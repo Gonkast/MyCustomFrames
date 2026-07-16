@@ -33,10 +33,12 @@ set them up on your own:
   breaking DynamicCam's custom camera situations — this addon neutralizes that call. Only matters
   if you run both DialogueUI and DynamicCam together, and DialogueUI's own "Camera Movement"
   option must be turned off for it to work.
-- **WaypointUI** — waypoint/map arrow display.
+- **[WaypointUI](https://www.curseforge.com/wow/addons/waypointui)** — waypoint/map arrow display.
 - **[Sorted](https://www.curseforge.com/wow/addons/sorted)** — bag sorting.
-- **Bartender4 Animations** — extra button-press animations for Bartender4.
-- **DF Friendly Nameplates Midnight** — friendly nameplate visibility on Midnight.
+- **[Bartender4 Animations](https://www.curseforge.com/wow/addons/bartender4-animations)** — extra
+  button-press animations for Bartender4.
+- **[DF Friendly Nameplates](https://www.curseforge.com/wow/addons/df-friendly-nameplates)** —
+  friendly nameplate visibility on Midnight.
 - **Masque Skinner: Blizz Buffs** — Masque skin for the native Blizzard buff/debuff icons.
 
 ## What's inside
