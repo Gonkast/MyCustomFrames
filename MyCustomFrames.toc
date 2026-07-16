@@ -1,0 +1,37 @@
+## Interface: 120007
+## Title: |cffdeee53Azerite|r|cff60c43eUI|r Preset - |cfff06018Gonkast|r
+## Notes: Custom cap bars, portraits, auras, info bar, quest tracker coloring and assisted glow
+## Author: Gonkast
+## Version: 8.1
+## Category: Unit Frames
+## IconTexture: Interface\AddOns\MyCustomFrames\Assets\addon_icon.tga
+## SavedVariables: MyCustomFramesDB
+## OptionalDeps: AzeriteUI5_JuNNeZ_Edition, Bartender4, DynamicCam, Masque, Chattynator
+
+Defaults.lua
+core.lua
+Glow.lua
+ChatBubble.lua
+MicroMenu.lua
+Grouping.lua
+MasqueSkin.lua
+
+# Bridge con AzeriteUI (reintegrado 2026-07-15 para re-probar con taint.log: la causa real del
+# taint persistente resulto ser StaticPopupDialogs/Calendario, NO la mutacion de tablas de config
+# de AzeriteUI — esa hipotesis quedo marcada como "parcial o erronea" en su momento).
+Integration_AzeriteUI.lua
+
+# --- Perfiles de otros addons (carga SEGURA: Pre guarda globales vivos, copias, Post restaura) ---
+Profiles_Pre.lua
+Profiles\Bartender4\Bartender4.lua
+Profiles\DynamicCam\DynamicCam.lua
+Profiles\Masque\Masque.lua
+Profiles\Chattynator\Chattynator.lua
+Profiles\AzeriteUI5_JuNNeZ_Edition\AzeriteUI5_JuNNeZ_Edition.lua
+Profiles_Post.lua
+Profiles\_Exports.lua
+ProfilesApply.lua
+
+Tracker.lua
+Options.lua
+Setup.lua

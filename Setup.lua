@@ -1,0 +1,789 @@
+-- ==========================================================================
+-- Setup.lua — asistente de PRIMERA INSTALACION (6 paginas: que hace el addon, que addons
+-- con perfil incluido tenes instalados, opciones globales reducidas, hide-when-mounted +
+-- auto-hide del tracker, Explorer Mode, e inyectar el preset Gonkast en AzeriteUI + el HUD
+-- de Blizzard Edit Mode). Se muestra UNA sola vez (db.setupSeen); reabrible a mano con /mcfsetup.
+-- Reusa el toolkit visual de Options.lua (ns.UI) y la deteccion/aplicacion de
+-- perfiles de ProfilesApply.lua (ns.ProfilesStatus/ns.ProfilesInfo/ns.ApplyProfilesFiltered).
+-- Carga al final del toc: necesita ns.UI, ns.PL, ns.GetDB y el sistema de perfiles ya listos.
+-- ==========================================================================
+local ADDON, ns = ...
+
+-- Assets tomados de Plumber (Icons/Button), copiados localmente para no depender de que
+-- Plumber este instalado. El "ExpansionBorder" y el fondo "checklist" resultaron ser atlas
+-- con varios widgets empaquetados (se veian rotos al estirarlos) y se descartaron: solo se
+-- usan aca piezas simples de un solo sprite (divisor, icono, check verde).
+local A = "Interface\\AddOns\\MyCustomFrames\\Assets\\"
+local ART = {
+    DIVIDER     = A .. "Setup_Divider.tga",
+    CHECK_ICON  = A .. "Setup_ChecklistIcon.png",
+    CHECK_GREEN = A .. "Setup_CheckmarkGreen.blp",
+    CHECKBOX    = A .. "Setup_Checkbox.png",
+}
+
+-- Assets PROPIOS del usuario para este wizard (carpeta "Setup Assets").
+local U = A .. "Setup Assets\\"
+local CUSTOM = {
+    BG       = U .. "Background_Setup.tga",
+    EXIT     = U .. "Exit_Button.tga",
+    APPLY    = U .. "Apply_Button.tga",
+    NAVBTN   = U .. "skip_next_back_finish_Button.tga",
+    PAGE     = U .. "Page.tga",
+    PAGE_CUR = U .. "Curret_Page.tga",
+}
+
+-- Ancho de contenido comun a las 3 paginas (con margen respecto al marco del fondo propio).
+local CONTENT_W = 720
+
+-- Fuente pedida para el wizard (Blizzard FRIZQT, distinta de la Lato del panel de opciones).
+local FRIZQT = "Fonts\\FRIZQT__.TTF"
+local function SF(fs, size, flags)
+    if not fs:SetFont(FRIZQT, size, flags or "") then fs:SetFontObject("GameFontNormal") end
+end
+
+-- Paleta de colores tomada de Plumber (hex pedidos por el usuario, ya normalizados a 0-1):
+-- titulos 786553, texto de descripcion 7f7a72, lineas/texturas 7f6b59, opciones 877866.
+local COLOR_TITLE  = { 0x78 / 255, 0x65 / 255, 0x53 / 255 }
+local COLOR_DESC   = { 0x7f / 255, 0x7a / 255, 0x72 / 255 }
+local COLOR_LINE   = { 0x7f / 255, 0x6b / 255, 0x59 / 255 }
+local COLOR_OPTION = { 0x87 / 255, 0x78 / 255, 0x66 / 255 }
+
+-- Parrafo de una linea (con wrap) en el ancho de contenido comun: usado para el cuerpo de
+-- texto de cada pagina (evita repetir SetWidth/SetJustifyH/SetWordWrap/SetTextColor 3 veces).
+-- Color fijo (COLOR_DESC): antes cada llamada pasaba su propio r,g,b, pero Plumber usa un
+-- unico color de descripcion en todos lados.
+local function Paragraph(parent, x, y, size, text)
+    local fs = parent:CreateFontString(nil, "ARTWORK")
+    SF(fs, size)
+    fs:SetPoint("TOPLEFT", x, y)
+    fs:SetWidth(CONTENT_W); fs:SetJustifyH("LEFT"); fs:SetWordWrap(true)
+    fs:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+    fs:SetText(text)
+    return fs
+end
+
+-- Boton generico con textura propia: normal = la textura tal cual; hover = LA MISMA
+-- textura en capa ADD (se ilumina); presionado = la misma textura un poco mas oscura.
+-- Asi no hace falta un asset de "highlight" separado, como pidio el usuario.
+local function TexButton(parent, texturePath, w, h, text, fontSize)
+    local b = CreateFrame("Button", nil, parent)
+    b:SetSize(w, h)
+    b:SetNormalTexture(texturePath)
+    b:SetHighlightTexture(texturePath, "ADD")
+    b:SetPushedTexture(texturePath)
+    local pt = b:GetPushedTexture()
+    if pt then pt:SetVertexColor(0.75, 0.75, 0.75) end
+    if text then
+        local fs = b:CreateFontString(nil, "OVERLAY")
+        SF(fs, fontSize or 13)
+        fs:SetPoint("CENTER", 0, 1)
+        fs:SetTextColor(1, 0.92, 0.75)
+        fs:SetText(text)
+        b.text = fs
+    end
+    return b
+end
+
+-- Dropdown 3-slice (asset "EditModeDropdown.png" de Plumber, copiado local: Setup_Dropdown.png):
+-- la textura de nav (pill grande para Skip/Back/Next) se veia rara achicada a tamaño de
+-- dropdown, asi que este usa el mismo patron 3-slice + texcoords que Plumber usa para SU
+-- propio dropdown (fondo BACKGROUND recortado en 3 franjas + highlight ADD al pasar el mouse).
+local DROPDOWN_TEX = "Interface\\AddOns\\MyCustomFrames\\Assets\\Setup_Dropdown.png"
+local function DropdownButton(parent, w, h, text, fontSize)
+    local b = CreateFrame("Button", nil, parent)
+    b:SetSize(w, h)
+    local capW = 16
+    local function slice(layer, top, bottom)
+        local left = b:CreateTexture(nil, layer)
+        left:SetTexture(DROPDOWN_TEX)
+        left:SetPoint("TOPLEFT"); left:SetPoint("BOTTOMLEFT"); left:SetWidth(capW)
+        left:SetTexCoord(0, 32 / 256, top, bottom)
+        local right = b:CreateTexture(nil, layer)
+        right:SetTexture(DROPDOWN_TEX)
+        right:SetPoint("TOPRIGHT"); right:SetPoint("BOTTOMRIGHT"); right:SetWidth(capW)
+        right:SetTexCoord(176 / 256, 1, top, bottom)
+        local mid = b:CreateTexture(nil, layer)
+        mid:SetTexture(DROPDOWN_TEX)
+        mid:SetPoint("TOPLEFT", left, "TOPRIGHT"); mid:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
+        mid:SetTexCoord(32 / 256, 176 / 256, top, bottom)
+        return { left, mid, right }
+    end
+    slice("BACKGROUND", 0, 80 / 256)
+    local hl = slice("HIGHLIGHT", 160 / 256, 240 / 256)
+    for _, t in ipairs(hl) do t:SetVertexColor(0.3, 0.3, 0.3); t:SetBlendMode("ADD") end
+
+    local fs = b:CreateFontString(nil, "OVERLAY")
+    SF(fs, fontSize or 12)
+    fs:SetPoint("LEFT", 10, 0); fs:SetPoint("RIGHT", -22, 0)
+    fs:SetJustifyH("LEFT"); fs:SetMaxLines(1)
+    fs:SetTextColor(COLOR_OPTION[1], COLOR_OPTION[2], COLOR_OPTION[3])
+    fs:SetText(text or "")
+    b.text = fs
+
+    local arrow = b:CreateFontString(nil, "OVERLAY")
+    SF(arrow, fontSize or 12)
+    arrow:SetPoint("RIGHT", -8, 0)
+    arrow:SetTextColor(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3])
+    arrow:SetText("v")
+    return b
+end
+
+-- Sufijo visual para toggles "recomendados" (Plumber no tiene un skin de checkbox dedicado
+-- para esto — se investigo su codigo y lo unico parecido es un icono de "tiene sub-opciones"
+-- y un tag de "nueva funcion", ninguno es realmente "recomendado". Un sufijo de texto en
+-- dorado es el equivalente honesto mas simple).
+-- Un tono mas claro que COLOR_TITLE (mismo matiz, mas luminosidad) para que resalte sobre
+-- el resto del texto en vez de mezclarse con el.
+local REC = "  |cffd6b896(recommended)|r"
+
+local PAGE_COUNT = 7
+local frame, contentPages, selected = nil, {}, {}
+local curPage = 1
+local pageDots, backBtn, nextBtn, skipBtn, stepLabel
+
+local function UI() return ns.UI end
+
+-- Headers/toggles del toolkit compartido nacen con la fuente Lato del panel de opciones;
+-- estos wrappers los crean igual y despues fuerzan FRIZQT sobre sus FontStrings.
+local function Header(parent, text, x, y, width)
+    local fs = UI().MakeHeader(parent, text, x, y, width or CONTENT_W)
+    SF(fs, 14)
+    fs:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+    if fs.div then fs.div:SetVertexColor(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.6) end
+    return fs
+end
+local function Toggle(parent, label, x, y, getf, setf)
+    local cb = UI().MakeToggle(parent, label, x, y, getf, setf)
+    if cb.label then
+        SF(cb.label, 12)
+        cb.label:SetTextColor(COLOR_OPTION[1], COLOR_OPTION[2], COLOR_OPTION[3])
+        -- MakeToggle ya pone su propio OnEnter/OnLeave (blanco al pasar el mouse, vuelve a SU
+        -- color hardcodeado al salir) — HookScript solo AGREGA, asi que hay que re-aplicar
+        -- COLOR_OPTION en OnLeave o el hover lo dejaria en el color viejo al soltar el mouse.
+        cb:HookScript("OnLeave", function() cb.label:SetTextColor(COLOR_OPTION[1], COLOR_OPTION[2], COLOR_OPTION[3]) end)
+    end
+    -- Reskin del checkbox con el atlas de checkbox de Plumber (EditModeCheckbox.png):
+    -- mismos texcoords que su propio CreateCheckbox (SharedWidgets.lua) — cuadro en el
+    -- cuadrante superior-izquierdo, tilde en el sub-cuadrante superior-derecho del inferior-
+    -- derecho. Mas limpio que el "UI-Checkbox-Check" de Blizzard que usa el panel principal.
+    if cb.box then
+        cb.box:SetTexture(ART.CHECKBOX)
+        cb.box:SetTexCoord(0, 0.5, 0, 0.5)
+        cb.box:SetSize(22, 22)
+    end
+    if cb.check then
+        cb.check:SetTexture(ART.CHECKBOX)
+        cb.check:SetTexCoord(0.5, 0.75, 0.5, 0.75)
+        -- Plumber usa box=32/check=16 (mitad exacta); nuestro box=22 => check~11 mantiene la
+        -- misma proporcion. El tilde se veia corrido porque antes era desproporcionadamente
+        -- grande (14, casi 2/3 del box en vez de 1/2), lo que sacaba el glifo del recorte
+        -- centrado visualmente.
+        cb.check:SetSize(11, 11)
+        cb.check:ClearAllPoints()
+        cb.check:SetPoint("CENTER", cb.box, "CENTER", 0, 0)
+        cb.check:SetVertexColor(1, 1, 1)
+    end
+    -- BUG real: MakeToggle crea el tilde SIEMPRE visible y solo lo sincroniza con el valor
+    -- real al hacer click, o cuando el panel de Options.lua recorre su lista interna de
+    -- "refreshers" al abrirse (algo que el wizard nunca dispara). Sin este refresh() inicial,
+    -- TODOS los toggles del wizard se ven tildados sin importar el valor real hasta que se
+    -- clickean una vez — exactamente el bug reportado ("los no recomendados siguen prendidos").
+    if cb.refresh then cb.refresh() end
+    return cb
+end
+-- Toggle con tooltip: HookScript (no SetScript) para no pisar el OnEnter/OnLeave que ya
+-- pone MakeToggle (highlight de fila al pasar el mouse) — solo se AGREGA el tooltip encima.
+local function TooltipToggle(parent, label, x, y, getf, setf, tip)
+    local cb = Toggle(parent, label, x, y, getf, setf)
+    if tip then
+        cb:HookScript("OnEnter", function(self)
+            if GameTooltip:IsForbidden() then return end
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText(label, COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+            GameTooltip:AddLine(tip, 1, 1, 1, true)
+            GameTooltip:Show()
+        end)
+        cb:HookScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
+    end
+    return cb
+end
+
+-- Fade suave al cambiar de pagina (en vez de Show/Hide seco).
+local function FadeIn(f, duration)
+    f:Show(); f:SetAlpha(0)
+    if UIFrameFadeIn then
+        UIFrameFadeIn(f, duration or 0.18, 0, 1)
+    else
+        f:SetAlpha(1)
+    end
+end
+
+local function BuildFrame()
+    local f = CreateFrame("Frame", "MCFSetupWizard", UIParent, "BackdropTemplate")
+    f:SetSize(960, 760)
+    f:SetPoint("CENTER")
+    f:SetFrameStrata("DIALOG")
+    f:SetMovable(true); f:EnableMouse(true)
+    f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart", f.StartMoving)
+    f:SetScript("OnDragStop", f.StopMovingOrSizing)
+
+    -- El fondo del usuario (Background_Setup.tga) ya trae su propio marco ornamentado
+    -- horneado en la imagen: no se le agrega un borde separado encima.
+    local bg = f:CreateTexture(nil, "BACKGROUND")
+    bg:SetTexture(CUSTOM.BG)
+    bg:SetAllPoints()
+
+    local title = f:CreateFontString(nil, "ARTWORK")
+    SF(title, 20)
+    title:SetPoint("TOP", 0, -80)
+    title:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+    title:SetText("Welcome to AzeriteUI — Gonkast Preset")
+
+    local tdiv = f:CreateTexture(nil, "ARTWORK")
+    tdiv:SetTexture(ART.DIVIDER)
+    tdiv:SetPoint("TOP", title, "BOTTOM", 0, 2)
+    tdiv:SetSize(680, 16)
+    tdiv:SetVertexColor(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3])
+
+    -- "Step X of Y" ahora va ABAJO de los puntos de pagina (ver pageDots mas abajo),
+    -- centrado, en vez de arriba pegado al titulo.
+    stepLabel = f:CreateFontString(nil, "ARTWORK")
+    SF(stepLabel, 12)
+    stepLabel:SetPoint("BOTTOM", f, "BOTTOM", 0, 82)
+    stepLabel:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+
+    local closeBtn = TexButton(f, CUSTOM.EXIT, 38, 38)
+    closeBtn:SetPoint("TOPRIGHT", -26, -40)
+    closeBtn:SetScript("OnClick", function() ns.CloseSetupWizard(true) end)
+
+    local content = CreateFrame("Frame", nil, f)
+    content:SetPoint("TOPLEFT", 76, -140)
+    content:SetPoint("BOTTOMRIGHT", -76, 150)
+    f._content = content
+
+    -- Barra inferior, de arriba a abajo: puntos de pagina, "Step X of Y" centrado debajo de
+    -- ellos, y los botones de navegacion mas adentro del fondo (propios: Page.tga /
+    -- Curret_Page.tga para los puntos; skip_next_back_finish_Button para los botones).
+    pageDots = {}
+    for i = 1, PAGE_COUNT do
+        local d = f:CreateTexture(nil, "OVERLAY")
+        d:SetSize(20, 20)
+        d:SetPoint("BOTTOM", f, "BOTTOM", (i - (PAGE_COUNT + 1) / 2) * 24, 104)
+        d:SetTexture(CUSTOM.PAGE)
+        pageDots[i] = d
+    end
+
+    skipBtn = TexButton(f, CUSTOM.NAVBTN, 160, 40, "Skip setup", 13)
+    skipBtn:SetPoint("BOTTOMLEFT", 64, 64)
+    skipBtn:SetScript("OnClick", function() ns.CloseSetupWizard(true) end)
+
+    backBtn = TexButton(f, CUSTOM.NAVBTN, 130, 40, "< Back", 13)
+    backBtn:SetPoint("BOTTOMRIGHT", -214, 64)
+    backBtn:SetScript("OnClick", function() ns.SetupGoTo(curPage - 1) end)
+
+    nextBtn = TexButton(f, CUSTOM.NAVBTN, 130, 40, "Next >", 13)
+    nextBtn:SetPoint("BOTTOMRIGHT", -64, 64)
+    nextBtn:SetScript("OnClick", function()
+        if curPage < PAGE_COUNT then ns.SetupGoTo(curPage + 1) else ns.SetupFinish() end
+    end)
+
+    f:Hide()
+    frame = f
+    return content
+end
+
+-- ---------------- Pagina 1: que hace el addon ----------------
+local INTRO_LINES = {
+    "|cff786553Unit frames|r — health/power/cast for player, target, pet, focus, boss1-5 and party1-5, secret-number safe.",
+    "|cff786553Portraits|r — portraits with cage, background, model, role, leader and raid marker.",
+    "|cff786553Auras|r — buffs/debuffs with click-to-cancel, separate positions for in-combat/idle.",
+    "|cff786553Quest tracker|r — colors the native tracker and auto-hides it in combat, on a hostile target, in boss fights, arenas or battlegrounds.",
+    "|cff786553Info bar|r — clock, calendar, zone, FPS/MS in the AzeriteUI style, above the minimap.",
+    "|cff786553Micro menu|r — replaces Blizzard's buttons with the preset's style.",
+    "|cff786553Extras|r — mouselook, hide Blizzard UI, assisted glow, chat bubbles, Explorer Mode (fade on mouseover).",
+}
+
+local function BuildPage1(content)
+    local p = CreateFrame("Frame", nil, content)
+    p:SetAllPoints()
+    Header(p, "What this addon does", 0, -2)
+    local y = -30
+    for _, line in ipairs(INTRO_LINES) do
+        local fs = Paragraph(p, 4, y, 12, line)
+        y = y - (fs:GetStringHeight() + 14)
+    end
+    Paragraph(p, 4, y - 6, 11,
+        "Everything is editable later from Interface Options > AddOns > this panel, or with /mcf to move/lock frames.")
+    return p
+end
+
+-- ---------------- Pagina 2: addons detectados con perfil incluido ----------------
+local function BuildPage2(content)
+    local p = CreateFrame("Frame", nil, content)
+    p:SetAllPoints()
+    local icon = p:CreateTexture(nil, "ARTWORK")
+    icon:SetTexture(ART.CHECK_ICON)
+    icon:SetSize(18, 18)
+    icon:SetPoint("TOPLEFT", 0, 1)
+    Header(p, "Bundled profiles for other addons", 22, -2, CONTENT_W - 20)
+    Paragraph(p, 4, -26, 11,
+        "These addons are loaded and have a bundled Gonkast profile. Untick any you DON'T want replaced:")
+    p._list = p._list or {}
+    return p
+end
+
+local function RefreshPage2(p)
+    for _, w in ipairs(p._list) do w:Hide() end
+    wipe(p._list)
+    local list = (ns.ProfilesStatus and ns.ProfilesStatus()) or {}
+    local y = -50
+    if #list == 0 then
+        local fs = Paragraph(p, 4, y, 12,
+            "No supported addons detected (Bartender4, DynamicCam, Masque, Chattynator, AzeriteUI).")
+        table.insert(p._list, fs)
+        return
+    end
+    for _, addon in ipairs(list) do
+        if selected[addon] == nil then selected[addon] = true end
+        local label = (ns.ProfilesInfo and ns.ProfilesInfo[addon]) or addon
+        local cb = Toggle(p, label, 4, y,
+            function() return selected[addon] end,
+            function(v) selected[addon] = v end)
+        table.insert(p._list, cb)
+        -- Check verde a la derecha de la fila: "detectado" (addon cargado + con copia de
+        -- SavedVariables lista para inyectar), independiente del tilde interactivo de la izquierda.
+        local detected = p:CreateTexture(nil, "ARTWORK")
+        detected:SetTexture(ART.CHECK_GREEN)
+        detected:SetSize(16, 16)
+        detected:SetPoint("LEFT", cb.label or cb, "RIGHT", 8, 0)
+        table.insert(p._list, detected)
+        y = y - 26
+    end
+end
+
+-- ---------------- Pagina 3: opciones globales (subset reducido, con tooltips) ----------------
+-- Solo las 3 mas relevantes para alguien recien instalando (el resto sigue disponible
+-- en el panel de opciones principal, seccion "Global options").
+local function BuildPage3(content)
+    local p = CreateFrame("Frame", nil, content)
+    p:SetAllPoints()
+    Header(p, "Global options", 0, -2)
+    Paragraph(p, 4, -26, 11,
+        "Turn any of these on or off now, or change them later from the addon's options panel. Hover each one for details.")
+
+    -- Fuerza el estado recomendado al construir la pagina (UNA sola vez: las paginas se
+    -- arman una vez y despues solo se muestran/ocultan). Sin esto, un personaje que ya
+    -- tenia estas opciones en otro valor (de una sesion previa) mostraba el checkbox
+    -- desincronizado del texto "(recommended)".
+    do
+        local d = ns.GetDB()
+        if d then
+            d.mouselook = true
+            d.hideBlizzard = true
+            d.dcFix = true
+            if ns.HideBlizzardFrames then ns.HideBlizzardFrames() end
+            if ns.ApplyDcFix then ns.ApplyDcFix() end
+        end
+    end
+
+    local y = -56
+    local function row(label, key, tip, onSet)
+        TooltipToggle(p, label, 4, y, function() return ns.GetDB() and ns.GetDB()[key] end, function(v)
+            local d = ns.GetDB(); if not d then return end
+            d[key] = v
+            if onSet then onSet(v) end
+        end, tip)
+        y = y - 26
+    end
+
+    row("Mouselook (right-click drag)" .. REC, "mouselook",
+        "Holding the right mouse button turns the camera AND your character together, like most modern " ..
+        "third-person games, instead of Blizzard's default free-camera drag.")
+    row("Hide Blizzard unit frames" .. REC, "hideBlizzard",
+        "Hides the default Blizzard player/pet/target/target-of-target/boss/party frames and cast bars, " ..
+        "since this addon draws its own. Turning this OFF requires a /reload to bring them back.",
+        function(v) if v and ns.HideBlizzardFrames then ns.HideBlizzardFrames() end end)
+    row("DynamicCam camera fix" .. REC, "dcFix",
+        "Fixes DialogueUI's compatibility with DynamicCam: opening DialogueUI's panel calls a method " ..
+        "that freezes DynamicCam's camera and never releases it, breaking its custom camera situations. " ..
+        "This neutralizes that call. Only matters if you use BOTH DialogueUI and DynamicCam — and " ..
+        "DialogueUI's own \"Camera Movement\" option must be turned OFF for this to work.",
+        function() if ns.ApplyDcFix then ns.ApplyDcFix() end end)
+    return p
+end
+
+-- ---------------- Pagina 4: toggles por unidad (hide when mounted) + quest tracker ----------------
+local UNIT_MOUNT_ROWS = {
+    { "Player",       "player",      true },
+    { "Target",       "target" },
+    { "Player power", "playerpower", true },
+    { "Target power", "targetpower" },
+}
+local TRACKER_AUTOHIDE_ROWS = {
+    { "Hide in boss fights",      "hideInBoss",           true },
+    { "Hide in combat",           "hideInCombat",         true },
+    { "Hide on hostile target",   "hideOnHostileTarget" },
+    { "Hide in arena",            "hideInArena" },
+    { "Hide in battlegrounds",    "hideInBG" },
+}
+local function BuildPage4(content)
+    local p = CreateFrame("Frame", nil, content)
+    p:SetAllPoints()
+    Header(p, "Unit & quest tracker options", 0, -2)
+    Paragraph(p, 4, -26, 11,
+        "Hide these unit frames while mounted, and auto-hide the quest tracker in the situations below.")
+
+    -- Fuerza el estado recomendado al construir (ver comentario igual en BuildPage3).
+    do
+        local d = ns.GetDB()
+        if d and d.units then
+            for _, row in ipairs(UNIT_MOUNT_ROWS) do
+                local key = row[2]
+                if d.units[key] then d.units[key].hideWhenMounted = row[3] or false end
+            end
+        end
+        if d and d.tracker then
+            for _, row in ipairs(TRACKER_AUTOHIDE_ROWS) do d.tracker[row[2]] = row[3] or false end
+        end
+    end
+
+    Header(p, "Hide when mounted", 4, -56, 340)
+    local y = -80
+    for _, row in ipairs(UNIT_MOUNT_ROWS) do
+        local key = row[2]
+        Toggle(p, row[1] .. (row[3] and REC or ""), 4, y,
+            function() local d = ns.GetDB(); return d and d.units and d.units[key] and d.units[key].hideWhenMounted end,
+            function(v)
+                local d = ns.GetDB(); if not (d and d.units and d.units[key]) then return end
+                d.units[key].hideWhenMounted = v
+                if ns.RefreshUnit then ns.RefreshUnit(key) end
+            end)
+        y = y - 26
+    end
+
+    Header(p, "Quest tracker auto-hide", 380, -56, 336)
+    y = -80
+    for _, row in ipairs(TRACKER_AUTOHIDE_ROWS) do
+        local key = row[2]
+        Toggle(p, row[1] .. (row[3] and REC or ""), 380, y,
+            function() local d = ns.GetDB(); return d and d.tracker and d.tracker[key] end,
+            function(v)
+                local d = ns.GetDB(); if not (d and d.tracker) then return end
+                d.tracker[key] = v
+            end)
+        y = y - 26
+    end
+    return p
+end
+
+-- ---------------- Pagina 5: Explorer Mode (mismas opciones que el menu) ----------------
+local EXPLORER_LIST = {
+    { "Player unit frame", "player", true }, { "Player portrait", "portrait_player" },
+    { "Micro menu", "micromenu", true }, { "Info bar", "infobar" }, { "Pet unit frame", "pet", true },
+    { "Target unit frame", "target" }, { "Target portrait", "portrait_target" },
+    { "Player auras", "aura_player" }, { "Pet portrait", "portrait_pet", true }, { "Focus portrait", "portrait_focus", true },
+}
+local EXPLORER_ZONES = {
+    { "Open world", "world", true }, { "Dungeons", "dungeon" }, { "Raids", "raid" },
+    { "Arenas", "arena" }, { "Battlegrounds", "battleground" }, { "Scenarios / Delves", "scenario" },
+}
+local function BuildPage5(content)
+    local p = CreateFrame("Frame", nil, content)
+    p:SetAllPoints()
+    Header(p, "Explorer Mode", 0, -2)
+    Paragraph(p, 4, -26, 11,
+        "Enabled elements fade out and reappear on mouseover (even while hidden). Combat/target/casting can force them visible.")
+
+    -- Fuerza el estado recomendado al construir (ver comentario igual en BuildPage3): master
+    -- OFF, solo los 5 elementos marcados ON, los 3 "always show" ON, solo "Open world" ON.
+    do
+        local d = ns.GetDB()
+        if d then
+            d.explorerEnabled = false
+            d.explorer = d.explorer or {}
+            for _, e in ipairs(EXPLORER_LIST) do d.explorer[e[2]] = e[3] or nil end
+            d.explorerCombat = true
+            d.explorerTarget = true
+            d.explorerCasting = true
+            d.explorerZones = d.explorerZones or {}
+            for _, z in ipairs(EXPLORER_ZONES) do d.explorerZones[z[2]] = z[3] and true or false end
+        end
+    end
+
+    Toggle(p, "Enable Explorer (master switch)", 4, -56,
+        function() local d = ns.GetDB(); return d and d.explorerEnabled ~= false end,
+        function(v)
+            local d = ns.GetDB(); if not d then return end
+            d.explorerEnabled = v and true or false
+            if not v and ns.ExplorerResetAll then ns.ExplorerResetAll() end
+        end)
+
+    local L, R = 4, 380
+    for i, e in ipairs(EXPLORER_LIST) do
+        local col = (i <= 5) and L or R
+        local yy = -86 - ((i - 1) % 5) * 26
+        local key = e[2]
+        Toggle(p, e[1] .. (e[3] and REC or ""), col, yy,
+            function() local d = ns.GetDB(); return d and d.explorer and d.explorer[key] end,
+            function(v)
+                local d = ns.GetDB(); if not (d and d.explorer) then return end
+                d.explorer[key] = v or nil
+                if not v and ns.ExplorerReset then ns.ExplorerReset(key) end
+            end)
+    end
+
+    Header(p, "Always show", L, -226, 340)
+    Toggle(p, "Always show in combat" .. REC, L, -250,
+        function() local d = ns.GetDB(); return d and d.explorerCombat end,
+        function(v) local d = ns.GetDB(); if d then d.explorerCombat = v end end)
+    Toggle(p, "Always show on target" .. REC, L, -276,
+        function() local d = ns.GetDB(); return d and d.explorerTarget end,
+        function(v) local d = ns.GetDB(); if d then d.explorerTarget = v end end)
+    Toggle(p, "Always show while casting" .. REC, L, -302,
+        function() local d = ns.GetDB(); return d and d.explorerCasting end,
+        function(v) local d = ns.GetDB(); if d then d.explorerCasting = v end end)
+
+    Header(p, "Active in", R, -226, 336)
+    for i, z in ipairs(EXPLORER_ZONES) do
+        local zk = z[2]
+        Toggle(p, z[1] .. (z[3] and REC or ""), R, -250 - (i - 1) * 26,
+            function() local d = ns.GetDB(); return d and d.explorerZones and d.explorerZones[zk] ~= false end,
+            function(v)
+                local d = ns.GetDB(); if not (d and d.explorerZones) then return end
+                d.explorerZones[zk] = v and true or false
+                if not v and ns.ExplorerResetAll then ns.ExplorerResetAll() end
+            end)
+    end
+    return p
+end
+
+-- ---------------- Pagina 6: aplicar el preset (+ HUD de Edit Mode, MANUAL) ----------------
+-- 2026-07-15: el HUD de Blizzard Edit Mode YA NO se auto-importa (antes disparaba SIEMPRE un
+-- LUA_WARNING ruidoso al crear el layout, ver ProfilesApply.lua comentario de cabecera) — ahora
+-- "Apply now" solo reemplaza el SavedVariables de los addons tildados; el HUD se muestra como
+-- codigo copiable (boton propio) para que el usuario lo importe A MANO desde el Edit Mode nativo
+-- de Blizzard, sin pasar por codigo tainted por MyCustomFrames.
+local function BuildPage6(content)
+    local p = CreateFrame("Frame", nil, content)
+    p:SetAllPoints()
+    Header(p, "Apply the Gonkast preset", 0, -2)
+    Paragraph(p, 4, -30, 12,
+        "This REPLACES the SavedVariables of the addons you kept ticked on the previous page " ..
+        "with the bundled Gonkast profile (AzeriteUI layout, Bartender4 bars, DynamicCam, Masque skin, " ..
+        "Chattynator chat). A manual /reload is required afterwards. Only one profile is bundled per " ..
+        "addon (\"Default\" for Bartender4/DynamicCam) — that's the recommended one, applied automatically.")
+
+    -- Boton propio del usuario (Apply_Button.tga): la accion principal de la pagina.
+    local applyBtn = TexButton(p, CUSTOM.APPLY, 200, 40, "Apply now", 14)
+    applyBtn:SetPoint("TOPLEFT", 2, -78)
+
+    local hudBtn = TexButton(p, CUSTOM.NAVBTN, 180, 40, "Edit Mode Code", 14)
+    hudBtn:SetPoint("LEFT", applyBtn, "RIGHT", 14, 0)
+    hudBtn:SetScript("OnClick", function() ns.ShowBlizzardHUDCode() end)
+    Paragraph(p, 4, -128, 10,
+        "The HUD layout (\"Gonkast Preset\", Bartender4/portrait positions etc) is a separate, MANUAL " ..
+        "step: the button above shows a copyable code — paste it yourself via Esc > Edit Mode > Import " ..
+        "Layout. Doing it by hand avoids a harmless-but-noisy taint warning that an automatic import " ..
+        "always triggered. Also reachable any time later with |cffffff00/mcfhud|r.")
+
+    local resultFs = p:CreateFontString(nil, "ARTWORK")
+    SF(resultFs, 11)
+    resultFs:SetPoint("TOPLEFT", 4, -172)
+    resultFs:SetWidth(CONTENT_W); resultFs:SetJustifyH("LEFT"); resultFs:SetWordWrap(true)
+    resultFs:SetTextColor(0.6, 0.9, 0.6)
+
+    applyBtn:SetScript("OnClick", function()
+        local applied = ns.ApplyProfilesFiltered(selected)
+        local names = {}
+        for a in pairs(applied) do names[#names + 1] = (ns.ProfilesInfo and ns.ProfilesInfo[a]) or a end
+
+        -- Masque: el skin "Azerite HEX" vive DENTRO de MyCustomFrames (MasqueSkin.lua), registrado
+        -- en Masque desde que este addon cargo (file-load, ver MasqueSkin.lua). Masque NO expone
+        -- una API para re-skinear en caliente los grupos de OTRO addon (ni para enumerarlos), asi
+        -- que solo confirmamos que el registro esta hecho — el skin ya deberia estar disponible en
+        -- el panel de Masque y aplicarse solo a las barras cuya config (recien copiada de MasqueDB)
+        -- ya lo tenia seleccionado, tras el /reload.
+        local masqueOk, masqueInfo
+        if applied.Masque then
+            masqueOk, masqueInfo = ns.ApplyMasqueSkinAll and ns.ApplyMasqueSkinAll()
+        end
+
+        local msg
+        if #names == 0 then
+            msg = "Nothing selected to apply."
+        else
+            msg = "Applied: " .. table.concat(names, ", ")
+            if applied.Masque then
+                if masqueOk then
+                    msg = msg .. "\n\"Azerite HEX\" skin is registered — select it in Masque's panel " ..
+                        "if a bar doesn't switch automatically after /reload."
+                else
+                    msg = msg .. "\n|cffff5555Masque skin not registered:|r " .. tostring(masqueInfo)
+                end
+            end
+            msg = msg .. "\nType /reload now."
+        end
+        resultFs:SetText(msg)
+    end)
+    return p
+end
+
+-- ---------------- Pagina 7: perfil de Bartender4 (el unico que a veces no persiste tras /reload) ----------------
+-- Bartender4 es AceDB (multi-perfil): tras el Apply de la pagina anterior, un personaje sin
+-- entrada propia en profileKeys DEBERIA caer solo en "Default" (fallback estandar de AceDB),
+-- pero en la practica a veces no ocurre. Esto fuerza la asociacion profileKeys[personaje] =
+-- perfil elegido DIRECTAMENTE, sin depender de ese fallback.
+local selectedBTProfile = "Default"
+local function GetBartenderProfiles()
+    local list = {}
+    local src = ns.Profiles and ns.Profiles["Bartender4DB"]
+    if src and type(src.profiles) == "table" then
+        for name in pairs(src.profiles) do list[#list + 1] = name end
+        table.sort(list)
+    end
+    if #list == 0 then list[1] = "Default" end
+    return list
+end
+
+local function BuildPage7(content)
+    local p = CreateFrame("Frame", nil, content)
+    p:SetAllPoints()
+    Header(p, "Bartender4 profile", 0, -2)
+    Paragraph(p, 4, -26, 12,
+        "Bartender4 is the one addon that sometimes keeps using its own profile even after a /reload. " ..
+        "Pick a profile below and click Apply to force it for THIS character specifically.")
+
+    local dropBtn = DropdownButton(p, 240, 26, selectedBTProfile, 12)
+    dropBtn:SetPoint("TOPLEFT", 4, -76)
+
+    local listFrame = CreateFrame("Frame", nil, p)
+    listFrame:SetFrameLevel(dropBtn:GetFrameLevel() + 5)
+    listFrame:SetPoint("TOPLEFT", dropBtn, "BOTTOMLEFT", 0, -2)
+    listFrame:Hide()
+    local rows = {}
+    local function RebuildList()
+        for _, r in ipairs(rows) do r:Hide() end
+        wipe(rows)
+        local profiles = GetBartenderProfiles()
+        local yy = 0
+        for _, name in ipairs(profiles) do
+            local rb = DropdownButton(listFrame, 240, 24, name, 12)
+            rb:SetPoint("TOPLEFT", 0, yy)
+            rb:SetScript("OnClick", function()
+                selectedBTProfile = name
+                dropBtn.text:SetText(name)
+                listFrame:Hide()
+            end)
+            rows[#rows + 1] = rb
+            yy = yy - 28
+        end
+        listFrame:SetSize(240, math.max(#profiles * 28, 4))
+    end
+    dropBtn:SetScript("OnClick", function()
+        if listFrame:IsShown() then listFrame:Hide() else RebuildList(); listFrame:Show() end
+    end)
+
+    local applyBtn = TexButton(p, CUSTOM.APPLY, 240, 40, "Apply to this character", 13)
+    applyBtn:SetPoint("TOPLEFT", dropBtn, "BOTTOMLEFT", 0, -60)
+
+    local resultFs = p:CreateFontString(nil, "ARTWORK")
+    SF(resultFs, 11)
+    resultFs:SetPoint("TOPLEFT", applyBtn, "BOTTOMLEFT", 0, -12)
+    resultFs:SetWidth(CONTENT_W); resultFs:SetJustifyH("LEFT"); resultFs:SetWordWrap(true)
+    resultFs:SetTextColor(0.6, 0.9, 0.6)
+
+    applyBtn:SetScript("OnClick", function()
+        local charKey = (UnitName("player") or "?") .. " - " .. (GetRealmName() or "?")
+        local bt = _G.Bartender4DB
+        if type(bt) ~= "table" then
+            resultFs:SetText("|cffff5555Bartender4DB not found — is Bartender4 loaded?|r")
+            return
+        end
+        bt.profileKeys = bt.profileKeys or {}
+        bt.profileKeys[charKey] = selectedBTProfile
+        resultFs:SetText("Set \"" .. charKey .. "\" to use the \"" .. selectedBTProfile .. "\" profile.\nType /reload now.")
+    end)
+    return p
+end
+
+-- ---------------- Navegacion ----------------
+function ns.SetupGoTo(page)
+    if not frame then return end
+    page = math.max(1, math.min(PAGE_COUNT, page))
+    curPage = page
+    for i, f in ipairs(contentPages) do
+        if i == page then FadeIn(f) else f:Hide() end
+    end
+    for i, d in ipairs(pageDots) do
+        d:SetTexture(i == page and CUSTOM.PAGE_CUR or CUSTOM.PAGE)
+    end
+    stepLabel:SetText("Step " .. page .. " of " .. PAGE_COUNT)
+    backBtn:SetShown(page > 1)
+    nextBtn.text:SetText(page < PAGE_COUNT and "Next >" or "Finish")
+    if page == 2 then RefreshPage2(contentPages[2]) end
+end
+
+-- ReloadUI() es una funcion PROTEGIDA: Blizzard NO deja que ningun addon la llame, ni
+-- diferida ni en pcall (confirmado en juego: ADDON_ACTION_BLOCKED), y da igual COMO se
+-- invoque (RunSlashCmd/el comando de chat internamente terminan llamando a la MISMA funcion
+-- protegida) — no hay boton posible que dispare el reload por si solo. Misma restriccion que
+-- ya documenta DoApply en ProfilesApply.lua. Este popup es puramente informativo (un solo
+-- boton que cierra), el jugador tiene que escribir /reload el mismo.
+StaticPopupDialogs["MCF_SETUP_FINISH_RELOAD"] = {
+    text = "Setup finished!\n\nType |cffffff00/reload|r in chat now to apply everything.",
+    button1 = "Got it",
+    timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
+}
+
+function ns.SetupFinish()
+    local db = ns.GetDB and ns.GetDB()
+    if db then db.setupSeen = true end
+    if frame then frame:Hide() end
+    if StaticPopup_Show then StaticPopup_Show("MCF_SETUP_FINISH_RELOAD") end
+end
+
+function ns.CloseSetupWizard(markSeen)
+    if markSeen then
+        local db = ns.GetDB and ns.GetDB()
+        if db then db.setupSeen = true end
+    end
+    if frame then frame:Hide() end
+end
+
+function ns.ShowSetupWizard()
+    if not frame then
+        local content = BuildFrame()
+        contentPages[1] = BuildPage1(content)
+        contentPages[2] = BuildPage2(content)
+        contentPages[3] = BuildPage3(content)
+        contentPages[4] = BuildPage4(content)
+        contentPages[5] = BuildPage5(content)
+        contentPages[6] = BuildPage6(content)
+        contentPages[7] = BuildPage7(content)
+    end
+    if UIFrameFadeIn then
+        frame:Show(); frame:SetAlpha(0)
+        UIFrameFadeIn(frame, 0.2, 0, 1)
+    else
+        frame:Show()
+    end
+    ns.SetupGoTo(1)
+end
+
+SLASH_MCFSETUP1 = "/mcfsetup"
+SlashCmdList["MCFSETUP"] = function() ns.ShowSetupWizard() end
+
+-- Disparo automatico: solo la PRIMERA vez (db.setupSeen == false). Se espera un poco
+-- tras PLAYER_LOGIN para que el resto de addons (deteccion de perfiles) ya haya cargado.
+local trigger = CreateFrame("Frame")
+trigger:RegisterEvent("PLAYER_LOGIN")
+trigger:SetScript("OnEvent", function(self)
+    self:UnregisterAllEvents()
+    if C_Timer and C_Timer.After then
+        C_Timer.After(1.5, function()
+            local db = ns.GetDB and ns.GetDB()
+            if db and not db.setupSeen then ns.ShowSetupWizard() end
+        end)
+    end
+end)
