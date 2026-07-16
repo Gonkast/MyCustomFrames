@@ -44,6 +44,16 @@ personal preset of **Gonkast**, tuned to sit on top of AzeriteUI.
 | `/mcftrackerdump` | Diagnostics for the quest tracker text classification |
 | `/mcfchar` | Diagnostics for the portrait "open character panel" button |
 
+## Installation
+
+1. Click **Code → Download ZIP** above.
+2. Extract it. The extracted folder will be named `MyCustomFrames-main` — **rename it to exactly
+   `MyCustomFrames`** (no `-main` suffix). WoW requires the folder name to match the `.toc` file
+   inside it, or the addon won't show up in-game.
+3. Move that folder into `World of Warcraft\_retail_\Interface\AddOns\`.
+4. Restart WoW (or reload the AddOns list at the character screen).
+5. Log in — the first-run Setup Wizard opens automatically after a couple seconds.
+
 ## Credits
 
 Menu styling (fonts, borders, layout patterns) is adapted from **[Plumber](https://github.com/Peterodox/Plumber)**
