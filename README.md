@@ -58,9 +58,13 @@ personal preset of **Gonkast**, tuned to sit on top of AzeriteUI.
 
 Menu styling (fonts, borders, layout patterns) is adapted from **[Plumber](https://github.com/Peterodox/Plumber)**
 by Peterodox — used with real assets copied from Plumber's `Art/` folder. Because of that, this
-project ships under the **same license as Plumber (GPLv3)**. The bundled Masque skin ("Azerite
-HEX") is adapted from `Masque_Azerite_Hex` by Daniel Troko and Lars Norberg. The player-rest
-flipbook animation data is sourced from **M33kAuras**.
+project ships under the **same license as Plumber (GPLv3)**.
+
+Many of the bundled unit frame/portrait/cage/badge textures in `Assets/` are **edited versions of
+the original AzeriteUI assets by Daniel Troko and Lars Norberg** — copied and modified from
+[AzeriteUI](https://github.com/AzeriteTeam/Azerite5) to fit this preset. The bundled Masque skin
+("Azerite HEX") is likewise adapted from `Masque_Azerite_Hex`, also by Daniel Troko and Lars
+Norberg. The player-rest flipbook animation data is sourced from **M33kAuras**.
 
 ## License
 
