@@ -20,6 +20,21 @@ personal preset of **Gonkast**, tuned to sit on top of AzeriteUI.
   addon for it.
 - **[Chattynator](https://www.curseforge.com/wow/addons/chattynator)** — chat.
 
+## Other recommended addons (not part of the Setup Wizard)
+
+These pair well with this preset visually/functionally but aren't auto-configured — install and
+set them up on your own:
+
+- **[Plumber](https://github.com/Peterodox/Plumber)** — quality-of-life modules; this preset's
+  menu styling is based on it (see Credits below).
+- **[DialogueUI](https://www.curseforge.com/wow/addons/dialogueui)** — cleaner NPC dialogue/quest
+  UI.
+- **WaypointUI** — waypoint/map arrow display.
+- **[Sorted](https://www.curseforge.com/wow/addons/sorted)** — bag sorting.
+- **Bartender4 Animations** — extra button-press animations for Bartender4.
+- **DF Friendly Nameplates Midnight** — friendly nameplate visibility on Midnight.
+- **Masque Skinner: Blizz Buffs** — Masque skin for the native Blizzard buff/debuff icons.
+
 ## What's inside
 
 - Multi-unitframe health/power/cast bars (player, target, ToT, pet, focus, boss1-5, party1-5).
