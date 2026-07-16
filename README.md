@@ -28,7 +28,11 @@ set them up on your own:
 - **[Plumber](https://github.com/Peterodox/Plumber)** — quality-of-life modules; this preset's
   menu styling is based on it (see Credits below).
 - **[DialogueUI](https://www.curseforge.com/wow/addons/dialogueui)** — cleaner NPC dialogue/quest
-  UI.
+  UI. This preset includes a **DynamicCam compatibility fix** (`db.dcFix`, toggle in Global
+  options): DialogueUI calls a DynamicCam method that freezes its camera and never releases it,
+  breaking DynamicCam's custom camera situations — this addon neutralizes that call. Only matters
+  if you run both DialogueUI and DynamicCam together, and DialogueUI's own "Camera Movement"
+  option must be turned off for it to work.
 - **WaypointUI** — waypoint/map arrow display.
 - **[Sorted](https://www.curseforge.com/wow/addons/sorted)** — bag sorting.
 - **Bartender4 Animations** — extra button-press animations for Bartender4.
