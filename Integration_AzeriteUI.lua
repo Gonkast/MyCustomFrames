@@ -201,7 +201,7 @@ local function EnsureDefaults()
     if np.nameY == nil then np.nameY = 16 end
     if np.healthSize == nil then np.healthSize = 12 end
     if np.healthX == nil then np.healthX = 0 end
-    if np.healthY == nil then np.healthY = -18 end
+    if np.healthY == nil then np.healthY = -25 end
 
     -- MIGRACION UNA VEZ: como esto lo inyecta MCF (no se guarda en el SV de AzeriteUI), el preset
     -- "de fabrica" (todo ON, dorado, tamaños/offsets de nameplate) se FUERZA una sola vez sobre
@@ -214,7 +214,7 @@ local function EnsureDefaults()
             o.use, o.r, o.g, o.b = true, PRESET_R, PRESET_G, PRESET_B
         end
         np.nameSize, np.nameX, np.nameY = 12, 0, 16
-        np.healthSize, np.healthX, np.healthY = 12, 0, -18
+        np.healthSize, np.healthX, np.healthY = 12, 0, -25
     end
     return c
 end

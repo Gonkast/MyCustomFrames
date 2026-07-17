@@ -227,24 +227,34 @@ local function GlowEnforceCVar(val)
     end
 end
 
+-- OPTIMIZACION (2026-07-16, auditoria): antes GlowFindButtons recorria TODO glowBtnCache
+-- (barras Blizzard + LibActionButton, puede ser 100+ botones, con IsVisible+GetActionInfo por
+-- boton) en CADA tick de 0.1s, aunque el hechizo recomendado (sid) no hubiera cambiado desde el
+-- tick anterior. Ahora solo se recalcula glowWanted cuando `sid` cambia (o con `force`); si sigue
+-- siendo el mismo hechizo, se reusa el set ya calculado.
 local glowWanted = {}
 local glowFound = {}
+local lastSid
 local function RefreshGlow(force)
     local db = ns.GetDB and ns.GetDB()
     if not (db and db.glow) then return end
     local p = db.glow
     if not p.enabled then
         for btn in pairs(glowActive) do GlowStop(btn) end
+        lastSid = nil
         return
     end
     if p.disableNative then GlowEnforceCVar("0") end
     if force then for btn in pairs(glowActive) do GlowStop(btn) end end
 
     local sid = GlowNextSpell(p)
-    wipe(glowWanted)
-    if sid then
-        GlowFindButtons(sid, glowFound)
-        for _, btn in ipairs(glowFound) do glowWanted[btn] = true end
+    if force or sid ~= lastSid then
+        lastSid = sid
+        wipe(glowWanted)
+        if sid then
+            GlowFindButtons(sid, glowFound)
+            for _, btn in ipairs(glowFound) do glowWanted[btn] = true end
+        end
     end
     -- apaga los que ya no aplican
     for btn in pairs(glowActive) do

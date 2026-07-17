@@ -294,26 +294,65 @@ local function BuildFrame()
 end
 
 -- ---------------- Pagina 1: que hace el addon ----------------
-local INTRO_LINES = {
-    "|cff786553Unit frames|r — health/power/cast for player, target, pet, focus, boss1-5 and party1-5, secret-number safe.",
-    "|cff786553Portraits|r — portraits with cage, background, model, role, leader and raid marker.",
-    "|cff786553Auras|r — buffs/debuffs with click-to-cancel, separate positions for in-combat/idle.",
-    "|cff786553Quest tracker|r — colors the native tracker and auto-hides it in combat, on a hostile target, in boss fights, arenas or battlegrounds.",
-    "|cff786553Info bar|r — clock, calendar, zone, FPS/MS in the AzeriteUI style, above the minimap.",
-    "|cff786553Micro menu|r — replaces Blizzard's buttons with the preset's style.",
-    "|cff786553Extras|r — mouselook, hide Blizzard UI, assisted glow, chat bubbles, Explorer Mode (fade on mouseover).",
+-- 2026-07-16: rediseño pedido por el usuario ("mas organizado y simplificado, mas limpio") — la
+-- version vieja era una lista vertical de parrafos largos que dejaba muchisimo espacio vacio
+-- abajo. Ahora es una GRILLA de 2 columnas x 3 filas (6 items cortos, titulo + descripcion en 1
+-- linea) + un item "Extras" ancho completo abajo + nota de cierre en una franja separada por un
+-- divisor, para usar el espacio de forma pareja en vez de un bloque de texto con hueco al final.
+local FEATURES = {
+    { title = "Unit frames",   desc = "Health/power/cast for player, target, pet, focus, boss1-5 and party1-5." },
+    { title = "Portraits",     desc = "Cage, background, model, role, leader and raid marker." },
+    { title = "Auras",         desc = "Buffs/debuffs with click-to-cancel, dual in-combat/idle positions." },
+    { title = "Quest tracker", desc = "Colors the tracker, auto-hides in combat/boss/hostile target/PvP." },
+    { title = "Info bar",      desc = "Clock, calendar, zone, FPS/MS, above the minimap." },
+    { title = "Micro menu",    desc = "Replaces Blizzard's micro buttons with the preset's style." },
 }
+local EXTRAS_LINE = "Extras — mouselook, hide Blizzard UI, assisted glow, chat bubbles, Explorer Mode (fade on mouseover)."
+
+local function FeatureCard(parent, x, y, w, title, desc)
+    local icon = parent:CreateTexture(nil, "ARTWORK")
+    icon:SetTexture(ART.CHECK_ICON)
+    icon:SetSize(15, 15)
+    icon:SetPoint("TOPLEFT", x, y)
+
+    local ttl = parent:CreateFontString(nil, "ARTWORK")
+    SF(ttl, 13)
+    ttl:SetPoint("TOPLEFT", x + 20, y + 1)
+    ttl:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+    ttl:SetText(title)
+
+    local fs = parent:CreateFontString(nil, "ARTWORK")
+    SF(fs, 11)
+    fs:SetPoint("TOPLEFT", x + 20, y - 18)
+    fs:SetWidth(w - 20); fs:SetJustifyH("LEFT"); fs:SetWordWrap(true)
+    fs:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+    fs:SetText(desc)
+end
 
 local function BuildPage1(content)
     local p = CreateFrame("Frame", nil, content)
     p:SetAllPoints()
     Header(p, "What this addon does", 0, -2)
-    local y = -30
-    for _, line in ipairs(INTRO_LINES) do
-        local fs = Paragraph(p, 4, y, 12, line)
-        y = y - (fs:GetStringHeight() + 14)
+
+    local colW = (CONTENT_W - 24) / 2
+    local L, R = 0, colW + 24
+    local ROW_H = 64
+    for i, f in ipairs(FEATURES) do
+        local col = ((i - 1) % 2 == 0) and L or R
+        local row = math.floor((i - 1) / 2)
+        FeatureCard(p, col, -34 - row * ROW_H, colW, f.title, f.desc)
     end
-    Paragraph(p, 4, y - 6, 11,
+    local extrasY = -34 - 3 * ROW_H
+    FeatureCard(p, L, extrasY, CONTENT_W, "Extras", EXTRAS_LINE)
+
+    local divY = extrasY - 46
+    local div = p:CreateTexture(nil, "ARTWORK")
+    div:SetTexture(ART.DIVIDER)
+    div:SetSize(CONTENT_W, 16)
+    div:SetPoint("TOPLEFT", 0, divY)
+    div:SetVertexColor(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3])
+
+    Paragraph(p, 0, divY - 16, 11,
         "Everything is editable later from Interface Options > AddOns > this panel, or with /mcf to move/lock frames.")
     return p
 end
@@ -351,12 +390,20 @@ local function RefreshPage2(p)
             function() return selected[addon] end,
             function(v) selected[addon] = v end)
         table.insert(p._list, cb)
-        -- Check verde a la derecha de la fila: "detectado" (addon cargado + con copia de
-        -- SavedVariables lista para inyectar), independiente del tilde interactivo de la izquierda.
+        -- Check "detectado" (addon cargado + con copia de SavedVariables lista para inyectar),
+        -- independiente del tilde interactivo de la izquierda. COLUMNA FIJA a x=380 (2026-07-16,
+        -- prolijidad pedida por el usuario): antes se anclaba a la derecha del LABEL (X distinta
+        -- segun el largo de cada nombre) Y se pisaba con el label de Masque, el mas largo de
+        -- todos (acortado aparte en ProfilesApply.lua INFO). **Color DORADO, no verde** (pedido
+        -- del usuario): reusa el MISMO recorte de tilde que ya usan los checkboxes interactivos
+        -- (ART.CHECKBOX, texcoords del glifo en Toggle) en vez de Setup_CheckmarkGreen.blp, para
+        -- que combine con la paleta del resto del wizard.
         local detected = p:CreateTexture(nil, "ARTWORK")
-        detected:SetTexture(ART.CHECK_GREEN)
+        detected:SetTexture(ART.CHECKBOX)
+        detected:SetTexCoord(0.5, 0.75, 0.5, 0.75)
         detected:SetSize(16, 16)
-        detected:SetPoint("LEFT", cb.label or cb, "RIGHT", 8, 0)
+        detected:SetPoint("LEFT", p, "LEFT", 380, 0)
+        detected:SetPoint("TOP", cb, "TOP", 0, -3)
         table.insert(p._list, detected)
         y = y - 26
     end
@@ -410,6 +457,18 @@ local function BuildPage3(content)
         "This neutralizes that call. Only matters if you use BOTH DialogueUI and DynamicCam — and " ..
         "DialogueUI's own \"Camera Movement\" option must be turned OFF for this to work.",
         function() if ns.ApplyDcFix then ns.ApplyDcFix() end end)
+
+    -- Cierre visual (2026-07-16, prolijidad pedida por el usuario): esta pagina solo tiene 3
+    -- toggles y dejaba un vacio grande hasta el final — un divisor + nota, igual que las paginas
+    -- 1 y 6, cierra la pagina en vez de terminar en la nada.
+    local div = p:CreateTexture(nil, "ARTWORK")
+    div:SetTexture(ART.DIVIDER)
+    div:SetSize(CONTENT_W, 16)
+    div:SetPoint("TOPLEFT", 0, -150)
+    div:SetVertexColor(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3])
+    Paragraph(p, 0, -166, 11,
+        "The full options panel (Interface Options > AddOns > this addon) has many more settings " ..
+        "beyond these 3 — this page only surfaces the ones most people want to decide on day one.")
     return p
 end
 
@@ -474,6 +533,17 @@ local function BuildPage4(content)
             end)
         y = y - 26
     end
+
+    -- Cierre visual (2026-07-16, misma prolijidad que las paginas 1/3/6): las 2 columnas terminan
+    -- a distinta altura, dejaba un vacio irregular abajo.
+    local div = p:CreateTexture(nil, "ARTWORK")
+    div:SetTexture(ART.DIVIDER)
+    div:SetSize(CONTENT_W, 16)
+    div:SetPoint("TOPLEFT", 0, -226)
+    div:SetVertexColor(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3])
+    Paragraph(p, 0, -242, 11,
+        "\"(recommended)\" items are pre-checked; the rest are up to you. All of this stays " ..
+        "editable per-unit later from the main options panel.")
     return p
 end
 
@@ -574,14 +644,15 @@ local function BuildPage6(content)
         "Chattynator chat). A manual /reload is required afterwards. Only one profile is bundled per " ..
         "addon (\"Default\" for Bartender4/DynamicCam) — that's the recommended one, applied automatically.")
 
-    -- Boton propio del usuario (Apply_Button.tga): la accion principal de la pagina.
+    -- Boton propio del usuario (Apply_Button.tga): la accion principal de la pagina. Separado un
+    -- poco mas del parrafo de arriba (2026-07-16, pedido del usuario: se veian pegados).
     local applyBtn = TexButton(p, CUSTOM.APPLY, 200, 40, "Apply now", 14)
-    applyBtn:SetPoint("TOPLEFT", 2, -78)
+    applyBtn:SetPoint("TOPLEFT", 2, -100)
 
     local hudBtn = TexButton(p, CUSTOM.NAVBTN, 180, 40, "Edit Mode Code", 14)
     hudBtn:SetPoint("LEFT", applyBtn, "RIGHT", 14, 0)
     hudBtn:SetScript("OnClick", function() ns.ShowBlizzardHUDCode() end)
-    Paragraph(p, 4, -128, 10,
+    Paragraph(p, 4, -150, 10,
         "The HUD layout (\"Gonkast Preset\", Bartender4/portrait positions etc) is a separate, MANUAL " ..
         "step: the button above shows a copyable code — paste it yourself via Esc > Edit Mode > Import " ..
         "Layout. Doing it by hand avoids a harmless-but-noisy taint warning that an automatic import " ..
@@ -589,7 +660,7 @@ local function BuildPage6(content)
 
     local resultFs = p:CreateFontString(nil, "ARTWORK")
     SF(resultFs, 11)
-    resultFs:SetPoint("TOPLEFT", 4, -172)
+    resultFs:SetPoint("TOPLEFT", 4, -194)
     resultFs:SetWidth(CONTENT_W); resultFs:SetJustifyH("LEFT"); resultFs:SetWordWrap(true)
     resultFs:SetTextColor(0.6, 0.9, 0.6)
 
@@ -684,8 +755,24 @@ local function BuildPage7(content)
         if listFrame:IsShown() then listFrame:Hide() else RebuildList(); listFrame:Show() end
     end)
 
+    -- 2026-07-16: "usar este perfil para cualquier personaje NUEVO de la cuenta" — distinto del
+    -- boton de abajo (que solo fuerza ESTE personaje). Guardado en db.bartenderAutoProfile;
+    -- ns.ApplyBartenderAutoProfile (ProfilesApply.lua) lo aplica en cada login via la API viva de
+    -- AceDB (Bartender4.db:SetProfile), sin depender del orden de carga entre addons.
+    -- Posicion FIJA a -122 (2026-07-16, fix de prolijidad): la version original lo puso a -240,
+    -- una posicion que en la practica caia ENCIMA/pegado del boton Apply y el texto de resultado
+    -- de abajo (que estaban mas arriba, a -136/-186) — se reordeno todo en una columna logica:
+    -- dropdown -> checkbox "any new char" -> boton Apply -> resultado.
+    local autoCB = Toggle(p, "Also use this profile for any NEW character on this account",
+        4, -122,
+        function() local d = ns.GetDB(); return d and d.bartenderAutoProfile == selectedBTProfile and d.bartenderAutoProfile ~= nil end,
+        function(v)
+            local d = ns.GetDB(); if not d then return end
+            d.bartenderAutoProfile = v and selectedBTProfile or nil
+        end)
+
     local applyBtn = TexButton(p, CUSTOM.APPLY, 240, 40, "Apply to this character", 13)
-    applyBtn:SetPoint("TOPLEFT", dropBtn, "BOTTOMLEFT", 0, -60)
+    applyBtn:SetPoint("TOPLEFT", 2, -160)
 
     local resultFs = p:CreateFontString(nil, "ARTWORK")
     SF(resultFs, 11)
@@ -702,7 +789,15 @@ local function BuildPage7(content)
         end
         bt.profileKeys = bt.profileKeys or {}
         bt.profileKeys[charKey] = selectedBTProfile
-        resultFs:SetText("Set \"" .. charKey .. "\" to use the \"" .. selectedBTProfile .. "\" profile.\nType /reload now.")
+        -- Si el toggle "any NEW character" esta marcado, actualizamos el nombre guardado por si
+        -- el usuario cambio de dropdown despues de tildarlo (deben quedar sincronizados).
+        local d = ns.GetDB()
+        if d and d.bartenderAutoProfile then d.bartenderAutoProfile = selectedBTProfile end
+        local msg = "Set \"" .. charKey .. "\" to use the \"" .. selectedBTProfile .. "\" profile.\nType /reload now."
+        if d and d.bartenderAutoProfile then
+            msg = msg .. "\nFuture new characters will also default to \"" .. selectedBTProfile .. "\" (no /reload needed for that part)."
+        end
+        resultFs:SetText(msg)
     end)
     return p
 end

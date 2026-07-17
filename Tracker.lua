@@ -528,12 +528,25 @@ end
 -- core.lua y el boss-hider de mas arriba: el alpha no requiere permiso seguro, Show/Hide del
 -- ObjectiveTrackerFrame protegido desde codigo inseguro SI puede tainear/bloquear). Corre
 -- SIEMPRE (independiente de TrackerEnabled/Colorize titles) en el mismo ticker de 0.4s.
+-- FIX (2026-07-16, reportado por el usuario: "hide on hostile target" del boss-hider parpadeaba,
+-- desaparecia y reaparecia casi al instante): este ticker de 0.4s forzaba SIEMPRE
+-- otf:SetAlpha(1) cuando NO estaba en preview, pisando el alpha=0 que el boss-hider seguro
+-- (SetupBossHider/OnHide, mas arriba) acababa de aplicar al cambiar de target/combate. Ahora
+-- SOLO toca el alpha para (a) esconder en preview, o (b) restaurarlo cuando ES este mismo
+-- codigo el que lo habia escondido (previewApplied) — nunca pisa el alpha del boss-hider.
+local previewApplied = false
 local function ApplyPreviewHide()
     local otf = _G.ObjectiveTrackerFrame
     if not otf then return end
     local db = ns.GetDB and ns.GetDB()
     local hide = ns.IsUnlocked and ns.IsUnlocked() and db and db.lockHide and db.lockHide.tracker
-    otf:SetAlpha(hide and 0 or 1)
+    if hide then
+        otf:SetAlpha(0)
+        previewApplied = true
+    elseif previewApplied then
+        otf:SetAlpha(1)
+        previewApplied = false
+    end
 end
 ns.ApplyTrackerPreviewHide = ApplyPreviewHide   -- expuesto para reaccionar AL TOQUE (ver Options.lua OnUnlockChanged)
 C_Timer.NewTicker(0.4, function()

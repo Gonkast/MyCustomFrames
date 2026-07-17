@@ -709,6 +709,243 @@ en core (que `CurrentProfile` lo vea como upvalue) + rama en CurrentProfile/Appl
 default en InitDB/FillDefaults + `IsX`/label + grupo sidebar + `IsXSection` + rama en SelectUnit
 + tab + seccion de contenido en Options.
 
+## TEST: heal prediction + absorcion de daño (`HealAbsorb.lua`, 2026-07-16) — RONDA 2, RE-HABILITADO
+**Ronda 1:** el usuario probo `/mcfhealtest` (valores FALSOS fijos, no dependen de la API real) y
+no vio NADA → se saco del toc. **Causa raiz encontrada:** `u.fillTex` (el relleno de vida real,
+`core.lua` linea ~1568) esta en la capa **`OVERLAY`** (sublevel 0 implicito); los overlays de
+heal/absorcion estaban en la capa **`ARTWORK`** — en el orden de capas de WoW
+(`BACKGROUND < BORDER < ARTWORK < OVERLAY < HIGHLIGHT`), ARTWORK se dibuja SIEMPRE DETRAS de
+OVERLAY, asi que el relleno de vida los tapaba por completo, sin importar blend mode ni color.
+**Ronda 2:** corregido a `u.bar:CreateTexture(nil, "OVERLAY", nil, 1)` / `nil, 2` (sublevel 1 y 2,
+MAYOR que el 0 implicito de `fillTex`). **El usuario reporto SEGUIR sin ver nada tras este fix** — se agrego **`/mcfhealdebug`**
+(diagnostico real) y el usuario corrio `/mcfhealtest`+`/mcfhealdebug`: la salida mostro
+**`bar._readable=false bar._target=nil`** en el momento exacto probado. **CAUSA RAIZ #2
+encontrada:** `UpdateUnit` leia `u.bar._readable`/`_target`, calculados por el TICKER de
+core.lua — un ticker COMPLETAMENTE SEPARADO del propio de `HealAbsorb.lua` (ambos corren cada
+0.1-0.2s pero de forma independiente) — en el instante exacto que nuestro ticker corria, ese dato
+podia no estar listo/actualizado todavia (carrera entre 2 tickers), dejando el guard "vida
+legible" en false para SIEMPRE en la practica (aunque el usuario tuviera vida 100% legible un
+instante despues). **FIX (ronda 3):** `GetHealthFraction(u)` nuevo, AUTOCONTENIDO — calcula la
+fraccion de vida ACA MISMO (mismo metodo secret-safe que `GetUnitFraction` de core.lua:
+`UnitHealthPercent` + fallback geometrico por ancho del relleno nativo), sin depender del timing
+de otro archivo/ticker. Ademas el modo de PRUEBA (`/mcfhealtest`) ya NO exige vida legible en
+absoluto — usa 0.5 como base si no hay dato disponible, para SIEMPRE mostrar algo al probar.
+`/mcfhealdebug` ahora tambien imprime `GetHealthFraction(u)` para comparar contra el dato viejo
+del ticker de core. **Ronda 4 (mismo dia): "es un rectangulo, encajalo en el hpbar de cada party".** El overlay
+finalmente SI se veia (confirmado con screenshot) pero como un rectangulo blanco solido — el skin
+custom de la barra (rombo/diamante con transparencia horneada en la imagen del `.tga`) no tiene
+esa forma, y `WHITE8x8` (textura blanca lisa sin transparencia) estirada en un rectangulo no
+respeta el contorno del skin. **Fix: `PositionOverlay` ahora usa la MISMA textura del skin**
+(`p.texture`, el mismo asset que `fillTex`/`RenderManualFill`) en vez de `WHITE8x8`, y la recorta
+con `SetTexCoord` de la MISMA forma que el relleno real (ventana `[startFrac, startFrac+widthFrac]`
+del eje X de la imagen, no solo el ancho del contenedor) — asi la parte con forma/transparencia de
+la imagen queda recortada igual que el relleno base, y el overlay "encaja" en el hpbar en vez de
+verse como un bloque solido pegado encima. PENDIENTE VALIDAR EN JUEGO (4ta ronda).
+- **Ronda 5: probado en dungeon (daño + heal reales simultaneos) — el usuario NO vio nada.**
+  En vez de seguir con fixes a ciegas, se agrego **`/mcfhealverbose`**: avisa por chat cuando
+  `UnitGetIncomingHeals`/`UnitGetTotalAbsorbs` del PLAYER devuelven algo != 0 DE VERDAD (sin
+  valores falsos), o cuando la vida quedo "no legible" ese tick (causa mas probable en combate
+  intenso — mas info sin necesitar timear un `/mcfhealdebug` manual en el instante exacto).
+  El usuario corrio `/mcfhealverbose` en un dungeon real (daño+heal simultaneos) → salio
+  **"base health not readable this tick" constantemente**.
+- **Ronda 6 (descartada como fix definitivo):** se probo replicar la firma exacta
+  `UnitHealthPercent(unit, true, CurveConstants.ScaleTo100)` (3 args, la que usa `core.lua` con
+  exito en el resto del addon) — el usuario volvio a probar en dungeon real y **SIGUIO sin ser
+  legible** ("base health not readable this tick" de nuevo).
+- **Ronda 7 (ACTUAL) — REDISEÑO: ancla GEOMETRICA, ya NO lee ningun numero de vida.** En vez de
+  seguir peleando con la legibilidad del NUMERO de vida (rondas 2-6), el archivo ya no llama
+  `UnitHealthPercent` ni ningun equivalente. `GetFillEdge(u)` devuelve la TEXTURA que representa
+  el relleno visible ahora mismo (`u.fillTex` en modo manual, o la textura NATIVA del StatusBar
+  en modo secreto — cualquiera de las 2 que este `IsShown()`), y `PlaceAfter(tex, anchorTex, ...)`
+  ancla el overlay JUSTO DESPUES de esa textura via `SetPoint` (geometria pura — "donde esta el
+  borde de un frame ya renderizado" NUNCA requiere leer/comparar el valor de vida en si, asi que
+  no puede toparse con secret number bajo NINGUNA circunstancia). Solo el ANCHO
+  (`healFrac`/`absorbFrac`) sigue siendo numerico, pero sale de `UnitHealthMax` (SIEMPRE real,
+  nunca secreto) y las predicciones de heal/absorcion (no la vida en si). **Trade-off aceptado:**
+  el texcoord del overlay ya no calca la ventana EXACTA de la imagen del skin en ese punto
+  (requeriria saber la fraccion ABSOLUTA, que es lo que no podiamos leer) — usa una ventana LOCAL
+  (0..widthFrac) desde el propio origen de la imagen, asi que el patron del skin no continua
+  perfectamente el del relleno base en el borde exacto, pero mantiene la FORMA general (diamante/
+  rombo) en vez de ser un rectangulo, y sobre todo, YA NO DEPENDE de que la vida sea legible.
+  PENDIENTE VALIDAR EN JUEGO (7ma ronda) — dungeon real de nuevo.
+Overlay de PREDICCION DE HEAL (verde) y ABSORCION DE DAÑO/escudos (celeste) sobre las barras de
+vida — pregunta del usuario "con mis texturas custom como se lograria": **respuesta: NO hace
+falta un asset dedicado**, un rectangulo de la textura blanca nativa (`Interface\Buttons\
+WHITE8x8`) tintado semi-transparente y con `BlendMode ADD` ENCIMA del relleno existente alcanza,
+funciona con CUALQUIER skin de barra que el usuario tenga puesto.
+- **Heal prediction:** `UnitGetIncomingHeals(unit)` / `UnitHealthMax(unit)` → fraccion; se dibuja
+  desde donde termina la vida actual LEGIBLE (`u.bar._readable`/`u.bar._target`, mismo dato que ya
+  usa `UnitUpdateBar`) hasta donde llegaria si el heal pegara.
+- **Absorcion:** `UnitGetTotalAbsorbs(unit)` / maxHP → fraccion; se dibuja justo DESPUES del heal
+  prediction (o desde la vida actual si no hay heal entrante).
+- **`PositionOverlay(tex, container, startFrac, widthFrac, reverse)`:** helper propio (no reusa
+  `RenderManualFill` de core.lua porque ese SIEMPRE arranca desde el borde 0 — este necesita
+  arrancar en un offset arbitrario). Respeta `reverseFill` por unidad. CAPEADO al borde de la
+  barra (100%) — no soporta (todavia) el "desborde" que hace Blizzard con escudos enormes.
+- **Secret-safe:** TODOS los valores (vida base, heal entrante, absorcion, vida maxima) pasan por
+  `SafeVal` (pcall+issecretvalue) antes de cualquier operacion; si algo sale secreto/invalido ese
+  tick, se ocultan los overlays (nunca se adivina). Solo unidades de VIDA (`u.kind ~= "power"`),
+  solo fuera de preview (`ns.IsUnlocked()`).
+- Ticker propio (0.2s) independiente del ticker principal de core.lua, iterando `ns.frames`
+  (expuesto). Sin toggle en el menu todavia (test directo, siempre activo si hay heal/absorcion).
+- **Modo de PRUEBA: `/mcfhealtest`** — fuerza `healFrac=0.18`/`absorbFrac=0.10` FALSOS en TODAS
+  las unidades visibles con vida legible (sin depender de un heal/escudo real), mismo patron que
+  `/mcfpartytest`.
+- **PENDIENTE si convence:** toggle enable/disable en el menu, colores configurables, soporte de
+  desborde del escudo mas alla del 100%.
+
+## TEST: auras de Party1 reveladas por hover (`PartyAuraPreview.lua`, 2026-07-16)
+Prueba de concepto pedida por el usuario, ANTES de generalizar a Party1-5 o fusionar con el
+sistema de AURAS completo: al pasar el mouse sobre Party1, hasta **4 debuffs** se deslizan hacia
+la IZQUIERDA + aparecen con fade; al sacar el mouse, se esconden igual de suave. **No ocupa
+espacio en pantalla cuando no hay hover** (alpha 0 + colapsado contra el frame en reposo).
+- **Sigue al unitframe SIN código de seguimiento manual:** el frame `carrier` (contiene los 4
+  iconos) es CHILD de `ns.frames.party1.button` — se mueve/escala solo con el (drag, scale wheel,
+  snap) porque WoW mueve los hijos automáticamente con el padre.
+- **Trigger:** `HookScript` (no `SetScript`, para no pisar el tooltip/otros hooks ya puestos en
+  ese botón) de `OnEnter`/`OnLeave` sobre `u.button` (SecureUnitButtonTemplate) — HookScript sobre
+  frames protegidos es seguro (no reemplaza el script protegido, solo agrega una llamada
+  después), patrón ya usado en otras partes del addon.
+- **Animación por suavizado exponencial (no AnimationGroup nativo):** mismo criterio que el fade
+  del Explorer Mode en `core.lua` (half-life ~70ms, independiente del framerate) — un driver
+  `OnUpdate` propio interpola `frac` (0=escondido, 1=revelado) hacia el `target` (1 en hover, 0 al
+  salir), aplicando alpha=frac + un offset X = `(1-frac)*SLIDE_DIST` (90px) sobre el `carrier`. Se
+  prefirió esto a Translation/Alpha `AnimationGroup` nativos por ser más predecible y reusar un
+  patrón ya probado en el addon.
+- **Datos:** `CollectPartyDebuffs` propio (NO reusa el `CollectAuras` compartido de core.lua —
+  ese junta HELPFUL+HARMFUL para los grupos SIEMPRE-visibles; acá solo interesan debuffs, cap 4).
+  Refresca cada 0.3s SOLO mientras el mouse sigue encima (`u.button:IsMouseOver()`), vía
+  `C_Timer.NewTicker`. Cooldown/swipe secret-safe (`SetCooldownFromDurationObject`, mismo método
+  que el resto del addon).
+- **Deliberadamente MINIMO:** sin color por tipo de dispel, sin tooltip, sin cancelar buff, sin
+  posición configurable en el menú — solo Party1, para validar la sensación del hover-reveal
+  antes de invertir en generalizarlo. Si convence: generalizar a party1-5 (data-driven, como
+  `UNITS`/`PORTRAITS`/`AURAS`), agregar color por `dispelName`, y decidir si se funde con el
+  sistema de `AURAS` existente o queda separado (comportamiento fundamentalmente distinto: oculto
+  por defecto vs siempre visible).
+- Cargado en el toc tras `MasqueSkin.lua`, antes del bridge de AzeriteUI. Arranca en
+  `PLAYER_LOGIN` + 1s (mismo margen que otros triggers similares del addon).
+- **FIX de taint reportado en juego: `data.applications` (contador de acumulaciones) puede ser un
+  NUMERO SECRETO** (auras de OTRAS unidades en Midnight) — comparar `stacks > 1` directo sin
+  chequear `issecretvalue` primero crasheaba ("attempt to compare... secret number value").
+  Corregido al mismo orden de guard que usa el resto del addon: `type(stacks)=="number"` primero
+  (no crashea con secretos) → `not issecretvalue(stacks)` despues → RECIEN la comparacion
+  aritmetica. Unico campo de `data` que se leia sin guardar en este archivo (icon/auraID/duration
+  ya pasaban por pcall o se usaban solo como pass-through a C).
+- **Ronda 5 (mismo dia) — generalizado a Party1-5 + direccion configurable + strata LOW.**
+  `Setup(key)` ahora recibe la unidad (antes solo "party1"), llamado en loop para las 5
+  (`PARTY_KEYS`); `ns.PartyAuraPreviewTest` paso de tener `Show/Hide` sueltos a ser una tabla
+  `key -> {Show, Hide, Reanchor}`. **Direccion** (`db.partyAuraDirection`, global, default
+  "left"): `DIR_INFO` mapea cada direccion a como se ancla el `carrier` respecto al boton
+  (`carrierPoint`/`carrierRel`/`axis`/`sign`) — el carrier y los iconos LEEN la direccion en vivo
+  en cada `ApplyFrac`/`RefreshIcons` (barato, solo un `db` read), pero la `hoverZone` ESTATICA
+  necesita re-calcularse a mano cuando cambia (`ReanchorZone`, expuesta como `.Reanchor` y
+  disparada en bloque por `ns.RefreshPartyAuraDirection()` desde el menu). Para arriba/abajo
+  (`axis="y"`), los iconos se centran horizontalmente (`startX = -rowW/2 + ICON_SIZE/2`, mismo
+  criterio "centrado horizontal" que el grid de auras de player/target en core.lua) en vez de
+  crecer desde un borde como en izq/der. **Strata bajada de HIGH a LOW** (pedido del usuario) en
+  `carrier` y `hoverZone`.
+- **FIX "no puedo clickear el mundo/enemigos donde salen las auras" (2026-07-16):** `hoverZone` e
+  íconos con `EnableMouse(true)` capturaban TODO click en su zona, aunque visualmente ahi no hay
+  nada propio (es viewport de juego normal, no un boton real) — bloqueaba targetear enemigos con
+  click o interactuar con el mundo. Fix: `SetPropagateMouseClicks(true)` en ambos (mismo mecanismo
+  que ya usa el overlay de cancelar auras del addon) — deja pasar el CLICK a lo que este atras
+  (hasta el WorldFrame si no hay nada mas), sin afectar el hover/tooltip (OnEnter/OnLeave siguen
+  disparando igual, solo cambia el ruteo del click). Ninguno de los dos tenia OnClick propio, asi
+  que no se pierde funcionalidad.
+- **FIX "el boton de mouseover es muy grande" (2026-07-16):** `hoverZone` antes crecia con la
+  cantidad/tamaño de iconos (`SLIDE_DIST + 4*step`), bastante mas grande que el frame real, asi
+  que el mouse disparaba el reveal pasando por fuera de la unidad. Ahora `hoverZone` tiene el
+  MISMO tamaño que el outline de edicion (`u.button:GetWidth()/GetHeight()`, igual que
+  `MakeEditHighlight` que dibuja el borde de Lock mode) — el usuario puede saber su tamaño
+  mirando el outline en `/mcf`, sin adivinar.
+- **FIX de crash al abrir el menu: `ns.CurrentProfile()` (core.lua) no sabia que devolver para
+  `ns.currentEdit == "aura_party"`** — caia en el fallback `db.units["aura_party"]` (nil) y
+  crasheaba ("attempt to index a nil value") apenas se abria CUALQUIER seccion del menu, porque
+  widgets OCULTOS de otras pestañas (ej. "Anchor to" de General) igual corren su refresher via
+  `RefreshControls()` sin importar la seccion visible, y `getP()[dbKey]` con `getP()` nil explota.
+  Fix: nuevo branch en `CurrentProfile` devuelve una tabla `EMPTY_PROFILE` (vacia, reusada) para
+  "aura_party" — sus widgets REALES usan `getTbl`/`onChange` (nunca `getP()`), asi que la tabla
+  vacia solo sirve de red de seguridad nil-safe para esos refreshers ajenos.
+- **Menu (2026-07-16, MOVIDO de Editing a Auras > Party, pedido del usuario):** "Party" ahora es
+  un elemento SINGLETON del grupo sidebar "AURAS" (`UNIT_GROUPS`, junto a Player/Target Auras),
+  mismo patron que Tracker/Glow — `ns.IsPartyAura(key)` ("aura_party"), `IsPartyAuraSection`
+  (prefijo `ap_`), 1 sola pestaña "Gen" (`ap_general`). Controles: boton ciclico "Direction"
+  (`db.partyAuraDirection`, left→right→up→down) + slider "Icon size" (`db.partyAuraIconSize`,
+  12-48px, via `MakeSlider` con `getTbl`/`onChange` para valores GLOBALES ya que Party Auras NO
+  tiene edicion por-unidad — aplica a las 5 party frames por igual). Ambos llaman
+  `ns.RefreshPartyAuraDirection()`/`ns.RefreshPartyAuraSize()` (mismo alias, un solo recompute
+  real) para re-anclar las 5 `hoverZone` sin reiniciar el addon. **Tamaño del icono AHORA
+  configurable en vivo:** `ResizeIcon(b, sz)` (nuevo helper) recalcula tamaño + inset del borde;
+  se llama en CADA `RefreshIcons`, asi que mover el slider se ve al instante. Defaults en
+  `InitDB` (core.lua): `partyAuraDirection="left"`, `partyAuraIconSize=26`.
+- **FIX critico (mismo dia): "no pasaba nada" al probar sin grupo.** Causa: el `carrier` era
+  CHILD de `u.button` (el boton de Party1) — si Party1 esta oculto (sin grupo, lo esconde el
+  state driver de party), los HIJOS de un frame oculto NO SE RENDERIZAN aunque ellos mismos esten
+  `Show()`n (la visibilidad real es `IsShown() Y de TODOS los padres`). Fix: `carrier` ahora
+  cuelga de `UIParent` (visibilidad propia) y solo se ANCLA (`SetPoint`) a `u.button` — anclar
+  geometricamente a un frame oculto SI funciona (resuelve la posicion igual), asi que sigue
+  siguiendo al frame real cuando SI hay grupo, pero ya no depende de que este visible para
+  poder probarse.
+- **Ronda 2 (mismo dia) — FIX "se ponen locos" al pasar el mouse + tooltip:** la ronda 1 usaba
+  `OnEnter`/`OnLeave` de los ICONOS (que se mueven durante la animacion) para decidir `target` —
+  eso genera un feedback loop real: el icono se desliza bajo el cursor → dispara OnEnter →
+  target=1 → sigue deslizando → se aleja → OnLeave → target=0 → revierte → se acerca de nuevo →
+  OnEnter... = temblor/parpadeo constante. **FIX: `hoverZone`, una zona de hover FIJA que NUNCA
+  se mueve** (cubre desde el borde derecho del boton hasta el area maxima donde terminan los
+  iconos revelados, `SLIDE_DIST + 4*(ICON_SIZE+ICON_GAP)` de ancho) decide `target` — al ser
+  estatica, el cursor entra/sale UNA sola vez sin importar que los iconos de adentro se animen.
+  Los iconos individuales ahora SOLO controlan la tooltip (`GameTooltip:SetUnitAuraByAuraInstanceID`,
+  fallback `SetUnitDebuffByAuraInstanceID`), nunca `target`. **Tooltip en modo de prueba:** en vez
+  de omitirla en los placeholders (`b._fake`), muestra un tooltip generico ("Test Debuff N") para
+  poder probar la tooltip tambien sin auras reales, como pidio el usuario.
+- **Ronda 3 (mismo dia) — FIX GRAVE: "no puedo clickear/targetear la unidad".** La ronda 2 puso
+  `hoverZone` ENCIMA del boton real de Party1 (ancla + ancho que cubria tambien el boton, con
+  `EnableMouse(true)` en strata HIGH) — un frame invisible tapandole los clicks al boton real de
+  abajo. **FIX: `hoverZone` ahora SOLO cubre la zona de iconos, a la IZQUIERDA del boton, sin
+  superponerse NUNCA con el boton en si** (ancla `SetPoint("RIGHT", u.button, "LEFT", 0, 0)` en
+  vez de al `"RIGHT"` del boton). El boton real queda 100% libre para click/target/menu, como
+  siempre. El boton dispara el reveal por su cuenta via `HookScript` (lectura, no bloquea nada).
+  **"Que se queden un segundo" (LEAVE_DELAY=0.35s):** en vez de esconder apenas el mouse sale, se
+  espera ese margen y se re-chequea (`u.button:IsMouseOver() or hoverZone:IsMouseOver()`) — si el
+  cursor ya volvio a estar sobre cualquiera de los dos, no se esconde. `SLIDE_DIST` bajado de 90 a
+  56 ("se van algo lejos", feedback del usuario).
+- **Ronda 4 (mismo dia) — borde igualado al resto del sistema de auras + visible en combate.**
+  (a) `BORDER_SCALE = 0.26` (antes 0.16 hardcodeado) para que el borde luzca IGUAL que las auras
+  de player/target (`AuraDefaultsFor.borderScale` default en core.lua). (b) **"Se muestran fijas
+  en combate, el hover es para todo lo demas"**: nueva variable `inCombat` (poll de
+  `UnitAffectingCombat("party1")` cada 0.3s en el mismo ticker que ya refrescaba iconos — no hay
+  evento confiable para "OTRA unidad entro/salio de combate" sin polling; secret-safe via
+  `SafeInCombat` propio, mismo criterio que `safeBool` de core.lua). `Recompute()` combina
+  `hoverActive OR inCombat` → `target`; el hover (`EvaluateHover`) ya NO escribe `target`
+  directo, solo actualiza `hoverActive` y llama `Recompute()`.
+- **Debuffs con prioridad + fallback a buffs, para testear en unidad real (2026-07-16):**
+  `CollectPartyAuras` (renombrada de `CollectPartyDebuffs`) recolecta HARMFUL primero; si hay
+  MENOS de 4 debuffs, rellena los huecos con HELPFUL (buffs normales) hasta completar 4 — se
+  recalcula de cero en cada refresh (no quedan "buffs pegados" una vez que aparece un debuff
+  nuevo, ceden el lugar automaticamente). Cada aura se marca `__filter` ("HARMFUL"/"HELPFUL") para
+  que la tooltip use el metodo correcto (`SetUnitDebuffByAuraInstanceID` vs
+  `SetUnitBuffByAuraInstanceID`) y para el color de borde: rojo generico para debuffs, dorado para
+  buffs (el color exacto por tipo de dispel de Blizzard queda pendiente para cuando se generalice
+  a las 5 party frames — por ahora es solo rojo/dorado para poder distinguir a simple vista cual
+  es cual durante la prueba).
+- **FIX de sentido invertido en `ApplyFrac`:** la formula original tenia `shiftX = (1-frac)*SLIDE_DIST`
+  (offset GRANDE a frac=0/escondido, CHICO a frac=1/revelado) — invisible por el alpha=0 en reposo,
+  pero literalmente el movimiento contrario a "se desliza hacia la izquierda AL aparecer". Corregido
+  a `shiftX = frac*SLIDE_DIST` (arranca pegado al boton, termina desplazado a la izquierda).
+- **Combate/taint: CONFIRMADO seguro.** Nada de este sistema toca atributos protegidos del boton
+  real de Party1 — solo LEE su posicion (SetPoint) y su geometria (`IsMouseOver`), y usa
+  `HookScript` (permitido sobre frames protegidos sin tainear, patron ya usado en el resto del
+  addon). `carrier`/iconos son frames insegures normales colgando de `UIParent`.
+- **Modo de PRUEBA: `/mcfpartytest`** — toggle que fuerza 4 iconos PLACEHOLDER (`Interface\Icons\
+  INV_Misc_QuestionMark`, "signo de interrogacion") y el reveal DE UNA, sin esperar hover real ni
+  necesitar estar en grupo/tener debuffs. `testMode` (local a nivel de archivo) hace que
+  `RefreshIcons` arme una lista inventada (4 entradas, la 2da con `applications=2` para ver el
+  contador de acumulaciones tambien) en vez de `CollectPartyDebuffs`. `data.__fake` en el swipe:
+  si es placeholder se hace `swipe:Clear()` (nunca deja un cooldown radial viejo pegado de una
+  aura real anterior). Expuesto `ns.PartyAuraPreviewTest.Show()/Hide()` para que el
+  SlashCmdList (fuera del scope de `Setup()`) pueda forzar `target`/`RefreshIcons`/`StartDriver`.
+
 ## Perfiles desde archivos (`Profiles_Pre/Post.lua`, `Profiles\`, `ProfilesApply.lua`) — 2026-07-14
 Sistema DISTINTO de los presets internos del addon (`db.presets`): reemplaza el SavedVariables de
 OTROS addons por copias guardadas en `Profiles\<Addon>\<Addon>.lua`.
@@ -948,8 +1185,14 @@ Fuente **FRIZQT** (distinta de la Lato del panel de opciones principal). Carga A
   `db.setupSeen == false` (nil en instalación limpia). Al cerrarlo (X o "Skip setup") se marca
   `db.setupSeen = true` y no vuelve a aparecer solo. **Reabrible a mano en cualquier momento con el
   slash command `/mcfsetup`** (no depende de `setupSeen`).
-- **Página 1 — "What this addon does":** resumen de features (unit frames/portraits/auras/tracker/
-  info bar/micro menu/extras), texto fijo (`INTRO_LINES`).
+- **Página 1 — "What this addon does" — REDISEÑADA 2026-07-16** (pedido del usuario: "mas
+  organizado y simplificado, mas limpio" — la version vieja era una lista vertical de párrafos
+  largos con mucho espacio vacío al final). Ahora es una **grilla de 2 columnas x 3 filas** de
+  `FeatureCard` (ícono check + título corto + descripción de 1 línea, `FEATURES` tabla) + un item
+  "Extras" ancho completo abajo + un divisor + la nota de cierre en su propia franja — usa el
+  espacio vertical de forma pareja en vez de dejar un hueco grande. `FeatureCard(parent, x, y, w,
+  title, desc)` es el helper reusable (icono `ART.CHECK_ICON` 15x15, título `COLOR_TITLE` 13pt,
+  descripción `COLOR_DESC` 11pt con wrap).
 - **Página 2 — "Bundled profiles for other addons":** lista dinámica (`RefreshPage2`, usa
   `ns.ProfilesStatus()`/`ns.ProfilesInfo`) de los addons detectados con perfil Gonkast incluido
   (Bartender4/DynamicCam/Masque/Chattynator/AzeriteUI) — checkbox por addon (tildado por defecto,
@@ -973,10 +1216,36 @@ Fuente **FRIZQT** (distinta de la Lato del panel de opciones principal). Carga A
   también accesible con `/mcfhud` en cualquier momento) para que el usuario lo pegue a mano en
   Esc > Edit Mode > Import Layout. Resultado del "Apply now" mostrado en texto (aplicados/error),
   pide `/reload` manual (mismo patrón anti-taint: NUNCA auto-reload).
-- **Página 7 — "Bartender4 profile":** Bartender4 es AceDB multi-perfil; a veces NO cae en
+- **Página 7 — "Bartender4 profile" — ampliada 2026-07-16 con "any NEW character":** nuevo toggle
+  "Also use this profile for any NEW character on this account" (`db.bartenderAutoProfile`,
+  guarda el NOMBRE del perfil elegido, nil = apagado). Distinto del botón "Apply to this
+  character" (que fuerza SOLO el personaje actual escribiendo `profileKeys[charKey]` directo en
+  el SavedVariables crudo). **Por qué no alcanza con SavedVariables crudo para "cualquier
+  personaje futuro":** Bartender4 llama `AceDB:New("Bartender4DB", defaults)` SIN 3er argumento
+  `defaultProfile` en su propio `OnInitialize` — resuelve el perfil del personaje UNA vez, en el
+  momento en que Bartender4 carga, y el orden relativo de carga entre Bartender4 y MyCustomFrames
+  es el MISMO todas las sesiones → escribir el SavedVariables crudo antes de que Bartender4 lo lea
+  requeriría cargar SIEMPRE antes que Bartender4, no garantizable. **Fix: `ns.ApplyBartenderAutoProfile`
+  (ProfilesApply.lua) usa la API VIVA de AceDB** (`Bartender4.db:SetProfile(name)`), que se puede
+  llamar en CUALQUIER momento DESPUES de que Bartender4 ya inicializó — se dispara en
+  `PLAYER_LOGIN` + 2s (tiempo de sobra), sin depender del orden de carga. Detecta "personaje nunca
+  configurado" comparando `GetCurrentProfile()` contra el `charKey` (AceDB usa el charKey como
+  nombre de perfil de fallback cuando no hay entrada en `profileKeys`); si coincide, llama
+  `SetProfile(wanted)` (cambia el perfil EN VIVO y persiste `profileKeys[charKey]` para la
+  próxima sesión, igual efecto que el botón manual). `db.bartenderAutoApplied[charKey]` evita
+  re-forzarlo en personajes donde el usuario ya cambió a otro perfil a mano después.
+- **Página 7 — "Bartender4 profile" (original):** Bartender4 es AceDB multi-perfil; a veces NO cae en
   "Default" tras el /reload de la página 6 pese al fallback estándar de AceDB → esta página fuerza
   `profileKeys[personaje] = perfil elegido` DIRECTO (selector de perfiles vía
   `GetBartenderProfiles()`, lee `ns.Profiles["Bartender4DB"].profiles`).
+- **Pasada de prolijidad general (2026-07-16, pedido del usuario "mejora cada step"):**
+  (a) Página 2: el check verde de "detectado" pasó de anclarse a la derecha del LABEL (X distinta
+  según el largo de cada nombre de addon) a una columna FIJA (x=340) — lista alineada de verdad.
+  (b) Páginas 3 y 4: agregado divisor + nota de cierre al final — antes terminaban en un vacío
+  grande sin nada (mismo problema que se arregló en la página 1). (c) Página 7: el checkbox nuevo
+  "any new character" (agregado el mismo día) había quedado en una posición fija (y=-240) que se
+  pisaba con el botón Apply y el texto de resultado — reordenado en columna lógica: dropdown →
+  checkbox → botón Apply (ahora en posición fija en vez de encadenado al dropdown) → resultado.
 - **NOTA:** el comentario de cabecera del archivo dice "6 paginas" pero el código construye 7
   (`contentPages[1..7]`) — desactualizado, no corregido (no afecta funcionamiento).
 - Para resetear y volver a ver el wizard automático (sin usar `/mcfsetup`): poner

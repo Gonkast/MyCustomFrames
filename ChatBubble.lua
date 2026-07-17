@@ -15,11 +15,6 @@ local CHATBUBBLE_KEY = "chatbubble"
 ns.CHATBUBBLE_KEY = CHATBUBBLE_KEY
 ns.IsChatBubble = function(key) return key == CHATBUBBLE_KEY end
 
-local CB_EDGES = {
-    "TopLeftCorner", "TopRightCorner", "BottomLeftCorner", "BottomRightCorner",
-    "TopEdge", "BottomEdge", "LeftEdge", "RightEdge",
-}
-
 local function ChatBubbleDefaults()
     return {
         enabled = true, hideBackground = true,
@@ -35,21 +30,68 @@ local function CB_Flags(p)
     return f
 end
 
--- Skinea una bubble (fondo + fuente/color por-bubble como refuerzo del font global).
-local function CB_SkinBubble(frame, fs, p)
-    if p.hideBackground then
-        for _, e in ipairs(CB_EDGES) do
-            if frame[e] then frame[e]:SetTexture(nil) end
-        end
-        if frame.Center then frame.Center:SetTexture(nil) end
-        if frame.Tail then frame.Tail:SetTexture(nil) end
+-- FIX RONDA 5 (2026-07-16): el usuario identifico el asset real -- "Interface\Tooltips\..." es
+-- el path CLASICO de `SetBackdrop` (bgFile). Un fondo pintado por SetBackdrop se renderiza
+-- INTERNAMENTE (C++) y NUNCA aparece como una region Texture accesible via GetRegions()/
+-- GetChildren() en Lua -- por eso ninguna de las rondas anteriores (por nombre de campo, ni
+-- recorrido recursivo de regiones) podia encontrarlo NUNCA, sin importar cuanto se recorriera.
+-- El fix real es limpiar el BACKDROP en si: SetBackdrop(nil) + colores a alpha 0 como refuerzo.
+local function CB_ClearBackgroundTextures(frame, depth)
+    if not frame or (depth or 0) > 4 then return end
+    if frame.SetBackdrop then
+        pcall(frame.SetBackdrop, frame, nil)
     end
-    pcall(function() fs:SetFont(p.font or "Fonts\\FRIZQT__.TTF", p.fontSize or 13, CB_Flags(p)) end)
-    if p.useColor and p.color then
-        pcall(function() fs:SetTextColor(p.color.r, p.color.g, p.color.b) end)
+    if frame.SetBackdropColor then pcall(frame.SetBackdropColor, frame, 0, 0, 0, 0) end
+    if frame.SetBackdropBorderColor then pcall(frame.SetBackdropBorderColor, frame, 0, 0, 0, 0) end
+    if frame.GetNumRegions then
+        for i = 1, frame:GetNumRegions() do
+            local r = select(i, frame:GetRegions())
+            if r and r.GetObjectType and r:GetObjectType() == "Texture" then
+                r:SetTexture(nil)
+                if r.SetAtlas then pcall(r.SetAtlas, r, nil) end
+                r:SetAlpha(0)
+            end
+        end
+    end
+    if frame.GetNumChildren then
+        for i = 1, frame:GetNumChildren() do
+            local child = select(i, frame:GetChildren())
+            if child then CB_ClearBackgroundTextures(child, (depth or 0) + 1) end
+        end
     end
 end
 
+-- OPTIMIZACION (2026-07-16, auditoria): antes se reaplicaba SetFont/SetTextColor/backdrop a
+-- TODAS las bubbles visibles en CADA tick de 0.1s (10x/seg), aunque nada hubiera cambiado —
+-- ademas cada llamada envolvia un pcall(function() ... end), que ASIGNA UNA CLOSURE NUEVA por
+-- llamada (basura de GC constante). Mismo patron de cache que fsState en Tracker.lua: por-bubble
+-- (tabla EXTERNA weak-keyed, nunca escribimos claves propias sobre frames de Blizzard) se guarda
+-- el TEXTO actual + el epoch de config; si ninguno cambio desde el tick anterior, se saltea todo
+-- el trabajo. Las bubbles son frames pooled que Blizzard reutiliza para mensajes nuevos, por eso
+-- el texto (no solo la config) tambien es parte de la clave de cache.
+local bubbleState = setmetatable({}, { __mode = "k" })   -- outer -> { text, epoch }
+local configEpoch = 0
+
+local function CB_SkinBubble(outer, frame, fs, p)
+    local text = fs:GetText()
+    local st = bubbleState[outer]
+    if st and st.text == text and st.epoch == configEpoch then return end
+    if not st then st = {}; bubbleState[outer] = st end
+    st.text, st.epoch = text, configEpoch
+
+    if p.hideBackground then
+        CB_ClearBackgroundTextures(outer)
+    end
+    pcall(fs.SetFont, fs, p.font or "Fonts\\FRIZQT__.TTF", p.fontSize or 13, CB_Flags(p))
+    if p.useColor and p.color then
+        pcall(fs.SetTextColor, fs, p.color.r, p.color.g, p.color.b)
+    end
+end
+
+-- RONDA 3 (2026-07-16): se probo combinar GetAllChatBubbles(false) + (true) para cubrir bubbles
+-- de NPC en calabozos, pero `true` en este cliente devuelve basura (literalmente WorldFrame,
+-- confirmado con el error "bad argument #1 ... Usage: GetChildren()" al intentar iterar sus
+-- miles de hijos) — se descarta esa via, vuelta a solo `false` (la que sí funciona).
 local function CB_IterateBubbles(fn)
     if not (C_ChatBubbles and C_ChatBubbles.GetAllChatBubbles) then return end
     local ok, list = pcall(C_ChatBubbles.GetAllChatBubbles, false)
@@ -57,7 +99,7 @@ local function CB_IterateBubbles(fn)
     for _, obj in pairs(list) do
         local bubble = obj.GetChildren and obj:GetChildren() or nil
         if bubble and bubble.String and bubble.String:GetObjectType() == "FontString" then
-            fn(bubble, bubble.String)
+            fn(obj, bubble, bubble.String)
         end
     end
 end
@@ -67,12 +109,13 @@ local function RefreshChatBubble()
     if not (db and db.chatbubble) then return end
     local p = db.chatbubble
     if not p.enabled then return end
+    configEpoch = configEpoch + 1   -- invalida la cache de CB_SkinBubble (cambio config)
     -- Fuente/color GLOBAL (afecta a todas las bubbles via su font object).
     if ChatBubbleFont then
-        pcall(function() ChatBubbleFont:SetFont(p.font or "Fonts\\FRIZQT__.TTF", p.fontSize or 13, CB_Flags(p)) end)
-        if p.useColor and p.color then pcall(function() ChatBubbleFont:SetTextColor(p.color.r, p.color.g, p.color.b) end) end
+        pcall(ChatBubbleFont.SetFont, ChatBubbleFont, p.font or "Fonts\\FRIZQT__.TTF", p.fontSize or 13, CB_Flags(p))
+        if p.useColor and p.color then pcall(ChatBubbleFont.SetTextColor, ChatBubbleFont, p.color.r, p.color.g, p.color.b) end
     end
-    CB_IterateBubbles(function(frame, fs) CB_SkinBubble(frame, fs, p) end)
+    CB_IterateBubbles(function(outer, frame, fs) CB_SkinBubble(outer, frame, fs, p) end)
 end
 ns.RefreshChatBubble = RefreshChatBubble
 
@@ -82,7 +125,7 @@ if C_Timer and C_Timer.NewTicker then
         local db = ns.GetDB()
         if db and db.chatbubble and db.chatbubble.enabled then
             local p = db.chatbubble
-            CB_IterateBubbles(function(frame, fs) CB_SkinBubble(frame, fs, p) end)
+            CB_IterateBubbles(function(outer, frame, fs) CB_SkinBubble(outer, frame, fs, p) end)
         end
     end)
 end

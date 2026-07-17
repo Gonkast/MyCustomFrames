@@ -535,6 +535,7 @@ local function IsMicroSection(k) return k:sub(1, 3) == "mm_" end
 local function IsChatSection(k) return k:sub(1, 3) == "cb_" end
 local function IsTrackerSection(k) return k:sub(1, 2) == "t_" end
 local function IsGlowSection(k) return k:sub(1, 2) == "g_" end
+local function IsPartyAuraSection(k) return k:sub(1, 3) == "ap_" end
 
 -- p_rest / p_badges dependen de features del portrait; el resto siempre aplican.
 local function PortraitSectionAllowed(k, feats)
@@ -557,9 +558,11 @@ local function SelectUnit(key)
     local isGlow = ns.IsGlow and ns.IsGlow(key)
     local isAura = ns.IsAura and ns.IsAura(key)
     local isPortrait = ns.IsPortrait and ns.IsPortrait(key)
+    local isPartyAuraTitle = ns.IsPartyAura and ns.IsPartyAura(key)
     local u = (isAura and ns.auras[key]) or (isPortrait and ns.portraits[key]) or ns.frames[key]
     local title = isInfo and "Info Bar" or isMicro and "Micro Menu" or isChat and "Chat Bubble"
         or isTracker and "Quest Tracker" or isGlow and "Assisted Glow"
+        or isPartyAuraTitle and "Party Auras"
         or (u and u.label) or key
     if unitTitle then unitTitle:SetText("Editing:  |cffffffff" .. title .. "|r") end
 
@@ -590,6 +593,13 @@ local function SelectUnit(key)
     if isGlow then
         for k, b in pairs(sectionTabs) do b:SetShown(IsGlowSection(k)) end
         if not IsGlowSection(currentSection) then ShowSection("g_general") end
+        return
+    end
+
+    local isPartyAura = ns.IsPartyAura and ns.IsPartyAura(key)
+    if isPartyAura then
+        for k, b in pairs(sectionTabs) do b:SetShown(IsPartyAuraSection(k)) end
+        if not IsPartyAuraSection(currentSection) then ShowSection("ap_general") end
         return
     end
 
@@ -633,14 +643,14 @@ local function SelectUnit(key)
     for _, f in ipairs(powerHidden) do f:SetShown(not isPower) end
     for _, f in ipairs(colorHidden) do f:SetShown(not noColor) end
     for k, b in pairs(sectionTabs) do
-        if IsPortraitSection(k) or IsAuraSection(k) or IsInfoSection(k) or IsMicroSection(k) or IsChatSection(k) or IsTrackerSection(k) or IsGlowSection(k) then b:SetShown(false)
+        if IsPortraitSection(k) or IsAuraSection(k) or IsInfoSection(k) or IsMicroSection(k) or IsChatSection(k) or IsTrackerSection(k) or IsGlowSection(k) or IsPartyAuraSection(k) then b:SetShown(false)
         elseif nameSectionKeys[k] then b:SetShown(hasName and true or false)
         elseif k == "cast" or k == "highlight" then b:SetShown(not isPower)
         else b:SetShown(true) end
     end
     if IsPortraitSection(currentSection) or IsAuraSection(currentSection) or IsInfoSection(currentSection)
        or IsMicroSection(currentSection) or IsChatSection(currentSection) or IsTrackerSection(currentSection)
-       or IsGlowSection(currentSection)
+       or IsGlowSection(currentSection) or IsPartyAuraSection(currentSection)
        or currentSection == "presets" or currentSection == "explorer" or currentSection == "editing"
        or currentSection == "setup"
        or (nameSectionKeys[currentSection] and not hasName)
@@ -658,7 +668,7 @@ local UNIT_GROUPS = {
     { title = "PORTRAITS", keys = { "portrait_player", "portrait_pet", "portrait_focus",
         "portrait_target", "portrait_tot",
         "portrait_party1", "portrait_party2", "portrait_party3", "portrait_party4", "portrait_party5" } },
-    { title = "AURAS", keys = { "aura_player", "aura_target" } },
+    { title = "AURAS", keys = { "aura_player", "aura_target", "aura_party" } },
     { title = "INFO",  keys = { "infobar" } },
     { title = "MICRO", keys = { "micromenu" } },
     { title = "CHAT",  keys = { "chatbubble" } },
@@ -713,6 +723,7 @@ local function BuildPanel()
     LABELS[ns.CHATBUBBLE_KEY or "chatbubble"] = "Chat Bubble"
     LABELS[ns.TRACKER_KEY or "tracker"] = "Quest Tracker"
     LABELS[ns.GLOW_KEY or "glow"] = "Assisted Glow"
+    LABELS["aura_party"] = "Party"
 
     -- ===== SIDEBAR: lista de unidades agrupada (con scroll) =====
     local sidebar = CreateFrame("Frame", nil, panel)
@@ -1051,6 +1062,17 @@ local function BuildPanel()
     -- Pestanas de SECCION para el assisted glow.
     local glowSecList = { { key = "g_general", label = "Gen" } }
     for i, s in ipairs(glowSecList) do
+        local b = MakeButton(content, s.label, 46, 20)
+        b:SetPoint("TOPLEFT", 2 + (i - 1) * 48, -26)
+        b:SetScript("OnClick", function() ShowSection(s.key) end)
+        b:Hide()
+        sectionTabs[s.key] = b
+    end
+
+    -- Pestanas de SECCION para Party Auras (singleton, 1 sola pestaña "Gen" — igual patron que
+    -- Tracker/Glow arriba).
+    local partyAuraSecList = { { key = "ap_general", label = "Gen" } }
+    for i, s in ipairs(partyAuraSecList) do
         local b = MakeButton(content, s.label, 46, 20)
         b:SetPoint("TOPLEFT", 2 + (i - 1) * 48, -26)
         b:SetScript("OnClick", function() ShowSection(s.key) end)
@@ -1896,6 +1918,46 @@ local function BuildPanel()
         local resetBtn = MakeButton(f, "Reset assisted glow", 200, 22)
         resetBtn:SetPoint("TOPLEFT", R, -210)
         resetBtn:SetScript("OnClick", function() ns.ResetUnit(ns.currentEdit) end)
+    end
+
+    -- =========================== SECCION PARTY AURAS (TEST, 2026-07-16) ===========================
+    -- Elemento SINGLETON (como Tracker/Glow): una sola seccion controla LAS 5 party frames a la
+    -- vez (no hay edicion por-unidad, PartyAuraPreview.lua es deliberadamente global). Los
+    -- settings (db.partyAuraDirection/partyAuraIconSize) son GLOBALES, no van en db.units — por
+    -- eso los widgets usan getTbl/onChange en vez de getP()/OnEdit (patron ya usado para grid
+    -- size/explorer en el resto del menu).
+    do
+        local f = Section("ap_general")
+        MakeHeader(f, "Party Auras  —  hover/combat reveal (test)", L, -6, 430)
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 11)
+        note:SetPoint("TOPLEFT", L, -32); note:SetWidth(430); note:SetJustifyH("LEFT")
+        note:SetTextColor(0.8, 0.8, 0.8)
+        note:SetText("Applies to ALL 5 party frames at once. Shows up to 4 auras (debuffs take " ..
+            "priority, buffs fill empty slots) on mouseover, or fixed while the unit is in combat. " ..
+            "Try /mcfpartytest to preview without a real group.")
+
+        -- Direccion: boton ciclico (no hay MakeCycle generico para valores GLOBALES, se arma a
+        -- mano igual que el resto de los botones ciclicos del addon).
+        local dirBtn = MakeButton(f, "", 220, 24)
+        dirBtn:SetPoint("TOPLEFT", L, -76)
+        local function DirText()
+            local d = ns.GetDB() and ns.GetDB().partyAuraDirection or "left"
+            dirBtn.text:SetText("Direction: " .. d)
+        end
+        dirBtn:SetScript("OnClick", function()
+            local list = ns.PARTY_AURA_DIRECTIONS or { "left", "right", "up", "down" }
+            local d = ns.GetDB(); if not d then return end
+            local cur, idx = d.partyAuraDirection or "left", 1
+            for i, v in ipairs(list) do if v == cur then idx = i break end end
+            d.partyAuraDirection = list[(idx % #list) + 1]
+            DirText()
+            if ns.RefreshPartyAuraDirection then ns.RefreshPartyAuraDirection() end
+        end)
+        refreshers[#refreshers + 1] = DirText
+
+        MakeSlider(f, "Icon size", 12, 48, 1, "partyAuraIconSize", L, -120,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshPartyAuraSize then ns.RefreshPartyAuraSize() end end)
     end
 
     -- =========================== SECCION SETUP (integracion + perfiles) ===========================

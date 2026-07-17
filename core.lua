@@ -138,7 +138,11 @@ local UNITS = {
     { key = "party2", unit = "party2", label = "P2" },
     { key = "party3", unit = "party3", label = "P3" },
     { key = "party4", unit = "party4", label = "P4" },
-    { key = "party5", unit = "party5", label = "P5" },
+    -- "party5" NO es un unit token real de WoW (una party normal son 4 OTROS miembros +
+    -- vos = 5 en total; UnitExists("party5") siempre da false) — pedido del usuario
+    -- (2026-07-16): en vez de un 5to slot muerto, este frame ahora muestra al PROPIO
+    -- jugador (unit="player"), como una tile mas dentro de la grilla de party.
+    { key = "party5", unit = "player", label = "P5" },
 }
 ns.UNITS = UNITS
 
@@ -243,16 +247,19 @@ ns.DefaultsFor = DefaultsFor
 -- requireExists = solo aparece si la unidad existe. deadOnly = solo si la unidad esta
 -- muerta. kind = "model" (retrato 3D) o "icon" (icono de clase).
 local PORTRAITS = {
+    -- Pedido del usuario (2026-07-16): sin badge de LIDER en player/pet/target/tot (feature
+    -- "leader" quitada) — el badge de MARCA DE RAID (raidTarget) se deja intacto. focus y las
+    -- party (roleLeader, distinto flag) NO se tocan.
     { key = "portrait_player", unit = "player", label = "Player", kind = "model",
-      features = { rest = true, faction = true, combat = true, dualPos = true, leader = true, raidTarget = true } },
+      features = { rest = true, faction = true, combat = true, dualPos = true, raidTarget = true } },
     { key = "portrait_pet", unit = "pet", label = "Pet", kind = "model",
-      features = { dualPos = true, leader = true, raidTarget = true }, requireExists = true },
+      features = { dualPos = true, raidTarget = true }, requireExists = true },
     { key = "portrait_focus", unit = "focus", label = "Focus", kind = "model",
       features = { dualPos = true, leader = true, raidTarget = true }, requireExists = true },
     { key = "portrait_target", unit = "target", label = "Target", kind = "model",
-      features = { leader = true, raidTarget = true }, requireExists = true, deadOnly = true },
+      features = { raidTarget = true }, requireExists = true, deadOnly = true },
     { key = "portrait_tot", unit = "targettarget", label = "ToT", kind = "icon",
-      features = { leader = true, raidTarget = true }, requireExists = true },
+      features = { raidTarget = true }, requireExists = true },
     { key = "portrait_party1", unit = "party1", label = "Party1", kind = "icon",
       features = { raidTarget = true, roleLeader = true }, requireExists = true },
     { key = "portrait_party2", unit = "party2", label = "Party2", kind = "icon",
@@ -261,7 +268,8 @@ local PORTRAITS = {
       features = { raidTarget = true, roleLeader = true }, requireExists = true },
     { key = "portrait_party4", unit = "party4", label = "Party4", kind = "icon",
       features = { raidTarget = true, roleLeader = true }, requireExists = true },
-    { key = "portrait_party5", unit = "party5", label = "Party5", kind = "icon",
+    -- unit="player" (ver nota en UNITS de mas arriba: "party5" no es un token real).
+    { key = "portrait_party5", unit = "player", label = "Party5", kind = "icon",
       features = { raidTarget = true, roleLeader = true }, requireExists = true },
 }
 ns.PORTRAITS = PORTRAITS
@@ -658,12 +666,22 @@ local function AttachScaleWheel(frame, getP, reposition)
     end)
 end
 ns.AttachScaleWheel = AttachScaleWheel   -- expuesto para subsistemas en archivos aparte
+-- Tabla vacia reusada como fallback nil-safe: widgets OCULTOS de otras secciones (ej. "Anchor to"
+-- de la pestaña General) igual corren su refresher via RefreshControls() sin importar que seccion
+-- este visible — necesitan que getP() devuelva ALGO indexable, no nil, o `getP()[dbKey]` explota.
+local EMPTY_PROFILE = {}
 ns.CurrentProfile = function()
     if ns.currentEdit == INFOBAR_KEY then return db.infobar end
     if ns.currentEdit == MICROMENU_KEY then return db.micromenu end
     if ns.currentEdit == CHATBUBBLE_KEY then return db.chatbubble end
     if ns.currentEdit == TRACKER_KEY then return db.tracker end
     if ns.currentEdit == GLOW_KEY then return db.glow end
+    -- 2026-07-16: "aura_party" (PartyAuraPreview.lua) es un elemento SINGLETON como Tracker/Glow,
+    -- pero sus settings son GLOBALES (db.partyAuraDirection/partyAuraIconSize, no una tabla propia
+    -- por-elemento) — sus widgets reales usan getTbl/onChange, nunca getP(). Sin este branch caia
+    -- en `db.units["aura_party"]` (nil) y crasheaba ("attempt to index a nil value") apenas se
+    -- abria el menu, porque OTROS widgets ocultos (de la pestaña General) llaman getP() siempre.
+    if ns.IsPartyAura and ns.IsPartyAura(ns.currentEdit) then return EMPTY_PROFILE end
     if AURA_SET[ns.currentEdit] then return db.auras[ns.currentEdit] end
     if PORTRAIT_SET[ns.currentEdit] then return db.portraits[ns.currentEdit] end
     return db.units[ns.currentEdit]
@@ -1740,6 +1758,15 @@ local function PartyDriverString(u)
     -- [group:raid] es un condicional SEGURO y dinamico: oculta en raid y en
     -- CUALQUIER battleground (todos son grupos de raid al activarse), sin depender
     -- del timing del update en Lua ni del diferido por combate.
+    -- CASO ESPECIAL "party5" (unit="player", pedido del usuario 2026-07-16: el 5to slot
+    -- ahora muestra al propio jugador en vez de un token "party5" que no existe en WoW):
+    -- `[@player,exists]` siempre es verdadero, asi que ese condicional NO sirve para
+    -- ocultarlo estando solo (a diferencia de party1-4, que naturalmente no existen sin
+    -- grupo). Se usa `[group]` (verdadero en CUALQUIER grupo, party o raid) en su lugar,
+    -- para que se comporte igual que las otras 4 tiles: visible solo si estas agrupado.
+    if u.key == "party5" then
+        return "[group:raid] hide; [group] show; hide"
+    end
     return "[group:raid] hide; [@" .. u.unit .. ",exists] show; hide"
 end
 
@@ -2057,6 +2084,10 @@ local function PortraitShouldShow(u)
     if not PP(u).enabled then return false end
     -- Party portraits: gating por tipo de contenido (tickState.partyOK, por tick).
     if tickState.partyOK == false and u.key:sub(1, 14) == "portrait_party" then return false end
+    -- portrait_party5 usa unit="player" (ver nota en UNITS/PartyDriverString): UnitExists("player")
+    -- siempre es true, asi que "requireExists" no alcanza para ocultarlo estando SOLO (sin grupo).
+    -- Mismo criterio que el driver del unitframe: solo visible si estas agrupado.
+    if u.key == "portrait_party5" and not safeBool(IsInGroup) then return false end
     if u.requireExists and not UnitExists(u.unit) then return false end
     if u.deadOnly then
         local dead = safeBool(UnitExists, u.unit) and safeBool(UnitIsDeadOrGhost, u.unit)
@@ -3981,6 +4012,14 @@ local function InitDB()
     if db.gridSnap == nil then db.gridSnap = false end   -- al soltar, ajusta a la grilla
     if db.snapElements == nil then db.snapElements = true end -- B2: alinear con bordes/centros de otros
     if db.syncBlizzEditMode == nil then db.syncBlizzEditMode = true end -- abrir el lock con el Edit Mode de Blizzard
+    -- Bartender4 "usar este perfil para CUALQUIER personaje nuevo de la cuenta" (Setup Wizard
+    -- pagina 7). nil/"" = apagado. bartenderAutoApplied = {charKey=true} para no re-forzar el
+    -- perfil en personajes que el usuario ya cambio a mano despues del primer auto-apply.
+    db.bartenderAutoProfile = db.bartenderAutoProfile or nil
+    -- Direccion del test de auras de party (PartyAuraPreview.lua): izq/der/arriba/abajo.
+    if db.partyAuraDirection == nil then db.partyAuraDirection = "left" end
+    if db.partyAuraIconSize == nil then db.partyAuraIconSize = 26 end
+    db.bartenderAutoApplied = db.bartenderAutoApplied or {}
     -- (Inyeccion AzeriteUI ELIMINADA — causaba taint. db.azerite ya no se usa.)
     if db.previewSecureButton == nil then db.previewSecureButton = false end -- B4: dibuja el area de click
     -- B4: en modo Lock, ocultar SAMPLE de estos elementos (solo preview; no afecta el juego real).

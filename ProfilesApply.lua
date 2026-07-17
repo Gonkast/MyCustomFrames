@@ -32,7 +32,7 @@ local INFO = {
     AzeriteUI5_JuNNeZ_Edition = "AzeriteUI (SavedVariables)",
     Bartender4 = "Bartender4 (profile: GonkastUI)",
     DynamicCam = "DynamicCam (profile: default)",
-    Masque     = "Masque (profile: default + \"Azerite HEX\" skin, bundled in MyCustomFrames)",
+    Masque     = "Masque (default profile + \"Azerite HEX\" skin)",
     Chattynator= "Chattynator (default)",
 }
 
@@ -202,3 +202,54 @@ end
 
 SLASH_MCFHUD1 = "/mcfhud"
 SlashCmdList["MCFHUD"] = function() ns.ShowBlizzardHUDCode() end
+
+-- ==========================================================================
+-- Bartender4: "usar este perfil para CUALQUIER personaje nuevo de la cuenta" (2026-07-16,
+-- pedido por el usuario en la pagina 7 del Setup Wizard). Distinto del boton "Apply to this
+-- character" (que escribe `profileKeys[charKey]` directo en el SavedVariables crudo, sin
+-- garantia de timing): esto usa la API VIVA de AceDB (`Bartender4.db:SetProfile`), que NO
+-- depende de si Bartender4 carga antes o despues de MyCustomFrames.
+--
+-- POR QUE NO alcanza con tocar el SavedVariables crudo aca: Bartender4 llama
+-- `AceDB:New("Bartender4DB", defaults)` (SIN 3er argumento defaultProfile) en su propio
+-- OnInitialize — eso resuelve el perfil del personaje UNA sola vez, en el momento en que
+-- Bartender4 carga (que en la practica siempre pasa en el MISMO orden relativo a este addon,
+-- sesion tras sesion). Si escribieramos `profileKeys[charKey]` en el SavedVariables crudo
+-- ANTES de que Bartender4 lo lea, dependeriamos de cargar antes que Bartender4 SIEMPRE — fragil
+-- y dificil de garantizar. La API viva, en cambio, se puede llamar en CUALQUIER momento despues
+-- de que Bartender4 ya inicializo (PLAYER_LOGIN es tarde de sobra para eso), y
+-- `AceDBObject:SetProfile(name)` tanto cambia el perfil EN VIVO como escribe
+-- `profileKeys[charKey]` en el SavedVariables para la proxima sesion — mismo efecto que el boton
+-- manual de la pagina 7, pero sin la carrera de timing.
+local function ApplyBartenderAutoProfile()
+    local d = ns.GetDB and ns.GetDB()
+    local wanted = d and d.bartenderAutoProfile
+    if not wanted or wanted == "" then return end
+    local addon = _G.Bartender4
+    if not (addon and addon.db and addon.db.GetCurrentProfile and addon.db.SetProfile) then return end
+    local charKey = (UnitName("player") or "?") .. " - " .. (GetRealmName() or "?")
+    d.bartenderAutoApplied = d.bartenderAutoApplied or {}
+    -- Ya se aplico una vez para ESTE personaje: no forzar de nuevo (si el usuario cambio a mano
+    -- a otro perfil despues, respetamos su eleccion en vez de pisarla en cada login).
+    if d.bartenderAutoApplied[charKey] then return end
+    local ok, cur = pcall(addon.db.GetCurrentProfile, addon.db)
+    if not ok then return end
+    -- Solo forzar si el personaje NO tiene perfil propio configurado todavia: AceDB usa el
+    -- charKey como nombre de perfil de fallback (ver initdb en AceDB-3.0) cuando no hay entrada
+    -- previa en profileKeys — eso es la señal de "personaje nunca configurado".
+    if cur == charKey and cur ~= wanted then
+        pcall(addon.db.SetProfile, addon.db, wanted)
+    end
+    d.bartenderAutoApplied[charKey] = true
+end
+
+local btAutoFrame = CreateFrame("Frame")
+btAutoFrame:RegisterEvent("PLAYER_LOGIN")
+btAutoFrame:SetScript("OnEvent", function(self)
+    self:UnregisterAllEvents()
+    if C_Timer and C_Timer.After then
+        C_Timer.After(2, function() pcall(ApplyBartenderAutoProfile) end)
+    else
+        pcall(ApplyBartenderAutoProfile)
+    end
+end)

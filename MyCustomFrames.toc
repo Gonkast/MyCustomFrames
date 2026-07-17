@@ -16,6 +16,9 @@ MicroMenu.lua
 Grouping.lua
 MasqueSkin.lua
 
+# Auras de Party1-5 reveladas por hover/combate, direccion configurable.
+PartyAuraPreview.lua
+
 # Bridge con AzeriteUI (reintegrado 2026-07-15 para re-probar con taint.log: la causa real del
 # taint persistente resulto ser StaticPopupDialogs/Calendario, NO la mutacion de tablas de config
 # de AzeriteUI — esa hipotesis quedo marcada como "parcial o erronea" en su momento).
