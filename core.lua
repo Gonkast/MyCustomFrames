@@ -98,7 +98,11 @@ ns.PL = {
     BG    = A .. "SettingsPanelBackground.jpg",
     DIV_H = A .. "Divider_Gradient_Horizontal.tga",
     DIV_V = A .. "Divider_DropShadow_Vertical.tga",
-    FONT  = A .. "Lato-Bold.ttf",
+    -- 2026-07-17: Fonts\FRIZQT__.TTF (fuente por defecto de Blizzard) en vez de
+    -- Lato-Bold.ttf, para que el titulo y TODO el panel de opciones (Options.lua
+    -- usa esto via setFont) hagan juego con el wizard de Setup.lua, que ya usaba
+    -- FRIZQT por separado.
+    FONT  = "Fonts\\FRIZQT__.TTF",
 }
 
 local GOLD = { r = 1, g = 0.882, b = 0.608 }   -- FFE19B (color de texto por defecto)
@@ -3790,7 +3794,7 @@ end
 -- Blizzard frames, fade-in, grid/snap, Sync Edit Mode, Explorer y sus zonas).
 -- ==========================================================================
 local GLOBAL_FLAT_KEYS = {
-    "hideEditGreen", "groupMoveParty", "groupMoveBoss", "mouselook", "hideBlizzard",
+    "hideEditGreen", "groupMoveParty", "groupMoveBoss", "mouselook", "hideBlizzard", "barReposition",
     "dcFix", "gridShow", "gridSnap", "snapElements", "syncBlizzEditMode",
     "previewSecureButton", "fadeIn", "fadeDuration",
     "explorerEnabled", "explorerCombat", "explorerTarget", "explorerCasting", "explorerFadeAlpha",
@@ -4007,6 +4011,7 @@ local function InitDB()
     if db.groupMoveBoss == nil then db.groupMoveBoss = false end
     if db.mouselook == nil then db.mouselook = false end
     if db.hideBlizzard == nil then db.hideBlizzard = false end
+    if db.barReposition == nil then db.barReposition = false end
     if db.dcFix == nil then db.dcFix = true end   -- fix DialogueUI+DynamicCam (on por defecto)
     if db.gridShow == nil then db.gridShow = false end   -- grid de alineacion en modo Lock
     if db.gridSnap == nil then db.gridSnap = false end   -- al soltar, ajusta a la grilla

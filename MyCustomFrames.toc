@@ -16,6 +16,10 @@ MicroMenu.lua
 Grouping.lua
 MasqueSkin.lua
 
+# Reposiciona la barra possess/vehicle de Bartender4 (BT4Bar5) a una posicion fija
+# SOLO mientras el jugador esta MONTADO (db.barReposition, toggle en Options.lua/Setup.lua).
+BarReposition.lua
+
 # Auras de Party1-5 reveladas por hover/combate, direccion configurable.
 PartyAuraPreview.lua
 

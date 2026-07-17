@@ -41,12 +41,16 @@ local function SF(fs, size, flags)
     if not fs:SetFont(FRIZQT, size, flags or "") then fs:SetFontObject("GameFontNormal") end
 end
 
--- Paleta de colores tomada de Plumber (hex pedidos por el usuario, ya normalizados a 0-1):
--- titulos 786553, texto de descripcion 7f7a72, lineas/texturas 7f6b59, opciones 877866.
-local COLOR_TITLE  = { 0x78 / 255, 0x65 / 255, 0x53 / 255 }
-local COLOR_DESC   = { 0x7f / 255, 0x7a / 255, 0x72 / 255 }
-local COLOR_LINE   = { 0x7f / 255, 0x6b / 255, 0x59 / 255 }
-local COLOR_OPTION = { 0x87 / 255, 0x78 / 255, 0x66 / 255 }
+-- 2026-07-17: actualizada para que coincida EXACTO con la paleta final de
+-- Options.lua (misma jerarquia con contraste real entre roles: titulo dorado
+-- saturado, texto de opcion casi blanco, descripcion gris-tostado apagado,
+-- lineas marron oscuro). Antes tenia sus propios valores viejos (786553 etc),
+-- todos muy parecidos entre si — mismo problema de falta de contraste que
+-- tenia Options.lua antes de esta ronda de ajustes. NO se tocan texturas.
+local COLOR_TITLE  = { 215 / 255, 192 / 255, 163 / 255 }   -- dorado-tostado (headers/titulos)
+local COLOR_DESC   = { 163 / 255, 157 / 255, 147 / 255 }   -- gris-tostado apagado (notas/descripciones)
+local COLOR_LINE   = { 148 / 255, 124 / 255, 102 / 255 }   -- marron oscuro (separadores, nunca texto)
+local COLOR_OPTION = { 226 / 255, 216 / 255, 199 / 255 }   -- casi blanco calido (checkboxes/labels)
 
 -- Parrafo de una linea (con wrap) en el ancho de contenido comun: usado para el cuerpo de
 -- texto de cada pagina (evita repetir SetWidth/SetJustifyH/SetWordWrap/SetTextColor 3 veces).
@@ -77,7 +81,9 @@ local function TexButton(parent, texturePath, w, h, text, fontSize)
         local fs = b:CreateFontString(nil, "OVERLAY")
         SF(fs, fontSize or 13)
         fs:SetPoint("CENTER", 0, 1)
-        fs:SetTextColor(1, 0.92, 0.75)
+        -- 2026-07-17: (1,0.92,0.75) era un tono propio, no el COLOR_TITLE
+        -- compartido con el resto del wizard/panel principal.
+        fs:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
         fs:SetText(text)
         b.text = fs
     end
@@ -353,7 +359,7 @@ local function BuildPage1(content)
     div:SetVertexColor(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3])
 
     Paragraph(p, 0, divY - 16, 11,
-        "Everything is editable later from Interface Options > AddOns > this panel, or with /mcf to move/lock frames.")
+        "Everything is editable later with /mcfmenu (options panel), or /mcf to move/lock frames.")
     return p
 end
 
@@ -771,8 +777,20 @@ local function BuildPage7(content)
             d.bartenderAutoProfile = v and selectedBTProfile or nil
         end)
 
+    -- 2026-07-16: mueve la barra possess/vehicle de Bartender4 (BT4Bar5) a una posicion
+    -- fija mientras el jugador esta MONTADO (ver BarReposition.lua). Guardado en
+    -- db.barReposition, mismo toggle que en Options.lua (Editing tab) — solo se agrega
+    -- aca tambien para que quede visible durante el setup inicial.
+    local barRepoCB = Toggle(p, "Move Bartender possess bar while mounted", 4, -146,
+        function() local d = ns.GetDB(); return d and d.barReposition end,
+        function(v)
+            local d = ns.GetDB(); if not d then return end
+            d.barReposition = v
+            if ns.RefreshBarReposition then ns.RefreshBarReposition() end
+        end)
+
     local applyBtn = TexButton(p, CUSTOM.APPLY, 240, 40, "Apply to this character", 13)
-    applyBtn:SetPoint("TOPLEFT", 2, -160)
+    applyBtn:SetPoint("TOPLEFT", 2, -184)
 
     local resultFs = p:CreateFontString(nil, "ARTWORK")
     SF(resultFs, 11)

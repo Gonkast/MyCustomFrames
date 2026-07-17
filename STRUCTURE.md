@@ -7,6 +7,112 @@ Titulo del toc = "AzeriteUI |cffffcc00—|r Gonkast Preset", author Gonkast; la 
 siendo `MyCustomFrames` (renombrarla romperia las rutas de `Assets\`). Texto visible en INGLES;
 comentarios en español.
 
+**ACTUALIZADO 2026-07-17.** Sesion grande de rediseño del menu de opciones + features nuevas:
+
+- **`BarReposition.lua` (nuevo archivo, carga despues de `MasqueSkin.lua`)**: reposiciona la barra
+  possess/vehicle de Bartender4 (`BT4Bar5` — NO `BT4Bar3`, ese frame no existe en el perfil de
+  Bartender del usuario) a una posicion fija SOLO mientras el jugador esta MONTADO (`IsMounted()`).
+  Captura el anclaje ORIGINAL real de Bartender via `GetPoint()` antes de sobreescribirlo (nunca
+  asume `BOTTOM,UIParent,BOTTOM` a mano — un intento anterior hizo eso y la barra "desaparecia"
+  por anclarla mal) y lo restaura exacto al desmontar. Toggle en `Options.lua` (Editing tab, ahora
+  sidebar) y duplicado en `Setup.lua` (wizard, pagina 7). No hace nada si Bartender4 no esta
+  instalado (`_G["BT4Bar5"]` nil-safe en todo el archivo).
+- **`Options.lua` REDISEÑADO por completo**: paso de categoria embebida en Blizzard Settings
+  (`Settings.RegisterCanvasLayoutCategory`) a **frame STANDALONE** (`MyCF_ControlCenter`, 900x576,
+  centrado, arrastrable, ESC-cerrable via `UISpecialFrames`) calcando el layout de 3 columnas de
+  Plumber (sidebar de categorias con buscador → contenido → panel de preview con bullets). Se abre
+  con **`/mcfmenu`** (nuevo), el AddOn Compartment (icono junto al minimapa, texto de
+  visualizacion "AzeriteUI - Gonkast Preset" sin tocar el nombre real del addon), una entrada
+  minima en Interface Options > AddOns (fallback por si el Compartment no existe en este build de
+  Midnight), y un **boton de minimapa propio** (sin libreria, arrastrable, angulo guardado en
+  `db.minimapButtonAngle`). Detalle completo del rediseño (Fases A-D, paleta de colores con
+  jerarquia TITLE/OPTION/DESC/LINE, bugs encontrados y arreglados) en la seccion **"Menu de
+  opciones (rediseño 2026-07-17)"** mas abajo.
+- **`Setup.lua`**: paleta de colores unificada con la de `Options.lua` (mismos 4 roles con
+  contraste real); footer del wizard sin cambios de textura, solo color.
+- **`Profiles/Bartender4/Bartender4.lua`**: snapshot re-exportado desde el SavedVariables real del
+  usuario (2026-07-17) — incluye su posicion actual de la barra possess/vehicle
+  (`x=-214,y=-263`, antes `x=-246,y=-175`). `profileKeys` se deja vacio a proposito (no se
+  bundlea el personaje del usuario; se llena en vivo por personaje via el sistema existente en
+  `Setup.lua`/`ProfilesApply.lua`).
+
+## Menu de opciones (rediseño 2026-07-17)
+
+**Por que:** el usuario pidio calcar el menu del addon Plumber (`E:\...\AddOns\Plumber`). Antes
+de empezar se descubrio que `Options.lua` YA tenia una skin fuertemente inspirada en Plumber
+(assets `Assets\PlumberSettingsPanel.png` y `SettingsPanelBackground.jpg` copiados 1:1 del atlas
+real de Plumber, buscador con sus texcoords exactos) — por eso el trabajo se hizo editando
+`Options.lua` directamente en vez de crear un modulo nuevo (no aplicaba la regla de "codigo nuevo
+en archivo aparte": esto es evolucion del mismo panel, no una feature disjunta).
+
+**Arquitectura resultante:**
+- Frame standalone `MyCF_ControlCenter` (`BackdropTemplate`, 900x576, `CENTER`, `FrameStrata
+  HIGH`, `SetMovable`, `UISpecialFrames` para ESC). Ya NO usa `Settings.RegisterCanvasLayoutCategory`.
+- Borde: nine-slice armado a mano con piezas del atlas `PLB` (mismas coords que el
+  `MainFrame.NineSlice` de respaldo de Plumber, `SettingsPanelNew.lua:2143-2166`). Se probo
+  reemplazarlo por arte propio del usuario (`Background_complete.tga`/`Background_complete1.tga`
+  en `Assets\`) pero no convencio tras varias rondas de ajuste de padding/aspect ratio —
+  revertido al nine-slice. Los archivos quedan en `Assets\` sin usar por si se retoma.
+- **3 columnas**: sidebar (buscador + boton "All" que expande/colapsa todos los grupos +
+  lista de unidades agrupada MAIN/POWER/BOSSES/GROUP/PORTRAITS/AURAS/INFO/MICRO/CHAT/TRACKER/GLOW,
+  con scroll vertical suavizado por interpolacion) → contenido (titulo + fila de sub-tabs con su
+  PROPIO scroll horizontal + area de la seccion activa) → preview (icono + titulo + descripcion en
+  bullets, estatico por familia de seccion).
+- **Fase B** (categorias globales): Setup/Editing/Explorer/Profile se movieron de una fila de tabs
+  arriba a la derecha a ser 4 items FIJOS (no scrollean, pero SI filtran por busqueda) arriba de la
+  lista de unidades en la sidebar, con estilo "prominent" (fuente mas grande, tinte siempre visible)
+  para no confundirse con los items de unidad de abajo. Solo queda **Close** como tab arriba a la
+  derecha.
+- **Paleta de colores** con jerarquia de CONTRASTE real (antes `COLOR_OPTION` era identico a
+  `COLOR_TITLE`, cero distincion visual):
+  - `COLOR_TITLE` = dorado-tostado `(215,192,163)/255` — headers, categorias, estados activos.
+  - `COLOR_OPTION` = casi blanco calido `(226,216,199)/255` — texto de checkboxes/sliders (el
+    contenido que mas se lee).
+  - `COLOR_DESC` = gris-tostado apagado `(163,157,147)/255` — notas/descripciones (~30 sitios
+    que usaban gris plano `(0.7,0.7,0.7)` a mano se unificaron a esto).
+  - `COLOR_LINE` = marron oscuro `(148,124,102)/255` — separadores, nunca texto.
+  - `COLOR_GROUP` = dorado-ambar VIVO `(235,175,90)/255` — **SOLO** los headers de grupo de la
+    sidebar (MAIN/POWER/BOSSES/...); se probo aplicarlo a TODO el panel (ronda 3) y resulto
+    excesivo, revertido a alcance acotado (ronda 4).
+  - Misma paleta exacta copiada a `Setup.lua` (que tenia sus propios valores viejos apagados).
+- **Fuente**: `ns.PL.FONT` (definida en `core.lua`) cambiada de `Lato-Bold.ttf` a
+  `Fonts\FRIZQT__.TTF` — asi todo el panel hace juego con `Setup.lua`, que ya usaba FRIZQT aparte.
+- **Bugs encontrados y arreglados en el camino:**
+  - `MakeHeader`'s diamante decorativo usaba `SetPoint("LEFT", x, y-1)` — `"LEFT"` ancla al CENTRO
+    VERTICAL del padre, no al top; con Sections de ~330px de alto el diamante aparecia ~165px mas
+    abajo del titulo real. Fix: `TOPLEFT` igual que el texto.
+  - Habia DOS `panel:SetScript("OnShow", ...)` — el segundo (agregado al convertir a standalone)
+    pisaba SILENCIOSAMENTE al primero (un sistema de reintentos de 2s contra el bug de "labels en
+    blanco" del viejo canvas de Blizzard). Se fusionaron; el retryTicker en si se ELIMINO despues
+    (ya no aplica sin el canvas) porque causaba el parpadeo real reportado: cada reintento
+    re-disparaba `ShowSection()`, que re-dispara su fade-in, ~20 veces en los primeros 2s.
+  - El scrollbar vertical de la sidebar quedaba anclado a un offset FIJO (`-26` desde arriba) que
+    asumia que la lista arrancaba justo debajo del buscador; al agregar el bloque fijo de
+    categorias globales (Fase B) la lista se corrio mas abajo y el scrollbar quedo desalineado
+    (subia hasta tapar las categorias globales). Fix: anclado a `scroll` (que ya seguia el
+    movimiento dinamico) en vez de un numero fijo.
+  - Los sub-tabs (Gen/Bar/Cage/...) se armaban con posiciones fijas por indice asumiendo que
+    labels largos (Border/Death/Mark/Role) entraban en un ancho fijo — se salian de la pildora Y
+    se superponian con el panel de preview. Fix: `MakeTabButton` auto-ancho segun
+    `GetStringWidth()`, y `BuildTabRow` encadena cada boton al borde derecho del anterior dentro de
+    un ScrollFrame horizontal propio (`tabScroll`/`tabRow`), clippeado al ancho de `content`.
+  - "Move / Lock" y "Preview" (footer) tenian el MISMO click handler
+    (`ns.SetUnlocked(not ns.IsUnlocked())`) — confirmado con el usuario que era un duplicado sin
+    proposito propio, se elimino "Preview".
+- **Features nuevas de UX:**
+  - Fade suave (`UIFrameFadeIn`) al cambiar de seccion y al seleccionar/hover en la sidebar.
+  - Scroll vertical (sidebar) y horizontal (sub-tabs) con interpolacion suave en vez de saltos.
+  - Mientras esta en modo edicion (Move/Lock activo), la ventana se atenua a alpha 0.3 (animado)
+    para organizar elementos de fondo sin cerrarla — vuelve a 1.0 con mouseover del panel.
+  - Copy/Paste se movieron del footer a la esquina superior derecha del contenido (solo visibles
+    editando una unidad/portrait/etc, no en las 4 secciones globales). El footer gano 2 botones
+    nuevos en su lugar: **Reset ALL** (reusa el dialogo `MYCF_RESETALL` de la seccion Profile) y
+    **Setup Wizard** (reabre `ns.ShowSetupWizard()`).
+  - Botones del footer centrados como grupo (anclados en cadena a `moveBtn`, que se re-ancla al
+    centro del panel una vez conocido el ancho total).
+
+---
+
 **ACTUALIZADO 2026-07-15.** Desde el 2026-07-13 se agregaron: sistema de **Perfiles desde archivos**
 (`Profiles_Pre/Post.lua`, `ProfilesApply.lua`, carpeta `Profiles\`), **Integration_AzeriteUI.lua**
 (bridge de skin/colores hacia AzeriteUI5_JuNNeZ_Edition), **Grouping.lua** (mover elementos

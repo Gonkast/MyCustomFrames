@@ -23,13 +23,20 @@ ns.OnProfilePasted = RefreshControls
 ns.OnDragStopped = function(k) if k == ns.currentEdit then RefreshControls() end end
 ns.OnScaleWheel = RefreshControls   -- la rueda en modo Lock cambio una escala: refresca sliders
 
--- Paleta de colores de Plumber (hex pedidos por el usuario): titulos 786553, texto de
--- descripcion 7f7a72, lineas/divisores 7f6b59, opciones/checkboxes 877866. Reemplaza el
--- dorado (1, 0.82, 0.20) que tenia el panel antes; mismos valores que usa Setup.lua.
-local COLOR_TITLE  = { 0x78 / 255, 0x65 / 255, 0x53 / 255 }
-local COLOR_DESC   = { 0x7f / 255, 0x7a / 255, 0x72 / 255 }
-local COLOR_LINE   = { 0x7f / 255, 0x6b / 255, 0x59 / 255 }
-local COLOR_OPTION = { 0x87 / 255, 0x78 / 255, 0x66 / 255 }
+-- Paleta LITERAL de Plumber (2026-07-16, extraida directo de su Def table en
+-- Modules/ControlCenter/SettingsPanelNew.lua:15-38 — reemplaza los valores mas
+-- oscuros/apagados que tenia el panel antes, que eran una aproximacion a mano).
+-- 2026-07-17 (ronda 4): el dorado-ambar vivo de la ronda 3 se probo en TODO
+-- el panel (headers, botones, etc) y resulto DEMASIADO — al usuario le gusto
+-- especificamente en los headers de GRUPO de la sidebar (MAIN/POWER/BOSSES/...)
+-- nada mas. Esos ahora usan su PROPIA constante (COLOR_GROUP); todo lo demas
+-- que usaba COLOR_TITLE/COLOR_OPTION vuelve a los valores de la ronda 2.
+local COLOR_TITLE  = { 215 / 255, 192 / 255, 163 / 255 }   -- Def.TextColorNormal (dorado-tostado)
+local COLOR_DESC   = { 163 / 255, 157 / 255, 147 / 255 }   -- Def.TextColorReadable
+local COLOR_LINE   = { 148 / 255, 124 / 255, 102 / 255 }   -- Def.TextColorNonInteractable
+local COLOR_OPTION = { 226 / 255, 216 / 255, 199 / 255 }   -- casi blanco calido, mas legible/neutro que TITLE
+local COLOR_HIGHLIGHT = { 1, 1, 1 }                        -- Def.TextColorHighlight (hover/seleccionado)
+local COLOR_GROUP  = { 235 / 255, 175 / 255, 90 / 255 }    -- dorado-ambar vivo, SOLO headers de grupo (sidebar)
 
 -- ==========================================================================
 -- WIDGETS ESTILO PLUMBER (usan los assets reales de Plumber\Art)
@@ -79,7 +86,6 @@ local function StyleButton(b, w, h)
     local txt = b:CreateFontString(nil, "OVERLAY")
     setFont(txt, 12)
     txt:SetPoint("CENTER")
-    txt:SetTextColor(0.92, 0.86, 0.70)
     b.text = txt
 
     function b:SetActive(on)
@@ -87,10 +93,14 @@ local function StyleButton(b, w, h)
             for _, t in ipairs(parts) do t:SetVertexColor(1.0, 0.82, 0.35) end
             txt:SetTextColor(1, 1, 1)          -- blanco: se lee sobre el boton oscuro
         else
-            for _, t in ipairs(parts) do t:SetVertexColor(1, 1, 1) end
-            txt:SetTextColor(0.90, 0.85, 0.70)
+            -- 2026-07-17: tinte tostado en vez de blanco puro (el WIDGET.png es gris
+            -- piedra plano al pasarlo sin tenir; con blanco se veia gris/plano y
+            -- desentonaba con la paleta dorada del resto del panel).
+            for _, t in ipairs(parts) do t:SetVertexColor(0.62, 0.52, 0.40) end
+            txt:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
         end
     end
+    b:SetActive(false)
     return b
 end
 
@@ -102,19 +112,200 @@ local function MakeButton(parent, text, w, h)
     return b
 end
 
+-- Tab "pildora" 3-slice de Plumber (PlumberTabButtonTemplate, ver
+-- SettingsPanelNew.lua:1997-2013 y TabButtonMixin:UpdateVisual:1965-1981) — usado
+-- SOLO para la fila superior (Close/Profile/Explorer/Editing/Setup), que hace de
+-- "TabButtonContainer" de Plumber. Mismas coordenadas exactas de su atlas.
+local TAB_UNSEL = { left = { 392, 440 }, center = { 440, 552 }, right = { 552, 600 }, y = { 176, 272 } }
+local TAB_SEL   = { left = { 600, 648 }, center = { 648, 760 }, right = { 760, 808 }, y = { 176, 272 } }
+-- flipY (2026-07-17): voltea verticalmente la textura de la pildora (la parte
+-- "plana" queda abajo en vez de arriba) — pedido puntual para Copy/Paste, sin
+-- afectar al resto de los botones que usan esta misma factory.
+local function MakeTabButton(parent, text, w, h, flipY)
+    w = w or 90
+    h = h or 32
+    local b = CreateFrame("Button", nil, parent)
+    b:SetSize(w, h)
+
+    local function tex(coords)
+        local t = b:CreateTexture(nil, "BACKGROUND")
+        t:SetTexture(PLB)
+        local y1, y2 = TAB_UNSEL.y[1], TAB_UNSEL.y[2]
+        if flipY then y1, y2 = y2, y1 end
+        t:SetTexCoord(coords[1] / 1024, coords[2] / 1024, y1 / 1024, y2 / 1024)
+        return t
+    end
+    local capW = (h < 26) and 14 or 24
+    local left = tex(TAB_UNSEL.left); left:SetSize(capW, h); left:SetPoint("LEFT")
+    local right = tex(TAB_UNSEL.right); right:SetSize(capW, h); right:SetPoint("RIGHT")
+    local center = tex(TAB_UNSEL.center)
+    center:SetPoint("TOPLEFT", left, "TOPRIGHT"); center:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
+    b._tex = { left = left, center = center, right = right }
+
+    local txt = b:CreateFontString(nil, "OVERLAY")
+    setFont(txt, (h < 26) and 10 or 12)
+    txt:SetPoint("CENTER")
+    txt:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+    b.text = txt
+    b._label = text
+    txt:SetText(text)
+
+    -- 2026-07-17: auto-ancho — labels largos (Border/Death/Mark/Role) se salian
+    -- de la pildora porque el ancho quedaba fijo en el valor pedido por el
+    -- caller sin importar cuanto media el texto. Si el texto necesita mas
+    -- espacio que `w`, se agranda el boton (los caps quedan igual, solo el
+    -- centro se estira, ya que esta anclado por relacion a left/right).
+    local needed = txt:GetStringWidth() + capW * 2 + 12
+    if needed > w then b:SetWidth(needed) end
+
+    local function applyCoords(set)
+        local y1, y2 = set.y[1], set.y[2]
+        if flipY then y1, y2 = y2, y1 end
+        left:SetTexCoord(set.left[1] / 1024, set.left[2] / 1024, y1 / 1024, y2 / 1024)
+        center:SetTexCoord(set.center[1] / 1024, set.center[2] / 1024, y1 / 1024, y2 / 1024)
+        right:SetTexCoord(set.right[1] / 1024, set.right[2] / 1024, y1 / 1024, y2 / 1024)
+    end
+    function b:SetActive(on)
+        b._active = on
+        applyCoords(on and TAB_SEL or TAB_UNSEL)
+        txt:SetTextColor(on and 1 or COLOR_TITLE[1], on and 1 or COLOR_TITLE[2], on and 1 or COLOR_TITLE[3])
+    end
+    b:SetScript("OnEnter", function() if not b._active then txt:SetTextColor(1, 1, 1) end end)
+    b:SetScript("OnLeave", function() if not b._active then txt:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]) end end)
+    return b
+end
+
+-- Item de lista SIN chrome de boton por defecto (estilo sidebar real de Plumber:
+-- las categorias son texto plano, solo se ve una caja al pasar el mouse o al
+-- estar seleccionada). 2026-07-17: la version anterior dibujaba un rectangulo de
+-- esquinas duras y borde muy marcado (el usuario lo comparo contra Plumber, que
+-- usa una pildora suave de esquinas redondeadas) — se reemplaza por la MISMA
+-- pildora 3-slice del atlas PLB que ya usa el buscador, tenida mas tenue.
+-- `prominent` (2026-07-17): usado por los 4 items globales Setup/Editing/Explorer/
+-- Profile — el usuario noto que se confundian visualmente con la lista de unidades
+-- de abajo (mismo tamaño/color, parecia que "Setup" era otro elemento mas de las
+-- unitframes). Con prominent=true: fuente mas grande, tinte SIEMPRE visible (no
+-- solo en hover/seleccion) y color mas brillante en reposo.
+local function MakeListItem(parent, text, w, h, prominent)
+    local b = CreateFrame("Button", nil, parent)
+    b:SetSize(w or 104, h or 18)
+
+    local function pillPiece(x1, x2)
+        local t = b:CreateTexture(nil, "ARTWORK")
+        t:SetTexture(PLB)
+        t:SetTexCoord(x1 / 1024, x2 / 1024, 0 / 1024, 80 / 1024)
+        return t
+    end
+    local pLeft = pillPiece(0, 32); pLeft:SetSize(10, (h or 18) + 4); pLeft:SetPoint("LEFT", -2, 0)
+    local pRight = pillPiece(160, 192); pRight:SetSize(10, (h or 18) + 4); pRight:SetPoint("RIGHT", 2, 0)
+    local pMid = pillPiece(32, 160)
+    pMid:SetPoint("TOPLEFT", pLeft, "TOPRIGHT"); pMid:SetPoint("BOTTOMRIGHT", pRight, "BOTTOMLEFT")
+    local pill = { pLeft, pMid, pRight }
+    local idleAlpha = prominent and 0.30 or 0
+    for _, t in ipairs(pill) do t:SetAlpha(idleAlpha); t:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]) end
+    if not prominent then for _, t in ipairs(pill) do t:Hide() end end
+
+    local idleColor = prominent and COLOR_TITLE or COLOR_OPTION
+    local txt = b:CreateFontString(nil, "OVERLAY")
+    setFont(txt, prominent and 13 or 11)
+    txt:SetPoint("LEFT", 6, 0)
+    txt:SetTextColor(idleColor[1], idleColor[2], idleColor[3])
+    txt:SetText(text)
+    b.text = txt
+    b._label = text
+
+    -- 2026-07-17: fade suave en vez de Show/Hide instantaneo al seleccionar/pasar
+    -- el mouse (UIFrameFadeIn/Out son las utilidades estandar de Blizzard, animan
+    -- alpha solas via su propio OnUpdate compartido).
+    for _, t in ipairs(pill) do t:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]) end
+    local function fadePillTo(a, duration)
+        for _, t in ipairs(pill) do
+            if UIFrameFadeIn then
+                if not t:IsShown() then t:SetAlpha(0) end
+                t:Show()
+                UIFrameFadeIn(t, duration or 0.12, t:GetAlpha(), a)
+            else
+                t:SetAlpha(a); t:Show()
+            end
+        end
+    end
+    function b:SetActive(on)
+        b._active = on
+        if on then
+            fadePillTo(0.85)
+        elseif prominent then
+            fadePillTo(idleAlpha)
+        else
+            fadePillTo(0, 0.15)
+        end
+        txt:SetTextColor(on and 1 or idleColor[1], on and 1 or idleColor[2], on and 1 or idleColor[3])
+    end
+    b:SetScript("OnEnter", function()
+        if not b._active then fadePillTo(0.35); txt:SetTextColor(1, 1, 1) end
+    end)
+    b:SetScript("OnLeave", function()
+        if not b._active then
+            fadePillTo(prominent and idleAlpha or 0, 0.15)
+            txt:SetTextColor(idleColor[1], idleColor[2], idleColor[3])
+        end
+    end)
+    return b
+end
+
 local function MakeHeader(parent, text, x, y, width)
+    -- Diamante (2026-07-17): rombo de textura solida rotada 45 grados en vez de un
+    -- glyph de fuente (evita tofu si la fuente no tiene el caracter), calcando el
+    -- iconito que Plumber pone a la izquierda de cada header de seccion.
+    -- BUG (2026-07-17): "LEFT" ancla al CENTRO VERTICAL del padre, no al top —
+    -- con Section frames de ~330px de alto, el rombo terminaba ~165px mas abajo
+    -- del titulo real (el usuario lo vio flotando cerca de una fila de checkbox
+    -- muy por debajo del header). Debe ser TOPLEFT, igual que el texto/divisor.
     local fs = parent:CreateFontString(nil, "ARTWORK")
     setFont(fs, 14)
-    fs:SetPoint("TOPLEFT", x, y)
+    fs:SetPoint("TOPLEFT", x + 12, y)
     fs:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
     fs:SetText(text)
+
+    -- 2026-07-17 (ronda 2): quedaba unos px mas abajo que el centro visual del
+    -- texto. Anclado al CENTRO VERTICAL de `fs` (que ya sabe su propio alto real
+    -- via GetHeight) en vez de un offset fijo a ojo relativo a `y`.
+    local diamond = parent:CreateTexture(nil, "ARTWORK")
+    diamond:SetColorTexture(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+    diamond:SetSize(6, 6)
+    diamond:SetRotation(math.rad(45))
+    diamond:SetPoint("CENTER", fs, "LEFT", -6, 0)
     local div = parent:CreateTexture(nil, "ARTWORK")
     div:SetTexture(PL.DIV_H)
-    div:SetSize(width or 250, 8)
-    div:SetPoint("TOPLEFT", x, y - 16)
+    div:SetSize((width or 250) - 12, 8)
+    div:SetPoint("TOPLEFT", x + 12, y - 16)
     div:SetVertexColor(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.4)
     fs.div = div   -- expuesto para que otros archivos (p.ej. Setup.lua) puedan re-tenirlo
+    fs.diamond = diamond
     return fs
+end
+
+-- Lista de bullets (2026-07-17): parrafos largos como texto plano se leen como
+-- una pared de texto (el usuario lo noto en la seccion Setup). Mismo estilo que
+-- el panel de preview: cuadradito + linea, con el ALTO calculado dinamicamente
+-- via GetStringHeight() en vez de offsets fijos adivinados a mano (eso era lo
+-- que dejaba todo apretado/desalineado). Devuelve el Y final para encadenar.
+local function MakeBulletList(parent, lines, x, y, width)
+    local cy = y
+    for _, line in ipairs(lines) do
+        local dot = parent:CreateTexture(nil, "ARTWORK")
+        dot:SetColorTexture(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+        dot:SetSize(5, 5)
+        dot:SetPoint("TOPLEFT", x + 3, cy - 6)
+        local fs = parent:CreateFontString(nil, "ARTWORK")
+        setFont(fs, 11)
+        fs:SetPoint("TOPLEFT", x + 14, cy)
+        fs:SetWidth(width - 14)
+        fs:SetJustifyH("LEFT"); fs:SetWordWrap(true)
+        fs:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        fs:SetText(line)
+        cy = cy - (fs:GetStringHeight() or 14) - 10
+    end
+    return cy
 end
 
 -- Checkbox: recuadro + check clasicos de Blizzard (cargan SIEMPRE, los usa Ace3), con el
@@ -187,7 +378,7 @@ local function MakeSlider(parent, label, minV, maxV, step, dbKey, x, y, getTbl, 
     local lbl = s:CreateFontString(nil, "ARTWORK")
     setFont(lbl, 11)
     lbl:SetPoint("BOTTOMLEFT", s, "TOPLEFT", 0, 3)
-    lbl:SetTextColor(0.9, 0.88, 0.82)
+    lbl:SetTextColor(COLOR_OPTION[1], COLOR_OPTION[2], COLOR_OPTION[3])
 
     local syncing = false
     local decimals = (step < 1) and 2 or 0
@@ -260,7 +451,7 @@ local function MakeEditBox(parent, label, dbKey, x, y, width)
     local lbl = parent:CreateFontString(nil, "ARTWORK")
     setFont(lbl, 11)
     lbl:SetPoint("TOPLEFT", x, y)
-    lbl:SetTextColor(0.9, 0.88, 0.82)
+    lbl:SetTextColor(COLOR_OPTION[1], COLOR_OPTION[2], COLOR_OPTION[3])
     lbl:SetText(label)
     local eb = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
     eb:SetSize(width or 200, 20)
@@ -395,7 +586,7 @@ local function MakeTexturePicker(parent, label, dbKey, category, x, y, getTbl, o
     local get = getTbl or getP
     local edit = onChange or OnEdit
     local lbl = parent:CreateFontString(nil, "ARTWORK"); setFont(lbl, 11)
-    lbl:SetPoint("TOPLEFT", x, y); lbl:SetTextColor(0.9, 0.88, 0.82); lbl:SetText(label)
+    lbl:SetPoint("TOPLEFT", x, y); lbl:SetTextColor(COLOR_OPTION[1], COLOR_OPTION[2], COLOR_OPTION[3]); lbl:SetText(label)
     local eb = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
     eb:SetSize(138, 20); eb:SetPoint("TOPLEFT", x + 4, y - 15); eb:SetAutoFocus(false)
     eb:SetScript("OnEnterPressed", function(self) get()[dbKey] = self:GetText(); self:ClearFocus(); edit() end)
@@ -452,7 +643,7 @@ local function GetIOPopup()
 
     local action = MakeButton(p, "Import", 110, 24); action:SetPoint("BOTTOMRIGHT", -12, 10); p.action = action
     local hint = p:CreateFontString(nil, "ARTWORK"); setFont(hint, 10)
-    hint:SetPoint("BOTTOMLEFT", 12, 16); hint:SetTextColor(0.7, 0.7, 0.7); p.hint = hint
+    hint:SetPoint("BOTTOMLEFT", 12, 16); hint:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3]); p.hint = hint
     ioPopup = p
     return p
 end
@@ -484,9 +675,56 @@ end
 
 -- ==========================================================================
 -- PANEL
+-- 2026-07-16: convertido de categoria embebida en Blizzard Settings a frame
+-- STANDALONE (estilo Plumber real: ventana propia con borde, arrastrable,
+-- cerrable con ESC y con boton Close) — Settings.RegisterCanvasLayoutCategory
+-- imponia el chrome de Blizzard alrededor del panel; un frame propio permite
+-- calcar el layout de 3 columnas de Plumber (sidebar / contenido / preview).
+-- Se abre con /mcfmenu (Setup.lua ya usa /mcfsetup, core.lua usa /mcf para
+-- el toggle de unlock — no colisiona).
 -- ==========================================================================
-local panel = CreateFrame("Frame")
+local PANEL_W, PANEL_H = 900, 576   -- 576 = mismo PageHeight que usa Plumber
+local PREVIEW_W = 200               -- ancho de la 3ra columna (preview/descripcion)
+
+local panel = CreateFrame("Frame", "MyCF_ControlCenter", UIParent, "BackdropTemplate")
 panel.name = "AzeriteUI — Gonkast Preset"
+panel:SetSize(PANEL_W, PANEL_H)
+panel:SetPoint("CENTER")
+panel:SetFrameStrata("HIGH")
+-- Fondo solido simple (SIN edgeFile): el borde ornamentado real se dibuja aparte
+-- abajo, recortado del atlas PLB (mismas piezas 512-1024/832-1024 que usa el
+-- MainFrame.NineSlice de Plumber real, ver SettingsPanelNew.lua:2143-2166).
+panel:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8" })
+panel:SetBackdropColor(0.10, 0.08, 0.06, 0.97)
+panel:SetMovable(true)
+panel:EnableMouse(true)
+panel:SetClampedToScreen(true)
+panel:Hide()
+tinsert(UISpecialFrames, "MyCF_ControlCenter")   -- permite cerrar con ESC
+
+-- Borde (2026-07-17, intento 2): Background_complete1.tga — version nueva del
+-- usuario, exportada ya cerca del aspect ratio del panel (2592x1632 = 1.588:1
+-- vs panel 900x576 = 1.5625:1, mucho mas parecido que el intento anterior de
+-- 1.157:1). Padding medido con el mismo script de analisis de canal alfa:
+-- izq/der ~3.05%, arriba ~6.13%, abajo ~3.98%.
+local borderTex = panel:CreateTexture(nil, "ARTWORK")
+borderTex:SetTexture("Interface\\AddOns\\MyCustomFrames\\Assets\\Background_complete1.tga")
+borderTex:SetPoint("TOPLEFT", -44, 54)
+borderTex:SetPoint("BOTTOMRIGHT", 44, -41)
+
+-- Franja superior arrastrable (solo la zona del titulo, NO el ancho completo:
+-- los botones globales Profile/Explorer/Editing/Setup + Close viven a la derecha
+-- y necesitan recibir sus propios clics, no ser tapados por el area de arrastre).
+local dragStrip = CreateFrame("Frame", nil, panel)
+dragStrip:SetPoint("TOPLEFT", 12, -8)
+dragStrip:SetSize(360, 28)
+dragStrip:EnableMouse(true)
+dragStrip:SetScript("OnMouseDown", function() panel:StartMoving() end)
+dragStrip:SetScript("OnMouseUp", function() panel:StopMovingOrSizing() end)
+
+ns.OpenControlCenter = function() panel:Show() end
+ns.CloseControlCenter = function() panel:Hide() end
+ns.ToggleControlCenter = function() if panel:IsShown() then panel:Hide() else panel:Show() end end
 
 local sections = {}          -- key -> frame
 local sectionTabs = {}       -- key -> button
@@ -499,6 +737,7 @@ local unitTabs = {}
 -- y ReassertLabels los recorre igual que sectionTabs/unitTabs.
 local panelButtons = {}
 local unitTitle              -- fontstring del titulo de la unidad editada
+local unitCopyBtn, unitPasteBtn   -- Copy/Paste junto al titulo, solo visibles para unidades/portraits/etc
 local powerHidden, colorHidden, nameSectionKeys = {}, {}, { name = true, spell = true }
 local portraitDualBoxes = {}   -- grupos visibles solo si el portrait tiene dualPos
 local portraitModelOnly = {}   -- widgets visibles solo si el retrato es modelo 3D (no icono)
@@ -511,21 +750,45 @@ local explorerBtn              -- boton "Explorer" global (al lado de Profile)
 local editingBtn               -- boton "Editing" global (herramientas de edicion, B5)
 local setupBtn                 -- boton "Setup" global (integracion / perfiles de otros addons)
 local currentSection = "general"
+local UpdatePreview   -- asignada en BuildPanel (3ra columna estilo Plumber, ver mas abajo)
+
+-- Secciones "globales" (Setup/Editing/Explorer/Profile): no pertenecen a ninguna
+-- unidad, asi que NO tienen fila de sub-tabs propia. Antes esa fila se quedaba
+-- mostrando los sub-tabs de la ULTIMA unidad seleccionada (ej: entrar a Explorer
+-- dejaba visible "Gen/Bar/Cage/Sel/Health/Name/Spell/Cast/Color" de ToT debajo),
+-- dando la sensacion de estar en dos secciones a la vez. Se ocultan explicito aca.
+local GLOBAL_SECTION_TITLE = { presets = "Profile", explorer = "Explorer", editing = "Editing", setup = "Setup" }
 
 local function ShowSection(key)
     if not sections[key] then return end
     currentSection = key
     for k, f in pairs(sections) do f:SetShown(k == key) end
-    for k, b in pairs(sectionTabs) do b:SetActive(k == key) end
+    if GLOBAL_SECTION_TITLE[key] then
+        for k, b in pairs(sectionTabs) do b:Hide() end
+        if unitTitle then unitTitle:SetText(GLOBAL_SECTION_TITLE[key]) end
+        if unitCopyBtn then unitCopyBtn:Hide() end
+        if unitPasteBtn then unitPasteBtn:Hide() end
+    else
+        for k, b in pairs(sectionTabs) do b:SetActive(k == key) end
+        if unitCopyBtn then unitCopyBtn:Show() end
+        if unitPasteBtn then unitPasteBtn:Show() end
+    end
     if perfilBtn then perfilBtn:SetActive(key == "presets") end
     if explorerBtn then explorerBtn:SetActive(key == "explorer") end
     if editingBtn then editingBtn:SetActive(key == "editing") end
     if setupBtn then setupBtn:SetActive(key == "setup") end
+    if UpdatePreview then UpdatePreview() end
     -- Nudge: fuerza el relayout de la seccion recien mostrada. El canvas de Settings a
     -- veces no posiciona/renderiza los widgets hasta un Hide/Show (de ahi el bug de
     -- "botones que no aparecen hasta salir y volver"). Aplicarlo en CADA cambio de seccion.
     local f = sections[key]
     if f and f:IsShown() then f:Hide(); f:Show() end
+    -- Transicion suave (2026-07-17): un fade-in corto en vez de aparecer de golpe,
+    -- calcando el pulido de Plumber al cambiar de categoria.
+    if f and UIFrameFadeIn then
+        f:SetAlpha(0)
+        UIFrameFadeIn(f, 0.15, 0, 1)
+    end
 end
 
 local function IsPortraitSection(k) return k:sub(1, 2) == "p_" end
@@ -550,6 +813,7 @@ local function SelectUnit(key)
     ns.currentEdit = key
     for k, b in pairs(unitTabs) do b:SetActive(k == key) end
     RefreshControls()
+    if ns.ResetTabRowScroll then ns.ResetTabRowScroll() end
 
     local isInfo = ns.IsInfoBar and ns.IsInfoBar(key)
     local isMicro = ns.IsMicroMenu and ns.IsMicroMenu(key)
@@ -565,6 +829,7 @@ local function SelectUnit(key)
         or isPartyAuraTitle and "Party Auras"
         or (u and u.label) or key
     if unitTitle then unitTitle:SetText("Editing:  |cffffffff" .. title .. "|r") end
+    if UpdatePreview then UpdatePreview() end
 
     if isInfo then
         for k, b in pairs(sectionTabs) do b:SetShown(IsInfoSection(k)) end
@@ -680,39 +945,29 @@ local UNIT_GROUPS = {
 local built = false
 local function BuildPanel()
     -- Fondo.
+    -- 2026-07-17 (ronda 2): el usuario sigue viendolo muy oscuro — ademas del
+    -- velo negro de aca, sidebar (sbBg) y preview (pvBg) suman SUS PROPIOS
+    -- overlays negros encima, y se acumulan. Se aclaran los tres a la vez.
     local bg = panel:CreateTexture(nil, "BACKGROUND")
     bg:SetTexture(PL.BG)
     bg:SetPoint("TOPLEFT", 4, -4); bg:SetPoint("BOTTOMRIGHT", -4, 4)
-    bg:SetAlpha(0.5)
+    bg:SetAlpha(1)
     local shade = panel:CreateTexture(nil, "BACKGROUND", nil, 1)
-    shade:SetAllPoints(bg); shade:SetColorTexture(0, 0, 0, 0.4)
+    shade:SetAllPoints(bg); shade:SetColorTexture(0, 0, 0, 0.08)
 
     local title = panel:CreateFontString(nil, "ARTWORK")
-    setFont(title, 19)
-    title:SetPoint("TOPLEFT", 14, -12)
+    setFont(title, 16)
+    title:SetPoint("TOP", panel, "TOP", 0, -16)
     title:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
     title:SetText("AzeriteUI |cffffcc00—|r Gonkast Preset")
 
-    -- Boton PERFIL global (esquina superior derecha): abre la seccion de presets.
-    perfilBtn = MakeButton(panel, "Profile", 90, 24)
-    perfilBtn:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -14, -10)
-    perfilBtn:SetScript("OnClick", function() ShowSection("presets") end)
-    panelButtons[#panelButtons + 1] = perfilBtn
-    -- Boton EXPLORER global (al lado de Profile): auto-ocultar elementos por mouseover.
-    explorerBtn = MakeButton(panel, "Explorer", 90, 24)
-    explorerBtn:SetPoint("RIGHT", perfilBtn, "LEFT", -6, 0)
-    explorerBtn:SetScript("OnClick", function() ShowSection("explorer") end)
-    panelButtons[#panelButtons + 1] = explorerBtn
-    -- Boton EDITING global (al lado de Explorer): herramientas de edicion (B5).
-    editingBtn = MakeButton(panel, "Editing", 90, 24)
-    editingBtn:SetPoint("RIGHT", explorerBtn, "LEFT", -6, 0)
-    editingBtn:SetScript("OnClick", function() ShowSection("editing") end)
-    panelButtons[#panelButtons + 1] = editingBtn
-    -- Boton SETUP global (integracion / perfiles de otros addons).
-    setupBtn = MakeButton(panel, "Setup", 90, 24)
-    setupBtn:SetPoint("RIGHT", editingBtn, "LEFT", -6, 0)
-    panelButtons[#panelButtons + 1] = setupBtn
-    setupBtn:SetScript("OnClick", function() ShowSection("setup") end)
+    -- Unico tab arriba a la derecha: Close. Setup/Editing/Explorer/Profile se
+    -- movieron a la sidebar como categorias propias (2026-07-17, Fase B: antes
+    -- vivian aparte en esta fila, ahora son items de lista igual que las unidades).
+    local closeBtn = MakeTabButton(panel, "Close", 70)
+    closeBtn:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -62, -7)
+    closeBtn:SetScript("OnClick", function() panel:Hide() end)
+    panelButtons[#panelButtons + 1] = closeBtn
 
     local LABELS = {}
     for _, d in ipairs(ns.UNITS) do LABELS[d.key] = d.label end
@@ -731,39 +986,46 @@ local function BuildPanel()
     sidebar:SetPoint("BOTTOMLEFT", 10, 44)
     sidebar:SetWidth(140)
     local sbBg = sidebar:CreateTexture(nil, "BACKGROUND")
-    sbBg:SetAllPoints(); sbBg:SetColorTexture(0, 0, 0, 0.35)
+    -- 2026-07-17: un poco mas oscura que content (que no tiene overlay propio)
+    -- para que las 3 columnas (sidebar/contenido/preview) se lean como zonas
+    -- distintas en vez de un unico fondo continuo.
+    sbBg:SetAllPoints(); sbBg:SetColorTexture(0, 0, 0, 0.22)
 
     -- Buscador: filtra la lista por nombre. RelayoutSidebar se define mas abajo.
+    -- sortBtn (boton cuadrado a la derecha del buscador, estilo el "sort/filter" de
+    -- Plumber): aca solo se crea el widget; el OnClick se conecta mas abajo, una vez
+    -- que existe la tabla `collapsed` (expande/colapsa TODOS los grupos de un tiron).
     local searchText = ""
     local RelayoutSidebar
+    local sortBtn = MakeButton(sidebar, "All", 30, 22)
+    sortBtn:SetPoint("TOPRIGHT", -2, -4)
     -- Pildora con borde limpio (izq/centro/der 3-slice) + lupa, calcada del buscador REAL de
     -- Plumber (antes: InputBoxTemplate nativo de Blizzard, se veia como una caja azul generica).
     local searchBox = CreateFrame("EditBox", nil, sidebar)
-    searchBox:SetSize(104, 20)
-    searchBox:SetPoint("TOPLEFT", 10, -4)
+    searchBox:SetSize(84, 22)
+    searchBox:SetPoint("TOPLEFT", 10, -5)
     searchBox:SetAutoFocus(false)
     searchBox:SetFontObject("GameFontNormal")
     searchBox:SetTextInsets(18, 4, 0, 0)
     searchBox:SetTextColor(0.92, 0.86, 0.70)
 
-    -- Los caps se dibujan un poco MAS ALTOS que la caja (20+6=26) y se solapan hacia adentro
+    -- Los caps se dibujan un poco MAS ALTOS que la caja (22+6=28) y se solapan hacia adentro
     -- (offset -2/2) para que el borde del atlas (que es una pildora completa, no un marco fino)
-    -- se recorte por los bordes de la caja en vez de aplastarse en una tira casi invisible de
-    -- 18-20px. Tinte con COLOR_TITLE (en vez de blanco puro) para que el marron/dorado del atlas
-    -- destaque mas contra el fondo casi negro del sidebar (el arte original esta pensado para un
-    -- fondo mas claro que el nuestro).
+    -- se recorte por los bordes de la caja en vez de aplastarse en una tira casi invisible.
+    -- Vertex color mas fuerte (2026-07-16: el usuario pidio un borde mas visible/grande,
+    -- comparando contra el buscador real de Plumber) para que el marco se note mas.
     local sbLeft = searchBox:CreateTexture(nil, "BACKGROUND")
     sbLeft:SetTexture(PLB); sbLeft:SetTexCoord(0 / 1024, 32 / 1024, 0 / 1024, 80 / 1024)
-    sbLeft:SetSize(13, 26); sbLeft:SetPoint("LEFT", -3, 0)
-    sbLeft:SetVertexColor(1.15, 1.05, 0.85)
+    sbLeft:SetSize(14, 28); sbLeft:SetPoint("LEFT", -3, 0)
+    sbLeft:SetVertexColor(1.35, 1.2, 0.95)
     local sbRight = searchBox:CreateTexture(nil, "BACKGROUND")
     sbRight:SetTexture(PLB); sbRight:SetTexCoord(160 / 1024, 192 / 1024, 0 / 1024, 80 / 1024)
-    sbRight:SetSize(13, 26); sbRight:SetPoint("RIGHT", 3, 0)
-    sbRight:SetVertexColor(1.15, 1.05, 0.85)
+    sbRight:SetSize(14, 28); sbRight:SetPoint("RIGHT", 3, 0)
+    sbRight:SetVertexColor(1.35, 1.2, 0.95)
     local sbMid = searchBox:CreateTexture(nil, "BACKGROUND")
     sbMid:SetTexture(PLB); sbMid:SetTexCoord(32 / 1024, 160 / 1024, 0 / 1024, 80 / 1024)
     sbMid:SetPoint("TOPLEFT", sbLeft, "TOPRIGHT", -3, 0); sbMid:SetPoint("BOTTOMRIGHT", sbRight, "BOTTOMLEFT", 3, 0)
-    sbMid:SetVertexColor(1.15, 1.05, 0.85)
+    sbMid:SetVertexColor(1.35, 1.2, 0.95)
 
     local sbMag = searchBox:CreateTexture(nil, "OVERLAY")
     sbMag:SetTexture(PLB); sbMag:SetTexCoord(984 / 1024, 1024 / 1024, 0 / 1024, 40 / 1024)
@@ -772,19 +1034,81 @@ local function BuildPanel()
 
     local searchHint = searchBox:CreateFontString(nil, "ARTWORK"); setFont(searchHint, 10)
     searchHint:SetPoint("LEFT", 18, 0); searchHint:SetTextColor(0.55, 0.5, 0.42); searchHint:SetText("Search...")
+    local RelayoutGlobalNav   -- asignada mas abajo (bloque de la fila global Setup/Editing/...)
     searchBox:SetScript("OnTextChanged", function(self)
         searchText = self:GetText() or ""
         searchHint:SetShown(searchText == "")
         if RelayoutSidebar then RelayoutSidebar() end
+        if RelayoutGlobalNav then RelayoutGlobalNav() end
     end)
     searchBox:SetScript("OnEscapePressed", function(self) self:SetText(""); self:ClearFocus() end)
     searchBox:SetScript("OnEditFocusGained", function(self) sbMag:SetVertexColor(1, 0.9, 0.6) end)
     searchBox:SetScript("OnEditFocusLost", function(self) sbMag:SetVertexColor(0.6, 0.55, 0.45) end)
 
+    -- Fila FIJA (no scrollea, pero SI filtra por busqueda via RelayoutGlobalNav mas
+    -- abajo) con las 4 categorias globales Setup/Editing/Explorer/Profile — viven
+    -- arriba de la lista de unidades, cada una llama ShowSection() en vez de
+    -- SelectUnit(). MakeListItem con prominent=true (2026-07-17: el usuario las
+    -- confundia con items de la lista de unidades de abajo — fuente mas grande,
+    -- tinte siempre visible + fondo propio para separarlas).
+    local globalNav = CreateFrame("Frame", nil, sidebar)
+    globalNav:SetPoint("TOPLEFT", 2, -30)
+    globalNav:SetPoint("TOPRIGHT", -2, -30)
+    local navBg = globalNav:CreateTexture(nil, "BACKGROUND")
+    navBg:SetPoint("TOPLEFT", -2, 2); navBg:SetPoint("BOTTOMRIGHT", 2, -2)
+    navBg:SetColorTexture(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.12)
+    local GLOBAL_NAV_ITEMS = {
+        { key = "setup",    label = "Setup" },
+        { key = "editing",  label = "Editing" },
+        { key = "explorer", label = "Explorer" },
+        { key = "presets",  label = "Profile" },
+    }
+    local navDiv = sidebar:CreateTexture(nil, "ARTWORK")
+    navDiv:SetTexture(PL.DIV_H)
+    navDiv:SetHeight(6)
+    navDiv:SetVertexColor(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.4)
+
+    for i, e in ipairs(GLOBAL_NAV_ITEMS) do
+        local b = MakeListItem(globalNav, e.label, 118, 18, true)
+        b:SetScript("OnClick", function() ShowSection(e.key) end)
+        panelButtons[#panelButtons + 1] = b
+        e.btn = b
+        if e.key == "setup" then setupBtn = b
+        elseif e.key == "editing" then editingBtn = b
+        elseif e.key == "explorer" then explorerBtn = b
+        elseif e.key == "presets" then perfilBtn = b end
+    end
+
+    -- Reposiciona/filtra los 4 items globales por busqueda (2026-07-17: antes
+    -- quedaban fuera del filtro; buscar "setup" no los ocultaba/mostraba como
+    -- al resto de la sidebar). Sin busqueda entran los 4 siempre.
+    RelayoutGlobalNav = function()
+        local q = (searchText or ""):lower()
+        local sy = -4
+        local anyVisible = false
+        for _, e in ipairs(GLOBAL_NAV_ITEMS) do
+            if q == "" or e.label:lower():find(q, 1, true) then
+                e.btn:ClearAllPoints(); e.btn:SetPoint("TOPLEFT", 6, sy); e.btn:Show()
+                sy = sy - 25
+                anyVisible = true
+            else
+                e.btn:Hide()
+            end
+        end
+        globalNav:SetHeight(math.max(-sy + 4, 4))
+        globalNav:SetShown(anyVisible)
+        navBg:SetShown(anyVisible)
+        navDiv:ClearAllPoints()
+        navDiv:SetPoint("TOPLEFT", globalNav, "BOTTOMLEFT", 4, anyVisible and -2 or 0)
+        navDiv:SetPoint("TOPRIGHT", globalNav, "BOTTOMRIGHT", -4, anyVisible and -2 or 0)
+        navDiv:SetShown(anyVisible)
+    end
+    RelayoutGlobalNav()
+
     -- ScrollFrame + scrollbar CUSTOM (thumb arrastrable + flechas; texturas Plumber).
     -- value 0 = arriba (no invertido). La lista puede ser mas alta que el panel.
     local scroll = CreateFrame("ScrollFrame", nil, sidebar)
-    scroll:SetPoint("TOPLEFT", 2, -26)
+    scroll:SetPoint("TOPLEFT", globalNav, "BOTTOMLEFT", 0, -10)
     scroll:SetPoint("BOTTOMRIGHT", -14, 2)
     local sbChild = CreateFrame("Frame", nil, scroll)
     sbChild:SetSize(118, 10)
@@ -798,12 +1122,19 @@ local function BuildPanel()
         btn:SetSize(ARROW, ARROW)
         local tex = btn:CreateTexture(nil, "ARTWORK")
         tex:SetAllPoints(); tex:SetTexture(WIDGET); tex:SetTexCoord(0 / 512, 32 / 512, y1 / 512, y2 / 512)
+        tex:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
         btn.tex = tex
         btn:SetScript("OnEnter", function() tex:SetVertexColor(1, 0.9, 0.45) end)
-        btn:SetScript("OnLeave", function() tex:SetVertexColor(1, 1, 1) end)
+        btn:SetScript("OnLeave", function() tex:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]) end)
         return btn
     end
-    local upBtn   = TexBtn(396, 428); upBtn:SetPoint("TOPRIGHT", sidebar, "TOPRIGHT", -1, -26)
+    -- 2026-07-17: antes anclado a un offset FIJO desde arriba de la sidebar (-26),
+    -- que asumia que la lista scrolleable empezaba justo debajo del buscador. Desde
+    -- que se agrego el bloque fijo de las 4 categorias globales (Setup/Editing/...)
+    -- la lista arranca mas abajo (y su altura varia con la busqueda) — se ancla
+    -- directo a `scroll` (que ya seguia ese movimiento) en vez de un numero fijo,
+    -- asi el scrollbar siempre arranca justo donde arranca la lista de unidades.
+    local upBtn   = TexBtn(396, 428); upBtn:SetPoint("TOPRIGHT", scroll, "TOPRIGHT", 13, 2)
     local downBtn = TexBtn(428, 460); downBtn:SetPoint("BOTTOMRIGHT", sidebar, "BOTTOMRIGHT", -1, 2)
 
     local track = CreateFrame("Frame", nil, sidebar)
@@ -812,23 +1143,44 @@ local function BuildPanel()
     track:SetPoint("BOTTOMRIGHT", downBtn, "TOPRIGHT", 0, 2)
     local rail = track:CreateTexture(nil, "BACKGROUND")
     rail:SetAllPoints(); rail:SetTexture(WIDGET)
-    rail:SetTexCoord(0 / 512, 32 / 512, 0 / 512, 128 / 512); rail:SetVertexColor(1, 1, 1, 0.22)
+    rail:SetTexCoord(0 / 512, 32 / 512, 0 / 512, 128 / 512)
+    rail:SetVertexColor(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.4)
 
     local thumb = CreateFrame("Button", nil, track)
     thumb:SetPoint("TOP"); thumb:SetSize(BAR_W, 40)
     local tt = thumb:CreateTexture(nil, "ARTWORK")
     tt:SetAllPoints(); tt:SetTexture(WIDGET); tt:SetTexCoord(0 / 512, 32 / 512, 132 / 512, 260 / 512)
+    tt:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
 
+    -- Scroll SUAVE (2026-07-17): `scrollValue` es el destino, `displayValue` es la
+    -- posicion realmente dibujada — un OnUpdate la va acercando al destino en vez
+    -- de saltar de golpe (rueda del mouse / flechas). Arrastrando el thumb SI es
+    -- 1:1 inmediato (instant=true), un lag ahi se siente mal.
+    local displayValue = 0
     local function PositionThumb()
         local usable = math.max((track:GetHeight() or 1) - (thumb:GetHeight() or 1), 0)
-        local frac = (scrollRange > 0) and (scrollValue / scrollRange) or 0
+        local frac = (scrollRange > 0) and (displayValue / scrollRange) or 0
         thumb:ClearAllPoints(); thumb:SetPoint("TOP", track, "TOP", 0, -frac * usable)
     end
-    local function ApplyScroll(v)
+    local function ApplyScroll(v, instant)
         scrollValue = math.min(math.max(v or 0, 0), scrollRange)
-        scroll:SetVerticalScroll(scrollValue)
-        PositionThumb()
+        if instant then
+            displayValue = scrollValue
+            scroll:SetVerticalScroll(displayValue)
+            PositionThumb()
+        end
     end
+    scroll:SetScript("OnUpdate", function(self, elapsed)
+        if displayValue == scrollValue then return end
+        local diff = scrollValue - displayValue
+        if math.abs(diff) < 0.5 then
+            displayValue = scrollValue
+        else
+            displayValue = displayValue + diff * math.min(elapsed * 14, 1)
+        end
+        scroll:SetVerticalScroll(displayValue)
+        PositionThumb()
+    end)
 
     upBtn:SetScript("OnClick",   function() ApplyScroll(scrollValue - 30) end)
     downBtn:SetScript("OnClick", function() ApplyScroll(scrollValue + 30) end)
@@ -837,14 +1189,14 @@ local function BuildPanel()
         self.dragging = true; self.startY = select(2, GetCursorPosition()); self.startV = scrollValue
         tt:SetVertexColor(1, 0.9, 0.5)
     end)
-    thumb:SetScript("OnMouseUp", function(self) self.dragging = false; tt:SetVertexColor(1, 1, 1) end)
+    thumb:SetScript("OnMouseUp", function(self) self.dragging = false; tt:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]) end)
     thumb:SetScript("OnUpdate", function(self)
         if not self.dragging then return end
-        if not IsMouseButtonDown("LeftButton") then self.dragging = false; tt:SetVertexColor(1, 1, 1); return end
+        if not IsMouseButtonDown("LeftButton") then self.dragging = false; tt:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]); return end
         local _, y = GetCursorPosition()
         local usable = math.max((track:GetHeight() or 1) - (thumb:GetHeight() or 1), 1)
         local dy = (self.startY - y) / (track:GetEffectiveScale() or 1)
-        ApplyScroll(self.startV + (dy / usable) * scrollRange)
+        ApplyScroll(self.startV + (dy / usable) * scrollRange, true)
     end)
 
     scroll:EnableMouseWheel(true)
@@ -857,7 +1209,7 @@ local function BuildPanel()
         track:SetShown(scrollable); upBtn:SetShown(scrollable); downBtn:SetShown(scrollable)
         local trackH = track:GetHeight() or 1
         thumb:SetSize(BAR_W, math.max(24, trackH * math.min(visible / math.max(content, 1), 1)))
-        ApplyScroll(scrollValue)
+        ApplyScroll(scrollValue, true)
     end
     scroll:SetScript("OnSizeChanged", updateScroll)
 
@@ -866,17 +1218,40 @@ local function BuildPanel()
     local collapsed = {}
     local sideHeaders = {}
 
+    -- sortBtn (creado antes, junto al buscador): expande/colapsa TODOS los grupos
+    -- de un tiron. Analogo funcional al boton "sort/filter" de Plumber (icono T que
+    -- abre un popup) — aca no aplica un "sort by" real (nuestras categorias no
+    -- tienen fecha), asi que se reutiliza el espacio para algo util: colapsar todo.
+    local allCollapsed = false
+    sortBtn:SetScript("OnClick", function()
+        allCollapsed = not allCollapsed
+        for _, grp in ipairs(UNIT_GROUPS) do collapsed[grp.title] = allCollapsed end
+        if RelayoutSidebar then RelayoutSidebar() end
+    end)
+    sortBtn:HookScript("OnEnter", function()
+        if GameTooltip:IsForbidden() then return end
+        GameTooltip:SetOwner(sortBtn, "ANCHOR_LEFT")
+        GameTooltip:SetText("Expand / collapse all groups", 1, 1, 1)
+        GameTooltip:Show()
+    end)
+    sortBtn:HookScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
+
     local function MakeCollapseHeader(grp)
         local h = CreateFrame("Button", nil, sbChild)
         h:SetSize(112, 15)
+        -- COLOR_GROUP (dorado-ambar vivo): SOLO estos headers de grupo de la
+        -- sidebar (MAIN/POWER/BOSSES/...), no el resto del panel.
         local arrow = h:CreateFontString(nil, "ARTWORK"); setFont(arrow, 10)
-        arrow:SetPoint("LEFT", 0, 0); arrow:SetTextColor(0.75, 0.62, 0.25)
+        arrow:SetPoint("LEFT", 0, 0); arrow:SetTextColor(COLOR_GROUP[1], COLOR_GROUP[2], COLOR_GROUP[3])
         h.arrow = arrow
         local fs = h:CreateFontString(nil, "ARTWORK"); setFont(fs, 10)
-        fs:SetPoint("LEFT", 11, 0); fs:SetTextColor(0.75, 0.62, 0.25); fs:SetText(grp.title)
+        fs:SetPoint("LEFT", 11, 0); fs:SetTextColor(COLOR_GROUP[1], COLOR_GROUP[2], COLOR_GROUP[3]); fs:SetText(grp.title)
         h.fs = fs
         h:SetScript("OnEnter", function() fs:SetTextColor(1, 0.9, 0.45); arrow:SetTextColor(1, 0.9, 0.45) end)
-        h:SetScript("OnLeave", function() fs:SetTextColor(0.75, 0.62, 0.25); arrow:SetTextColor(0.75, 0.62, 0.25) end)
+        h:SetScript("OnLeave", function()
+            fs:SetTextColor(COLOR_GROUP[1], COLOR_GROUP[2], COLOR_GROUP[3])
+            arrow:SetTextColor(COLOR_GROUP[1], COLOR_GROUP[2], COLOR_GROUP[3])
+        end)
         h:SetScript("OnClick", function()
             collapsed[grp.title] = not collapsed[grp.title]
             RelayoutSidebar()
@@ -887,8 +1262,7 @@ local function BuildPanel()
     for _, grp in ipairs(UNIT_GROUPS) do
         sideHeaders[grp.title] = MakeCollapseHeader(grp)
         for _, key in ipairs(grp.keys) do
-            local b = MakeButton(sbChild, LABELS[key] or key, 104, 18)
-            b.text:ClearAllPoints(); b.text:SetPoint("LEFT", 10, 0)
+            local b = MakeListItem(sbChild, LABELS[key] or key, 104, 18)
             b:SetScript("OnClick", function() SelectUnit(key) end)
             unitTabs[key] = b
         end
@@ -943,16 +1317,210 @@ local function BuildPanel()
     vdiv:SetPoint("BOTTOMLEFT", sidebar, "BOTTOMRIGHT", 2, -10)
     vdiv:SetWidth(16); vdiv:SetVertexColor(1, 1, 1, 0.35)
 
+    -- ===== PREVIEW (3ra columna, estilo Plumber: descripcion de la categoria activa) =====
+    local preview = CreateFrame("Frame", nil, panel)
+    preview:SetPoint("TOPRIGHT", -12, -42)
+    preview:SetPoint("BOTTOMRIGHT", -12, 44)
+    preview:SetWidth(PREVIEW_W)
+    local pvBg = preview:CreateTexture(nil, "BACKGROUND")
+    pvBg:SetAllPoints(); pvBg:SetColorTexture(0, 0, 0, 0.16)
+
+    local pvdiv = panel:CreateTexture(nil, "ARTWORK")
+    pvdiv:SetTexture(PL.DIV_V)
+    pvdiv:SetPoint("TOPLEFT", preview, "TOPRIGHT", -18, 10)
+    pvdiv:SetPoint("BOTTOMLEFT", preview, "BOTTOMRIGHT", -18, -10)
+    pvdiv:SetWidth(16); pvdiv:SetVertexColor(1, 1, 1, 0.35)
+
+    -- Icono decorativo (2026-07-17): Plumber muestra una imagen/preview arriba del
+    -- texto; no hay arte por-categoria disponible, asi que se usa el icono del addon
+    -- como acento visual generico en vez de dejar el panel puramente texto plano.
+    local pvIcon = preview:CreateTexture(nil, "ARTWORK")
+    pvIcon:SetTexture("Interface\\AddOns\\MyCustomFrames\\Assets\\addon_icon.tga")
+    pvIcon:SetSize(40, 40)
+    pvIcon:SetPoint("TOP", 0, -12)
+    pvIcon:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+
+    local pvTitle = preview:CreateFontString(nil, "ARTWORK")
+    setFont(pvTitle, 14)
+    pvTitle:SetPoint("TOP", pvIcon, "BOTTOM", 0, -8)
+    pvTitle:SetPoint("LEFT", 10, 0)
+    pvTitle:SetPoint("RIGHT", -10, 0)
+    pvTitle:SetJustifyH("CENTER"); pvTitle:SetWordWrap(true)
+    pvTitle:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+
+    -- Lista de bullets (2026-07-17: el usuario pidio que las descripciones se vean
+    -- organizadas en puntos, con un cuadradito antes de cada uno — calcando el estilo
+    -- del changelog real de Plumber). Pool reutilizable, UpdatePreview la rearma.
+    local pvBullets = {}
+    local function GetBullet(i)
+        local b = pvBullets[i]
+        if not b then
+            local dot = preview:CreateTexture(nil, "ARTWORK")
+            dot:SetColorTexture(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+            dot:SetSize(5, 5)
+            local fs = preview:CreateFontString(nil, "ARTWORK")
+            setFont(fs, 11)
+            fs:SetJustifyH("LEFT"); fs:SetWordWrap(true)
+            fs:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+            b = { dot = dot, fs = fs }
+            pvBullets[i] = b
+        end
+        return b
+    end
+
+    -- Descripcion corta por familia de seccion (arrays = puntos separados con
+    -- bullet). Se resuelve por prefijo de key (mismo criterio que
+    -- IsPortraitSection/IsAuraSection/etc, definidas mas arriba).
+    local FAMILY_DESC = {
+        { test = function(k) return IsPortraitSection(k) end, title = "Portraits", desc = {
+            "Portrait: frame, 3D model or icon.", "Badges and raid role/target marker." } },
+        { test = function(k) return IsAuraSection(k) end, title = "Auras", desc = {
+            "Grid, position and border of the group.", "Death/no-target icons and text." } },
+        { test = function(k) return IsInfoSection(k) end, title = "Info Bar", desc = {
+            "Visible elements and their position.", "Text and background of the bar." } },
+        { test = function(k) return IsMicroSection(k) end, title = "Micro Menu", desc = {
+            "Reskin of Blizzard's micro buttons.", "Movable and scalable." } },
+        { test = function(k) return IsChatSection(k) end, title = "Chat Bubble", desc = {
+            "Background of world chat bubbles.", "Font and text color." } },
+        { test = function(k) return IsTrackerSection(k) end, title = "Quest Tracker", desc = {
+            "Colors of the quest tracker.", "Auto-hide in combat/instances." } },
+        { test = function(k) return IsGlowSection(k) end, title = "Assisted Glow", desc = {
+            "Assisted highlight for available abilities." } },
+        { test = function(k) return IsPartyAuraSection(k) end, title = "Party Auras", desc = {
+            "Auras for Party1-5.", "Revealed on hover or in combat." } },
+        { test = function(k) return k == "presets" end, title = "Profiles", desc = {
+            "Save and load full profiles.", "Export and import across accounts." } },
+        { test = function(k) return k == "explorer" end, title = "Explorer", desc = {
+            "Auto-hide UI elements.", "Revealed on mouseover." } },
+        { test = function(k) return k == "editing" end, title = "Editing", desc = {
+            "Grid, snap and layout preview.", "Lock mode to move elements." } },
+        { test = function(k) return k == "setup" end, title = "Setup", desc = {
+            "Integration with other addons.", "Bundled profiles ready to apply." } },
+    }
+    local function GetFamilyDescription(key)
+        for _, f in ipairs(FAMILY_DESC) do
+            if f.test(key) then return f.title, f.desc end
+        end
+        return "Unit Frames", {
+            "Bar, cage, highlight and health.", "Name, spell, cast bar and colors." }
+    end
+    UpdatePreview = function()
+        local t, d = GetFamilyDescription(currentSection)
+        pvTitle:SetText(t)
+        local anchor = pvTitle
+        for i, line in ipairs(d) do
+            local b = GetBullet(i)
+            b.dot:ClearAllPoints()
+            b.dot:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 4, (i == 1) and -12 or -10)
+            b.fs:ClearAllPoints()
+            b.fs:SetPoint("TOPLEFT", b.dot, "TOPRIGHT", 6, 2)
+            b.fs:SetPoint("RIGHT", preview, "RIGHT", -10, 0)
+            b.fs:SetText(line)
+            b.dot:Show(); b.fs:Show()
+            anchor = b.fs
+        end
+        for i = #d + 1, #pvBullets do
+            pvBullets[i].dot:Hide(); pvBullets[i].fs:Hide()
+        end
+    end
+    UpdatePreview()
+
     -- ===== CONTENIDO =====
     local content = CreateFrame("Frame", nil, panel)
     content:SetPoint("TOPLEFT", sidebar, "TOPRIGHT", 22, 0)
-    content:SetPoint("BOTTOMRIGHT", -10, 44)
+    content:SetPoint("BOTTOMRIGHT", preview, "BOTTOMLEFT", -10, 0)
     panel._content = content   -- para el nudge de relayout en ApplyPanelView
 
     unitTitle = content:CreateFontString(nil, "ARTWORK")
     setFont(unitTitle, 14)
     unitTitle:SetPoint("TOPLEFT", 4, -2)
     unitTitle:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+
+    -- 2026-07-17: Copy/Paste movidos aca (esquina superior derecha del contenido)
+    -- desde el footer — el usuario los queria a mano cerca del titulo de la
+    -- unidad, visibles SOLO al editar una unidad/portrait/etc (no en las
+    -- secciones globales Setup/Editing/Explorer/Profile). ShowSection() los
+    -- oculta/muestra igual que hace con sectionTabs para esas secciones.
+    unitPasteBtn = MakeTabButton(content, "Paste", 60, 20, true)
+    unitPasteBtn:SetPoint("TOPRIGHT", 0, -3)
+    unitPasteBtn:SetScript("OnClick", ns.PasteSettings)
+    unitCopyBtn = MakeTabButton(content, "Copy", 60, 20, true)
+    unitCopyBtn:SetPoint("RIGHT", unitPasteBtn, "LEFT", -4, 0)
+    unitCopyBtn:SetScript("OnClick", ns.CopySettings)
+
+    -- 2026-07-17: las filas de sub-tabs se armaban con posiciones fijas por indice
+    -- (2 + (i-1)*48), asumiendo que TODOS los labels entraban en ese ancho — labels
+    -- largos (Border/Death/Mark/Role) se salian de la pildora Y se superponian con
+    -- el panel de preview de la derecha. Ahora viven dentro de un ScrollFrame
+    -- HORIZONTAL propio (tabScroll/tabRow), clippeado al ancho de `content`, con
+    -- rueda del mouse + una barrita fina arrastrable debajo.
+    local tabScroll = CreateFrame("ScrollFrame", nil, content)
+    tabScroll:SetPoint("TOPLEFT", 0, -24)
+    tabScroll:SetPoint("TOPRIGHT", 0, -24)
+    tabScroll:SetHeight(20)
+    tabScroll:EnableMouseWheel(true)
+    local tabRow = CreateFrame("Frame", nil, tabScroll)
+    tabRow:SetSize(10, 20)
+    tabScroll:SetScrollChild(tabRow)
+    local tabRowWidth = 0
+    local tabScrollX = 0
+
+    -- 2026-07-17: usaba SetColorTexture (rectangulos solidos lisos) en vez del
+    -- mismo atlas WIDGET que usa el scrollbar VERTICAL de la sidebar (rail/thumb
+    -- con textura), por eso no hacian juego. Coords UV rotadas 90 grados a mano
+    -- (8-arg SetTexCoord, sin SetRotation) para que el patron vertical del atlas
+    -- se estire en el eje correcto en vez de deformarse.
+    local hbTrack = content:CreateTexture(nil, "ARTWORK")
+    hbTrack:SetPoint("TOPLEFT", tabScroll, "BOTTOMLEFT", 0, -2)
+    hbTrack:SetPoint("TOPRIGHT", tabScroll, "BOTTOMRIGHT", 0, -2)
+    hbTrack:SetHeight(3)
+    hbTrack:SetTexture(WIDGET)
+    hbTrack:SetTexCoord(0 / 512, 0 / 512, 0 / 512, 128 / 512, 32 / 512, 128 / 512, 32 / 512, 0 / 512)
+    hbTrack:SetVertexColor(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.4)
+    local hbThumb = content:CreateTexture(nil, "OVERLAY")
+    hbThumb:SetHeight(3)
+    hbThumb:SetTexture(WIDGET)
+    hbThumb:SetTexCoord(0 / 512, 132 / 512, 0 / 512, 260 / 512, 32 / 512, 260 / 512, 32 / 512, 132 / 512)
+    hbThumb:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3], 0.9)
+
+    local function UpdateHScroll()
+        local visibleW = tabScroll:GetWidth() or 1
+        local maxX = math.max(tabRowWidth - visibleW, 0)
+        tabScrollX = math.min(math.max(tabScrollX, 0), maxX)
+        tabScroll:SetHorizontalScroll(tabScrollX)
+        local scrollable = maxX > 1
+        hbTrack:SetShown(scrollable)
+        hbThumb:SetShown(scrollable)
+        if scrollable then
+            local frac = visibleW / math.max(tabRowWidth, 1)
+            local thumbW = math.max(20, visibleW * frac)
+            hbThumb:ClearAllPoints()
+            hbThumb:SetPoint("LEFT", hbTrack, "LEFT", (tabScrollX / maxX) * (visibleW - thumbW), 0)
+            hbThumb:SetWidth(thumbW)
+        end
+    end
+    tabScroll:SetScript("OnMouseWheel", function(self, delta)
+        tabScrollX = tabScrollX - delta * 40
+        UpdateHScroll()
+    end)
+    tabScroll:SetScript("OnSizeChanged", UpdateHScroll)
+
+    local function BuildTabRow(list, minW, hiddenByDefault)
+        local prevBtn
+        for _, s in ipairs(list) do
+            local b = MakeTabButton(tabRow, s.label, minW, 20)
+            if prevBtn then b:SetPoint("TOPLEFT", prevBtn, "TOPRIGHT", 2, 0)
+            else b:SetPoint("TOPLEFT", 0, 0) end
+            b:SetScript("OnClick", function() ShowSection(s.key) end)
+            if hiddenByDefault then b:Hide() end
+            sectionTabs[s.key] = b
+            prevBtn = b
+        end
+        if prevBtn then
+            local right = (prevBtn:GetRight() or 0) - (tabRow:GetLeft() or 0)
+            tabRowWidth = math.max(tabRowWidth, right)
+        end
+    end
 
     -- Pestanas de SECCION.
     local secList = {
@@ -966,12 +1534,7 @@ local function BuildPanel()
         { key = "cast",    label = "Cast" },
         { key = "colors",  label = "Color" },
     }
-    for i, s in ipairs(secList) do
-        local b = MakeButton(content, s.label, 46, 20)
-        b:SetPoint("TOPLEFT", 2 + (i - 1) * 48, -26)
-        b:SetScript("OnClick", function() ShowSection(s.key) end)
-        sectionTabs[s.key] = b
-    end
+    BuildTabRow(secList, 40, false)
 
     -- Pestanas de SECCION para portraits (misma fila; ocultas hasta seleccionar un portrait).
     local portSecList = {
@@ -987,14 +1550,7 @@ local function BuildPanel()
         { key = "p_role",    label = "Role" },
         { key = "p_focus",   label = "Focus" },
     }
-    -- pestañas de portrait (11): un poco mas angostas/juntas para que quepan.
-    for i, s in ipairs(portSecList) do
-        local b = MakeButton(content, s.label, 38, 20)
-        b:SetPoint("TOPLEFT", 2 + (i - 1) * 40, -26)
-        b:SetScript("OnClick", function() ShowSection(s.key) end)
-        b:Hide()
-        sectionTabs[s.key] = b
-    end
+    BuildTabRow(portSecList, 34, true)
 
     -- Pestanas de SECCION para auras (misma fila; ocultas hasta seleccionar un grupo).
     local auraSecList = {
@@ -1005,13 +1561,7 @@ local function BuildPanel()
         { key = "a_style",   label = "Border" },
         { key = "a_text",    label = "Text" },
     }
-    for i, s in ipairs(auraSecList) do
-        local b = MakeButton(content, s.label, 46, 20)
-        b:SetPoint("TOPLEFT", 2 + (i - 1) * 48, -26)
-        b:SetScript("OnClick", function() ShowSection(s.key) end)
-        b:Hide()
-        sectionTabs[s.key] = b
-    end
+    BuildTabRow(auraSecList, 40, true)
 
     -- Pestanas de SECCION para el info bar (ocultas hasta seleccionar Info Bar).
     local infoSecList = {
@@ -1021,70 +1571,44 @@ local function BuildPanel()
         { key = "i_text",     label = "Text" },
         { key = "i_bg",       label = "Bg" },
     }
-    for i, s in ipairs(infoSecList) do
-        local b = MakeButton(content, s.label, 46, 20)
-        b:SetPoint("TOPLEFT", 2 + (i - 1) * 48, -26)
-        b:SetScript("OnClick", function() ShowSection(s.key) end)
-        b:Hide()
-        sectionTabs[s.key] = b
-    end
+    BuildTabRow(infoSecList, 40, true)
 
     -- Pestanas de SECCION para el micro menu.
     local microSecList = { { key = "mm_general", label = "Gen" } }
-    for i, s in ipairs(microSecList) do
-        local b = MakeButton(content, s.label, 46, 20)
-        b:SetPoint("TOPLEFT", 2 + (i - 1) * 48, -26)
-        b:SetScript("OnClick", function() ShowSection(s.key) end)
-        b:Hide()
-        sectionTabs[s.key] = b
-    end
+    BuildTabRow(microSecList, 40, true)
 
     -- Pestanas de SECCION para el chat bubble.
     local chatSecList = { { key = "cb_general", label = "Gen" } }
-    for i, s in ipairs(chatSecList) do
-        local b = MakeButton(content, s.label, 46, 20)
-        b:SetPoint("TOPLEFT", 2 + (i - 1) * 48, -26)
-        b:SetScript("OnClick", function() ShowSection(s.key) end)
-        b:Hide()
-        sectionTabs[s.key] = b
-    end
+    BuildTabRow(chatSecList, 40, true)
 
     -- Pestanas de SECCION para el quest tracker.
     local trackerSecList = { { key = "t_general", label = "Gen" } }
-    for i, s in ipairs(trackerSecList) do
-        local b = MakeButton(content, s.label, 46, 20)
-        b:SetPoint("TOPLEFT", 2 + (i - 1) * 48, -26)
-        b:SetScript("OnClick", function() ShowSection(s.key) end)
-        b:Hide()
-        sectionTabs[s.key] = b
-    end
+    BuildTabRow(trackerSecList, 40, true)
 
     -- Pestanas de SECCION para el assisted glow.
     local glowSecList = { { key = "g_general", label = "Gen" } }
-    for i, s in ipairs(glowSecList) do
-        local b = MakeButton(content, s.label, 46, 20)
-        b:SetPoint("TOPLEFT", 2 + (i - 1) * 48, -26)
-        b:SetScript("OnClick", function() ShowSection(s.key) end)
-        b:Hide()
-        sectionTabs[s.key] = b
-    end
+    BuildTabRow(glowSecList, 40, true)
 
     -- Pestanas de SECCION para Party Auras (singleton, 1 sola pestaña "Gen" — igual patron que
     -- Tracker/Glow arriba).
     local partyAuraSecList = { { key = "ap_general", label = "Gen" } }
-    for i, s in ipairs(partyAuraSecList) do
-        local b = MakeButton(content, s.label, 46, 20)
-        b:SetPoint("TOPLEFT", 2 + (i - 1) * 48, -26)
-        b:SetScript("OnClick", function() ShowSection(s.key) end)
-        b:Hide()
-        sectionTabs[s.key] = b
-    end
+    BuildTabRow(partyAuraSecList, 40, true)
+
+    tabRow:SetWidth(math.max(tabRowWidth, 10))
+    UpdateHScroll()
+    -- Cuando cambia de unidad/familia (otro grupo de sub-tabs, otro ancho total)
+    -- hay que resetear el scroll horizontal, si no algunas filas mas angostas
+    -- podrian quedar "cortadas" con un scroll heredado de la fila anterior.
+    ns.ResetTabRowScroll = function() tabScrollX = 0; UpdateHScroll() end
 
     -- Divisor horizontal (Plumber) separando la fila de pestanas del contenido.
+    -- 2026-07-17 (ronda 2): movida de DEBAJO a ENCIMA de la fila de sub-tabs
+    -- (entre el titulo "Editing: X" y "Gen/Bar/Cage/..."), separandola del
+    -- titulo en vez de flotar sin nada arriba.
     local tdiv = content:CreateTexture(nil, "ARTWORK")
     tdiv:SetTexture(PL.DIV_H)
-    tdiv:SetPoint("TOPLEFT", 0, -50); tdiv:SetPoint("TOPRIGHT", 0, -50)
-    tdiv:SetHeight(8); tdiv:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3], 0.35)
+    tdiv:SetPoint("TOPLEFT", 0, -19); tdiv:SetPoint("TOPRIGHT", 0, -19)
+    tdiv:SetHeight(6); tdiv:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3], 0.7)
 
     -- Area de controles de la seccion activa.
     local secArea = CreateFrame("Frame", nil, content)
@@ -1138,7 +1662,7 @@ local function BuildPanel()
         MakeSlider(f, "Click offset Y", -400, 400, 1, "btnOffsetY", R, -182)
         local cnote = f:CreateFontString(nil, "ARTWORK"); setFont(cnote, 10)
         cnote:SetPoint("TOPLEFT", R, -228); cnote:SetWidth(210); cnote:SetJustifyH("LEFT")
-        cnote:SetTextColor(0.6, 0.6, 0.6)
+        cnote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         cnote:SetText("Click = the secure button (right-click menu / targeting). 0 follows the bar size. Applies when preview is OFF.")
         -- B4: outline de edicion propio por unidad (W/H, 0 = seguir al frame) + ocultar nombre.
         MakeSlider(f, "Outline width (0 = frame)", 0, 1200, 1, "outlineW", L, -276)
@@ -1223,7 +1747,7 @@ local function BuildPanel()
         MakeColorButton(f, "Spell color", "spellColor", R, -120)
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", R, -150); note:SetWidth(210); note:SetJustifyH("LEFT")
-        note:SetTextColor(0.7, 0.7, 0.7)
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("Long spell names wrap to 2 lines (within the cast bar width). Max characters truncates with '..' (readable names only).")
     end
     -- Cast bar (posicion fija: imita al hp bar).
@@ -1237,7 +1761,7 @@ local function BuildPanel()
         MakeCheckbox(f, "Inverse (right -> left)", "castReverse", R, -66)
         MakeCheckbox(f, "Smooth progress", "castSmooth", R, -92)
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
-        note:SetPoint("TOPLEFT", R, -126); note:SetTextColor(0.7, 0.7, 0.7)
+        note:SetPoint("TOPLEFT", R, -126); note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("Position: fixed (mimics the hp bar)")
 
         MakeSlider(f, "Spark width", 0, 60, 1, "castSparkWidth", L, -176)
@@ -1262,7 +1786,7 @@ local function BuildPanel()
         MakeHeader(f, "Profiles", L, -6, 200)
 
         local nlbl = f:CreateFontString(nil, "ARTWORK"); setFont(nlbl, 11)
-        nlbl:SetPoint("TOPLEFT", L, -30); nlbl:SetTextColor(0.9, 0.88, 0.82)
+        nlbl:SetPoint("TOPLEFT", L, -30); nlbl:SetTextColor(COLOR_OPTION[1], COLOR_OPTION[2], COLOR_OPTION[3])
         nlbl:SetText("New preset name")
         local nameBox = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
         nameBox:SetSize(130, 20)
@@ -1315,10 +1839,22 @@ local function BuildPanel()
                     print("|cffffcc00[MCF]|r Reload (/reload) to restore the Blizzard frames.")
                 end
             end)
-        MakeToggle(f, "Smooth fade-in (frames appearing)", R, -150,
+        local barRepoCB = MakeToggle(f, "Bartender bar (mounted)", R, -150,
+            function() return ns.GetDB().barReposition end,
+            function(v) ns.GetDB().barReposition = v; if ns.RefreshBarReposition then ns.RefreshBarReposition() end end)
+        barRepoCB:HookScript("OnEnter", function(self)
+            if GameTooltip:IsForbidden() then return end
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText("Bartender: move possess bar while mounted", COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+            GameTooltip:AddLine("Moves Bartender4's possess/vehicle bar (BT4Bar5) to (-246, -175) while the " ..
+                "player is mounted. Restores its original Bartender position automatically when dismounting.", 1, 1, 1, true)
+            GameTooltip:Show()
+        end)
+        barRepoCB:HookScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
+        MakeToggle(f, "Smooth fade-in (frames appearing)", R, -174,
             function() return ns.GetDB().fadeIn end,
             function(v) ns.GetDB().fadeIn = v end)
-        local dcFixCB = MakeToggle(f, "DynamicCam camera fix", R, -174,
+        local dcFixCB = MakeToggle(f, "DynamicCam camera fix", R, -198,
             function() return ns.GetDB().dcFix end,
             function(v) ns.GetDB().dcFix = v; if ns.ApplyDcFix then ns.ApplyDcFix() end end)
         dcFixCB:HookScript("OnEnter", function(self)
@@ -1334,8 +1870,8 @@ local function BuildPanel()
         end)
         dcFixCB:HookScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
         local tnote = f:CreateFontString(nil, "ARTWORK"); setFont(tnote, 10)
-        tnote:SetPoint("TOPLEFT", R, -206); tnote:SetWidth(210); tnote:SetJustifyH("LEFT")
-        tnote:SetTextColor(0.6, 0.6, 0.6)
+        tnote:SetPoint("TOPLEFT", R, -230); tnote:SetWidth(210); tnote:SetJustifyH("LEFT")
+        tnote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         tnote:SetText("Grid, Snap and Preview moved to the EDITING tab (top). Quest tracker options are in the TRACKER tab.")
 
         -- ===== Logica (handlers) =====
@@ -1433,7 +1969,7 @@ local function BuildPanel()
         MakeCheckbox(dual, "Center if: raid/dungeon", "centerInInstance", R, -114)
         local note = dual:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", R, -148); note:SetWidth(210); note:SetJustifyH("LEFT")
-        note:SetTextColor(0.7, 0.7, 0.7)
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("If no condition is met, the alternate position is used.")
     end
     -- Portrait / Posicion
@@ -1477,7 +2013,7 @@ local function BuildPanel()
         MakeSlider(f, "Offset Y", -200, 200, 1, "modelOffsetY", R, -62)
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", R, -100); note:SetWidth(200); note:SetJustifyH("LEFT")
-        note:SetTextColor(0.7, 0.7, 0.7)
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("ToT and Party use a class icon (no 3D model or zoom).")
     end
     -- Portrait / Borde (orbe)
@@ -1544,7 +2080,7 @@ local function BuildPanel()
         MakeTexturePicker(f, "Marker texture", "raidTargetTexture", "raidtarget", R, -20)
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", R, -66); note:SetWidth(210); note:SetJustifyH("LEFT")
-        note:SetTextColor(0.7, 0.7, 0.7)
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("Shows the raid target icon (skull, cross, star...) as a badge over the party portrait, only when the member is marked. In preview it shows a sample skull.")
     end
     -- Portrait / Role + Leader icons. Rol = solo party (sub-grupo portraitRoleOnly);
@@ -1615,7 +2151,7 @@ local function BuildPanel()
         resetBtn:SetScript("OnClick", function() ns.ResetUnit(ns.currentEdit) end)
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", L, -186); note:SetWidth(210); note:SetJustifyH("LEFT")
-        note:SetTextColor(0.7, 0.7, 0.7)
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("Sort: index (API), timeUp, timeDown, name. Secret times go to the end.")
 
         -- Solo Player Auras: editar posicion + condiciones + opacidad.
@@ -1629,13 +2165,13 @@ local function BuildPanel()
         MakeSlider(dual, "Base opacity (hover/cond=100%)", 0, 1, 0.05, "groupAlpha", R, -150)
         local dnote = dual:CreateFontString(nil, "ARTWORK"); setFont(dnote, 10)
         dnote:SetPoint("TOPLEFT", R, -192); dnote:SetWidth(210); dnote:SetJustifyH("LEFT")
-        dnote:SetTextColor(0.7, 0.7, 0.7)
+        dnote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         dnote:SetText("No condition = alternate. Player dead = Death pos (Death tab).")
 
         MakeCheckbox(dual, "Cancel buff on right-click", "allowCancel", R, -232)
         local cnote = dual:CreateFontString(nil, "ARTWORK"); setFont(cnote, 10)
         cnote:SetPoint("TOPLEFT", R, -258); cnote:SetWidth(210); cnote:SetJustifyH("LEFT")
-        cnote:SetTextColor(0.7, 0.7, 0.7)
+        cnote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         cnote:SetText("Right-click a buff to cancel it (mounts, toys, self-buffs). Buffs only; not in combat for buffs gained while fighting.")
     end
     -- Aura / Grid (centrado horizontal, hacia abajo)
@@ -1649,7 +2185,7 @@ local function BuildPanel()
 
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", R, -110); note:SetWidth(210); note:SetJustifyH("LEFT")
-        note:SetTextColor(0.7, 0.7, 0.7)
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("Grid direction: centered horizontally then downward. Each row is centered under the anchor.")
     end
     -- Aura / Posicion (una sola ubicacion)
@@ -1688,7 +2224,7 @@ local function BuildPanel()
         MakeSlider(petg, "Offset Y", -2000, 2000, 1, "petOffsetYAlt", R, -306)
         local pnote = petg:CreateFontString(nil, "ARTWORK"); setFont(pnote, 10)
         pnote:SetPoint("TOPLEFT", L, -350); pnote:SetWidth(430); pnote:SetJustifyH("LEFT")
-        pnote:SetTextColor(0.7, 0.7, 0.7)
+        pnote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         pnote:SetText("Added to the primary / alternate position while you have a pet (live only, not in preview). Each position has its own independent offset.")
     end
     -- Aura / Muerte (3a posicion cuando el player esta muerto; solo Player Auras)
@@ -1708,7 +2244,7 @@ local function BuildPanel()
 
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", L, -192); note:SetWidth(430); note:SetJustifyH("LEFT")
-        note:SetTextColor(0.7, 0.7, 0.7)
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("On death, auras go to one of these 2 depending on whether you have a target. In preview pick 'dead' or 'deadTarget' in 'Edit' (Gen tab) to place them.")
     end
     -- Aura / Estilo (borde, duracion, contador)
@@ -1722,7 +2258,7 @@ local function BuildPanel()
 
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", R, -10); note:SetWidth(210); note:SetJustifyH("LEFT")
-        note:SetTextColor(0.7, 0.7, 0.7)
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("Default texture: actionbutton-border square. You can enter another texture path.")
     end
     -- Aura / Texto (duracion + contador + tooltip)
@@ -1740,7 +2276,7 @@ local function BuildPanel()
         MakeCheckbox(f, "Show tooltip (hover)", "showTooltip", R, -108)
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", R, -142); note:SetWidth(210); note:SetJustifyH("LEFT")
-        note:SetTextColor(0.7, 0.7, 0.7)
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("The duration offset is global: it moves the text of ALL auras equally.")
     end
 
@@ -1757,7 +2293,7 @@ local function BuildPanel()
 
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", R, -10); note:SetWidth(210); note:SetJustifyH("LEFT")
-        note:SetTextColor(0.7, 0.7, 0.7)
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("Global font size/color here are the base. Per-text Size/Color/Alpha are in the TEXT tab; the calendar button is in the CAL tab. In preview, drag each element to move it.")
         local resetBtn = MakeButton(f, "Reset info bar", 200, 22)
         resetBtn:SetPoint("TOPLEFT", R, -110)
@@ -1824,7 +2360,7 @@ local function BuildPanel()
         MakeTexturePicker(f, "Background texture", "bgTexture", "infobg", R, -100)
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", R, -146); note:SetWidth(210); note:SetJustifyH("LEFT")
-        note:SetTextColor(0.7, 0.7, 0.7)
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("Custom texture (default info_bg). A path ending in .tga/.blp is loaded as a texture; anything else is treated as an atlas name.")
     end
 
@@ -1840,7 +2376,7 @@ local function BuildPanel()
 
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", R, -104); note:SetWidth(210); note:SetJustifyH("LEFT")
-        note:SetTextColor(0.7, 0.7, 0.7)
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("In preview (/mcf): drag the row to move it. Reskins the Blizzard micro buttons (no background). Repositioning applies out of combat.")
         local resetBtn = MakeButton(f, "Reset micro menu", 200, 22)
         resetBtn:SetPoint("TOPLEFT", R, -150)
@@ -1860,7 +2396,7 @@ local function BuildPanel()
         MakeColorButton(f, "Text color", "color", R, -38)
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", R, -74); note:SetWidth(210); note:SetJustifyH("LEFT")
-        note:SetTextColor(0.7, 0.7, 0.7)
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("Controls the world chat bubbles: hides their background and sets the text font/size/outline/color. Applies live as bubbles appear.")
         local resetBtn = MakeButton(f, "Reset chat bubble", 200, 22)
         resetBtn:SetPoint("TOPLEFT", R, -130)
@@ -1888,7 +2424,7 @@ local function BuildPanel()
 
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", R, -10); note:SetWidth(210); note:SetJustifyH("LEFT")
-        note:SetTextColor(0.7, 0.7, 0.7)
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("Colorize titles: recolors the objective-tracker headers/quests (cosmetic, no taint). Title/Dungeon center offset: fine-tune horizontal centering of quest titles vs. scenario/dungeon titles (e.g. \"Windrunner Spire\") independently — live, no reload needed. Auto-hide toggles fold the tracker (alpha 0) via a secure driver — any combination can be active at once; the tracker reappears as soon as none of the checked conditions apply.")
     end
 
@@ -1910,7 +2446,7 @@ local function BuildPanel()
 
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", R, -160); note:SetWidth(210); note:SetJustifyH("LEFT")
-        note:SetTextColor(0.7, 0.7, 0.7)
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         local libNote = ns.HasLCG
             and "Replaces the assisted-rotation highlight with a custom glow on the recommended action button. 'Texture' uses your Assets image (actionbuttonhighlight)."
             or "LibCustomGlow not detected: 'Texture' and 'Border' styles work; Pixel/AutoCast/Button glows need that library."
@@ -1928,8 +2464,8 @@ local function BuildPanel()
     -- size/explorer en el resto del menu).
     do
         local f = Section("ap_general")
-        MakeHeader(f, "Party Auras  —  hover/combat reveal (test)", L, -6, 430)
-        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 11)
+        MakeHeader(f, "Party Auras  —  hover/combat reveal", L, -6, 430)
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", L, -32); note:SetWidth(430); note:SetJustifyH("LEFT")
         note:SetTextColor(0.8, 0.8, 0.8)
         note:SetText("Applies to ALL 5 party frames at once. Shows up to 4 auras (debuffs take " ..
@@ -1961,26 +2497,32 @@ local function BuildPanel()
     end
 
     -- =========================== SECCION SETUP (integracion + perfiles) ===========================
+    -- 2026-07-17: reorganizada — los 2 parrafos densos ahora son bullets (via
+    -- MakeBulletList) y todo el flujo vertical se calcula dinamicamente en vez
+    -- de offsets fijos adivinados (que dejaban el header/parrafo siguiente muy
+    -- pegados o el boton flotando lejos de su texto).
     do
         local f = Section("setup")
-        MakeHeader(f, "Setup  —  addon integration & profiles", L, -6, 430)
-        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 11)
-        note:SetPoint("TOPLEFT", L, -34); note:SetWidth(430); note:SetJustifyH("LEFT")
-        note:SetTextColor(0.85, 0.85, 0.85)
-        note:SetText("AzeriteUI: runtime injection RE-ENABLED (2026-07-15) to re-test — the taint that led to removing it was later traced to unrelated bugs (StaticPopupDialogs reassignment + calendar), not this injection. Its own toggles/colors live in AzeriteUI's options panel (/az -> Gonkast Preset). If you see taint errors, open that panel and turn OFF the master toggle first.")
-        -- Aplicar perfiles de otros addons (Bartender4/DynamicCam/Masque/Chattynator) +
-        -- layout del HUD de Blizzard. DESTRUCTIVO: reemplaza su config con el preset y recarga.
-        MakeHeader(f, "Apply bundled addon profiles", L, -110, 430)
-        local prNote = f:CreateFontString(nil, "ARTWORK"); setFont(prNote, 10)
-        prNote:SetPoint("TOPLEFT", L, -134); prNote:SetWidth(430); prNote:SetJustifyH("LEFT")
-        prNote:SetTextColor(0.7, 0.7, 0.7)
-        prNote:SetText("Installs the bundled profiles for the detected addons (Bartender4, DynamicCam, Masque, Chattynator, AzeriteUI SavedVariables) + the Blizzard HUD Edit Mode layout, then reloads. WARNING: this REPLACES those addons' current configuration.")
+        MakeHeader(f, "Setup  —  addon integration & profiles", L, -6, 440)
+        local y = MakeBulletList(f, {
+            "AzeriteUI runtime injection is re-enabled to re-test (2026-07-15) — the taint issue that led to removing it was traced to unrelated bugs (StaticPopupDialogs + Calendar), not this injection.",
+            "AzeriteUI's own toggles/colors live in its own panel (/az -> Gonkast Preset). If you see taint errors, open that panel and turn OFF the master toggle first.",
+        }, L, -36, 440)
+
+        MakeHeader(f, "Apply bundled addon profiles", L, y - 14, 440)
+        y = MakeBulletList(f, {
+            "Installs the bundled profiles for detected addons (Bartender4, DynamicCam, Masque, Chattynator, AzeriteUI) plus the Blizzard HUD Edit Mode layout, then reloads.",
+            "|cffff5555Warning:|r this REPLACES those addons' current configuration.",
+        }, L, y - 44, 440)
+
         local applyBtn = MakeButton(f, "Apply Profiles", 160, 24)
-        applyBtn:SetPoint("TOPLEFT", L, -200)
+        applyBtn:SetPoint("TOPLEFT", L, y - 16)
         applyBtn:SetScript("OnClick", function() if ns.ApplyProfiles then ns.ApplyProfiles() end end)
+
         -- Lista de addons detectados (se refresca al abrir la seccion).
         local statusFS = f:CreateFontString(nil, "ARTWORK"); setFont(statusFS, 10)
-        statusFS:SetPoint("TOPLEFT", L, -236); statusFS:SetWidth(430); statusFS:SetJustifyH("LEFT")
+        statusFS:SetPoint("TOPLEFT", applyBtn, "BOTTOMLEFT", 0, -12)
+        statusFS:SetWidth(440); statusFS:SetJustifyH("LEFT"); statusFS:SetWordWrap(true)
         statusFS:SetTextColor(0.55, 0.85, 0.55)
         local function refreshStatus()
             local list = (ns.ProfilesStatus and ns.ProfilesStatus()) or {}
@@ -2035,7 +2577,7 @@ local function BuildPanel()
         prBtn:SetScript("OnClick", function() ShowSection("presets") end)
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", L, -222); note:SetWidth(210); note:SetJustifyH("LEFT")
-        note:SetTextColor(0.7, 0.7, 0.7)
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("Per-unit outline width/height live in each unit's Bar tab. Move/Lock and Copy/Paste stay in the footer. 'Apply addon profiles' sets Bartender4/DynamicCam profiles and disables the AzeriteUI modules this addon replaces.")
         -- B4: ocultar SAMPLE de elementos SOLO en preview (no afecta el juego real).
         local lhdr = f:CreateFontString(nil, "ARTWORK"); setFont(lhdr, 12)
@@ -2120,7 +2662,7 @@ local function BuildPanel()
         end
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", L, -302); note:SetWidth(210); note:SetJustifyH("LEFT")
-        note:SetTextColor(0.7, 0.7, 0.7)
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("Enabled elements fade out and reappear when you hover where they are (works even while hidden). Combat keeps them visible. 'Active in' limits Explorer to the chosen content types.")
     end
 
@@ -2131,22 +2673,56 @@ local function BuildPanel()
     fdiv:SetPoint("BOTTOMLEFT", 10, 42); fdiv:SetPoint("BOTTOMRIGHT", -10, 42)
     fdiv:SetHeight(8); fdiv:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3], 0.30)
 
-    local moveBtn = MakeButton(panel, "Move / Lock (/mcf)", 170, 24)
-    moveBtn:SetPoint("BOTTOMLEFT", 10, 12)
+    -- 2026-07-17: tooltips para los botones del footer (antes no explicaban nada,
+    -- a diferencia del resto del panel que ya tiene tooltips en varios lugares).
+    local function AddTooltip(btn, title, desc)
+        btn:HookScript("OnEnter", function()
+            if GameTooltip:IsForbidden() then return end
+            GameTooltip:SetOwner(btn, "ANCHOR_TOP")
+            GameTooltip:SetText(title, COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+            if desc then GameTooltip:AddLine(desc, 1, 1, 1, true) end
+            GameTooltip:Show()
+        end)
+        btn:HookScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
+    end
+
+    local moveBtn = MakeTabButton(panel, "Move / Lock (/mcf)", 170, 24)
+    moveBtn:SetPoint("BOTTOMLEFT", 10, 22)
     moveBtn:SetScript("OnClick", function() ns.SetUnlocked(not ns.IsUnlocked()) end)
     panelButtons[#panelButtons + 1] = moveBtn
+    AddTooltip(moveBtn, "Move / Lock", "Toggles edit mode: drag any element to reposition it. Same as typing /mcf.")
 
-    local previewBtn = MakeButton(panel, "Preview", 80, 24)
-    previewBtn:SetPoint("LEFT", moveBtn, "RIGHT", 6, 0)
-    previewBtn:SetScript("OnClick", function() ns.SetUnlocked(not ns.IsUnlocked()) end)
-    ns.OnUnlockChanged = function(state)
-        previewBtn:SetActive(state)
-        if ns.ApplyTrackerPreviewHide then ns.ApplyTrackerPreviewHide() end
+    -- 2026-07-17: se saco el boton "Preview" — hacia LITERAL lo mismo que
+    -- Move/Lock (mismo click handler, `ns.SetUnlocked(not ns.IsUnlocked())`),
+    -- confirmado con el usuario que era un duplicado sin proposito propio.
+    -- Mientras esta en modo edicion (Move/Lock activo), la ventana se atenua al
+    -- 30% para poder organizar los elementos de fondo sin cerrarla — vuelve a
+    -- 100% en cuanto el mouse pasa por encima del panel (mouseover = opaco,
+    -- mouseout = atenuado, SOLO mientras esta lockeado/en edicion).
+    -- 2026-07-17 (ronda 2): transicion animada (UIFrameFadeIn/Out) en vez del
+    -- salto brusco de SetAlpha.
+    local editAlphaActive = false
+    local function UpdatePanelAlpha()
+        local target = (editAlphaActive and not panel:IsMouseOver()) and 0.3 or 1
+        if UIFrameFadeIn and UIFrameFadeOut then
+            if target == 1 then UIFrameFadeIn(panel, 0.25, panel:GetAlpha(), 1)
+            else UIFrameFadeOut(panel, 0.25, panel:GetAlpha(), 0.3) end
+        else
+            panel:SetAlpha(target)
+        end
     end
-    panelButtons[#panelButtons + 1] = previewBtn
+    panel:HookScript("OnEnter", UpdatePanelAlpha)
+    panel:HookScript("OnLeave", UpdatePanelAlpha)
 
-    local greenBtn = MakeButton(panel, "Outline: ON", 104, 24)
-    greenBtn:SetPoint("LEFT", previewBtn, "RIGHT", 6, 0)
+    ns.OnUnlockChanged = function(state)
+        moveBtn:SetActive(state)
+        if ns.ApplyTrackerPreviewHide then ns.ApplyTrackerPreviewHide() end
+        editAlphaActive = state
+        UpdatePanelAlpha()
+    end
+
+    local greenBtn = MakeTabButton(panel, "Outline: ON", 104, 24)
+    greenBtn:SetPoint("LEFT", moveBtn, "RIGHT", 6, 0)
     local function updGreen()
         local hidden = ns.GetDB().hideEditGreen
         local txt = hidden and "Outline: OFF" or "Outline: ON"
@@ -2161,15 +2737,30 @@ local function BuildPanel()
     end)
     refreshers[#refreshers + 1] = updGreen
     panelButtons[#panelButtons + 1] = greenBtn
+    AddTooltip(greenBtn, "Outline", "Toggles the green edit outline shown around elements while in Move/Lock mode.")
 
-    local copyBtn = MakeButton(panel, "Copy", 70, 24)
-    copyBtn:SetPoint("LEFT", greenBtn, "RIGHT", 6, 0)
-    copyBtn:SetScript("OnClick", ns.CopySettings)
-    panelButtons[#panelButtons + 1] = copyBtn
-    local pasteBtn = MakeButton(panel, "Paste", 70, 24)
-    pasteBtn:SetPoint("LEFT", copyBtn, "RIGHT", 6, 0)
-    pasteBtn:SetScript("OnClick", ns.PasteSettings)
-    panelButtons[#panelButtons + 1] = pasteBtn
+    -- 2026-07-17: Copy/Paste se movieron junto al titulo de unidad (esquina
+    -- superior derecha del contenido, ver unitCopyBtn/unitPasteBtn). En su
+    -- lugar en el footer van 2 accesos rapidos: Reset ALL y abrir el wizard
+    -- de Setup.
+    local resetAllFooterBtn = MakeTabButton(panel, "Reset ALL", 100, 24)
+    resetAllFooterBtn:SetPoint("LEFT", greenBtn, "RIGHT", 6, 0)
+    resetAllFooterBtn:SetScript("OnClick", function() StaticPopup_Show("MYCF_RESETALL") end)
+    panelButtons[#panelButtons + 1] = resetAllFooterBtn
+    AddTooltip(resetAllFooterBtn, "Reset ALL", "Resets everything to the default preset (or factory values if none is marked as default).")
+
+    local wizardBtn = MakeTabButton(panel, "Setup Wizard", 120, 24)
+    wizardBtn:SetPoint("LEFT", resetAllFooterBtn, "RIGHT", 6, 0)
+    wizardBtn:SetScript("OnClick", function() if ns.ShowSetupWizard then ns.ShowSetupWizard() end end)
+    panelButtons[#panelButtons + 1] = wizardBtn
+    AddTooltip(wizardBtn, "Setup Wizard", "Reopens the first-install wizard (addon integration, profiles, Explorer Mode, etc).")
+
+    -- 2026-07-17: centrar el grupo entero (estaba pegado a la izquierda). Como
+    -- greenBtn/resetAllFooterBtn/wizardBtn estan anclados EN CADENA relativos a
+    -- moveBtn, alcanza con re-anclar solo moveBtn — el resto se mueve con el.
+    local totalW = wizardBtn:GetRight() - moveBtn:GetLeft()
+    moveBtn:ClearAllPoints()
+    moveBtn:SetPoint("BOTTOM", panel, "BOTTOM", -totalW / 2 + moveBtn:GetWidth() / 2, 22)
 
     -- GUARD permanente contra el bug del canvas de Settings: su pase de layout a veces
     -- RE-MUESTRA secciones que ya habiamos ocultado, superponiendolas sobre la activa
@@ -2233,41 +2824,24 @@ end
 -- cada 0.1s durante 2s completos (20 intentos) mientras el panel este visible, y se auto-cancela
 -- al terminar la ventana o si el panel se cierra antes. Barato (ApplyPanelView es solo Hide/Show +
 -- SetText, no crea nada) y cubre pases de layout lentos sin adivinar un numero magico de reintentos.
-local retryTicker
+-- 2026-07-17: el retryTicker (reintentaba ApplyPanelView cada 0.1s durante 2s
+-- completos) era un parche para un bug especifico del CANVAS de Blizzard Settings
+-- (su pase de layout no tenia tiempo fijo). Desde que el panel es un frame
+-- standalone (Fase A, ya no usa Settings.RegisterCanvasLayoutCategory) ese bug ya
+-- no aplica — y el ticker causaba el parpadeo real que reporto el usuario: cada
+-- reintento volvia a llamar ShowSection(), que re-dispara el fade-in de la
+-- seccion activa, o sea la seccion se desvanecia y reaparecia ~20 veces seguidas
+-- en los primeros 2 segundos tras abrir. Se elimina el ticker por completo.
 panel:SetScript("OnShow", function()
     if not ns.GetDB() then return end
     if not built then BuildPanel() built = true end
     ApplyPanelView()
-    if retryTicker then retryTicker:Cancel(); retryTicker = nil end
-    if C_Timer and C_Timer.NewTicker then
-        local elapsed = 0
-        retryTicker = C_Timer.NewTicker(0.1, function(self)
-            elapsed = elapsed + 0.1
-            if not panel:IsShown() or elapsed >= 2.0 then
-                self:Cancel()
-                if retryTicker == self then retryTicker = nil end
-                return
-            end
-            ApplyPanelView()
-        end)
-    end
-end)
-panel:SetScript("OnHide", function()
-    if retryTicker then retryTicker:Cancel(); retryTicker = nil end
-end)
-
--- El canvas de Settings dispara OnSizeChanged JUSTO en su pase de layout (que es
--- cuando re-muestra secciones ocultas). Reaplicar ahi es lo mas determinista.
--- ApplyPanelView solo hace Hide/Show de secciones hijas (no redimensiona el panel),
--- asi que no hay recursion. Guardado por 'built' + panel visible.
-panel:HookScript("OnSizeChanged", function()
-    if built and panel:IsShown() then ApplyPanelView() end
+    panel:SetAlpha(1)
 end)
 
 -- Construir el panel POR ADELANTADO (una vez que exista la DB) en lugar de
--- perezosamente en el primer OnShow. Construir los widgets durante el primer
--- pase de layout del canvas de Settings hacia que algunos no se dibujaran
--- hasta mostrar el panel una segunda vez (el bug de "clic afuera y volver").
+-- perezosamente en el primer OnShow, para que este listo apenas se invoque
+-- /mcfmenu por primera vez.
 local builder = CreateFrame("Frame")
 builder:RegisterEvent("PLAYER_LOGIN")
 builder:SetScript("OnEvent", function(self)
@@ -2276,11 +2850,118 @@ builder:SetScript("OnEvent", function(self)
         BuildPanel()
         built = true
     end
+    -- AddOn Compartment (2026-07-17): el icono de rompecabezas junto al minimapa,
+    -- disponible desde Dragonflight — el usuario no quiere depender solo de
+    -- /mcfmenu. Es el reemplazo moderno de "clic derecho > Opciones" para addons
+    -- que no usan un panel nativo de Blizzard Settings (dejamos de usar ese
+    -- sistema en la Fase A al pasar a frame standalone estilo Plumber). Se
+    -- registra aca (PLAYER_LOGIN) en vez de al cargar el archivo, para asegurar
+    -- que AddonCompartmentFrame ya exista.
+    if AddonCompartmentFrame and AddonCompartmentFrame.RegisterAddon then
+        AddonCompartmentFrame:RegisterAddon({
+            -- 2026-07-17: nombre de VISUALIZACION, no el nombre real del addon
+            -- (que sigue siendo MyCustomFrames en el .toc) — el usuario quiere
+            -- ver "AzeriteUI - Gonkast Preset" en el minimapa/menu de addons.
+            text = "AzeriteUI - Gonkast Preset",
+            icon = "Interface\\AddOns\\" .. ADDON .. "\\Assets\\addon_icon.tga",
+            notCheckable = true,
+            func = function()
+                if not built and ns.GetDB() then BuildPanel(); built = true end
+                if built then ns.ToggleControlCenter() end
+            end,
+        })
+    end
+
+    -- FALLBACK garantizado (2026-07-17): el usuario no encontro el icono del
+    -- AddOn Compartment (puede no existir todavia en este build de Midnight, o
+    -- estar oculto). Settings.RegisterCanvasLayoutCategory es una API mucho mas
+    -- vieja/estable — se registra una entrada MINIMA (no el panel entero, que ya
+    -- es standalone) en Interface Options > AddOns con solo un boton "Open Panel".
+    if Settings and Settings.RegisterCanvasLayoutCategory then
+        local miniPanel = CreateFrame("Frame")
+        miniPanel.name = "AzeriteUI - Gonkast Preset"
+        local openBtn = CreateFrame("Button", nil, miniPanel, "UIPanelButtonTemplate")
+        openBtn:SetSize(200, 26)
+        openBtn:SetPoint("TOPLEFT", 16, -16)
+        openBtn:SetText("Open Options Panel")
+        openBtn:SetScript("OnClick", function()
+            if not built and ns.GetDB() then BuildPanel(); built = true end
+            if built then ns.ToggleControlCenter() end
+        end)
+        local hint = miniPanel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+        hint:SetPoint("TOPLEFT", openBtn, "BOTTOMLEFT", 0, -10)
+        hint:SetText("Or type /mcfmenu, or click the AddOn Compartment icon (puzzle piece near the minimap).")
+        local miniCategory = Settings.RegisterCanvasLayoutCategory(miniPanel, miniPanel.name)
+        miniCategory.ID = miniPanel.name
+        Settings.RegisterAddOnCategory(miniCategory)
+    end
+
+    -- Boton de MINIMAPA (2026-07-17): el addon no tiene ninguna libreria tipo
+    -- LibDBIcon embebida, asi que se implementa a mano — arrastrable alrededor
+    -- del minimapa (angulo guardado en db), click abre/cierra el panel.
+    local mmBtn = CreateFrame("Button", "MyCF_MinimapButton", Minimap)
+    mmBtn:SetSize(31, 31)
+    mmBtn:SetFrameStrata("MEDIUM")
+    mmBtn:SetFrameLevel(8)
+    mmBtn:RegisterForClicks("LeftButtonUp")
+    mmBtn:RegisterForDrag("LeftButton")
+
+    local mmIcon = mmBtn:CreateTexture(nil, "ARTWORK")
+    mmIcon:SetTexture("Interface\\AddOns\\" .. ADDON .. "\\Assets\\addon_icon.tga")
+    mmIcon:SetSize(20, 20)
+    mmIcon:SetPoint("CENTER", 0, 1)
+
+    local mmBorder = mmBtn:CreateTexture(nil, "OVERLAY")
+    mmBorder:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    mmBorder:SetSize(54, 54)
+    mmBorder:SetPoint("TOPLEFT")
+
+    local function UpdateMinimapPos()
+        local d = ns.GetDB()
+        local angle = (d and d.minimapButtonAngle) or 200
+        local rad = math.rad(angle)
+        local r = 80
+        mmBtn:ClearAllPoints()
+        mmBtn:SetPoint("CENTER", Minimap, "CENTER", r * math.cos(rad), r * math.sin(rad))
+    end
+
+    mmBtn:SetScript("OnDragStart", function(self)
+        self:SetScript("OnUpdate", function()
+            local mx, my = Minimap:GetCenter()
+            local px, py = GetCursorPosition()
+            local scale = Minimap:GetEffectiveScale()
+            px, py = px / scale, py / scale
+            local angle = math.deg(math.atan2(py - my, px - mx))
+            local d = ns.GetDB()
+            if d then d.minimapButtonAngle = angle end
+            UpdateMinimapPos()
+        end)
+    end)
+    mmBtn:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
+
+    mmBtn:SetScript("OnClick", function()
+        if not built and ns.GetDB() then BuildPanel(); built = true end
+        if built then ns.ToggleControlCenter() end
+    end)
+    mmBtn:SetScript("OnEnter", function(self)
+        if GameTooltip:IsForbidden() then return end
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:SetText("AzeriteUI - Gonkast Preset", COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+        GameTooltip:AddLine("Click to open the options panel.", 1, 1, 1)
+        GameTooltip:AddLine("Drag to move this button.", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    mmBtn:SetScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
+
+    UpdateMinimapPos()
 end)
 
-local category = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
-category.ID = panel.name
-Settings.RegisterAddOnCategory(category)
+-- Abre el panel de opciones standalone (reemplaza la categoria de Blizzard Settings).
+SLASH_MCFMENU1 = "/mcfmenu"
+SlashCmdList["MCFMENU"] = function()
+    if not built and ns.GetDB() then BuildPanel(); built = true end
+    if built then ns.ToggleControlCenter() end
+end
 
 -- Expone el toolkit de estilo del panel (botones/toggles/headers Plumber-style) para otros
 -- archivos que necesiten la misma UI sin duplicarla, p.ej. el wizard de primera instalacion
