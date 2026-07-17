@@ -7,6 +7,38 @@ Titulo del toc = "AzeriteUI |cffffcc00—|r Gonkast Preset", author Gonkast; la 
 siendo `MyCustomFrames` (renombrarla romperia las rutas de `Assets\`). Texto visible en INGLES;
 comentarios en español.
 
+**AUDITORIA 2026-07-17 (limites de Lua + codigo muerto):**
+- **`core.lua` esta AL LIMITE: ~195/200 locals de nivel-archivo** (contado con el mismo metodo
+  que `grep -c '^local '` pero sumando variables de lineas `local a, b, c = ...`). Esta sesion
+  rompio la carga de TODO el addon (`main function has more than 200 local variables`) al agregar
+  ~5 locals nuevas para un fix de taint de AzeriteUI — se revirtio y el fix se re-hizo en
+  `Integration_AzeriteUI.lua` en cambio. **Con solo ~5 locals de margen, CUALQUIER feature nueva en
+  core.lua puede volver a romper la carga.** Antes de agregar algo a core.lua: contar de nuevo, y
+  si esta cerca, usar un archivo nuevo del toc (patron ya establecido: ChatBubble/MicroMenu/
+  Grouping/Glow se movieron por esto mismo) o sumarlo a un archivo existente con margen
+  (Integration_AzeriteUI.lua ~41/200, Tracker.lua ~36/200, Setup.lua ~52/200).
+- **`Options.lua`, funcion `BuildPanel` (linea ~1025-3000, ~2000 lineas): ~52/60 upvalues** — el
+  limite de Lua de 60 upvalues (variables de FUERA de la funcion que una funcion captura) es
+  DISTINTO al de 200 locals y es POR FUNCION, no por archivo. Esta sesion tambien lo rompio
+  (`function at line ... has more than 60 upvalues`) al agregar 3 locals nuevas para el sistema de
+  scroll horizontal de tabs; se arreglo consolidando grupos de variables relacionadas en tablas
+  (`VIS`, `NAVBTN`, `HIDEGRP` — de 13 locals sueltas a 3 tablas). **Patron para agregar algo nuevo
+  a `BuildPanel` sin acercarse mas al limite: si son 2+ variables relacionadas, meterlas en UNA
+  tabla en vez de N locals sueltas** (mismo patron que `VIS`/`NAVBTN`/`HIDEGRP`). Con ~52/60, el
+  margen real es de solo 8.
+- **Auditoria de codigo muerto** (barrido con agente sobre los 17 archivos activos del toc, cruzando
+  ~220 funciones definidas contra sus usos): solo se encontro **1 funcion sin usar**,
+  `ns.CloseControlCenter` (Options.lua) — nunca se llamaba (existia `ns.OpenControlCenter` y
+  `ns.ToggleControlCenter`, pero no un "close" directo). Eliminada. El resto del addon esta limpio,
+  sin funciones muertas detectables.
+- **Archivo huerfano encontrado:** `Profiles/Masque_Azerite_Hex/` (con su propio `.toc`,
+  `main.lua`, `media/`) — es un addon Masque STANDALONE completo, pero NO esta en el `.toc` de
+  MyCustomFrames (no carga como parte del addon) NI es descubrible por WoW como addon propio
+  (esta anidado demasiado profundo: `AddOns/MyCustomFrames/Profiles/Masque_Azerite_Hex/`, WoW solo
+  escanea `AddOns/<Carpeta>/<Carpeta>.toc` en el primer nivel). Esta 100% inerte. Si no se usa,
+  se puede borrar sin afectar nada; si se queria distribuir aparte, habria que moverlo fuera de
+  `AddOns/MyCustomFrames/`.
+
 **ACTUALIZADO 2026-07-17.** Sesion grande de rediseño del menu de opciones + features nuevas:
 
 - **`BarReposition.lua` (nuevo archivo, carga despues de `MasqueSkin.lua`)**: reposiciona la barra

@@ -392,6 +392,28 @@ local function MakeSlider(parent, label, minV, maxV, step, dbKey, x, y, getTbl, 
     box:SetSize(44, 16)
     box:SetPoint("RIGHT", plus, "LEFT", -4, 0)
     box:SetAutoFocus(false); box:SetJustifyH("RIGHT")
+    -- Reskin FLAT (2026-07-17): el InputBoxTemplate de Blizzard (bordes azules 3-slice)
+    -- desentona con el resto del panel (oscuro/dorado, todo flat). Ocultamos el arte
+    -- default y dibujamos fondo plano + 2 lineas finas (mismo lenguaje visual que
+    -- COLOR_LINE ya usa en dividers/tracks). Cambio centralizado: afecta TODOS los
+    -- sliders del menu de una sola vez.
+    if box.Left then box.Left:SetAlpha(0) end
+    if box.Middle then box.Middle:SetAlpha(0) end
+    if box.Right then box.Right:SetAlpha(0) end
+    local boxBg = box:CreateTexture(nil, "BACKGROUND", nil, -1)
+    boxBg:SetColorTexture(0, 0, 0, 0.45)
+    boxBg:SetPoint("TOPLEFT", -3, 1)
+    boxBg:SetPoint("BOTTOMRIGHT", 3, -1)
+    local boxTop = box:CreateTexture(nil, "BORDER")
+    boxTop:SetColorTexture(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.5)
+    boxTop:SetPoint("TOPLEFT", boxBg, "TOPLEFT", 0, 0)
+    boxTop:SetPoint("TOPRIGHT", boxBg, "TOPRIGHT", 0, 0)
+    boxTop:SetHeight(1)
+    local boxBot = box:CreateTexture(nil, "BORDER")
+    boxBot:SetColorTexture(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.5)
+    boxBot:SetPoint("BOTTOMLEFT", boxBg, "BOTTOMLEFT", 0, 0)
+    boxBot:SetPoint("BOTTOMRIGHT", boxBg, "BOTTOMRIGHT", 0, 0)
+    boxBot:SetHeight(1)
     local minus = MakeButton(s, "-", 18, 16)
     minus:SetPoint("RIGHT", box, "LEFT", -2, 0)
 
@@ -520,9 +542,18 @@ local function GetTexPopup()
     local ttl = p:CreateFontString(nil, "OVERLAY"); setFont(ttl, 13)
     ttl:SetPoint("TOPLEFT", 10, -8); ttl:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]); ttl:SetText("Choose texture")
     local close = MakeButton(p, "X", 22, 20); close:SetPoint("TOPRIGHT", -6, -6)
-    close:SetScript("OnClick", function() p:Hide() end)
+    close:SetScript("OnClick", function() p:Hide() end)   -- cierra SIN aplicar (cancelar)
+    -- Fila de botones fija abajo (Accept/Cancel): el click en una fila ya NO aplica
+    -- directo, solo selecciona/marca; hace falta Accept para confirmar.
+    local acceptBtn = MakeButton(p, "Accept", 106, 22)
+    acceptBtn:SetPoint("BOTTOMLEFT", 8, 8)
+    acceptBtn:SetScript("OnClick", function() if p.applySelected then p.applySelected() end end)
+    local cancelBtn = MakeButton(p, "Cancel", 106, 22)
+    cancelBtn:SetPoint("BOTTOMRIGHT", -8, 8)
+    cancelBtn:SetScript("OnClick", function() p:Hide() end)
+    p.acceptBtn = acceptBtn
     local sf = CreateFrame("ScrollFrame", nil, p)
-    sf:SetPoint("TOPLEFT", 8, -34); sf:SetPoint("BOTTOMRIGHT", -8, 8)
+    sf:SetPoint("TOPLEFT", 8, -34); sf:SetPoint("BOTTOMRIGHT", -8, 38)
     local child = CreateFrame("Frame", nil, sf); child:SetSize(232, 10); sf:SetScrollChild(child)
     sf:EnableMouseWheel(true)
     sf:SetScript("OnMouseWheel", function(self, d)
@@ -545,6 +576,12 @@ local function AcquireTexRow(p, i)
         tx:SetPoint("LEFT", sw, "RIGHT", 6, 0); tx:SetJustifyH("LEFT"); tx:SetTextColor(0.92, 0.9, 0.85)
         r.tx = tx
         local hl = r:CreateTexture(nil, "HIGHLIGHT"); hl:SetAllPoints(); hl:SetColorTexture(1, 0.82, 0.2, 0.14)
+        -- Marca de SELECCIONADO (distinta del highlight de mouse-over): queda
+        -- prendida en la fila elegida hasta que se confirme con Accept o se
+        -- elija otra.
+        local sel = r:CreateTexture(nil, "ARTWORK", nil, 1)
+        sel:SetAllPoints(); sel:SetColorTexture(1, 0.82, 0.2, 0.30); sel:Hide()
+        r.sel = sel
         p.pool[i] = r
     end
     return r
@@ -555,12 +592,19 @@ local function OpenTexPopup(category, dbKey, anchor, getTbl, onChange)
     local edit = onChange or OnEdit
     local p = GetTexPopup()
     local files = (ns.TEX_LIB and ns.TEX_LIB[category]) or {}
+    local currentPath = get()[dbKey]
+    p.selectedRow, p.selectedPath = nil, nil
+    p.applySelected = function()
+        if p.selectedPath then get()[dbKey] = p.selectedPath; edit(); RefreshControls() end
+        p:Hide()
+    end
     local i, y = 0, -2
     for _, skin in ipairs(ns.TEX_SKINS or {}) do
         if #files > 0 then
             i = i + 1; local h = AcquireTexRow(p, i)
             h.sw:Hide(); h.tx:ClearAllPoints(); h.tx:SetPoint("LEFT", 4, 0)
             h.tx:SetText("|cffffcc00" .. (skin.label or "Skin") .. "|r")
+            h.sel:Hide()
             h:SetPoint("TOPLEFT", 0, y); h:Disable(); h:Show(); y = y - 20
             for _, file in ipairs(files) do
                 i = i + 1; local r = AcquireTexRow(p, i)
@@ -568,8 +612,12 @@ local function OpenTexPopup(category, dbKey, anchor, getTbl, onChange)
                 r.sw:Show(); r.sw:SetTexture(path)
                 r.tx:ClearAllPoints(); r.tx:SetPoint("LEFT", r.sw, "RIGHT", 6, 0); r.tx:SetText(file)
                 r:SetPoint("TOPLEFT", 0, y); r:Enable()
+                r.sel:SetShown(path == currentPath)   -- preselecciona la textura actual
+                if path == currentPath then p.selectedRow, p.selectedPath = r, path end
                 r:SetScript("OnClick", function()
-                    get()[dbKey] = path; edit(); RefreshControls(); p:Hide()
+                    if p.selectedRow then p.selectedRow.sel:Hide() end
+                    p.selectedRow, p.selectedPath = r, path
+                    r.sel:Show()
                 end)
                 r:Show(); y = y - 24
             end
@@ -581,7 +629,9 @@ local function OpenTexPopup(category, dbKey, anchor, getTbl, onChange)
     p:Show(); p:Raise()
 end
 
--- Editbox (ruta manual) + swatch de preview + boton "..." que abre el selector.
+-- Editbox (ruta manual, reskin flat) + boton "..." que abre el selector.
+-- (2026-07-17: sacada la swatch de preview al lado, el usuario no la necesita
+-- — solo el editbox + el boton para abrir el selector.)
 local function MakeTexturePicker(parent, label, dbKey, category, x, y, getTbl, onChange)
     local get = getTbl or getP
     local edit = onChange or OnEdit
@@ -591,13 +641,31 @@ local function MakeTexturePicker(parent, label, dbKey, category, x, y, getTbl, o
     eb:SetSize(138, 20); eb:SetPoint("TOPLEFT", x + 4, y - 15); eb:SetAutoFocus(false)
     eb:SetScript("OnEnterPressed", function(self) get()[dbKey] = self:GetText(); self:ClearFocus(); edit() end)
     eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
-    local sw = parent:CreateTexture(nil, "OVERLAY"); sw:SetSize(20, 20); sw:SetPoint("LEFT", eb, "RIGHT", 6, 0)
-    local pick = MakeButton(parent, "...", 24, 20); pick:SetPoint("LEFT", sw, "RIGHT", 6, 0)
+    -- Reskin FLAT (mismo lenguaje visual que MakeSlider): oculta el arte azul
+    -- default de InputBoxTemplate y dibuja fondo plano + lineas finas.
+    if eb.Left then eb.Left:SetAlpha(0) end
+    if eb.Middle then eb.Middle:SetAlpha(0) end
+    if eb.Right then eb.Right:SetAlpha(0) end
+    local ebBg = eb:CreateTexture(nil, "BACKGROUND", nil, -1)
+    ebBg:SetColorTexture(0, 0, 0, 0.45)
+    ebBg:SetPoint("TOPLEFT", -3, 1)
+    ebBg:SetPoint("BOTTOMRIGHT", 3, -1)
+    local ebTop = eb:CreateTexture(nil, "BORDER")
+    ebTop:SetColorTexture(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.5)
+    ebTop:SetPoint("TOPLEFT", ebBg, "TOPLEFT", 0, 0)
+    ebTop:SetPoint("TOPRIGHT", ebBg, "TOPRIGHT", 0, 0)
+    ebTop:SetHeight(1)
+    local ebBot = eb:CreateTexture(nil, "BORDER")
+    ebBot:SetColorTexture(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.5)
+    ebBot:SetPoint("BOTTOMLEFT", ebBg, "BOTTOMLEFT", 0, 0)
+    ebBot:SetPoint("BOTTOMRIGHT", ebBg, "BOTTOMRIGHT", 0, 0)
+    ebBot:SetHeight(1)
+
+    local pick = MakeButton(parent, "...", 24, 20); pick:SetPoint("LEFT", eb, "RIGHT", 10, 0)
     pick:SetScript("OnClick", function() OpenTexPopup(category, dbKey, pick, getTbl, onChange) end)
     refreshers[#refreshers + 1] = function()
         local v = get()[dbKey]
         eb:SetText(v or "")
-        if v and v ~= "" then sw:SetTexture(v); sw:Show() else sw:Hide() end
     end
     return eb
 end
@@ -712,18 +780,16 @@ borderTex:SetTexture("Interface\\AddOns\\MyCustomFrames\\Assets\\Background_comp
 borderTex:SetPoint("TOPLEFT", -44, 54)
 borderTex:SetPoint("BOTTOMRIGHT", 44, -41)
 
--- Franja superior arrastrable (solo la zona del titulo, NO el ancho completo:
--- los botones globales Profile/Explorer/Editing/Setup + Close viven a la derecha
--- y necesitan recibir sus propios clics, no ser tapados por el area de arrastre).
-local dragStrip = CreateFrame("Frame", nil, panel)
-dragStrip:SetPoint("TOPLEFT", 12, -8)
-dragStrip:SetSize(360, 28)
-dragStrip:EnableMouse(true)
-dragStrip:SetScript("OnMouseDown", function() panel:StartMoving() end)
-dragStrip:SetScript("OnMouseUp", function() panel:StopMovingOrSizing() end)
+-- Arrastre (2026-07-17, v3): antes solo se podia mover desde una franja fija
+-- arriba (con un icono de "agarre" que quedo feo) — ahora se puede arrastrar
+-- desde CUALQUIER zona vacia de la ventana. El panel entero recibe el mouse
+-- down; los widgets interactivos (botones, sliders, editboxes, tabs) viven en
+-- frames propios con su propio mouse habilitado, asi que capturan el click
+-- ANTES de que llegue a `panel` — solo el fondo/espacios vacios arrastran.
+panel:SetScript("OnMouseDown", function(self, btn) if btn == "LeftButton" then self:StartMoving() end end)
+panel:SetScript("OnMouseUp", function(self) self:StopMovingOrSizing() end)
 
 ns.OpenControlCenter = function() panel:Show() end
-ns.CloseControlCenter = function() panel:Hide() end
 ns.ToggleControlCenter = function() if panel:IsShown() then panel:Hide() else panel:Show() end end
 
 local sections = {}          -- key -> frame
@@ -738,17 +804,22 @@ local unitTabs = {}
 local panelButtons = {}
 local unitTitle              -- fontstring del titulo de la unidad editada
 local unitCopyBtn, unitPasteBtn   -- Copy/Paste junto al titulo, solo visibles para unidades/portraits/etc
-local powerHidden, colorHidden, nameSectionKeys = {}, {}, { name = true, spell = true }
-local portraitDualBoxes = {}   -- grupos visibles solo si el portrait tiene dualPos
-local portraitModelOnly = {}   -- widgets visibles solo si el retrato es modelo 3D (no icono)
-local portraitPlayerOnly = {}  -- widgets visibles solo en el player portrait
-local portraitFocusOnly = {}   -- widgets visibles solo en el focus portrait (texto vida + highlight)
-local portraitRoleOnly = {}    -- widgets visibles solo si el portrait tiene rol (party)
-local auraDualBoxes = {}       -- grupos visibles solo si el aura tiene dualPos (player)
-local perfilBtn                -- boton "Profile" global (esquina superior derecha)
-local explorerBtn              -- boton "Explorer" global (al lado de Profile)
-local editingBtn               -- boton "Editing" global (herramientas de edicion, B5)
-local setupBtn                 -- boton "Setup" global (integracion / perfiles de otros addons)
+-- fila Gen/Bar/Cage/... + su scrollbar horizontal (tabla en vez de 3 locals
+-- sueltas: BuildPanel ya estaba al limite de 60 upvalues de Lua por funcion).
+local tabScrollUI = {}
+-- Consolidado en tablas (2026-07-17): BuildPanel se paso del limite de 60
+-- upvalues de Lua por funcion; cada grupo de variables relacionadas pasa de
+-- N locals sueltas a 1 sola tabla (misma logica, menos upvalues).
+local HIDEGRP = { powerHidden = {}, colorHidden = {}, nameSectionKeys = { name = true, spell = true } }
+local VIS = {
+    portraitDualBoxes = {},   -- grupos visibles solo si el portrait tiene dualPos
+    portraitModelOnly = {},   -- widgets visibles solo si el retrato es modelo 3D (no icono)
+    portraitPlayerOnly = {},  -- widgets visibles solo en el player portrait
+    portraitFocusOnly = {},   -- widgets visibles solo en el focus portrait (texto vida + highlight)
+    portraitRoleOnly = {},    -- widgets visibles solo si el portrait tiene rol (party)
+    auraDualBoxes = {},       -- grupos visibles solo si el aura tiene dualPos (player)
+}
+local NAVBTN = {}   -- .presets/.explorer/.editing/.setup: botones globales (esquina sup. derecha)
 local currentSection = "general"
 local UpdatePreview   -- asignada en BuildPanel (3ra columna estilo Plumber, ver mas abajo)
 
@@ -768,15 +839,22 @@ local function ShowSection(key)
         if unitTitle then unitTitle:SetText(GLOBAL_SECTION_TITLE[key]) end
         if unitCopyBtn then unitCopyBtn:Hide() end
         if unitPasteBtn then unitPasteBtn:Hide() end
+        -- Setup/Editing/Explorer/Profile no tienen sub-tabs (Gen/Bar/Cage/...),
+        -- asi que tampoco necesitan SU scrollbar horizontal - antes quedaba
+        -- visible "pegada" de la ultima unidad seleccionada.
+        if tabScrollUI.frame then tabScrollUI.frame:Hide() end
+        if tabScrollUI.track then tabScrollUI.track:Hide() end
+        if tabScrollUI.thumb then tabScrollUI.thumb:Hide() end
     else
         for k, b in pairs(sectionTabs) do b:SetActive(k == key) end
         if unitCopyBtn then unitCopyBtn:Show() end
         if unitPasteBtn then unitPasteBtn:Show() end
+        if tabScrollUI.frame then tabScrollUI.frame:Show() end
     end
-    if perfilBtn then perfilBtn:SetActive(key == "presets") end
-    if explorerBtn then explorerBtn:SetActive(key == "explorer") end
-    if editingBtn then editingBtn:SetActive(key == "editing") end
-    if setupBtn then setupBtn:SetActive(key == "setup") end
+    if NAVBTN.presets then NAVBTN.presets:SetActive(key == "presets") end
+    if NAVBTN.explorer then NAVBTN.explorer:SetActive(key == "explorer") end
+    if NAVBTN.editing then NAVBTN.editing:SetActive(key == "editing") end
+    if NAVBTN.setup then NAVBTN.setup:SetActive(key == "setup") end
     if UpdatePreview then UpdatePreview() end
     -- Nudge: fuerza el relayout de la seccion recien mostrada. El canvas de Settings a
     -- veces no posiciona/renderiza los widgets hasta un Hide/Show (de ahi el bug de
@@ -875,7 +953,7 @@ local function SelectUnit(key)
             elseif IsAuraSection(k) then b:SetShown(true)
             else b:SetShown(false) end
         end
-        for _, w in ipairs(auraDualBoxes) do w:SetShown(dual and true or false) end
+        for _, w in ipairs(VIS.auraDualBoxes) do w:SetShown(dual and true or false) end
         local okSec = IsAuraSection(currentSection) and (currentSection ~= "a_dead" or dual)
         if not okSec then ShowSection("a_general") end
         return
@@ -889,11 +967,11 @@ local function SelectUnit(key)
             b:SetShown(IsPortraitSection(k) and PortraitSectionAllowed(k, feats)
                 and (k ~= "p_focus" or isFocus))
         end
-        for _, w in ipairs(portraitDualBoxes) do w:SetShown(feats.dualPos and true or false) end
-        for _, w in ipairs(portraitModelOnly) do w:SetShown(kind == "model") end
-        for _, w in ipairs(portraitPlayerOnly) do w:SetShown(key == "portrait_player") end
-        for _, w in ipairs(portraitFocusOnly) do w:SetShown(isFocus) end
-        for _, w in ipairs(portraitRoleOnly) do w:SetShown(feats.roleLeader and true or false) end
+        for _, w in ipairs(VIS.portraitDualBoxes) do w:SetShown(feats.dualPos and true or false) end
+        for _, w in ipairs(VIS.portraitModelOnly) do w:SetShown(kind == "model") end
+        for _, w in ipairs(VIS.portraitPlayerOnly) do w:SetShown(key == "portrait_player") end
+        for _, w in ipairs(VIS.portraitFocusOnly) do w:SetShown(isFocus) end
+        for _, w in ipairs(VIS.portraitRoleOnly) do w:SetShown(feats.roleLeader and true or false) end
         local okSection = IsPortraitSection(currentSection)
             and PortraitSectionAllowed(currentSection, feats)
             and (currentSection ~= "p_focus" or isFocus)
@@ -905,11 +983,11 @@ local function SelectUnit(key)
     local isPower = u and u.kind == "power"
     local noColor = isPower or (u and u.fixedColor ~= nil)
     local hasName = u and u.nameText
-    for _, f in ipairs(powerHidden) do f:SetShown(not isPower) end
-    for _, f in ipairs(colorHidden) do f:SetShown(not noColor) end
+    for _, f in ipairs(HIDEGRP.powerHidden) do f:SetShown(not isPower) end
+    for _, f in ipairs(HIDEGRP.colorHidden) do f:SetShown(not noColor) end
     for k, b in pairs(sectionTabs) do
         if IsPortraitSection(k) or IsAuraSection(k) or IsInfoSection(k) or IsMicroSection(k) or IsChatSection(k) or IsTrackerSection(k) or IsGlowSection(k) or IsPartyAuraSection(k) then b:SetShown(false)
-        elseif nameSectionKeys[k] then b:SetShown(hasName and true or false)
+        elseif HIDEGRP.nameSectionKeys[k] then b:SetShown(hasName and true or false)
         elseif k == "cast" or k == "highlight" then b:SetShown(not isPower)
         else b:SetShown(true) end
     end
@@ -918,7 +996,7 @@ local function SelectUnit(key)
        or IsGlowSection(currentSection) or IsPartyAuraSection(currentSection)
        or currentSection == "presets" or currentSection == "explorer" or currentSection == "editing"
        or currentSection == "setup"
-       or (nameSectionKeys[currentSection] and not hasName)
+       or (HIDEGRP.nameSectionKeys[currentSection] and not hasName)
        or ((currentSection == "cast" or currentSection == "highlight") and isPower) then
         ShowSection("general")
     end
@@ -969,6 +1047,68 @@ local function BuildPanel()
     closeBtn:SetScript("OnClick", function() panel:Hide() end)
     panelButtons[#panelButtons + 1] = closeBtn
 
+    -- Escala de la VENTANA del menu (no confundir con "scale" de las unidades,
+    -- que es por-unidad). Global (db.panelScale), no por preset.
+    -- 2026-07-17: reemplazado el drag-slider (80px mapeando un rango de 0.9 ->
+    -- cada pixel de arrastre saltaba mucho, "muy grande o muy chico") por un
+    -- stepper -/valor editable/+ de paso fijo (0.05) — mismo control preciso
+    -- que ya usa MakeSlider, sin el drag impreciso.
+    do
+        local step = 0.05
+        local minV, maxV = 0.6, 1.5
+        local function clampScale(v) return math.max(minV, math.min(maxV, v)) end
+        local function roundScale(v) return math.floor(v / step + 0.5) * step end
+
+        local scalePlus = MakeButton(panel, "+", 20, 20)
+        scalePlus:SetPoint("RIGHT", closeBtn, "LEFT", -8, 0)
+
+        local scaleVal = CreateFrame("EditBox", nil, panel, "InputBoxTemplate")
+        scaleVal:SetSize(40, 20)
+        scaleVal:SetPoint("RIGHT", scalePlus, "LEFT", -2, 0)
+        scaleVal:SetAutoFocus(false); scaleVal:SetJustifyH("CENTER")
+        if scaleVal.Left then scaleVal.Left:SetAlpha(0) end
+        if scaleVal.Middle then scaleVal.Middle:SetAlpha(0) end
+        if scaleVal.Right then scaleVal.Right:SetAlpha(0) end
+        local svBg = scaleVal:CreateTexture(nil, "BACKGROUND", nil, -1)
+        svBg:SetColorTexture(0, 0, 0, 0.45)
+        svBg:SetPoint("TOPLEFT", -3, 1); svBg:SetPoint("BOTTOMRIGHT", 3, -1)
+        local svTop = scaleVal:CreateTexture(nil, "BORDER")
+        svTop:SetColorTexture(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.5)
+        svTop:SetPoint("TOPLEFT", svBg, "TOPLEFT", 0, 0); svTop:SetPoint("TOPRIGHT", svBg, "TOPRIGHT", 0, 0); svTop:SetHeight(1)
+        local svBot = scaleVal:CreateTexture(nil, "BORDER")
+        svBot:SetColorTexture(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.5)
+        svBot:SetPoint("BOTTOMLEFT", svBg, "BOTTOMLEFT", 0, 0); svBot:SetPoint("BOTTOMRIGHT", svBg, "BOTTOMRIGHT", 0, 0); svBot:SetHeight(1)
+
+        local scaleMinus = MakeButton(panel, "-", 20, 20)
+        scaleMinus:SetPoint("RIGHT", scaleVal, "LEFT", -2, 0)
+
+        local scaleLbl = panel:CreateFontString(nil, "ARTWORK"); setFont(scaleLbl, 11)
+        scaleLbl:SetPoint("RIGHT", scaleMinus, "LEFT", -8, 0)
+        scaleLbl:SetTextColor(COLOR_OPTION[1], COLOR_OPTION[2], COLOR_OPTION[3])
+        scaleLbl:SetText("Scale")
+
+        local function setScale(v)
+            v = clampScale(roundScale(v))
+            ns.GetDB().panelScale = v
+            panel:SetScale(v)
+            scaleVal:SetText(string.format("%.2f", v))
+        end
+        scalePlus:SetScript("OnClick", function() setScale(((ns.GetDB() and ns.GetDB().panelScale) or 1.0) + step) end)
+        scaleMinus:SetScript("OnClick", function() setScale(((ns.GetDB() and ns.GetDB().panelScale) or 1.0) - step) end)
+        scaleVal:SetScript("OnEnterPressed", function(self)
+            local v = tonumber(self:GetText())
+            if v then setScale(v) else self:SetText(string.format("%.2f", (ns.GetDB() and ns.GetDB().panelScale) or 1.0)) end
+            self:ClearFocus()
+        end)
+        scaleVal:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+
+        refreshers[#refreshers + 1] = function()
+            local v = (ns.GetDB() and ns.GetDB().panelScale) or 1.0
+            scaleVal:SetText(string.format("%.2f", v))
+            panel:SetScale(v)
+        end
+    end
+
     local LABELS = {}
     for _, d in ipairs(ns.UNITS) do LABELS[d.key] = d.label end
     for _, d in ipairs(ns.PORTRAITS or {}) do LABELS[d.key] = d.label end
@@ -997,30 +1137,29 @@ local function BuildPanel()
     -- que existe la tabla `collapsed` (expande/colapsa TODOS los grupos de un tiron).
     local searchText = ""
     local RelayoutSidebar
-    local sortBtn = MakeButton(sidebar, "All", 30, 22)
-    sortBtn:SetPoint("TOPRIGHT", -2, -4)
-    -- Pildora con borde limpio (izq/centro/der 3-slice) + lupa, calcada del buscador REAL de
-    -- Plumber (antes: InputBoxTemplate nativo de Blizzard, se veia como una caja azul generica).
+    -- Buscador (2026-07-17, agrandado): fila propia, ancho casi completo del
+    -- sidebar (antes compartia fila con "All" y quedaba muy chico/apretado).
+    -- "All" bajo a su propia fila, a la derecha.
     local searchBox = CreateFrame("EditBox", nil, sidebar)
-    searchBox:SetSize(84, 22)
-    searchBox:SetPoint("TOPLEFT", 10, -5)
+    searchBox:SetSize(118, 28)
+    searchBox:SetPoint("TOPLEFT", 10, -6)
     searchBox:SetAutoFocus(false)
     searchBox:SetFontObject("GameFontNormal")
-    searchBox:SetTextInsets(18, 4, 0, 0)
+    searchBox:SetTextInsets(22, 6, 0, 0)
     searchBox:SetTextColor(0.92, 0.86, 0.70)
 
-    -- Los caps se dibujan un poco MAS ALTOS que la caja (22+6=28) y se solapan hacia adentro
+    -- Los caps se dibujan un poco MAS ALTOS que la caja (28+6=34) y se solapan hacia adentro
     -- (offset -2/2) para que el borde del atlas (que es una pildora completa, no un marco fino)
     -- se recorte por los bordes de la caja en vez de aplastarse en una tira casi invisible.
     -- Vertex color mas fuerte (2026-07-16: el usuario pidio un borde mas visible/grande,
     -- comparando contra el buscador real de Plumber) para que el marco se note mas.
     local sbLeft = searchBox:CreateTexture(nil, "BACKGROUND")
     sbLeft:SetTexture(PLB); sbLeft:SetTexCoord(0 / 1024, 32 / 1024, 0 / 1024, 80 / 1024)
-    sbLeft:SetSize(14, 28); sbLeft:SetPoint("LEFT", -3, 0)
+    sbLeft:SetSize(17, 34); sbLeft:SetPoint("LEFT", -3, 0)
     sbLeft:SetVertexColor(1.35, 1.2, 0.95)
     local sbRight = searchBox:CreateTexture(nil, "BACKGROUND")
     sbRight:SetTexture(PLB); sbRight:SetTexCoord(160 / 1024, 192 / 1024, 0 / 1024, 80 / 1024)
-    sbRight:SetSize(14, 28); sbRight:SetPoint("RIGHT", 3, 0)
+    sbRight:SetSize(17, 34); sbRight:SetPoint("RIGHT", 3, 0)
     sbRight:SetVertexColor(1.35, 1.2, 0.95)
     local sbMid = searchBox:CreateTexture(nil, "BACKGROUND")
     sbMid:SetTexture(PLB); sbMid:SetTexCoord(32 / 1024, 160 / 1024, 0 / 1024, 80 / 1024)
@@ -1029,11 +1168,14 @@ local function BuildPanel()
 
     local sbMag = searchBox:CreateTexture(nil, "OVERLAY")
     sbMag:SetTexture(PLB); sbMag:SetTexCoord(984 / 1024, 1024 / 1024, 0 / 1024, 40 / 1024)
-    sbMag:SetSize(12, 12); sbMag:SetPoint("LEFT", 5, 0)
+    sbMag:SetSize(15, 15); sbMag:SetPoint("LEFT", 6, 0)
     sbMag:SetVertexColor(0.85, 0.78, 0.62)
 
-    local searchHint = searchBox:CreateFontString(nil, "ARTWORK"); setFont(searchHint, 10)
-    searchHint:SetPoint("LEFT", 18, 0); searchHint:SetTextColor(0.55, 0.5, 0.42); searchHint:SetText("Search...")
+    local searchHint = searchBox:CreateFontString(nil, "ARTWORK"); setFont(searchHint, 11)
+    searchHint:SetPoint("LEFT", 22, 0); searchHint:SetTextColor(0.55, 0.5, 0.42); searchHint:SetText("Search...")
+
+    local sortBtn = MakeButton(sidebar, "All", 40, 22)
+    sortBtn:SetPoint("TOPRIGHT", -2, -40)
     local RelayoutGlobalNav   -- asignada mas abajo (bloque de la fila global Setup/Editing/...)
     searchBox:SetScript("OnTextChanged", function(self)
         searchText = self:GetText() or ""
@@ -1052,8 +1194,8 @@ local function BuildPanel()
     -- confundia con items de la lista de unidades de abajo — fuente mas grande,
     -- tinte siempre visible + fondo propio para separarlas).
     local globalNav = CreateFrame("Frame", nil, sidebar)
-    globalNav:SetPoint("TOPLEFT", 2, -30)
-    globalNav:SetPoint("TOPRIGHT", -2, -30)
+    globalNav:SetPoint("TOPLEFT", 2, -70)
+    globalNav:SetPoint("TOPRIGHT", -2, -70)
     local navBg = globalNav:CreateTexture(nil, "BACKGROUND")
     navBg:SetPoint("TOPLEFT", -2, 2); navBg:SetPoint("BOTTOMRIGHT", 2, -2)
     navBg:SetColorTexture(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.12)
@@ -1073,10 +1215,10 @@ local function BuildPanel()
         b:SetScript("OnClick", function() ShowSection(e.key) end)
         panelButtons[#panelButtons + 1] = b
         e.btn = b
-        if e.key == "setup" then setupBtn = b
-        elseif e.key == "editing" then editingBtn = b
-        elseif e.key == "explorer" then explorerBtn = b
-        elseif e.key == "presets" then perfilBtn = b end
+        if e.key == "setup" then NAVBTN.setup = b
+        elseif e.key == "editing" then NAVBTN.editing = b
+        elseif e.key == "explorer" then NAVBTN.explorer = b
+        elseif e.key == "presets" then NAVBTN.presets = b end
     end
 
     -- Reposiciona/filtra los 4 items globales por busqueda (2026-07-17: antes
@@ -1455,8 +1597,8 @@ local function BuildPanel()
     -- HORIZONTAL propio (tabScroll/tabRow), clippeado al ancho de `content`, con
     -- rueda del mouse + una barrita fina arrastrable debajo.
     local tabScroll = CreateFrame("ScrollFrame", nil, content)
-    tabScroll:SetPoint("TOPLEFT", 0, -24)
-    tabScroll:SetPoint("TOPRIGHT", 0, -24)
+    tabScroll:SetPoint("TOPLEFT", 0, -34)
+    tabScroll:SetPoint("TOPRIGHT", 0, -34)
     tabScroll:SetHeight(20)
     tabScroll:EnableMouseWheel(true)
     local tabRow = CreateFrame("Frame", nil, tabScroll)
@@ -1504,6 +1646,7 @@ local function BuildPanel()
         UpdateHScroll()
     end)
     tabScroll:SetScript("OnSizeChanged", UpdateHScroll)
+    tabScrollUI.frame, tabScrollUI.track, tabScrollUI.thumb = tabScroll, hbTrack, hbThumb
 
     local function BuildTabRow(list, minW, hiddenByDefault)
         local prevBtn
@@ -1607,12 +1750,13 @@ local function BuildPanel()
     -- titulo en vez de flotar sin nada arriba.
     local tdiv = content:CreateTexture(nil, "ARTWORK")
     tdiv:SetTexture(PL.DIV_H)
-    tdiv:SetPoint("TOPLEFT", 0, -19); tdiv:SetPoint("TOPRIGHT", 0, -19)
+    tdiv:SetPoint("TOPLEFT", 0, -25); tdiv:SetPoint("TOPRIGHT", 0, -25)
     tdiv:SetHeight(6); tdiv:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3], 0.7)
 
-    -- Area de controles de la seccion activa.
+    -- Area de controles de la seccion activa. (2026-07-17: bajada de -54 a -70,
+    -- el usuario la queria mas separada de la fila de pestañas Gen/Bar/Cage/...)
     local secArea = CreateFrame("Frame", nil, content)
-    secArea:SetPoint("TOPLEFT", 0, -54)
+    secArea:SetPoint("TOPLEFT", 0, -70)
     secArea:SetPoint("BOTTOMRIGHT", 0, 0)
 
     local cdiv = secArea:CreateTexture(nil, "ARTWORK")
@@ -1631,151 +1775,189 @@ local function BuildPanel()
     -- General
     do
         local f = Section("general")
-        MakeEditBox(f, "Anchor to (frame; empty = screen)", "anchorFrame", L, -10)
-        MakeCycle(f, "Strata", ns.STRATA_VALUES, "strata", L, -52)
-        MakeCycle(f, "Point (bar)", ns.POINT_VALUES, "point", L, -82)
-        MakeCycle(f, "Point (target)", ns.POINT_VALUES, "relativePoint", L, -112)
-        MakeSlider(f, "Scale (wheel in Lock too)", 0.3, 3, 0.02, "scale", L, -156)
-        MakeSlider(f, "Offset X", -2000, 2000, 1, "offsetX", R, -20)
-        MakeSlider(f, "Offset Y", -2000, 2000, 1, "offsetY", R, -62)
-        MakeCheckbox(f, "Hide when mounted", "hideWhenMounted", R, -92)
-        powerHidden[#powerHidden + 1] = MakeCheckbox(f, "Show tooltip", "showTooltip", R, -118)
+        MakeHeader(f, "Anchor & position", L, -6, 210)
+        MakeEditBox(f, "Anchor to (frame; empty = screen)", "anchorFrame", L, -32)
+        MakeCycle(f, "Strata", ns.STRATA_VALUES, "strata", L, -74)
+        MakeCycle(f, "Point (bar)", ns.POINT_VALUES, "point", L, -104)
+        MakeCycle(f, "Point (target)", ns.POINT_VALUES, "relativePoint", L, -134)
+        MakeSlider(f, "Scale (wheel in Lock too)", 0.3, 3, 0.02, "scale", L, -178)
         local resetBtn = MakeButton(f, "Reset this unit", 200, 22)
-        resetBtn:SetPoint("TOPLEFT", L, -204)
+        resetBtn:SetPoint("TOPLEFT", L, -226)
         resetBtn:SetScript("OnClick", function() ns.ResetUnit(ns.currentEdit) end)
+
+        MakeHeader(f, "Position offset", R, -6, 210)
+        MakeSlider(f, "Offset X", -2000, 2000, 1, "offsetX", R, -48)
+        MakeSlider(f, "Offset Y", -2000, 2000, 1, "offsetY", R, -90)
+
+        MakeHeader(f, "Behavior", R, -132, 210)
+        MakeCheckbox(f, "Hide when mounted", "hideWhenMounted", R, -156)
+        HIDEGRP.powerHidden[#HIDEGRP.powerHidden + 1] = MakeCheckbox(f, "Show tooltip", "showTooltip", R, -182)
     end
-    -- Barra (incluye tamaño de la barra: Width/Height, movidos desde General)
+    -- Barra: reorganizada en grupos con header (2026-07-17) — antes era una
+    -- columna larga de sliders sin agrupar, dificil de escanear. Ahora:
+    -- izquierda = Texture & size + Secure click area; derecha = Appearance +
+    -- Edit outline. Mismo patron MakeHeader que ya usan el resto de las secciones.
     do
         local f = Section("bar")
-        MakeTexturePicker(f, "Texture (empty = none)", "texture", "bar", L, -12)
-        MakeSlider(f, "Width", 10, 1000, 1, "width", L, -66)
-        MakeSlider(f, "Height", 2, 300, 1, "height", L, -108)
-        MakeSlider(f, "Bar opacity", 0, 1, 0.05, "barAlpha", L, -150)
-        MakeSlider(f, "Background opacity", 0, 1, 0.05, "bgAlpha", R, -20)
-        MakeCheckbox(f, "Inverse (right -> left)", "reverseFill", R, -50)
-        MakeCheckbox(f, "Smooth progress", "smooth", R, -76)
-        MakeCheckbox(f, "Show background", "showBackground", R, -102)
-        -- Area de CLICK del boton seguro (independiente del tamaño de la barra).
-        MakeSlider(f, "Click width (0 = bar)", 0, 1200, 1, "btnWidth", L, -192)
-        MakeSlider(f, "Click height (0 = bar)", 0, 400, 1, "btnHeight", L, -234)
-        MakeSlider(f, "Click offset X", -400, 400, 1, "btnOffsetX", R, -140)
-        MakeSlider(f, "Click offset Y", -400, 400, 1, "btnOffsetY", R, -182)
+
+        -- NOTA: MakeSlider ancla su label FLOTANDO arriba del punto Y (BOTTOMLEFT
+        -- del label = TOPLEFT del slider + 3px), no en el propio Y -> un header
+        -- seguido de un slider necesita ~42px de hueco (no ~24) para no pisarse;
+        -- header seguido de checkbox/texture-picker (label sin flotar) si funciona
+        -- con ~26-30px.
+        MakeHeader(f, "Texture & size", L, -6, 210)
+        MakeTexturePicker(f, "Texture (empty = none)", "texture", "bar", L, -32)
+        MakeSlider(f, "Width", 10, 1000, 1, "width", L, -88)
+        MakeSlider(f, "Height", 2, 300, 1, "height", L, -130)
+
+        MakeHeader(f, "Secure click area", L, -174, 210)
+        MakeSlider(f, "Click width (0 = bar)", 0, 1200, 1, "btnWidth", L, -216)
+        MakeSlider(f, "Click height (0 = bar)", 0, 400, 1, "btnHeight", L, -258)
+        MakeSlider(f, "Click offset X", -400, 400, 1, "btnOffsetX", L, -300)
+        MakeSlider(f, "Click offset Y", -400, 400, 1, "btnOffsetY", L, -342)
         local cnote = f:CreateFontString(nil, "ARTWORK"); setFont(cnote, 10)
-        cnote:SetPoint("TOPLEFT", R, -228); cnote:SetWidth(210); cnote:SetJustifyH("LEFT")
+        cnote:SetPoint("TOPLEFT", L, -388); cnote:SetWidth(210); cnote:SetJustifyH("LEFT")
         cnote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         cnote:SetText("Click = the secure button (right-click menu / targeting). 0 follows the bar size. Applies when preview is OFF.")
+
+        MakeHeader(f, "Appearance", R, -6, 210)
+        MakeSlider(f, "Bar opacity", 0, 1, 0.05, "barAlpha", R, -48)
+        MakeSlider(f, "Background opacity", 0, 1, 0.05, "bgAlpha", R, -90)
+        MakeCheckbox(f, "Show background", "showBackground", R, -132)
+        MakeCheckbox(f, "Smooth progress", "smooth", R, -158)
+        MakeCheckbox(f, "Reverse fill (right -> left)", "reverseFill", R, -184)
+
         -- B4: outline de edicion propio por unidad (W/H, 0 = seguir al frame) + ocultar nombre.
-        MakeSlider(f, "Outline width (0 = frame)", 0, 1200, 1, "outlineW", L, -276)
-        MakeSlider(f, "Outline height (0 = frame)", 0, 400, 1, "outlineH", L, -318)
-        MakeCheckbox(f, "Hide outline name", "outlineHideName", R, -276)
+        MakeHeader(f, "Edit outline", R, -224, 210)
+        MakeSlider(f, "Outline width (0 = frame)", 0, 1200, 1, "outlineW", R, -266)
+        MakeSlider(f, "Outline height (0 = frame)", 0, 400, 1, "outlineH", R, -308)
+        MakeCheckbox(f, "Hide outline name", "outlineHideName", R, -350)
     end
     -- Cage
     do
         local f = Section("cage")
-        MakeTexturePicker(f, "Cage texture (empty = none)", "cageTexture", "cage", L, -12)
-        MakeSlider(f, "Cage width", 2, 1200, 1, "cageWidth", L, -66)
-        MakeSlider(f, "Cage height", 2, 400, 1, "cageHeight", L, -108)
-        MakeSlider(f, "Offset X", -400, 400, 1, "cageOffsetX", R, -20)
-        MakeSlider(f, "Offset Y", -400, 400, 1, "cageOffsetY", R, -62)
-        MakeSlider(f, "Cage opacity", 0, 1, 0.05, "cageAlpha", R, -104)
-        MakeCheckbox(f, "Hide cage when the unit dies", "cageHideDead", L, -150)
+        MakeHeader(f, "Texture & size", L, -6, 210)
+        MakeTexturePicker(f, "Cage texture (empty = none)", "cageTexture", "cage", L, -32)
+        MakeSlider(f, "Cage width", 2, 1200, 1, "cageWidth", L, -86)
+        MakeSlider(f, "Cage height", 2, 400, 1, "cageHeight", L, -128)
+
+        MakeHeader(f, "Behavior", L, -172, 210)
+        MakeCheckbox(f, "Hide cage when the unit dies", "cageHideDead", L, -196)
+
+        MakeHeader(f, "Position & opacity", R, -6, 210)
+        MakeSlider(f, "Offset X", -400, 400, 1, "cageOffsetX", R, -48)
+        MakeSlider(f, "Offset Y", -400, 400, 1, "cageOffsetY", R, -90)
+        MakeSlider(f, "Cage opacity", 0, 1, 0.05, "cageAlpha", R, -132)
     end
     -- Highlight de unidad seleccionada (target)
     do
         local f = Section("highlight")
-        MakeCheckbox(f, "Highlight when it's my target", "showHighlight", L, -12)
-        MakeTexturePicker(f, "Highlight texture", "highlightTexture", "highlight", L, -44)
-        MakeSlider(f, "Width", 2, 1200, 1, "highlightWidth", L, -98)
-        MakeSlider(f, "Height", 2, 400, 1, "highlightHeight", L, -140)
-        MakeSlider(f, "Scale", 0.2, 3, 0.02, "highlightScale", L, -182)
+        MakeHeader(f, "Highlight", L, -6, 210)
+        MakeCheckbox(f, "Highlight when it's my target", "showHighlight", L, -30)
+        MakeTexturePicker(f, "Highlight texture", "highlightTexture", "highlight", L, -62)
+        MakeSlider(f, "Width", 2, 1200, 1, "highlightWidth", L, -116)
+        MakeSlider(f, "Height", 2, 400, 1, "highlightHeight", L, -158)
+        MakeSlider(f, "Scale", 0.2, 3, 0.02, "highlightScale", L, -200)
 
-        MakeSlider(f, "Offset X", -400, 400, 1, "highlightOffsetX", R, -20)
-        MakeSlider(f, "Offset Y", -400, 400, 1, "highlightOffsetY", R, -62)
-        MakeSlider(f, "Opacity", 0, 1, 0.05, "highlightAlpha", R, -104)
-        MakeColorButton(f, "Color", "highlightColor", R, -134)
-        MakeCheckbox(f, "Glow (pulse)", "highlightGlow", R, -170)
+        MakeHeader(f, "Position & style", R, -6, 210)
+        MakeSlider(f, "Offset X", -400, 400, 1, "highlightOffsetX", R, -48)
+        MakeSlider(f, "Offset Y", -400, 400, 1, "highlightOffsetY", R, -90)
+        MakeSlider(f, "Opacity", 0, 1, 0.05, "highlightAlpha", R, -132)
+        MakeColorButton(f, "Color", "highlightColor", R, -162)
+        MakeCheckbox(f, "Glow (pulse)", "highlightGlow", R, -198)
     end
     -- Vida
     do
         local f = Section("health")
-        MakeCheckbox(f, "Show text", "showText", L, -10)
-        powerHidden[#powerHidden + 1] = MakeCheckbox(f, "Show value (99% | 100m)", "showValue", L, -36)
-        MakeCheckbox(f, "Auto-hide (comb/hostile tgt/mo)", "textAutoHide", L, -62)
-        MakeSlider(f, "Font size", 4, 60, 1, "fontSize", L, -104)
-        MakeSlider(f, "Opacity", 0, 1, 0.05, "textAlpha", L, -146)
-        MakeCheckbox(f, "Also reveal on low HP", "textLowHealthShow", L, -178)
-        MakeSlider(f, "Reveal below %", 5, 100, 1, "textLowHealthThreshold", L, -212)
+        MakeHeader(f, "Visibility", L, -6, 210)
+        MakeCheckbox(f, "Show text", "showText", L, -30)
+        HIDEGRP.powerHidden[#HIDEGRP.powerHidden + 1] = MakeCheckbox(f, "Show value (99% | 100m)", "showValue", L, -56)
+        MakeCheckbox(f, "Smart auto-hide", "textAutoHide", L, -82)
+        MakeCheckbox(f, "Also reveal on low HP", "textLowHealthShow", L, -108)
+        MakeSlider(f, "Reveal below %", 5, 100, 1, "textLowHealthThreshold", L, -150)
 
-        MakeSlider(f, "Offset X", -200, 200, 1, "textOffsetX", R, -20)
-        MakeSlider(f, "Offset Y", -200, 200, 1, "textOffsetY", R, -62)
-        MakeCheckbox(f, "Custom text color", "useHealthColor", R, -92)
-        MakeColorButton(f, "Text color", "healthColor", R, -120)
+        MakeHeader(f, "Text style", L, -196, 210)
+        MakeSlider(f, "Font size", 4, 60, 1, "fontSize", L, -238)
+        MakeSlider(f, "Opacity", 0, 1, 0.05, "textAlpha", L, -280)
 
-        MakeHeader(f, "Low-health warning", R, -156, 210)
-        MakeCheckbox(f, "Color health text on low HP", "lowHealthWarn", R, -180)
-        MakeSlider(f, "Below %", 5, 100, 1, "lowHealthThreshold", R, -214)
-        MakeColorButton(f, "Low-HP text color", "lowHealthColor", R, -256)
+        MakeHeader(f, "Position & color", R, -6, 210)
+        MakeSlider(f, "Offset X", -200, 200, 1, "textOffsetX", R, -48)
+        MakeSlider(f, "Offset Y", -200, 200, 1, "textOffsetY", R, -90)
+        MakeCheckbox(f, "Custom text color", "useHealthColor", R, -122)
+        MakeColorButton(f, "Text color", "healthColor", R, -150)
     end
     -- Nombre
     do
         local f = Section("name")
-        MakeCheckbox(f, "Show name", "showName", L, -10)
-        MakeCheckbox(f, "Auto-hide", "nameAutoHide", L, -36)
-        MakeCheckbox(f, "Level color by rank", "nameLevelColor", L, -62)
-        MakeCheckbox(f, "Dynamic width (200/111)", "nameDynamicWidth", L, -88)
-        MakeSlider(f, "Font size", 4, 60, 1, "nameFontSize", L, -130)
-        MakeSlider(f, "Opacity", 0, 1, 0.05, "nameAlpha", L, -172)
-        MakeSlider(f, "Scale", 0.5, 2, 0.05, "nameScale", R, -20)
-        MakeSlider(f, "Max characters (0=off)", 0, 20, 1, "nameMaxLength", R, -62)
-        MakeSlider(f, "Offset X", -200, 200, 1, "nameOffsetX", R, -104)
-        MakeSlider(f, "Offset Y", -200, 200, 1, "nameOffsetY", R, -146)
-        MakeCheckbox(f, "Custom name color", "useNameColor", R, -176)
-        MakeColorButton(f, "Name color", "nameColor", R, -204)
+        MakeHeader(f, "Behavior", L, -6, 210)
+        MakeCheckbox(f, "Show name", "showName", L, -30)
+        MakeCheckbox(f, "Auto-hide", "nameAutoHide", L, -56)
+        MakeCheckbox(f, "Level color by rank", "nameLevelColor", L, -82)
+        MakeCheckbox(f, "Dynamic width (200/111)", "nameDynamicWidth", L, -108)
+
+        MakeHeader(f, "Text style", L, -148, 210)
+        MakeSlider(f, "Font size", 4, 60, 1, "nameFontSize", L, -190)
+        MakeSlider(f, "Opacity", 0, 1, 0.05, "nameAlpha", L, -232)
+
+        MakeHeader(f, "Size & position", R, -6, 210)
+        MakeSlider(f, "Scale", 0.5, 2, 0.05, "nameScale", R, -48)
+        MakeSlider(f, "Max characters (0=off)", 0, 20, 1, "nameMaxLength", R, -90)
+        MakeSlider(f, "Offset X", -200, 200, 1, "nameOffsetX", R, -132)
+        MakeSlider(f, "Offset Y", -200, 200, 1, "nameOffsetY", R, -174)
+        MakeCheckbox(f, "Custom name color", "useNameColor", R, -206)
+        MakeColorButton(f, "Name color", "nameColor", R, -234)
     end
     -- Hechizo
     do
         local f = Section("spell")
-        MakeCheckbox(f, "Show spell name", "showSpell", L, -10)
-        MakeSlider(f, "Font size", 4, 60, 1, "spellFontSize", L, -52)
-        MakeSlider(f, "Opacity", 0, 1, 0.05, "spellAlpha", L, -94)
-        MakeSlider(f, "Scale", 0.5, 2, 0.05, "spellScale", L, -136)
-        MakeSlider(f, "Max characters (0=off)", 0, 40, 1, "spellMaxLength", L, -178)
-        MakeSlider(f, "Wrap width (lower = stack)", 30, 400, 1, "spellWrapWidth", L, -220)
-        MakeSlider(f, "Offset X", -200, 200, 1, "spellOffsetX", R, -20)
-        MakeSlider(f, "Offset Y", -200, 200, 1, "spellOffsetY", R, -62)
-        MakeCheckbox(f, "Custom spell color", "useSpellColor", R, -92)
-        MakeColorButton(f, "Spell color", "spellColor", R, -120)
+        MakeHeader(f, "Text style", L, -6, 210)
+        MakeCheckbox(f, "Show spell name", "showSpell", L, -30)
+        MakeSlider(f, "Font size", 4, 60, 1, "spellFontSize", L, -72)
+        MakeSlider(f, "Opacity", 0, 1, 0.05, "spellAlpha", L, -114)
+        MakeSlider(f, "Scale", 0.5, 2, 0.05, "spellScale", L, -156)
+        MakeSlider(f, "Max characters (0=off)", 0, 40, 1, "spellMaxLength", L, -198)
+        MakeSlider(f, "Wrap width (lower = stack)", 30, 400, 1, "spellWrapWidth", L, -240)
+
+        MakeHeader(f, "Position & color", R, -6, 210)
+        MakeSlider(f, "Offset X", -200, 200, 1, "spellOffsetX", R, -48)
+        MakeSlider(f, "Offset Y", -200, 200, 1, "spellOffsetY", R, -90)
+        MakeCheckbox(f, "Custom spell color", "useSpellColor", R, -122)
+        MakeColorButton(f, "Spell color", "spellColor", R, -150)
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
-        note:SetPoint("TOPLEFT", R, -150); note:SetWidth(210); note:SetJustifyH("LEFT")
+        note:SetPoint("TOPLEFT", R, -182); note:SetWidth(210); note:SetJustifyH("LEFT")
         note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("Long spell names wrap to 2 lines (within the cast bar width). Max characters truncates with '..' (readable names only).")
     end
     -- Cast bar (posicion fija: imita al hp bar).
     do
         local f = Section("cast")
-        MakeSlider(f, "Width", 2, 1000, 1, "castWidth", L, -20)
-        MakeSlider(f, "Height", 2, 300, 1, "castHeight", L, -62)
-        MakeSlider(f, "Opacity", 0, 1, 0.05, "castAlpha", L, -104)
-        MakeColorButton(f, "Cast color", "castColor", L, -134)
-        MakeTexturePicker(f, "Cast texture", "castTexture", "bar", R, -20)
-        MakeCheckbox(f, "Inverse (right -> left)", "castReverse", R, -66)
-        MakeCheckbox(f, "Smooth progress", "castSmooth", R, -92)
-        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
-        note:SetPoint("TOPLEFT", R, -126); note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        note:SetText("Position: fixed (mimics the hp bar)")
+        MakeHeader(f, "Bar", L, -6, 210)
+        MakeSlider(f, "Width", 2, 1000, 1, "castWidth", L, -48)
+        MakeSlider(f, "Height", 2, 300, 1, "castHeight", L, -90)
+        MakeSlider(f, "Opacity", 0, 1, 0.05, "castAlpha", L, -132)
+        MakeColorButton(f, "Cast color", "castColor", L, -162)
 
-        MakeSlider(f, "Spark width", 0, 60, 1, "castSparkWidth", L, -176)
-        MakeSlider(f, "Spark height", 0, 120, 1, "castSparkHeight", L, -218)
-        MakeSlider(f, "Spark scale", 0.2, 3, 0.05, "castSparkScale", L, -260)
+        MakeHeader(f, "Spark", L, -198, 210)
+        MakeSlider(f, "Spark width", 0, 60, 1, "castSparkWidth", L, -240)
+        MakeSlider(f, "Spark height", 0, 120, 1, "castSparkHeight", L, -282)
+        MakeSlider(f, "Spark scale", 0.2, 3, 0.05, "castSparkScale", L, -324)
+
+        MakeHeader(f, "Texture & fill", R, -6, 210)
+        MakeTexturePicker(f, "Cast texture", "castTexture", "bar", R, -32)
+        MakeCheckbox(f, "Inverse (right -> left)", "castReverse", R, -88)
+        MakeCheckbox(f, "Smooth progress", "castSmooth", R, -114)
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
+        note:SetPoint("TOPLEFT", R, -148); note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        note:SetText("Position: fixed (mimics the hp bar)")
     end
     -- Colores
     do
         local f = Section("colors")
         MakeCheckbox(f, "Manual color (ignore auto)", "useBarColor", L, -12)
         MakeColorButton(f, "Bar color", "barColor", L, -40)
-        colorHidden[#colorHidden + 1] = MakeColorButton(f, "Hostile color", "colorHostile", L, -72)
-        colorHidden[#colorHidden + 1] = MakeColorButton(f, "Neutral color", "colorNeutral", L, -100)
-        colorHidden[#colorHidden + 1] = MakeColorButton(f, "Friendly color", "colorFriendly", L, -128)
+        HIDEGRP.colorHidden[#HIDEGRP.colorHidden + 1] = MakeColorButton(f, "Hostile color", "colorHostile", L, -72)
+        HIDEGRP.colorHidden[#HIDEGRP.colorHidden + 1] = MakeColorButton(f, "Neutral color", "colorNeutral", L, -100)
+        HIDEGRP.colorHidden[#HIDEGRP.colorHidden + 1] = MakeColorButton(f, "Friendly color", "colorFriendly", L, -128)
     end
     -- Presets
     do
@@ -1955,13 +2137,13 @@ local function BuildPanel()
 
         -- Solo player: click izquierdo abre el panel de personaje.
         local playerOnly = MakeGroup(f)
-        portraitPlayerOnly[#portraitPlayerOnly + 1] = playerOnly
+        VIS.portraitPlayerOnly[#VIS.portraitPlayerOnly + 1] = playerOnly
         MakeCheckbox(playerOnly, "Left-click opens Character panel", "clickOpenChar", L, -216)
         MakeSlider(playerOnly, "Click area size", 0.3, 3, 0.05, "charBtnScale", L, -258)
 
         -- Doble posicion (solo portraits con dualPos: player/pet/focus).
         local dual = MakeGroup(f)
-        portraitDualBoxes[#portraitDualBoxes + 1] = dual
+        VIS.portraitDualBoxes[#VIS.portraitDualBoxes + 1] = dual
         MakeHeader(dual, "Dual position", R, -6, 250)
         MakeCycle(dual, "Edit (preview)", { "center", "alt" }, "editPos", R, -30)
         MakeCheckbox(dual, "Center if: target", "centerOnTarget", R, -62)
@@ -1984,7 +2166,7 @@ local function BuildPanel()
 
         -- Posicion alterna (solo dualPos).
         local alt = MakeGroup(f)
-        portraitDualBoxes[#portraitDualBoxes + 1] = alt
+        VIS.portraitDualBoxes[#VIS.portraitDualBoxes + 1] = alt
         MakeHeader(alt, "Alternate position", R, -6, 210)
         MakeEditBox(alt, "Anchor to (empty = screen)", "altAnchor", R, -30, 200)
         MakeCycle(alt, "Point", ns.POINT_VALUES, "altPoint", R, -70)
@@ -2006,7 +2188,7 @@ local function BuildPanel()
         local f = Section("p_model")
         MakeCheckbox(f, "Show portrait", "showModel", L, -10)
         local zoom = MakeSlider(f, "Zoom (3D model only)", 0, 1, 0.01, "modelZoom", L, -52)
-        portraitModelOnly[#portraitModelOnly + 1] = zoom
+        VIS.portraitModelOnly[#VIS.portraitModelOnly + 1] = zoom
         MakeSlider(f, "Scale", 0.2, 2, 0.02, "modelScale", L, -94)
         MakeSlider(f, "Opacity", 0, 1, 0.05, "modelAlpha", L, -136)
         MakeSlider(f, "Offset X", -200, 200, 1, "modelOffsetX", R, -20)
@@ -2089,7 +2271,7 @@ local function BuildPanel()
         local f = Section("p_role")
         -- ROL (solo party)
         local roleG = MakeGroup(f)
-        portraitRoleOnly[#portraitRoleOnly + 1] = roleG
+        VIS.portraitRoleOnly[#VIS.portraitRoleOnly + 1] = roleG
         MakeHeader(roleG, "Role icon (tank/heal/dps)", L, -6, 210)
         MakeCheckbox(roleG, "Show role", "showRole", L, -30)
         MakeSlider(roleG, "Scale", 0.1, 2, 0.02, "roleScale", L, -68)
@@ -2156,7 +2338,7 @@ local function BuildPanel()
 
         -- Solo Player Auras: editar posicion + condiciones + opacidad.
         local dual = MakeGroup(f)
-        auraDualBoxes[#auraDualBoxes + 1] = dual
+        VIS.auraDualBoxes[#VIS.auraDualBoxes + 1] = dual
         MakeHeader(dual, "Positions / Opacity", R, -6, 250)
         MakeCycle(dual, "Edit (preview)", { "center", "alt", "dead", "deadTarget" }, "editPos", R, -30)
         MakeCheckbox(dual, "Primary if: target", "centerOnTarget", R, -62)
@@ -2200,7 +2382,7 @@ local function BuildPanel()
 
         -- Posicion alterna (solo Player Auras).
         local alt = MakeGroup(f)
-        auraDualBoxes[#auraDualBoxes + 1] = alt
+        VIS.auraDualBoxes[#VIS.auraDualBoxes + 1] = alt
         MakeHeader(alt, "Alternate position", R, -6, 210)
         MakeEditBox(alt, "Anchor to (empty = screen)", "altAnchor", R, -30, 200)
         MakeCycle(alt, "Point", ns.POINT_VALUES, "altPoint", R, -70)
@@ -2215,7 +2397,7 @@ local function BuildPanel()
         -- Con solo 24px entre header y el primer slider (bug anterior) la etiqueta del slider caia
         -- ENCIMA del divisor/texto del header (colision vista en captura). Minimo seguro: ~44px.
         local petg = MakeGroup(f)
-        auraDualBoxes[#auraDualBoxes + 1] = petg
+        VIS.auraDualBoxes[#VIS.auraDualBoxes + 1] = petg
         MakeHeader(petg, "Pet offset — primary", L, -220, 210)
         MakeSlider(petg, "Offset X", -2000, 2000, 1, "petOffsetX", L, -264)
         MakeSlider(petg, "Offset Y", -2000, 2000, 1, "petOffsetY", L, -306)

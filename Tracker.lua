@@ -177,6 +177,17 @@ local function IsScenarioTitle(fs)
     return false
 end
 
+-- Distingue un HEADER de categoria ("Quests", "World Quests", "Bonus Objectives"...)
+-- de un titulo de mision individual: usan fuentes distintas (ObjectiveTrackerHeaderFont
+-- vs ObjectiveTrackerLineFont, ver /mcftrackerdump). El centrado (SetJustifyH) ahora
+-- SOLO se aplica a headers - los titulos de mision quedan con su alineacion nativa.
+local function IsHeaderFontString(fs)
+    local ok, fo = pcall(fs.GetFontObject, fs)
+    if not ok or not fo or not fo.GetName then return false end
+    local okN, name = pcall(fo.GetName, fo)
+    return okN and type(name) == "string" and name:find("Header") ~= nil
+end
+
 local function ApplyFontColor(fs)
     if not fs or fs:GetObjectType() ~= "FontString" then return end
     local text = fs:GetText()
@@ -196,7 +207,7 @@ local function ApplyFontColor(fs)
            or math.abs((cb or 0) - st.b) > 0.004 then
             fs:SetTextColor(r, st.g, st.b, a or 1)
         end
-        if fs.SetJustifyH then pcall(fs.SetJustifyH, fs, "CENTER") end
+        if st.isHeader and fs.SetJustifyH then pcall(fs.SetJustifyH, fs, "CENTER") end
         return
     end
 
@@ -206,15 +217,11 @@ local function ApplyFontColor(fs)
     if r == nil then return end   -- objetivo de mision: mantener su color nativo
     local a = select(4, fs:GetTextColor()) or 1
     fs:SetTextColor(r, g, b, a)
-    -- Centrado en el eje X (titulos de mision, headers "Quests"/"All Objectives"...). Algunos
-    -- fontstrings (ej. "All Objectives") ya tienen una caja mas ancha que su texto → SetJustifyH
-    -- solo ya centra. Otros (titulos de mision) estan anclados exactamente al ancho del texto →
-    -- justificar no se nota hasta darles mas ancho. El intento de anclar al PADRE con su ancho
-    -- REAL fallo (el bloque de mision se auto-ajusta al contenido, sin ancho fijo confiable →
-    -- volvio a verse sin centrar). Vuelta al ancho FIJO (SI se veia centrado, aunque no pixel-
-    -- perfecto contra "Quests"), reusando el mismo punto/relTo/offset original (sin anclas nuevas).
-    -- Solo UNA vez por fontstring (cacheado via st.widened).
-    if fs.SetJustifyH then pcall(fs.SetJustifyH, fs, "CENTER") end
+    -- Centrado en el eje X: SOLO para headers de categoria ("Quests", "All Objectives"...),
+    -- NO para titulos de mision individuales (el usuario los quiere con su alineacion nativa).
+    -- isHeader se clasifica UNA vez por fontstring (via IsHeaderFontString, chequea la fuente).
+    if st.isHeader == nil then st.isHeader = IsHeaderFontString(fs) end
+    if st.isHeader and fs.SetJustifyH then pcall(fs.SetJustifyH, fs, "CENTER") end
     -- Guarda el ancla ORIGINAL (nativa de Blizzard) UNA sola vez — leerla de nuevo en pases
     -- posteriores devolveria NUESTRO propio anclaje ya modificado, no el original, y los ajustes
     -- del slider se acumularian mal en vez de partir siempre de la misma base. Tambien clasifica
@@ -229,8 +236,9 @@ local function ApplyFontColor(fs)
     -- Re-aplica si el epoch cambio (el usuario movio un slider "Title/Dungeon center offset" en
     -- el menu), no solo la primera vez — asi el ajuste se ve EN VIVO sin /reload. Siempre parte
     -- del ancla ORIGINAL guardada arriba. Offset INDEPENDIENTE segun si es titulo de mision o de
-    -- escenario/mazmorra (ej. "Windrunner Spire").
-    if st.widenedEpoch ~= colorEpoch and st.origPoint and fs.SetWidth then
+    -- escenario/mazmorra (ej. "Windrunner Spire"). SOLO headers/escenario (isHeader/isScenario):
+    -- el usuario NO quiere que los titulos de mision individuales se centren/desplacen.
+    if (st.isHeader or st.isScenario) and st.widenedEpoch ~= colorEpoch and st.origPoint and fs.SetWidth then
         local c = cfg()
         local off = st.isScenario and (c and c.dungeonTitleOffsetX) or (c and c.titleOffsetX)
         local adjX = st.origX + (off or -18)

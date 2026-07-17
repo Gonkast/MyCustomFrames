@@ -200,10 +200,6 @@ local function DefaultsFor(key)
         highlightOffsetX = 0, highlightOffsetY = 0,
         highlightColor = { r = 1, g = 1, b = 1 }, highlightAlpha = 1.0,
         highlightGlow = true,   -- latido de opacidad
-        -- Aviso de vida baja (tinte rojo que pulsa cuando HP% < umbral). Opt-in; usa el
-        -- porcentaje LEGIBLE de la API (secret-safe). Util sobre todo en el player.
-        lowHealthWarn = false, lowHealthThreshold = 35,
-        lowHealthColor = { r = 1, g = 0.1, b = 0.1 },
         -- Texto vida
         showText = true, showValue = wantValue, textAlpha = 1.0,
         textOffsetX = 0, textOffsetY = 0, textAutoHide = not power, fontSize = 14,
@@ -732,12 +728,10 @@ local function UnitColor(u)
 end
 
 local function GetHealthPercent(unit)
-    local pct
-    if CurveConstants and CurveConstants.ScaleTo100 then
-        pct = UnitHealthPercent(unit, true, CurveConstants.ScaleTo100)
-    else
-        pct = UnitHealthPercent(unit)
-    end
+    -- SIN curva: la API ya devuelve 0-100 legible (segun la doc de Blizzard, pasar
+    -- una curva es justo lo que marca el resultado como SECRETO -> antes lo teniamos
+    -- al reves, pensando que la curva era necesaria para "escalar a 100").
+    local pct = UnitHealthPercent(unit, true)
     local readable = (type(pct) == "number") and not (issecretvalue and issecretvalue(pct))
     return pct, readable
 end
@@ -781,13 +775,8 @@ local function UnitUpdateText(u)
     if UnitHealthPercent then
         local okH, readablePct, readable = pcall(GetHealthPercent, u.unit)
         if not okH then readablePct, readable = nil, false end
-        -- Color del texto: rojo (lowHealthColor) si la vida esta bajo el umbral configurado
-        -- (IGNORA el color custom); si no, el color personalizado (o GOLD). Se re-evalua cada tick.
-        -- SECRET-SAFE: usa la fraccion LEGIBLE del relleno (u.bar._target, con fallback por
-        -- geometria del ancho del relleno) — NO readablePct, que puede ser SECRETO en el player.
-        local frac = u.bar._readable and u.bar._target
-        local low = p.lowHealthWarn and frac and frac < ((p.lowHealthThreshold or 35) / 100)
-        local col = (low and (p.lowHealthColor or GOLD)) or (p.useHealthColor and p.healthColor or GOLD)
+        -- Color del texto: personalizado (useHealthColor) o GOLD. Se re-evalua cada tick.
+        local col = (p.useHealthColor and p.healthColor) or GOLD
         -- Dedupe: SetTextColor solo si el color realmente cambio (numeros propios, no secretos).
         if col.r ~= u._hpR or col.g ~= u._hpG or col.b ~= u._hpB then
             u._hpR, u._hpG, u._hpB = col.r, col.g, col.b
@@ -947,32 +936,35 @@ local function UnitTextVisibility(u)
     -- que para el player mismo nunca es "atacable" -> el texto nunca se mostraba con hostiles).
     local hostile = safeBool(UnitExists, u.unit) and safeBool(UnitCanAttack, "player", u.unit)
     local hostileTarget = safeBool(UnitExists, "target") and safeBool(UnitCanAttack, "player", "target")
-    -- Vida baja: usa la fraccion LEGIBLE del relleno (secret-safe, misma fuente que lowHealthWarn).
+    -- Vida baja: usa la fraccion LEGIBLE del relleno (secret-safe).
     local frac = u.bar._readable and u.bar._target
     local lowHP = p.textLowHealthShow and frac and frac < ((p.textLowHealthThreshold or 60) / 100)
     hpText:SetAlpha((tickState.inCombat or hostile or hostileTarget or u.isMouseOver or lowHP) and p.textAlpha or 0)
 end
 
--- Relleno MANUAL estilo WeakAuras: la textura queda anclada a un lado y se
--- recorta (SetWidth + SetTexCoord); asi NO se desliza al invertir. Requiere la
--- fraccion (0..1) como numero legible. container = el frame de la barra.
+-- Relleno MANUAL, LEFT o RIGHT (unicas 2 direcciones soportadas: con casi todos
+-- los valores de vida/poder secretos en Midnight 12.0.7 no hay fraccion legible
+-- para calcular CENTER, asi que no tiene sentido ofrecerlo). Tecnica de
+-- WeakAuras (SetTexCoord + SetVertexOffset en las 4 esquinas) para que el
+-- recorte sea pixel-perfect, sin estirar/deformar el arte -> evita el quirk de
+-- Blizzard donde StatusBar:SetReverseFill "desliza" texturas custom asimetricas.
 local function RenderManualFill(tex, container, frac, reverse)
     frac = clamp(frac or 0, 0, 1)
+    tex:ClearAllPoints()
+    tex:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
+    tex:SetPoint("BOTTOMRIGHT", container, "BOTTOMRIGHT", 0, 0)
     if frac <= 0 then tex:Hide() return end
     tex:Show()
-    local w = math.max((container:GetWidth() or 0) * frac, 0.1)
-    tex:ClearAllPoints()
-    if reverse then
-        tex:SetPoint("TOPRIGHT", container, "TOPRIGHT", 0, 0)
-        tex:SetPoint("BOTTOMRIGHT", container, "BOTTOMRIGHT", 0, 0)
-        tex:SetWidth(w)
-        tex:SetTexCoord(1 - frac, 1, 0, 1)
-    else
-        tex:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
-        tex:SetPoint("BOTTOMLEFT", container, "BOTTOMLEFT", 0, 0)
-        tex:SetWidth(w)
-        tex:SetTexCoord(0, frac, 0, 1)
-    end
+
+    local W = container:GetWidth() or 0
+    local startP, endP = 0, frac
+    if reverse then startP, endP = 1 - frac, 1 end
+
+    tex:SetTexCoord(startP, 0, startP, 1, endP, 0, endP, 1)
+    tex:SetVertexOffset(UPPER_LEFT_VERTEX, startP * W, 0)
+    tex:SetVertexOffset(LOWER_LEFT_VERTEX, startP * W, 0)
+    tex:SetVertexOffset(UPPER_RIGHT_VERTEX, (endP - 1) * W, 0)
+    tex:SetVertexOffset(LOWER_RIGHT_VERTEX, (endP - 1) * W, 0)
 end
 
 -- Fraccion 0..1 de la unidad + si es LEGIBLE (no secreta).
@@ -1012,7 +1004,7 @@ local function UnitUpdateBar(u)
     if unlocked then
         u.bar:GetStatusBarTexture():SetAlpha(0)
         if p.texture and p.texture ~= "" then
-            RenderManualFill(u.fillTex, u.bar, 1, p.reverseFill)
+            RenderManualFill(u.fillTex, u.bar, 1)
         else
             u.fillTex:Hide()
         end
@@ -1066,13 +1058,18 @@ local function UnitUpdateBar(u)
             u.bar._readable = true
             u.bar._target = frac
             if u.bar._cur == nil or not p.smooth then u.bar._cur = frac end
+            -- reverseFill: (1) archivo YA espejado (MirrorTexPath) para que el arte
+            -- se vea coherente, (2) ANCLAR el recorte al lado derecho para que se
+            -- vacie de izquierda a derecha (si no, solo cambia el arte pero sigue
+            -- creciendo/vaciandose igual que LEFT).
             RenderManualFill(u.fillTex, u.bar, u.bar._cur, p.reverseFill)
         else
-            -- Secreto e ilegible: StatusBar nativo (normal OK; inverse puede deslizar).
+            -- Secreto e ilegible: StatusBar nativo (unico camino posible). Mismo
+            -- combo: archivo espejado + SetReverseFill(true) (anclar a la derecha).
             u.bar._readable = false
             u.fillTex:Hide()
             u.bar:GetStatusBarTexture():SetAlpha(1)
-            u.bar:SetReverseFill(p.reverseFill)
+            u.bar:SetReverseFill(p.reverseFill and true or false)
         end
     end
     UnitUpdateText(u)
@@ -1133,9 +1130,6 @@ local function UnitUpdateHighlight(u)
         if u.highlightAnim then u.highlightAnim:Stop() end
     end
 end
-
--- (El aviso de vida baja ya NO es un overlay rojo: ahora el TEXTO de vida se colorea con
--- lowHealthColor bajo el umbral, en UnitUpdateText. Ver #6.)
 
 local function TargetReactionLE4()
     local ok, reaction = pcall(UnitReaction, "target", "player")
@@ -1221,10 +1215,26 @@ local function UnitApplyLayout(u)
     u.needsLayout = nil
 end
 
+-- Con reverseFill activo, el StatusBar nativo (unico camino con vida secreta)
+-- no puede recortar la textura sin distorsionarla si el arte es asimetrico
+-- (ver conversacion). La solucion real es usar el archivo YA pre-espejado
+-- ("nombre mirror.tga" <-> "nombre.tga") en vez de intentar espejar en runtime.
+local function MirrorTexPath(path)
+    if not path or path == "" then return path end
+    local base, ext = path:match("^(.-)%s+[Mm][Ii][Rr][Rr][Oo][Rr]%.(%a+)$")
+    if base then return base .. "." .. ext end
+    base, ext = path:match("^(.-)%.(%a+)$")
+    if base then return base .. " mirror." .. ext end
+    return path
+end
+
 local function UnitApplyAppearance(u)
     local p = P(u)
     local hasTex = (p.texture and p.texture ~= "") and true or false
     local barTex = hasTex and p.texture or BLANK_TEXTURE
+    if hasTex and p.reverseFill then
+        barTex = MirrorTexPath(p.texture)
+    end
     -- Texturas (StatusBar nativo = fallback secreto; fillTex = relleno manual legible).
     u.bar:SetStatusBarTexture(barTex)
     u.fillTex:SetTexture(barTex)
@@ -1577,6 +1587,7 @@ local function CreateUnit(def)
     bar:SetScript("OnUpdate", BarOnUpdate)
 
     -- Textura de relleno MANUAL (para valores legibles; encima del relleno nativo).
+    -- Recorte via SetTexCoord+SetVertexOffset (tecnica WeakAuras), sin mascara.
     local fillTex = bar:CreateTexture(nil, "OVERLAY")
     fillTex:Hide()
 
@@ -4010,6 +4021,7 @@ local function InitDB()
     if db.groupMoveParty == nil then db.groupMoveParty = false end
     if db.groupMoveBoss == nil then db.groupMoveBoss = false end
     if db.mouselook == nil then db.mouselook = false end
+    if db.panelScale == nil then db.panelScale = 1.0 end   -- escala de la VENTANA del menu (no de las unidades)
     if db.hideBlizzard == nil then db.hideBlizzard = false end
     if db.barReposition == nil then db.barReposition = false end
     if db.dcFix == nil then db.dcFix = true end   -- fix DialogueUI+DynamicCam (on por defecto)
