@@ -444,6 +444,16 @@ local function Setup(key)
     end
 
     local refreshTicker = C_Timer.NewTicker(0.3, function()
+        -- FIX (2026-07-20, mismo bug reportado y arreglado en ArenaAuraPreview.lua,
+        -- "revisa que no pase tambien con los de party"): Recompute() solo se llamaba
+        -- desde EvaluateHover (mouse enter/leave) o desde este ticker cuando cambiaba
+        -- el combate -- si salias de la mazmorra con el mouse ENCIMA y sin cambiar de
+        -- combate, target se quedaba en 1 para siempre. Se fuerza el recompute apenas
+        -- se detecta la salida de la mazmorra, sin depender de mouse/combate.
+        if not InDungeon() and not testMode and hoverActive then
+            hoverActive = false
+            Recompute()
+        end
         local nowCombat = (not InArena()) and SafeInCombat(u.unit)
         if nowCombat ~= inCombat then
             inCombat = nowCombat

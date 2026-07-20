@@ -1884,6 +1884,25 @@ C_Timer.NewTicker(0.1, function()
     if tickState.n % 20 == 0 and not tickState.inCombat and ns.UpdateArenaDrivers then
         ns.UpdateArenaDrivers()
     end
+    -- RED DE SEGURIDAD (2026-07-20, reportado por el usuario con capturas de /fstack:
+    -- "aun sigue viendo elementos de la barra de arena de blizzard" -- persistia
+    -- incluso con hide blizzard activo): Blizzard actualiza estos frames (member
+    -- healthBar/castBar/CcRemoverFrame/StealthedUnitFrame/etc.) desde su PROPIO
+    -- refresh nativo, disparado por eventos que este addon no controla (y a veces
+    -- crea sub-frames NUEVOS recien en ese momento, ej. el icono de sigilo). Se
+    -- reaplica cada ~0.3s mientras estas en contenido de arena real (tickState.arenaOK).
+    -- CORREGIDO (2026-07-20, "esto fue en una partida nueva despues de hacer reload"):
+    -- antes llamaba a ns.HideBlizzardFrames() -- la funcion COMPLETA, que internamente
+    -- aborta si InCombatLockdown() es true -- y una partida de arena esta en combate
+    -- casi todo el tiempo, asi que esta red de seguridad nunca llegaba a correr de
+    -- verdad durante el partido. Se llama a HideArenaFramesNow() DIRECTO (sin ese
+    -- guard, ver definicion mas abajo -- es 100% alpha, seguro en combate) y se sube
+    -- la frecuencia a cada ~0.3s (tickState.n % 3) ya que es mucho mas barata que la
+    -- funcion completa (solo toca los frames de arena, no los ~15 sistemas del resto
+    -- de Hide Blizzard).
+    if tickState.n % 3 == 0 and db.hideBlizzard and tickState.arenaOK and ns.HideArenaFramesNow then
+        ns.HideArenaFramesNow()
+    end
     -- Explorer: la ANIMACION corre por frame en explorerDriver (OnUpdate); el ticker
     -- solo refresca el estado de combate (del snapshot) y enciende/apaga el driver.
     local exOn = db.explorerEnabled ~= false and db.explorer and next(db.explorer) ~= nil
@@ -1998,10 +2017,31 @@ local blizzNeedsApply = false
 -- inline sobre estos frames protegidos). Guard por frame para no apilar el
 -- mismo hook cada vez que HideBlizzardFramesNow corre (se llama seguido).
 local blizzShowHooked = setmetatable({}, { __mode = "k" })
+-- Guard de reentrancia para el hook de SetAlpha de mas abajo -- por FRAME, no global
+-- (2 frames distintos disparando su hook al mismo tiempo no deben pisarse entre si).
+local blizzAlphaReentrant = setmetatable({}, { __mode = "k" })
 local function HB_HookShowAlpha(frame)
     if not frame or blizzShowHooked[frame] then return end
     blizzShowHooked[frame] = true
     pcall(hooksecurefunc, frame, "Show", function(self) self:SetAlpha(0) end)
+    -- FIX (2026-07-20, reportado por el usuario con /fstack: "CompactArenaFrameMemberN
+    -- SelectionHighlight" seguia visible en pantalla, confirmado SIN /fstack abierto):
+    -- el hook de Show no alcanza si algo anima el alpha DIRECTO (ej. un glow/pulso de
+    -- "seleccion" via AnimationGroup, que llama SetAlpha en cada frame sin pasar por
+    -- Show()). Se engancha TAMBIEN SetAlpha -- si alguien mas (Blizzard u otro addon)
+    -- lo pone en >0, se vuelve a forzar 0 en el mismo tick.
+    -- CORREGIDO (2026-07-20, error en juego: "attempt to compare local 'a' (a secret
+    -- number value...)"): el valor de alpha que pasa Blizzard internamente es SECRETO
+    -- en este cliente -- comparar `a > 0` esta prohibido, ni siquiera envuelto en pcall
+    -- sirve para leerlo con seguridad. Se evita LEER el valor por completo: en vez de
+    -- decidir segun 'a', se usa un guard de reentrancia por-frame (el propio SetAlpha(0)
+    -- de aca abajo re-dispara este mismo hook -- sin el guard seria un loop infinito).
+    pcall(hooksecurefunc, frame, "SetAlpha", function(self)
+        if blizzAlphaReentrant[self] then return end
+        blizzAlphaReentrant[self] = true
+        self:SetAlpha(0)
+        blizzAlphaReentrant[self] = false
+    end)
 end
 -- FIX (2026-07-19, reportado por el usuario: "el player y cast de Blizzard
 -- reaparecieron, sin ningun error"): el guard blizzHidden[frame] hacia que
@@ -2067,6 +2107,53 @@ local function HB_HideAlpha(frame)
     if frame.SetAlpha then frame:SetAlpha(0) end
     HB_HookShowAlpha(frame)
 end
+
+-- FIX (2026-07-20, pedido del usuario: "confirma que el 100% de unitframe de arena
+-- nativa este ocultada" -- vio un castbar suelto que no llego a identificar con
+-- /fstack): en vez de seguir adivinando nombres de campos uno por uno (castBar,
+-- healthBar, CcRemoverFrame, TempMaxHealthLoss...), esto oculta el frame Y TODOS
+-- sus hijos directos por GetChildren() -- cubre cualquier sub-widget (cast bar
+-- incluido) sin necesitar saber su nombre exacto. Regions (texturas/fontstrings,
+-- ej. iconos sueltos) NO tienen GetChildren, pero SI heredan el alpha de su frame
+-- padre automaticamente -- no hace falta tocarlas aparte. pcall por las dudas
+-- (GetChildren puede fallar en frames raros/protegidos de formas inesperadas).
+-- FIX (2026-07-20, pedido del usuario: "el outline de seleccion aun sale"): un solo
+-- nivel de hijos no alcanzaba -- se agrega un 2do nivel (nietos) para cubrir highlight/
+-- selection textures anidadas mas adentro (ej. dentro de la healthBar del member, no
+-- directo del member). depth por defecto 2 (frame + hijos + nietos).
+local function HB_HideAlphaDeep(frame, depth)
+    if not frame then return end
+    depth = depth or 2
+    HB_HideAlpha(frame)
+    if depth <= 0 then return end
+    local ok, children = pcall(function() return { frame:GetChildren() } end)
+    if not ok then return end
+    for _, child in ipairs(children) do
+        HB_HideAlphaDeep(child, depth - 1)
+    end
+end
+
+-- FIX (2026-07-20, reportado por el usuario: "esto fue en una partida nueva despues de
+-- hacer reload" -- seguian apareciendo elementos nuevos del arena nativo, ej. un icono
+-- de sigilo (StealthedUnitFrameN) que no existia al momento del ultimo hide): el guard
+-- `if InCombatLockdown() then return end` de HideBlizzardFramesNow bloqueaba TODA la
+-- funcion durante combate -- y una partida de arena esta en combate casi todo el tiempo,
+-- asi que la "red de seguridad" periodica (mas abajo en el ticker) nunca llegaba a
+-- reaplicar nada nuevo durante el partido real. Se separa el hide de arena a su PROPIA
+-- funcion, SIN ese guard -- es 100% alpha (HB_HideAlphaDeep), tecnica ya confirmada
+-- segura en combate en todo este archivo, no necesita esperar a salir de combate.
+local function HideArenaFramesNow()
+    if not (db and db.hideBlizzard) then return end
+    HB_HideAlphaDeep(_G.ArenaEnemyFrames)
+    HB_HideAlphaDeep(_G.CompactArenaFrame)
+    HB_HideAlphaDeep(_G.PreMatchFramesContainer)
+    for i = 1, 5 do
+        HB_HideAlphaDeep(_G["ArenaEnemyFrame" .. i])          -- alias legacy, nil-safe
+        HB_HideAlphaDeep(_G["ArenaEnemyMatchFrame" .. i])
+        HB_HideAlphaDeep(_G["CompactArenaFrameMember" .. i])
+    end
+end
+ns.HideArenaFramesNow = HideArenaFramesNow
 
 local function HideBlizzardFramesNow()
     if not (db and db.hideBlizzard) then return end
@@ -2144,18 +2231,18 @@ local function HideBlizzardFramesNow()
     -- party/raid). SOLO por alpha, SOLO el contenedor (ArenaEnemyFrames):
     -- mismo criterio que CompactPartyFrame -- los ArenaEnemyFrame1..5
     -- individuales tienen botones/barras protegidos, nunca tocarlos directo.
-    HB_HideAlpha(_G.ArenaEnemyFrames)
-    -- FIX (2026-07-20, pedido del usuario con captura de /fstack): el nombre
-    -- real de los miembros en este cliente es ArenaEnemyMatchFrame1..5 (NO
-    -- ArenaEnemyFrame1..5, ese nombre quedo legacy) -- cada uno ademas tiene
-    -- su propio PetFrame hijo (ArenaEnemyMatchFrameNPetFrame) que igual se
-    -- muestra suelto si no se oculta aparte. Se mantiene tambien
-    -- ArenaEnemyFrame1..5 por las dudas (nil-safe, no hace nada si no existe).
-    for i = 1, 5 do
-        HB_HideAlpha(_G["ArenaEnemyFrame" .. i])
-        HB_HideAlpha(_G["ArenaEnemyMatchFrame" .. i])
-        HB_HideAlpha(_G["ArenaEnemyMatchFrame" .. i .. "PetFrame"])
-    end
+    -- FIX (2026-07-20, pedido del usuario: "confirma que el 100% de unitframe de arena
+    -- nativa este ocultada" -- reporto un castbar suelto que no llego a identificar con
+    -- /fstack, despues de ya haber agregado varios campos a mano uno por uno):
+    -- reemplazado por HB_HideAlphaDeep (oculta el frame Y TODOS sus hijos directos por
+    -- GetChildren, ver definicion) en vez de seguir adivinando nombres de campos --
+    -- cubre castBar/healthBar/powerBar/CcRemoverFrame/TempMaxHealthLoss/PetFrame/lo
+    -- que sea, existente o futuro, sin depender de conocer el nombre exacto. Aplicado
+    -- a los 2 contenedores (ArenaEnemyFrames, CompactArenaFrame, PreMatchFramesContainer)
+    -- Y a cada member individual (los hijos DIRECTOS de un member, como su cast bar, no
+    -- quedan cubiertos solo con ocultar el contenedor de arriba si Blizzard les toca el
+    -- alpha aparte en su propio refresh nativo).
+    HideArenaFramesNow()
 end
 -- GROUP_ROSTER_UPDATE dispara TANTO nuestro handler como el refresh nativo de
 -- CompactPartyFrame/CompactRaidFrameContainer (CompactUnitFrame_UpdateAll -> UpdateHealthColor,

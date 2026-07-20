@@ -366,6 +366,19 @@ local function Setup(key)
             lastMouseEnabled = inArenaNow
             hoverZone:EnableMouse(inArenaNow or testMode)
         end
+        -- FIX (2026-07-20, reportado por el usuario: "las auras de arena que dejen de
+        -- mostrarse apenas salga de arena, algunas veces se sigue mostrando"):
+        -- Recompute() SOLO se llamaba desde EvaluateHover (mouse enter/leave) o desde
+        -- este mismo ticker cuando cambiaba el estado de combate -- si salias de la
+        -- arena con el mouse ENCIMA y SIN estar en combate, ninguna de esas dos
+        -- condiciones cambiaba, target se quedaba en 1 para siempre (el grupo nunca se
+        -- desvanecia). Se fuerza hoverActive=false + Recompute() en el momento EXACTO
+        -- en que se detecta la salida (inArenaNow pasa de true a false), sin depender
+        -- de que el mouse se mueva o el combate cambie.
+        if not inArenaNow and not testMode and hoverActive then
+            hoverActive = false
+            Recompute()
+        end
         local nowCombat = inArenaNow and SafeInCombat(u.unit)
         if nowCombat ~= inCombat then
             inCombat = nowCombat

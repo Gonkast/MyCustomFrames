@@ -91,12 +91,67 @@ end
 -- reset por-GUID via ARENA_OPPONENT_UPDATE (disparaba varias veces por
 -- partido de todas formas) y se limpia SIEMPRE en PLAYER_ENTERING_WORLD, que
 -- ya cubre el caso real (partido nuevo = loading screen nuevo).
+-- ==========================================================================
+-- PREMATCH CLASS/SPEC ICON (pedido del usuario 2026-07-20: "es posible que se
+-- muestren las barras de arena enemigas en ese punto, con la informacion que
+-- permita, en el prematch?"): durante la preparacion del arena (antes de que
+-- arranque el combate), UnitHealth/UnitName de arenaN todavia no estan
+-- disponibles (por eso Blizzard usa un frame APARTE, PreMatchFramesContainer,
+-- en vez del ArenaEnemyMatchFrame real, para el prep) -- pero
+-- GetArenaOpponentSpec(index) SI es publica y funciona en el prep, devuelve el
+-- specID del rival. Con eso alcanza para mostrar un icono de especializacion
+-- en el PORTRAIT de arena (portrait_arena_enemy1/2/3, ver Portraits.lua ->
+-- PortraitUpdatePicture), reemplazado por el icono normal en cuanto arranca
+-- el combate real. El propio tick de portraits (TickPortraits, cada ~3
+-- ciclos para kind="icon") recoge este estado solo, no hace falta refrescar
+-- manualmente aca.
+-- ==========================================================================
+ns.ArenaPrepSpecState = {}   -- unit -> {icon=textureID, classFile=STRING}
+
+local function ScanPrepSpecs()
+    if not GetArenaOpponentSpec then return end
+    for i, unit in ipairs(ENEMY_UNITS) do
+        local ok, specID = pcall(GetArenaOpponentSpec, i)
+        if ok and specID and specID > 0 then
+            local ok2, _, _, _, icon, _, classFile = pcall(GetSpecializationInfoByID, specID)
+            if ok2 and icon then
+                ns.ArenaPrepSpecState[unit] = { icon = icon, classFile = classFile }
+            end
+        end
+    end
+end
+
+local prepWatcher = CreateFrame("Frame")
+prepWatcher:RegisterEvent("ARENA_PREP_OPPONENT_SPECIALIZATIONS")
+prepWatcher:RegisterEvent("PLAYER_ENTERING_WORLD")
+-- El combate arrancando = el partido realmente empezo -- de aca en mas las
+-- barras reales (Units.lua) ya tienen vida/nombre validos, se apaga el icono
+-- de prep para no taparlas.
+prepWatcher:RegisterEvent("PLAYER_REGEN_DISABLED")
+prepWatcher:SetScript("OnEvent", function(self, event)
+    if event == "PLAYER_REGEN_DISABLED" then
+        for _, unit in ipairs(ENEMY_UNITS) do
+            ns.ArenaPrepSpecState[unit] = nil
+        end
+        return
+    end
+    ScanPrepSpecs()
+end)
+
 local resetWatcher = CreateFrame("Frame")
 resetWatcher:RegisterEvent("PLAYER_ENTERING_WORLD")
 resetWatcher:SetScript("OnEvent", function()
     for _, unit in ipairs(ENEMY_UNITS) do
         seenInstance[unit] = nil
         ns.ArenaTrinketState[unit] = nil
+        -- FIX (2026-07-20, reportado por el usuario: "si hago reload en medio de
+        -- prematch, se desaparecen [los iconos]"): este frame y prepWatcher (arriba)
+        -- escuchan el MISMO evento PLAYER_ENTERING_WORLD -- Blizzard los dispara en
+        -- orden de registro, y como prepWatcher se registra ANTES, su ScanPrepSpecs()
+        -- corre primero (rellena ns.ArenaPrepSpecState) y ESTE handler corria justo
+        -- despues, pisandolo con nil en el mismo tick. Se saca el clear de aca --
+        -- ScanPrepSpecs ya sobreescribe con datos frescos solo, y PLAYER_REGEN_DISABLED
+        -- (ver prepWatcher) ya limpia esto cuando el combate real arranca.
         if ns.RefreshArenaTrinketIcon then ns.RefreshArenaTrinketIcon(unit) end
     end
 end)

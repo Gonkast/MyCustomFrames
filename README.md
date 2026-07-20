@@ -38,7 +38,9 @@ set them up on your own:
   if you run both DialogueUI and DynamicCam together, and DialogueUI's own "Camera Movement"
   option must be turned off for it to work.
 - **[WaypointUI](https://www.curseforge.com/wow/addons/waypointui)** — waypoint/map arrow display.
-- **[Sorted](https://www.curseforge.com/wow/addons/sorted)** — bag sorting.
+- **[BetterBags](https://www.curseforge.com/wow/addons/better-bags)** — bag management. There's a
+  matching skin for it, **[BetterBagsSkinGonkast](https://github.com/Gonkast/BetterBagsSkinGonkast)**,
+  built to fit this preset's look.
 - **[Bartender4 Animations](https://www.curseforge.com/wow/addons/bartender4-animations)** — extra
   button-press animations for Bartender4.
 - **[DF Friendly Nameplates](https://www.curseforge.com/wow/addons/df-friendly-nameplates)** —

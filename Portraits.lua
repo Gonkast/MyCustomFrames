@@ -83,6 +83,22 @@ local function PortraitUpdatePicture(u)
     if u.kind == "icon" then
         if not u.classIcon then return end
         if not p.showModel then u.classIcon:Hide() return end
+        -- PREMATCH DE ARENA (pedido del usuario 2026-07-20): "se deberia mostrar el
+        -- icono de clase/spec en el portrait de la arena" -- UnitClass(arenaN) todavia
+        -- no resuelve nada util durante el prep (mismo motivo por el que Blizzard usa
+        -- un frame aparte, PreMatchFramesContainer), pero GetArenaOpponentSpec() SI
+        -- funciona ahi (ver ArenaTrinket.lua, ns.ArenaPrepSpecState). Se usa el icono
+        -- de ESPECIALIZACION real (mas especifico que el generico por clase) mientras
+        -- dure el prep; se limpia solo al arrancar el combate.
+        if u.key:sub(1, 14) == "portrait_arena" and ns.ArenaPrepSpecState then
+            local prep = ns.ArenaPrepSpecState[u.unit]
+            if prep and prep.icon then
+                u.classIcon:SetTexture(prep.icon)
+                u.classIcon:SetTexCoord(0, 1, 0, 1)
+                u.classIcon:Show()
+                return
+            end
+        end
         local coords = PortraitClassCoords(u.unit)
         if not coords and ns.IsUnlocked() then coords = PortraitClassCoords("player") end  -- preview
         if coords then
@@ -318,12 +334,31 @@ local function PortraitShouldShow(u)
     -- portrait_arena_player (unit="player") mostraria SIEMPRE, ya que UnitExists("player")
     -- es siempre true -- mismo problema de fondo que portrait_party5 arriba.
     if u.key:sub(1, 14) == "portrait_arena" and ns.tickState.arenaOK == false then return false end
-    if u.requireExists and not UnitExists(u.unit) then return false end
+    -- FIX (2026-07-20, prematch de arena): UnitExists("arenaN") tambien es FALSE
+    -- durante el prep (mismo motivo por el que Blizzard usa un frame aparte,
+    -- PreMatchFramesContainer, en vez de reusar su ArenaEnemyMatchFrame real) --
+    -- sin este bypass, requireExists bloqueaba el portrait antes de llegar siquiera
+    -- al chequeo de PortraitClassCoords de mas abajo.
+    if u.requireExists and not UnitExists(u.unit) then
+        local hasPrepIcon = u.key:sub(1, 14) == "portrait_arena" and ns.ArenaPrepSpecState
+            and ns.ArenaPrepSpecState[u.unit]
+        if not hasPrepIcon then return false end
+    end
     if u.deadOnly then
         local dead = ns.safeBool(UnitExists, u.unit) and ns.safeBool(UnitIsDeadOrGhost, u.unit)
         if not dead then return false end
     end
-    if u.kind == "icon" and not PortraitClassCoords(u.unit) then return false end
+    -- FIX (2026-07-20, reportado por el usuario: "el portrait en el prematch con la
+    -- clase no esta saliendo"): PortraitClassCoords usa UnitClass(unit), que durante
+    -- el prep de arena todavia no resuelve nada (mismo motivo por el que se necesito
+    -- GetArenaOpponentSpec en ArenaTrinket.lua) -- este gate bloqueaba el portrait
+    -- ENTERO antes de llegar a PortraitUpdatePicture, que es donde vive el fallback
+    -- de ns.ArenaPrepSpecState. Se agrega el mismo fallback aca.
+    if u.kind == "icon" and not PortraitClassCoords(u.unit) then
+        local hasPrepIcon = u.key:sub(1, 14) == "portrait_arena" and ns.ArenaPrepSpecState
+            and ns.ArenaPrepSpecState[u.unit]
+        if not hasPrepIcon then return false end
+    end
     return true
 end
 
