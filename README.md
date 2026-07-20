@@ -120,7 +120,10 @@ even though it no longer requires it, huge parts of this addon — the unit fram
 textures in `Assets/`, the raid frame layout and look, the bundled Masque skin ("Azerite HEX",
 adapted from `Masque_Azerite_Hex`), and the overall visual language this whole preset is built
 around — are directly copied, modified, or learned from studying that codebase. This addon would
-not exist in its current form without it. The player-rest flipbook animation data is sourced from
+not exist in its current form without it. Also credit to
+**[AzeriteUI JuNNeZ Edition (Midnight)](https://www.curseforge.com/wow/addons/azeriteui-junnez-edition-wow12)**
+for the updated-for-Midnight version of that codebase, which this preset originally ran on top of
+and leaned on heavily during development. The player-rest flipbook animation data is sourced from
 **M33kAuras**.
 
 ## License
