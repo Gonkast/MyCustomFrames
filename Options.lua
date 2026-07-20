@@ -12,6 +12,45 @@ local function setFont(fs, size, flags)
     if not fs:SetFont(FONT, size, flags or "") then fs:SetFontObject("GameFontNormal") end
 end
 
+-- ==========================================================================
+-- Ocultar la textura NATIVA del EditBox de chat (el borde/fondo ornamentado
+-- de Blizzard donde escribis) -- pedido del usuario 2026-07-19: "eso es de
+-- blizzard, se puede ocultar, azeriteui lo hace". No depende de AzeriteUI:
+-- oculta TODAS las Texture (no FontString) del EditBox -- el borde/fondo son
+-- texturas, el texto que escribis es un FontString aparte, no se toca.
+-- Cubre ChatFrame1..N (dock general) + hookea FCF_OpenTemporaryWindow para
+-- las ventanas temporales (susurros) que Blizzard crea sobre la marcha.
+-- ==========================================================================
+local function SetChatEditBoxTexture(eb, hide)
+    if not eb then return end
+    local ok, regions = pcall(function() return { eb:GetRegions() } end)
+    if not ok then return end
+    for _, r in ipairs(regions) do
+        if r.GetObjectType and r:GetObjectType() == "Texture" then
+            pcall(r.SetAlpha, r, hide and 0 or 1)
+        end
+    end
+    if eb.NineSlice then eb.NineSlice:SetShown(not hide) end
+end
+local function RefreshChatEditBoxSkin()
+    local hide = ns.GetDB and ns.GetDB() and ns.GetDB().hideChatEditBoxTexture
+    for i = 1, (NUM_CHAT_WINDOWS or 10) + 10 do
+        local eb = _G["ChatFrame" .. i .. "EditBox"]
+        if eb then SetChatEditBoxTexture(eb, hide) end
+    end
+end
+ns.RefreshChatEditBoxSkin = RefreshChatEditBoxSkin
+do
+    local f = CreateFrame("Frame")
+    f:RegisterEvent("PLAYER_LOGIN")
+    f:SetScript("OnEvent", function()
+        RefreshChatEditBoxSkin()
+        hooksecurefunc("FCF_OpenTemporaryWindow", function()
+            C_Timer.After(0, RefreshChatEditBoxSkin)
+        end)
+    end)
+end
+
 local getP = function() return ns.CurrentProfile() end
 local OnEdit = function() ns.ApplyCurrent() end
 
@@ -111,6 +150,11 @@ local function MakeButton(parent, text, w, h)
     b._label = text
     return b
 end
+-- Expuesto para NameplateDesigner.lua (pedido del usuario: "sigue el
+-- formato de diseño de mi menu") -- carga DESPUES en el .toc, pero esto se
+-- llama recien en runtime (CreateDesigner, mucho despues de que TODOS los
+-- archivos ya corrieron), asi que el orden de carga no importa aca.
+ns.MakeButton = MakeButton
 
 -- Tab "pildora" 3-slice de Plumber (PlumberTabButtonTemplate, ver
 -- SettingsPanelNew.lua:1997-2013 y TabButtonMixin:UpdateVisual:1965-1981) — usado
@@ -443,7 +487,10 @@ local function MakeSlider(parent, label, minV, maxV, step, dbKey, x, y, getTbl, 
         if v then setValue(v) else self:SetText(fmtVal(get()[dbKey])) end
         self:ClearFocus()
     end)
-    box:SetScript("OnEscapePressed", function(self) self:SetText(fmtVal(get()[dbKey])); self:ClearFocus() end)
+    box:SetScript("OnEscapePressed", function(self)
+        self:SetText(fmtVal(get()[dbKey])); self:ClearFocus()
+        if ns.CloseMainPanel then ns.CloseMainPanel() end
+    end)
 
     refreshers[#refreshers + 1] = function()
         local v = get()[dbKey]
@@ -480,7 +527,10 @@ local function MakeEditBox(parent, label, dbKey, x, y, width)
     eb:SetPoint("TOPLEFT", x + 4, y - 15)
     eb:SetAutoFocus(false)
     eb:SetScript("OnEnterPressed", function(self) getP()[dbKey] = self:GetText(); self:ClearFocus(); OnEdit() end)
-    eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+    eb:SetScript("OnEscapePressed", function(self)
+        self:ClearFocus()
+        if ns.CloseMainPanel then ns.CloseMainPanel() end
+    end)
     refreshers[#refreshers + 1] = function() eb:SetText(getP()[dbKey] or "") end
     return eb
 end
@@ -533,11 +583,16 @@ end
 local texPopup
 local function GetTexPopup()
     if texPopup then return texPopup end
-    local p = CreateFrame("Frame", nil, UIParent)
+    local p = CreateFrame("Frame", "MyCF_TexPopup", UIParent)
     p:SetSize(252, 340)
     p:SetFrameStrata("FULLSCREEN_DIALOG")
     p:EnableMouse(true)
     p:Hide()
+    -- Cerrable con ESC via UISpecialFrames (el intento de manejarlo a mano con
+    -- OnKeyDown, 2026-07-18, resulto no disparar nunca -- ver nota igual en el
+    -- panel principal). Ademas se cierra solo si el panel principal se oculta
+    -- (ver el HookScript OnHide de `panel`, mas abajo en el archivo).
+    tinsert(UISpecialFrames, "MyCF_TexPopup")
     local bg = p:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(0.04, 0.04, 0.05, 0.96)
     local ttl = p:CreateFontString(nil, "OVERLAY"); setFont(ttl, 13)
     ttl:SetPoint("TOPLEFT", 10, -8); ttl:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]); ttl:SetText("Choose texture")
@@ -640,7 +695,10 @@ local function MakeTexturePicker(parent, label, dbKey, category, x, y, getTbl, o
     local eb = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
     eb:SetSize(138, 20); eb:SetPoint("TOPLEFT", x + 4, y - 15); eb:SetAutoFocus(false)
     eb:SetScript("OnEnterPressed", function(self) get()[dbKey] = self:GetText(); self:ClearFocus(); edit() end)
-    eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+    eb:SetScript("OnEscapePressed", function(self)
+        self:ClearFocus()
+        if ns.CloseMainPanel then ns.CloseMainPanel() end
+    end)
     -- Reskin FLAT (mismo lenguaje visual que MakeSlider): oculta el arte azul
     -- default de InputBoxTemplate y dibuja fondo plano + lineas finas.
     if eb.Left then eb.Left:SetAlpha(0) end
@@ -676,8 +734,9 @@ end
 local ioPopup
 local function GetIOPopup()
     if ioPopup then return ioPopup end
-    local p = CreateFrame("Frame", nil, UIParent)
+    local p = CreateFrame("Frame", "MyCF_IOPopup", UIParent)
     p:SetSize(440, 300); p:SetFrameStrata("FULLSCREEN_DIALOG"); p:EnableMouse(true); p:Hide()
+    tinsert(UISpecialFrames, "MyCF_IOPopup")   -- mismo motivo que MyCF_TexPopup
     p:SetMovable(true); p:RegisterForDrag("LeftButton")
     p:SetScript("OnDragStart", p.StartMoving); p:SetScript("OnDragStop", p.StopMovingOrSizing)
     local bg = p:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(0.04, 0.04, 0.05, 0.97)
@@ -693,8 +752,15 @@ local function GetIOPopup()
     sf:SetPoint("TOPLEFT", 4, -4); sf:SetPoint("BOTTOMRIGHT", -4, 4)
     local eb = CreateFrame("EditBox", nil, sf)
     eb:SetMultiLine(true); eb:SetAutoFocus(false); eb:SetFontObject(ChatFontNormal)
-    eb:SetMaxLetters(99999); eb:SetWidth(400)
-    eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+    -- FIX 2026-07-19 (reportado por el usuario: "el export nuevo no esta
+    -- funcionando... formato invalido" -- el string de export ahora incluye
+    -- MUCHAS mas sub-tablas que antes (nameplates/classpower/tooltip/etc,
+    -- ver PRESET_TABLE_KEYS en core.lua) y supera el limite viejo de 99999
+    -- caracteres -- SetText() lo trunca en SILENCIO al mostrarlo, asi que
+    -- lo que el usuario copiaba ya venia cortado (Lua invalido al
+    -- reimportar). 0 = sin limite.
+    eb:SetMaxLetters(0); eb:SetWidth(400)
+    eb:SetScript("OnEscapePressed", function(self) self:ClearFocus(); p:Hide() end)
     sf:SetScrollChild(eb)
     sf:EnableMouseWheel(true)
     sf:SetScript("OnMouseWheel", function(self, d)
@@ -768,7 +834,32 @@ panel:SetMovable(true)
 panel:EnableMouse(true)
 panel:SetClampedToScreen(true)
 panel:Hide()
+-- 2026-07-18: se probo reemplazar esto por un OnKeyDown manual (teoria: ESC via
+-- UISpecialFrames hacia un fundido diferido) -- el diagnostico en vivo
+-- (/mcfpaneldiag) confirmo que el OnKeyDown NUNCA disparaba (panel quedaba
+-- shown=true despues de ESC) y, peor, sin estar en UISpecialFrames el ESC
+-- pasaba de largo a abrir el menu de Blizzard ENCIMA del panel, que seguia
+-- vivo y bloqueando el mouse debajo. El culpable real de la "zona muerta"
+-- original eran los popups de textura/import (ver GetTexPopup/GetIOPopup),
+-- ya corregidos aparte -- se revierte esto a lo que SI funcionaba.
 tinsert(UISpecialFrames, "MyCF_ControlCenter")   -- permite cerrar con ESC
+
+-- 2026-07-18 (intento definitivo): con TODOS los caminos "normales" ya
+-- probados y confirmados rotos en vivo (/mcfpaneldiag: panel sigue
+-- shown=true despues de ESC, con o sin UISpecialFrames, con o sin OnKeyDown
+-- manual, con o sin editbox enfocado) -- lo mas probable es que
+-- CloseSpecialWindows() no este reconociendo este frame por algun motivo
+-- propio del cliente 12.0.7, y ESC termina en ToggleGameMenu() de todas
+-- formas (abriendo el menu de Blizzard ENCIMA, dejando el panel vivo debajo
+-- -- eso explicaria la "zona muerta"). En vez de seguir dependiendo de que
+-- Blizzard reconozca el panel, se engancha DIRECTO la funcion que ESC
+-- realmente ejecuta: si se llega a abrir el menu de Blizzard mientras
+-- nuestro panel sigue abierto, se cierra al toque.
+if ToggleGameMenu then
+    hooksecurefunc("ToggleGameMenu", function()
+        if panel:IsShown() then panel:Hide() end
+    end)
+end
 
 -- Borde (2026-07-17, intento 2): Background_complete1.tga — version nueva del
 -- usuario, exportada ya cerca del aspect ratio del panel (2592x1632 = 1.588:1
@@ -786,11 +877,69 @@ borderTex:SetPoint("BOTTOMRIGHT", 44, -41)
 -- down; los widgets interactivos (botones, sliders, editboxes, tabs) viven en
 -- frames propios con su propio mouse habilitado, asi que capturan el click
 -- ANTES de que llegue a `panel` — solo el fondo/espacios vacios arrastran.
-panel:SetScript("OnMouseDown", function(self, btn) if btn == "LeftButton" then self:StartMoving() end end)
-panel:SetScript("OnMouseUp", function(self) self:StopMovingOrSizing() end)
+panel:SetScript("OnMouseDown", function(self, btn)
+    if btn == "LeftButton" and not self.isMoving then self.isMoving = true; self:StartMoving() end
+end)
+local function PanelFinishMove(self)
+    if not self.isMoving then return end
+    self.isMoving = false
+    self:StopMovingOrSizing()
+end
+panel:SetScript("OnMouseUp", PanelFinishMove)
+-- Red de seguridad (2026-07-18): si el boton se suelta fuera del panel (p.ej.
+-- sobre el boton de cerrar, que captura el click antes de llegar a `panel`),
+-- OnMouseUp nunca dispara y el panel queda "pegado" siguiendo al mouse -- eso
+-- es lo que se veia como un "fantasma" bloqueando esa zona de la pantalla.
+-- Un ticker barato chequea el boton fisico del mouse y corta el movimiento
+-- ni bien se suelta, sin depender de que el evento llegue a este frame.
+local moveWatcher = CreateFrame("Frame")
+moveWatcher:Hide()
+moveWatcher:SetScript("OnUpdate", function()
+    if panel.isMoving and not IsMouseButtonDown("LeftButton") then PanelFinishMove(panel) end
+    if not panel.isMoving then moveWatcher:Hide() end
+end)
+panel:HookScript("OnMouseDown", function() if panel.isMoving then moveWatcher:Show() end end)
+-- Si el panel se oculta (ESC, boton de cerrar, toggle rapido) mientras se
+-- estaba arrastrando, forzar el corte del movimiento tambien aca.
+panel:HookScript("OnHide", function(self)
+    PanelFinishMove(self)
+    -- A pedido del usuario: cerrar el menu cancela el modo Lock/edicion.
+    if ns.IsUnlocked and ns.IsUnlocked() and ns.SetUnlocked then ns.SetUnlocked(false) end
+    -- Red de seguridad: si el popup de textura o de import/export quedo abierto,
+    -- se cierra junto con el menu principal (ya no deberia ocurrir porque ambos
+    -- se cierran solos con ESC, pero por si el panel se oculta por otra via).
+    if texPopup then texPopup:Hide() end
+    if ioPopup then ioPopup:Hide() end
+end)
 
 ns.OpenControlCenter = function() panel:Show() end
 ns.ToggleControlCenter = function() if panel:IsShown() then panel:Hide() else panel:Show() end end
+-- 2026-07-18: el motivo real de "ESC no cierra el panel" (confirmado con
+-- /mcfpaneldiag: panel quedaba shown=true despues de ESC) es un comportamiento
+-- NATIVO de EditBox -- si CUALQUIERA de los editbox del panel (sliders con
+-- valor tipeable, campos de textura, buscador, etc.) tiene el foco, ESC solo
+-- le saca el foco a ESE editbox y NUNCA llega a UISpecialFrames -- hace falta
+-- un SEGUNDO ESC para cerrar el panel. Los OnEscapePressed de esos editbox
+-- ahora llaman esto ademas de ClearFocus(), para que UN solo ESC alcance
+-- siempre, tenga foco un editbox o no.
+ns.CloseMainPanel = function() panel:Hide() end
+
+-- Diagnostico 2026-07-18: correr esto PARADO SOBRE la zona muerta, ANTES de
+-- clickear nada mas (el click en el boton del minimapa "libera" la zona, asi
+-- que hay que capturar el estado mientras sigue trabada).
+SLASH_MCFPANELDIAG1 = "/mcfpaneldiag"
+SlashCmdList["MCFPANELDIAG"] = function()
+    print(("|cff00ff00[MCF diag]|r panel: shown=%s mouse=%s alpha=%.2f isMoving=%s strata=%s point=%s"):format(
+        tostring(panel:IsShown()), tostring(panel:IsMouseEnabled()), panel:GetAlpha() or -1,
+        tostring(panel.isMoving), panel:GetFrameStrata(), tostring(select(1, panel:GetPoint()))))
+    if texPopup then print(("  texPopup: shown=%s mouse=%s"):format(tostring(texPopup:IsShown()), tostring(texPopup:IsMouseEnabled()))) end
+    if ioPopup then print(("  ioPopup: shown=%s mouse=%s"):format(tostring(ioPopup:IsShown()), tostring(ioPopup:IsMouseEnabled()))) end
+    local x, y = GetCursorPosition()
+    local scale = UIParent:GetEffectiveScale()
+    x, y = x / scale, y / scale
+    local f = GetMouseFocus and GetMouseFocus()
+    print(("  cursor=(%.0f,%.0f) mouseFocus=%s"):format(x, y, f and (f:GetName() or "<anon>") or "nil"))
+end
 
 local sections = {}          -- key -> frame
 local sectionTabs = {}       -- key -> button
@@ -815,7 +964,6 @@ local VIS = {
     portraitDualBoxes = {},   -- grupos visibles solo si el portrait tiene dualPos
     portraitModelOnly = {},   -- widgets visibles solo si el retrato es modelo 3D (no icono)
     portraitPlayerOnly = {},  -- widgets visibles solo en el player portrait
-    portraitFocusOnly = {},   -- widgets visibles solo en el focus portrait (texto vida + highlight)
     portraitRoleOnly = {},    -- widgets visibles solo si el portrait tiene rol (party)
     auraDualBoxes = {},       -- grupos visibles solo si el aura tiene dualPos (player)
 }
@@ -828,7 +976,7 @@ local UpdatePreview   -- asignada en BuildPanel (3ra columna estilo Plumber, ver
 -- mostrando los sub-tabs de la ULTIMA unidad seleccionada (ej: entrar a Explorer
 -- dejaba visible "Gen/Bar/Cage/Sel/Health/Name/Spell/Cast/Color" de ToT debajo),
 -- dando la sensacion de estar en dos secciones a la vez. Se ocultan explicito aca.
-local GLOBAL_SECTION_TITLE = { presets = "Profile", explorer = "Explorer", editing = "Editing", setup = "Setup" }
+local GLOBAL_SECTION_TITLE = { presets = "Profile", explorer = "Explorer", editing = "Editing", setup = "Setup", extras = "Extras" }
 
 local function ShowSection(key)
     if not sections[key] then return end
@@ -855,6 +1003,7 @@ local function ShowSection(key)
     if NAVBTN.explorer then NAVBTN.explorer:SetActive(key == "explorer") end
     if NAVBTN.editing then NAVBTN.editing:SetActive(key == "editing") end
     if NAVBTN.setup then NAVBTN.setup:SetActive(key == "setup") end
+    if NAVBTN.extras then NAVBTN.extras:SetActive(key == "extras") end
     if UpdatePreview then UpdatePreview() end
     -- Nudge: fuerza el relayout de la seccion recien mostrada. El canvas de Settings a
     -- veces no posiciona/renderiza los widgets hasta un Hide/Show (de ahi el bug de
@@ -877,6 +1026,11 @@ local function IsChatSection(k) return k:sub(1, 3) == "cb_" end
 local function IsTrackerSection(k) return k:sub(1, 2) == "t_" end
 local function IsGlowSection(k) return k:sub(1, 2) == "g_" end
 local function IsPartyAuraSection(k) return k:sub(1, 3) == "ap_" end
+local function IsArenaAuraSection(k) return k:sub(1, 3) == "aa_" end
+local function IsMinimapSection(k) return k:sub(1, 3) == "mn_" end
+local function IsNameplatesSection(k) return k:sub(1, 3) == "np_" end
+local function IsClassPowerSection(k) return k:sub(1, 3) == "cp_" end
+local function IsRaidSection(k) return k:sub(1, 2) == "r_" end
 
 -- p_rest / p_badges dependen de features del portrait; el resto siempre aplican.
 local function PortraitSectionAllowed(k, feats)
@@ -898,13 +1052,18 @@ local function SelectUnit(key)
     local isChat = ns.IsChatBubble and ns.IsChatBubble(key)
     local isTracker = ns.IsTracker and ns.IsTracker(key)
     local isGlow = ns.IsGlow and ns.IsGlow(key)
+    local isMinimap = ns.IsMinimap and ns.IsMinimap(key)
+    local isNameplates = ns.IsNameplates and ns.IsNameplates(key)
+    local isRaid = ns.IsRaid and ns.IsRaid(key)
     local isAura = ns.IsAura and ns.IsAura(key)
     local isPortrait = ns.IsPortrait and ns.IsPortrait(key)
     local isPartyAuraTitle = ns.IsPartyAura and ns.IsPartyAura(key)
+    local isArenaAuraTitle = ns.IsArenaAura and ns.IsArenaAura(key)
     local u = (isAura and ns.auras[key]) or (isPortrait and ns.portraits[key]) or ns.frames[key]
     local title = isInfo and "Info Bar" or isMicro and "Micro Menu" or isChat and "Chat Bubble"
-        or isTracker and "Quest Tracker" or isGlow and "Assisted Glow"
-        or isPartyAuraTitle and "Party Auras"
+        or isTracker and "Quest Tracker" or isGlow and "Assisted Glow" or isMinimap and "Minimap"
+        or isNameplates and "Nameplates" or isRaid and "Raid Frames" or isPartyAuraTitle and "Party Auras"
+        or isArenaAuraTitle and "Arena Auras"
         or (u and u.label) or key
     if unitTitle then unitTitle:SetText("Editing:  |cffffffff" .. title .. "|r") end
     if UpdatePreview then UpdatePreview() end
@@ -939,10 +1098,42 @@ local function SelectUnit(key)
         return
     end
 
+    if isMinimap then
+        for k, b in pairs(sectionTabs) do b:SetShown(IsMinimapSection(k)) end
+        if not IsMinimapSection(currentSection) then ShowSection("mn_general") end
+        return
+    end
+
+    if isNameplates then
+        for k, b in pairs(sectionTabs) do b:SetShown(IsNameplatesSection(k)) end
+        if not IsNameplatesSection(currentSection) then ShowSection("np_general") end
+        return
+    end
+
+    if isRaid then
+        for k, b in pairs(sectionTabs) do b:SetShown(IsRaidSection(k)) end
+        if not IsRaidSection(currentSection) then ShowSection("r_general") end
+        return
+    end
+
     local isPartyAura = ns.IsPartyAura and ns.IsPartyAura(key)
     if isPartyAura then
         for k, b in pairs(sectionTabs) do b:SetShown(IsPartyAuraSection(k)) end
         if not IsPartyAuraSection(currentSection) then ShowSection("ap_general") end
+        return
+    end
+
+    local isArenaAura = ns.IsArenaAura and ns.IsArenaAura(key)
+    if isArenaAura then
+        for k, b in pairs(sectionTabs) do b:SetShown(IsArenaAuraSection(k)) end
+        if not IsArenaAuraSection(currentSection) then ShowSection("aa_general") end
+        return
+    end
+
+    local isClassPower = ns.IsClassPower and ns.IsClassPower(key)
+    if isClassPower then
+        for k, b in pairs(sectionTabs) do b:SetShown(IsClassPowerSection(k)) end
+        if not IsClassPowerSection(currentSection) then ShowSection("cp_general") end
         return
     end
 
@@ -962,19 +1153,15 @@ local function SelectUnit(key)
     if isPortrait then
         local feats = (ns.PortraitFeatures and ns.PortraitFeatures(key)) or {}
         local kind = (ns.PortraitKind and ns.PortraitKind(key)) or "model"
-        local isFocus = (key == "portrait_focus")
         for k, b in pairs(sectionTabs) do
-            b:SetShown(IsPortraitSection(k) and PortraitSectionAllowed(k, feats)
-                and (k ~= "p_focus" or isFocus))
+            b:SetShown(IsPortraitSection(k) and PortraitSectionAllowed(k, feats))
         end
         for _, w in ipairs(VIS.portraitDualBoxes) do w:SetShown(feats.dualPos and true or false) end
         for _, w in ipairs(VIS.portraitModelOnly) do w:SetShown(kind == "model") end
         for _, w in ipairs(VIS.portraitPlayerOnly) do w:SetShown(key == "portrait_player") end
-        for _, w in ipairs(VIS.portraitFocusOnly) do w:SetShown(isFocus) end
         for _, w in ipairs(VIS.portraitRoleOnly) do w:SetShown(feats.roleLeader and true or false) end
         local okSection = IsPortraitSection(currentSection)
             and PortraitSectionAllowed(currentSection, feats)
-            and (currentSection ~= "p_focus" or isFocus)
         if not okSection then ShowSection("p_general") end
         return
     end
@@ -983,19 +1170,27 @@ local function SelectUnit(key)
     local isPower = u and u.kind == "power"
     local noColor = isPower or (u and u.fixedColor ~= nil)
     local hasName = u and u.nameText
+    -- Trinket de PvP: solo Arena Enemy 1/2/3 (pedido del usuario -- "no añadir
+    -- funciones propias de addons PvP avanzados", esta pestaña solo aparece
+    -- donde el widget realmente existe, ver CreateUnit en Units.lua).
+    local isArenaEnemy = key:sub(1, 11) == "arena_enemy"
     for _, f in ipairs(HIDEGRP.powerHidden) do f:SetShown(not isPower) end
     for _, f in ipairs(HIDEGRP.colorHidden) do f:SetShown(not noColor) end
     for k, b in pairs(sectionTabs) do
-        if IsPortraitSection(k) or IsAuraSection(k) or IsInfoSection(k) or IsMicroSection(k) or IsChatSection(k) or IsTrackerSection(k) or IsGlowSection(k) or IsPartyAuraSection(k) then b:SetShown(false)
+        if IsPortraitSection(k) or IsAuraSection(k) or IsInfoSection(k) or IsMicroSection(k) or IsChatSection(k) or IsTrackerSection(k) or IsGlowSection(k) or IsPartyAuraSection(k) or IsArenaAuraSection(k) or IsMinimapSection(k) or IsNameplatesSection(k) or IsClassPowerSection(k) or IsRaidSection(k) then b:SetShown(false)
         elseif HIDEGRP.nameSectionKeys[k] then b:SetShown(hasName and true or false)
         elseif k == "cast" or k == "highlight" then b:SetShown(not isPower)
+        elseif k == "trinket" then b:SetShown(isArenaEnemy)
         else b:SetShown(true) end
     end
+    if currentSection == "trinket" and not isArenaEnemy then ShowSection("general") end
     if IsPortraitSection(currentSection) or IsAuraSection(currentSection) or IsInfoSection(currentSection)
        or IsMicroSection(currentSection) or IsChatSection(currentSection) or IsTrackerSection(currentSection)
-       or IsGlowSection(currentSection) or IsPartyAuraSection(currentSection)
+       or IsGlowSection(currentSection) or IsPartyAuraSection(currentSection) or IsArenaAuraSection(currentSection)
+       or IsMinimapSection(currentSection)
+       or IsNameplatesSection(currentSection) or IsClassPowerSection(currentSection) or IsRaidSection(currentSection)
        or currentSection == "presets" or currentSection == "explorer" or currentSection == "editing"
-       or currentSection == "setup"
+       or currentSection == "setup" or currentSection == "extras"
        or (HIDEGRP.nameSectionKeys[currentSection] and not hasName)
        or ((currentSection == "cast" or currentSection == "highlight") and isPower) then
         ShowSection("general")
@@ -1004,19 +1199,31 @@ end
 
 -- ---- Construccion -------------------------------------------------------
 local UNIT_GROUPS = {
-    { title = "MAIN", keys = { "player", "target", "targettarget", "pet" } },   -- focus: config solo en su portrait (#5)
+    { title = "MAIN", keys = { "player", "target", "targettarget", "pet", "focus" } },
     { title = "POWER",     keys = { "playerpower", "targetpower" } },
     { title = "BOSSES",     keys = { "boss1", "boss2", "boss3", "boss4", "boss5" } },
     { title = "GROUP",     keys = { "party1", "party2", "party3", "party4", "party5" } },
-    { title = "PORTRAITS", keys = { "portrait_player", "portrait_pet", "portrait_focus",
+    { title = "RAID", keys = { "raid" } },
+    -- ARENA (pedido del usuario 2026-07-19): 6 unitframes propias, copias
+    -- INDEPENDIENTES de player/party1/party2 (aliados) + arena1/2/3 nativos
+    -- (enemigos) -- ver ARENA_KEYS en core.lua. Usan el MISMO sistema generico
+    -- de edicion por-unidad que GROUP/BOSSES, nada especial que registrar aca.
+    { title = "ARENA", keys = { "arena_player", "arena_party1", "arena_party2",
+        "arena_enemy1", "arena_enemy2", "arena_enemy3" } },
+    { title = "PORTRAITS", keys = { "portrait_player", "portrait_pet",
         "portrait_target", "portrait_tot",
         "portrait_party1", "portrait_party2", "portrait_party3", "portrait_party4", "portrait_party5" } },
-    { title = "AURAS", keys = { "aura_player", "aura_target", "aura_party" } },
+    { title = "ARENA PORTRAITS", keys = { "portrait_arena_player", "portrait_arena_party1",
+        "portrait_arena_party2", "portrait_arena_enemy1", "portrait_arena_enemy2", "portrait_arena_enemy3" } },
+    { title = "AURAS", keys = { "aura_player", "aura_target", "aura_party", "aura_arena" } },
     { title = "INFO",  keys = { "infobar" } },
     { title = "MICRO", keys = { "micromenu" } },
     { title = "CHAT",  keys = { "chatbubble" } },
     { title = "TRACKER", keys = { "tracker" } },
     { title = "GLOW",  keys = { "glow" } },
+    { title = "MINIMAP", keys = { "minimap" } },
+    { title = "NAMEPLATES", keys = { "nameplates" } },
+    { title = "CLASS POWER", keys = { "classpower" } },
 }
 
 
@@ -1100,7 +1307,10 @@ local function BuildPanel()
             if v then setScale(v) else self:SetText(string.format("%.2f", (ns.GetDB() and ns.GetDB().panelScale) or 1.0)) end
             self:ClearFocus()
         end)
-        scaleVal:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+        scaleVal:SetScript("OnEscapePressed", function(self)
+            self:ClearFocus()
+            if ns.CloseMainPanel then ns.CloseMainPanel() end
+        end)
 
         refreshers[#refreshers + 1] = function()
             local v = (ns.GetDB() and ns.GetDB().panelScale) or 1.0
@@ -1118,7 +1328,10 @@ local function BuildPanel()
     LABELS[ns.CHATBUBBLE_KEY or "chatbubble"] = "Chat Bubble"
     LABELS[ns.TRACKER_KEY or "tracker"] = "Quest Tracker"
     LABELS[ns.GLOW_KEY or "glow"] = "Assisted Glow"
+    LABELS["minimap"] = "Minimap"
+    LABELS["nameplates"] = "Nameplates"
     LABELS["aura_party"] = "Party"
+    LABELS["aura_arena"] = "Arena"
 
     -- ===== SIDEBAR: lista de unidades agrupada (con scroll) =====
     local sidebar = CreateFrame("Frame", nil, panel)
@@ -1183,7 +1396,10 @@ local function BuildPanel()
         if RelayoutSidebar then RelayoutSidebar() end
         if RelayoutGlobalNav then RelayoutGlobalNav() end
     end)
-    searchBox:SetScript("OnEscapePressed", function(self) self:SetText(""); self:ClearFocus() end)
+    searchBox:SetScript("OnEscapePressed", function(self)
+        self:SetText(""); self:ClearFocus()
+        if ns.CloseMainPanel then ns.CloseMainPanel() end
+    end)
     searchBox:SetScript("OnEditFocusGained", function(self) sbMag:SetVertexColor(1, 0.9, 0.6) end)
     searchBox:SetScript("OnEditFocusLost", function(self) sbMag:SetVertexColor(0.6, 0.55, 0.45) end)
 
@@ -1204,6 +1420,7 @@ local function BuildPanel()
         { key = "editing",  label = "Editing" },
         { key = "explorer", label = "Explorer" },
         { key = "presets",  label = "Profile" },
+        { key = "extras",   label = "Extras" },
     }
     local navDiv = sidebar:CreateTexture(nil, "ARTWORK")
     navDiv:SetTexture(PL.DIV_H)
@@ -1218,12 +1435,13 @@ local function BuildPanel()
         if e.key == "setup" then NAVBTN.setup = b
         elseif e.key == "editing" then NAVBTN.editing = b
         elseif e.key == "explorer" then NAVBTN.explorer = b
-        elseif e.key == "presets" then NAVBTN.presets = b end
+        elseif e.key == "presets" then NAVBTN.presets = b
+        elseif e.key == "extras" then NAVBTN.extras = b end
     end
 
-    -- Reposiciona/filtra los 4 items globales por busqueda (2026-07-17: antes
+    -- Reposiciona/filtra los items globales por busqueda (2026-07-17: antes
     -- quedaban fuera del filtro; buscar "setup" no los ocultaba/mostraba como
-    -- al resto de la sidebar). Sin busqueda entran los 4 siempre.
+    -- al resto de la sidebar). Sin busqueda entran todos siempre.
     RelayoutGlobalNav = function()
         local q = (searchText or ""):lower()
         local sy = -4
@@ -1530,6 +1748,18 @@ local function BuildPanel()
             "Assisted highlight for available abilities." } },
         { test = function(k) return IsPartyAuraSection(k) end, title = "Party Auras", desc = {
             "Auras for Party1-5.", "Revealed on hover or in combat." } },
+        { test = function(k) return IsArenaAuraSection(k) end, title = "Arena Auras", desc = {
+            "Auras for the 6 arena frames.", "Revealed on hover or in combat, arena-only." } },
+        { test = function(k) return IsMinimapSection(k) end, title = "Minimap", desc = {
+            "Round custom skin around the native map.", "Compass, coordinates, LFG eye, XP/Rep ring." } },
+        { test = function(k) return IsNameplatesSection(k) end, title = "Nameplates", desc = {
+            "Reskin of Blizzard's native nameplates.", "Size/offsets via the Nameplate Designer (drag + wheel)." } },
+        { test = function(k) return IsClassPowerSection(k) end, title = "Class Power", desc = {
+            "Combo Points/Holy Power/Chi/Soul Shards/Arcane Charges/Essence/Runes/Soul Fragments/Maelstrom Weapon.",
+            "Movable and scalable in Lock, even without an active class resource." } },
+        { test = function(k) return IsRaidSection(k) end, title = "Raid Frames", desc = {
+            "Up to 40 players, AzeriteUI look. Shows in raid groups and battlegrounds only.",
+            "Growth direction, spacing, and icon position/size are configurable — the rest of the look is fixed by design." } },
         { test = function(k) return k == "presets" end, title = "Profiles", desc = {
             "Save and load full profiles.", "Export and import across accounts." } },
         { test = function(k) return k == "explorer" end, title = "Explorer", desc = {
@@ -1538,13 +1768,53 @@ local function BuildPanel()
             "Grid, snap and layout preview.", "Lock mode to move elements." } },
         { test = function(k) return k == "setup" end, title = "Setup", desc = {
             "Integration with other addons.", "Bundled profiles ready to apply." } },
+        { test = function(k) return k == "extras" end, title = "Extras", desc = {
+            "Tooltip skin and Mirror Timers (breath/rested/feign death).", "Global, not per-unit." } },
     }
+    -- Pedido del usuario 2026-07-19 ("me gustaria que sea PER UNIDAD... si
+    -- estoy en tot me resuma lo que puedo hacer ahi"): antes esto era una UNICA
+    -- descripcion generica ("Unit Frames") para CUALQUIER unidad normal
+    -- (player/target/ToT/pet/focus/boss/party/arena/power), sin importar cual
+    -- estuviera editando. Ahora resume lo especifico de CADA unidad -- las
+    -- familias especiales (portraits/auras/tracker/etc, ver FAMILY_DESC arriba)
+    -- siguen igual, esto solo reemplaza el fallback generico del final.
+    local function GetUnitDescription(key)
+        local u = ns.frames[key]
+        local label = (u and u.label) or key
+        if key == "playerpower" or key == "targetpower" then
+            return label, { "Power bar only.", "No name, spell, cast or highlight tabs." }
+        end
+        if key:sub(1, 4) == "boss" then
+            return label, { "Boss encounter frame, fixed color.", "Shows automatically during boss fights." }
+        end
+        if key == "targettarget" then
+            return label, { "Target-of-target — small frame under Target.", "Shows what your current target is looking at." }
+        end
+        if key == "pet" then
+            return label, { "Pet frame — auto-hides without an active pet.", "Bar, cage, highlight and health, like the rest." }
+        end
+        if key == "focus" then
+            return label, { "Focus frame — set/clear focus via UI or macro.", "Bar, cage, highlight and health, like the rest." }
+        end
+        if key == "party5" then
+            return label, { "5th party slot — shows YOUR OWN frame.", "Visible whenever you're in any group (party or raid)." }
+        end
+        if key:sub(1, 5) == "party" then
+            return label, { "Party member — visible only in a 5-man group.", "Hidden in raids, arenas and battlegrounds." }
+        end
+        if key == "arena_player" or key == "arena_party1" or key == "arena_party2" then
+            return label, { "Arena ally — visible ONLY in an arena match.", "Independent copy, doesn't affect your normal frames." }
+        end
+        if key:sub(1, 11) == "arena_enemy" then
+            return label, { "Arena enemy — visible ONLY in an arena match.", "Also has a PvP Trinket icon (see Trinket tab)." }
+        end
+        return label, { "Bar, cage, highlight and health.", "Name, spell, cast bar and colors." }
+    end
     local function GetFamilyDescription(key)
         for _, f in ipairs(FAMILY_DESC) do
             if f.test(key) then return f.title, f.desc end
         end
-        return "Unit Frames", {
-            "Bar, cage, highlight and health.", "Name, spell, cast bar and colors." }
+        return GetUnitDescription(ns.currentEdit)
     end
     UpdatePreview = function()
         local t, d = GetFamilyDescription(currentSection)
@@ -1676,6 +1946,9 @@ local function BuildPanel()
         { key = "spell",   label = "Spell" },
         { key = "cast",    label = "Cast" },
         { key = "colors",  label = "Color" },
+        -- Trinket de PvP (pedido del usuario 2026-07-19) -- pestaña visible
+        -- SOLO para arena_enemy1/2/3 (ver SelectUnit, filtro por key:sub(1,11)).
+        { key = "trinket", label = "Trinket" },
     }
     BuildTabRow(secList, 40, false)
 
@@ -1691,7 +1964,6 @@ local function BuildPanel()
         { key = "p_badges",  label = "Badge" },
         { key = "p_raid",    label = "Mark" },
         { key = "p_role",    label = "Role" },
-        { key = "p_focus",   label = "Focus" },
     }
     BuildTabRow(portSecList, 34, true)
 
@@ -1732,10 +2004,50 @@ local function BuildPanel()
     local glowSecList = { { key = "g_general", label = "Gen" } }
     BuildTabRow(glowSecList, 40, true)
 
+    -- Pestanas de SECCION para el Minimap (singleton).
+    local minimapSecList = {
+        { key = "mn_general",  label = "Gen" },
+        { key = "mn_display",  label = "Display" },
+        { key = "mn_icons",    label = "Icons" },
+        { key = "mn_textures", label = "Textures" },
+    }
+    BuildTabRow(minimapSecList, 40, true)
+
+    -- Pestanas de SECCION para Raid Frames (singleton). SIN pestaña "Style":
+    -- pedido explicito del usuario (2026-07-20) -- la apariencia (texturas/
+    -- colores/tamaños de barra) es 100% codigo (Raid.lua, ns.ForceRaidStyle),
+    -- el menu solo controla comportamiento/layout/posicion.
+    local raidSecList = {
+        { key = "r_general", label = "Gen" },
+        { key = "r_layout",  label = "Layout" },
+        { key = "r_pos",     label = "Pos" },
+        { key = "r_icons",   label = "Icons" },
+    }
+    BuildTabRow(raidSecList, 40, true)
+
+    -- Pestanas de SECCION para Nameplates -- 2do tab "Alpha" agregado
+    -- 2026-07-19 (pedido del usuario, 5 controles de alpha nuevos): el panel
+    -- NO tiene scroll (content:SetPoint BOTTOMRIGHT contra preview, corte
+    -- duro en el borde) -- meterlos todos en "Gen" empujaba "Name-only mode"
+    -- y sus offsets fuera de la ventana. Pestaña propia = espacio de sobra
+    -- para cada grupo, sin apretar pixeles.
+    local nameplatesSecList = { { key = "np_general", label = "Gen" }, { key = "np_alpha", label = "Alpha" } }
+    BuildTabRow(nameplatesSecList, 40, true)
+
     -- Pestanas de SECCION para Party Auras (singleton, 1 sola pestaña "Gen" — igual patron que
     -- Tracker/Glow arriba).
     local partyAuraSecList = { { key = "ap_general", label = "Gen" } }
     BuildTabRow(partyAuraSecList, 40, true)
+
+    -- Pestanas de SECCION para Arena Auras (singleton, mismo patron que Party Auras --
+    -- pedido del usuario 2026-07-19: "todas esta auras esten en una casilla juntas de arena").
+    local arenaAuraSecList = { { key = "aa_general", label = "Gen" } }
+    BuildTabRow(arenaAuraSecList, 40, true)
+
+    -- Pestanas de SECCION para Class Power (singleton, 1 sola pestaña "Gen" -- igual patron
+    -- que Party Auras/Nameplates arriba).
+    local classPowerSecList = { { key = "cp_general", label = "Gen" } }
+    BuildTabRow(classPowerSecList, 40, true)
 
     tabRow:SetWidth(math.max(tabRowWidth, 10))
     UpdateHScroll()
@@ -1865,6 +2177,26 @@ local function BuildPanel()
         MakeSlider(f, "Opacity", 0, 1, 0.05, "highlightAlpha", R, -132)
         MakeColorButton(f, "Color", "highlightColor", R, -162)
         MakeCheckbox(f, "Glow (pulse)", "highlightGlow", R, -198)
+    end
+    -- Trinket de PvP (pedido del usuario 2026-07-19, SOLO Arena Enemy 1/2/3) --
+    -- deliberadamente MINIMO: "permitir UNICAMENTE opciones visuales: mostrar/
+    -- ocultar, posicion, tamaño. No añadir funciones propias de addons PvP
+    -- avanzados (DR tracker, etc)". Usa getP()/OnEdit genericos como el resto
+    -- de las pestañas por-unidad (no es singleton, cada Arena Enemy tiene su
+    -- propio icono independiente).
+    do
+        local f = Section("trinket")
+        MakeHeader(f, "PvP Trinket", L, -6, 210)
+        MakeCheckbox(f, "Show", "showTrinket", L, -30)
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
+        note:SetPoint("TOPLEFT", L, -56); note:SetWidth(210); note:SetJustifyH("LEFT")
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        note:SetText("Detected via combat log only (public API) -- same as Blizzard's own arena frames.")
+
+        MakeHeader(f, "Position & size", R, -6, 210)
+        MakeSlider(f, "Size", 8, 64, 1, "trinketSize", R, -48)
+        MakeSlider(f, "Offset X", -200, 200, 1, "trinketOffsetX", R, -90)
+        MakeSlider(f, "Offset Y", -200, 200, 1, "trinketOffsetY", R, -132)
     end
     -- Vida
     do
@@ -2084,6 +2416,14 @@ local function BuildPanel()
             if selected.name then ns.DeletePreset(selected.name); selected.name = nil; refreshSel(); updateLabels() end
         end)
         defBtn:SetScript("OnClick", function() if selected.name then ns.SetDefaultPreset(selected.name); updateLabels() end end)
+        -- Pedido del usuario 2026-07-19: mismo boton "Set default" tambien
+        -- accesible desde el footer -- selected/updateLabels son locals de
+        -- ESTE bloque (Section("presets")), se exponen via ns.* para que el
+        -- footer los pueda llamar sin duplicar la logica.
+        ns.SetDefaultToSelectedPreset = function()
+            if selected.name then ns.SetDefaultPreset(selected.name); updateLabels() end
+        end
+        ns.GetSelectedPresetName = function() return selected.name end
         exportBtn:SetScript("OnClick", function() ShowExport(selected.name) end)
         importBtn:SetScript("OnClick", function()
             ShowImport(function(newName) selected.name = newName; refreshSel(); updateLabels() end)
@@ -2114,6 +2454,56 @@ local function BuildPanel()
         end)
 
         refreshers[#refreshers + 1] = function() refreshSel(); updateLabels() end
+    end
+
+    -- Extras (pedido del usuario 2026-07-19: "muevelo todo a una seccion
+    -- aparte, no en profile") -- tooltip + mirror timers, ambos GLOBALES
+    -- (no por-unidad), separados de Profile en su propia pestaña de sidebar.
+    do
+        local f = Section("extras")
+
+        MakeHeader(f, "Tooltip", L, -6, 210)
+        local function TTDB() return ns.GetDB() and ns.GetDB().tooltip end
+        MakeToggle(f, "Enable tooltip skin", L, -30,
+            function() return TTDB() and TTDB().enabled end,
+            function(v) if TTDB() then TTDB().enabled = v end; if ns.RefreshTooltipSkin then ns.RefreshTooltipSkin() end end)
+        MakeSlider(f, "Scale", 0.5, 2, 0.05, "scale", L, -74, TTDB,
+            function() if ns.RefreshTooltipSkin then ns.RefreshTooltipSkin() end end)
+        local ttNote = f:CreateFontString(nil, "ARTWORK"); setFont(ttNote, 10)
+        ttNote:SetPoint("TOPLEFT", L, -128); ttNote:SetWidth(210); ttNote:SetJustifyH("LEFT")
+        ttNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        ttNote:SetText("Reskins GameTooltip and related tooltips (items, units, comparisons) to match this preset.")
+
+        MakeHeader(f, "Mirror Timers (breath/rested/feign death)", R, -6, 210)
+        local function MTDB() return ns.GetDB() and ns.GetDB().mirrortimer end
+        local function RefreshMT() if ns.RefreshMirrorTimers then ns.RefreshMirrorTimers() end end
+        MakeToggle(f, "Enable", R, -30,
+            function() return MTDB() and MTDB().enabled end,
+            function(v) if MTDB() then MTDB().enabled = v end; RefreshMT() end)
+        MakeSlider(f, "Bar Width", 60, 400, 5, "width", R, -74, MTDB, RefreshMT)
+        MakeSlider(f, "Bar Height", 8, 40, 1, "height", R, -126, MTDB, RefreshMT)
+        -- Pedido del usuario 2026-07-19: "dejame elegir el w h de ambas" --
+        -- cage (fondo/marco) con tamaño INDEPENDIENTE de la barra, ya no
+        -- derivado por proporcion fija.
+        MakeSlider(f, "Cage Width", 60, 500, 5, "cageWidth", R, -178, MTDB, RefreshMT)
+        MakeSlider(f, "Cage Height", 20, 200, 2, "cageHeight", R, -230, MTDB, RefreshMT)
+        MakeSlider(f, "Offset X", -500, 500, 1, "offsetX", R, -282, MTDB, RefreshMT)
+        MakeSlider(f, "Offset Y", -300, 100, 1, "offsetY", R, -334, MTDB, RefreshMT)
+        -- Pedido del usuario 2026-07-19: "no me dejes elegir texturas desde
+        -- el menu" -- textura fija (misma que AzeriteUI, ver MirrorTimers.lua),
+        -- sin selector. Solo tamaño/posicion/color quedan configurables.
+        local mtNote = f:CreateFontString(nil, "ARTWORK"); setFont(mtNote, 10)
+        mtNote:SetPoint("TOPLEFT", R, -386); mtNote:SetWidth(210); mtNote:SetJustifyH("LEFT")
+        mtNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        mtNote:SetText("Fixed texture (same as AzeriteUI). To move it: enter Lock (top bar) — it shows with a draggable outline.")
+
+        -- Texto (pedido del usuario 2026-07-19: "quiero controlar el texto,
+        -- x y size y color tambien") -- columna izquierda, debajo de Tooltip.
+        MakeHeader(f, "Mirror Timer Text", L, -180, 210)
+        MakeSlider(f, "Text Offset X", -100, 100, 1, "labelOffsetX", L, -224, MTDB, RefreshMT)
+        MakeSlider(f, "Text Offset Y", -100, 100, 1, "labelOffsetY", L, -276, MTDB, RefreshMT)
+        MakeSlider(f, "Text Size", 6, 24, 1, "labelFontSize", L, -328, MTDB, RefreshMT)
+        MakeGlobalColor(f, "Text Color", function() return MTDB() and MTDB().labelColor end, L, -370, RefreshMT)
     end
 
     -- =========================== SECCIONES PORTRAIT ===========================
@@ -2286,38 +2676,6 @@ local function BuildPanel()
         MakeSlider(f, "Opacity", 0, 1, 0.05, "leaderAlpha", R, -110)
         MakeSlider(f, "Offset X", -200, 200, 1, "leaderOffsetX", R, -152)
         MakeSlider(f, "Offset Y", -200, 200, 1, "leaderOffsetY", R, -194)
-    end
-
-    -- Portrait / FOCUS: el texto de vida (%/valor) y el highlight del focus viven en la
-    -- unitframe db.units.focus (no en el portrait). Estos controles la editan directamente.
-    do
-        local f = Section("p_focus")
-        local function fp() return ns.GetDB().units.focus end
-        local function fref() if ns.RefreshUnit then ns.RefreshUnit("focus") end end
-        local function fGet(k) return function() return fp()[k] end end
-        local function fSet(k) return function(v) fp()[k] = v; fref() end end
-        -- Texto de vida (izquierda).
-        MakeHeader(f, "Health text", L, -6, 210)
-        MakeToggle(f, "Show value (%  |  amount)", L, -30, fGet("showValue"), fSet("showValue"))
-        MakeSlider(f, "Font size", 6, 40, 1, "fontSize", L, -68, fp, fref)
-        MakeSlider(f, "Offset X", -200, 200, 1, "textOffsetX", L, -110, fp, fref)
-        MakeSlider(f, "Offset Y", -200, 200, 1, "textOffsetY", L, -152, fp, fref)
-        MakeToggle(f, "Custom text color", L, -186, fGet("useHealthColor"), fSet("useHealthColor"))
-        MakeGlobalColor(f, "Text color", function() return fp().healthColor end, L, -216, fref)
-        -- Textura del highlight (apunta a db.units.focus via getTbl/onChange).
-        MakeTexturePicker(f, "Highlight texture", "highlightTexture", "highlight", L, -252, fp, fref)
-        -- Highlight (derecha).
-        MakeHeader(f, "Highlight (when focus = target)", R, -6, 220)
-        MakeToggle(f, "Show highlight", R, -30, fGet("showHighlight"), fSet("showHighlight"))
-        MakeToggle(f, "Pulse", R, -54, fGet("highlightGlow"), fSet("highlightGlow"))
-        MakeSlider(f, "Scale", 0.2, 4, 0.02, "highlightScale", R, -92, fp, fref)
-        MakeSlider(f, "Opacity", 0, 1, 0.05, "highlightAlpha", R, -134, fp, fref)
-        MakeSlider(f, "Offset X", -200, 200, 1, "highlightOffsetX", R, -176, fp, fref)
-        MakeSlider(f, "Offset Y", -200, 200, 1, "highlightOffsetY", R, -218, fp, fref)
-        MakeGlobalColor(f, "Highlight color", function() return fp().highlightColor end, R, -248, fref)
-        -- Width/Height como en la pestaña "Sel" de las unidades (pet incluido).
-        MakeSlider(f, "Width", 2, 1200, 1, "highlightWidth", R, -286, fp, fref)
-        MakeSlider(f, "Height", 2, 400, 1, "highlightHeight", R, -328, fp, fref)
     end
 
     -- =========================== SECCIONES AURAS ===========================
@@ -2583,6 +2941,21 @@ local function BuildPanel()
         local resetBtn = MakeButton(f, "Reset chat bubble", 200, 22)
         resetBtn:SetPoint("TOPLEFT", R, -130)
         resetBtn:SetScript("OnClick", function() ns.ResetUnit(ns.currentEdit) end)
+
+        -- Pedido del usuario 2026-07-19: "eso es de blizzard, se puede
+        -- ocultar, azeriteui lo hace" -- el borde/fondo nativo del EditBox de
+        -- CHAT (donde escribis, distinto de las burbujas de arriba) -- global,
+        -- no por-unidad, por eso usa ns.GetDB() directo en vez de getP()/OnEdit.
+        -- No depende de AzeriteUI, ver SetChatEditBoxTexture/
+        -- RefreshChatEditBoxSkin al principio del archivo.
+        MakeHeader(f, "Chat window", L, -210, 440)
+        MakeToggle(f, "Hide chat edit box border texture", L, -234,
+            function() local d = ns.GetDB(); return d and d.hideChatEditBoxTexture end,
+            function(v)
+                local d = ns.GetDB(); if not d then return end
+                d.hideChatEditBoxTexture = v and true or false
+                if ns.RefreshChatEditBoxSkin then ns.RefreshChatEditBoxSkin() end
+            end)
     end
 
     -- =========================== SECCION QUEST TRACKER ===========================
@@ -2625,17 +2998,297 @@ local function BuildPanel()
         MakeSlider(f, "Scale", 0.5, 3.0, 0.1, "scale", R, -62)
         MakeCheckbox(f, "Only visible buttons", "onlyVisible", R, -96)
         MakeCheckbox(f, "Check usable (resource/CD)", "checkUsable", R, -128)
+        -- Pedido del usuario 2026-07-19: "me gustaria poder controlar el
+        -- strata" -- antes hardcodeado a "HIGH" (ver GlowStart en Glow.lua).
+        MakeCycle(f, "Strata", ns.STRATA_VALUES, "strata", R, -158)
 
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
-        note:SetPoint("TOPLEFT", R, -160); note:SetWidth(210); note:SetJustifyH("LEFT")
+        note:SetPoint("TOPLEFT", R, -200); note:SetWidth(210); note:SetJustifyH("LEFT")
         note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         local libNote = ns.HasLCG
             and "Replaces the assisted-rotation highlight with a custom glow on the recommended action button. 'Texture' uses your Assets image (actionbuttonhighlight)."
             or "LibCustomGlow not detected: 'Texture' and 'Border' styles work; Pixel/AutoCast/Button glows need that library."
         note:SetText(libNote)
         local resetBtn = MakeButton(f, "Reset assisted glow", 200, 22)
-        resetBtn:SetPoint("TOPLEFT", R, -210)
+        resetBtn:SetPoint("TOPLEFT", R, -250)
         resetBtn:SetScript("OnClick", function() ns.ResetUnit(ns.currentEdit) end)
+    end
+
+    -- =========================== SECCIONES MINIMAP ===========================
+    -- Minimap / General (enabled, escala, posicion del contenedor).
+    do
+        local f = Section("mn_general")
+        MakeCheckbox(f, "Enabled", "enabled", L, -10)
+        MakeSlider(f, "Scale (wheel in Lock too)", 0.3, 3, 0.02, "scale", L, -50)
+
+        MakeEditBox(f, "Anchor to (empty = screen)", "anchorFrame", R, -10, 200)
+        MakeCycle(f, "Point", ns.POINT_VALUES, "point", R, -54)
+        MakeCycle(f, "Rel. point", ns.POINT_VALUES, "relativePoint", R, -84)
+        MakeSlider(f, "Offset X", -2000, 2000, 1, "offsetX", L, -100)
+        MakeSlider(f, "Offset Y", -2000, 2000, 1, "offsetY", L, -142)
+
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
+        note:SetPoint("TOPLEFT", L, -180); note:SetWidth(430); note:SetJustifyH("LEFT")
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        note:SetText("The map itself keeps whatever size Blizzard's Edit Mode gives it — this only moves/scales the round frame (border, icons, ring) built around it. Drag in Lock mode to reposition; mouse wheel over it in Lock adjusts scale.")
+        local resetBtn = MakeButton(f, "Reset minimap", 200, 22)
+        resetBtn:SetPoint("TOPLEFT", L, -230)
+        resetBtn:SetScript("OnClick", function() ns.ResetUnit(ns.currentEdit) end)
+    end
+    -- Minimap / Display (que elementos mostrar).
+    do
+        local f = Section("mn_display")
+        MakeCheckbox(f, "Show compass (N)", "showCompass", L, -10)
+        MakeCheckbox(f, "Show coordinates", "showCoordinates", L, -42)
+        MakeCheckbox(f, "Show mail indicator", "showMail", L, -74)
+        MakeCheckbox(f, "Show LFG eye", "showEye", L, -106)
+        MakeCheckbox(f, "Show XP/Reputation ring", "showRing", L, -138)
+        -- Pedido del usuario 2026-07-19: "quiero poder moverlo, y que siga al
+        -- minimap de mi addon" (UIWidgetBelowMinimapContainerFrame nativo --
+        -- catch-up buffs, barras de faccion, etc).
+        MakeCheckbox(f, "Follow native below-minimap widget (catch-up buffs, etc)", "showBelowMinimapWidget", L, -170)
+    end
+    -- Minimap / Icons (offsets del eye y del boton de desmontar). Reorganizado
+    -- 2026-07-19 (pedido del usuario, "esta muy desorganizado, los ultimos
+    -- sliders pasan la ventana y los titulos estan muy juntos"): las 4
+    -- columnas de antes iban TODAS apiladas en una sola columna y se pasaban
+    -- del panel -- ahora van 2 en L y 2 en R, con mas aire entre header y
+    -- primer slider (40px en vez de 30) y entre sliders (44px en vez de 44,
+    -- pero el header ahora tiene su PROPIA fila en vez de compartir espacio).
+    do
+        local f = Section("mn_icons")
+        MakeHeader(f, "LFG eye", L, -6, 200)
+        MakeSlider(f, "Eye offset X", -200, 200, 1, "eyeOffsetX", L, -46)
+        MakeSlider(f, "Eye offset Y", -200, 200, 1, "eyeOffsetY", L, -100)
+
+        MakeHeader(f, "Coordinates", L, -166, 200)
+        MakeSlider(f, "Coords offset X", -200, 200, 1, "coordsOffsetX", L, -206)
+        MakeSlider(f, "Coords offset Y", -200, 200, 1, "coordsOffsetY", L, -260)
+
+        MakeHeader(f, "Dismount button", R, -6, 210)
+        MakeSlider(f, "Dismount offset X", -200, 200, 1, "dismountOffsetX", R, -46)
+        MakeSlider(f, "Dismount offset Y", -200, 200, 1, "dismountOffsetY", R, -100)
+
+        MakeHeader(f, "Below-minimap widget", R, -166, 210)
+        MakeSlider(f, "Widget offset X", -200, 200, 1, "widgetOffsetX", R, -206)
+        MakeSlider(f, "Widget offset Y", -200, 200, 1, "widgetOffsetY", R, -260)
+
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
+        note:SetPoint("TOPLEFT", L, -326); note:SetWidth(430); note:SetJustifyH("LEFT")
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        note:SetText("Offsets are relative to the minimap's own center (LFG eye), top edge (dismount button), bottom edge (coordinates), or bottom edge again (below-minimap widget).")
+    end
+    -- Minimap / Textures (borde, fondo, eye — la barra de XP/Reputacion NO se
+    -- personaliza, a pedido del usuario, para no romper el layout del anillo).
+    do
+        local f = Section("mn_textures")
+        MakeTexturePicker(f, "Border texture", "borderTexture", "minimapborder", L, -10)
+        MakeTexturePicker(f, "Backdrop texture", "backdropTexture", "minimapbackdrop", L, -50)
+        MakeTexturePicker(f, "LFG eye texture", "eyeTexture", "eye", L, -90)
+        MakeTexturePicker(f, "Dismount icon", "dismountTexture", "dismount", L, -130)
+
+        MakeTexturePicker(f, "Ring backdrop texture", "ringBackdropTexture", "ringbackdrop", R, -10)
+        MakeTexturePicker(f, "Ring button plate", "ringButtonTexture", "ringbutton", R, -50)
+
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
+        note:SetPoint("TOPLEFT", R, -100); note:SetWidth(210); note:SetJustifyH("LEFT")
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        note:SetText("Leave the path empty to use the addon's default texture. Only the ring's actual fill/progress arc isn't customizable, to keep the XP/Reputation reading intact.")
+    end
+
+    -- =========================== SECCIONES RAID FRAMES ===========================
+    -- Raid / General (enabled, backdrop de muerte/highlight, reset). Sin
+    -- "also show in normal parties" (pedido del usuario 2026-07-20: "quita
+    -- lo de party, que solo funcione en raids y bg" -- sus unitframes de
+    -- party1-5 propias NO se tocan, son un sistema aparte).
+    do
+        local f = Section("r_general")
+        MakeCheckbox(f, "Enabled", "enabled", L, -10)
+        MakeCheckbox(f, "Highlight my current target", "showHighlight", R, -10)
+        MakeCheckbox(f, "Hide backdrop when dead", "cageHideDead", R, -42)
+
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
+        note:SetPoint("TOPLEFT", L, -80); note:SetWidth(430); note:SetJustifyH("LEFT")
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        note:SetText("Shows automatically in any raid group and in battlegrounds only. Growth direction, per-row/column limits and spacing live in the Layout tab; the container's own screen position lives in Pos; icon positions live in Icons.")
+        local resetBtn = MakeButton(f, "Reset raid frames", 200, 22)
+        resetBtn:SetPoint("TOPLEFT", L, -130)
+        resetBtn:SetScript("OnClick", function() ns.ResetUnit(ns.currentEdit) end)
+    end
+    -- Raid / Icons (posicion de raid target/ready check-resurrect/rol,
+    -- pedido del usuario 2026-07-20: "dejame controlar la posicion de los
+    -- iconos, basado en el raid1, el resto copian a ese" -- un solo perfil
+    -- compartido, ver ns.PositionRaidIcons en Raid.lua).
+    do
+        local f = Section("r_icons")
+        MakeHeader(f, "Raid target icon", L, -6, 210)
+        MakeSlider(f, "Offset X", -60, 60, 1, "raidTargetOffsetX", L, -46)
+        MakeSlider(f, "Offset Y", -60, 60, 1, "raidTargetOffsetY", L, -90)
+
+        MakeHeader(f, "Ready check / Resurrect", R, -6, 210)
+        MakeSlider(f, "Offset X", -60, 60, 1, "readyCheckOffsetX", R, -46)
+        MakeSlider(f, "Offset Y", -60, 60, 1, "readyCheckOffsetY", R, -90)
+
+        MakeHeader(f, "Role icon (tank/healer)", L, -134, 210)
+        MakeSlider(f, "Offset X", -60, 80, 1, "roleOffsetX", L, -174)
+        MakeSlider(f, "Offset Y", -60, 60, 1, "roleOffsetY", L, -218)
+
+        -- Tamaños (pedido del usuario 2026-07-20: "me gustaria poder
+        -- cambiarles el tamaño" -- barra de vida/poder + icono de raid target).
+        MakeHeader(f, "Sizes", R, -134, 210)
+        MakeSlider(f, "Health bar width", 30, 200, 1, "healthBarWidth", R, -174)
+        MakeSlider(f, "Health bar height", 6, 40, 1, "healthBarHeight", R, -218)
+        MakeSlider(f, "Raid target icon size", 6, 32, 1, "raidTargetIconSize", R, -262)
+
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
+        note:SetPoint("TOPLEFT", L, -262); note:SetWidth(210); note:SetJustifyH("LEFT")
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        note:SetText("These position/size the icons and bar on member #1 in the Lock preview — every other member (real or preview) copies the same values, since all 40 share one style profile. The power bar's width follows the health bar's automatically.")
+    end
+    -- Raid / Layout — SIMPLIFICADO (pedido del usuario 2026-07-20): solo
+    -- izquierda/derecha + arriba/abajo, sin spacing vertical suelto ni
+    -- tamaño de member (fijo en codigo, ver Raid.lua ComputeGridSize).
+    do
+        local f = Section("r_layout")
+        MakeHeader(f, "Growth direction", L, -6, 210)
+        MakeCycle(f, "Grow to", { "LEFT", "RIGHT" }, "growPoint", L, -46)
+        MakeCycle(f, "New rows stack", { "TOP", "BOTTOM" }, "columnAnchorPoint", L, -90)
+
+        MakeHeader(f, "Limits", R, -6, 210)
+        MakeSlider(f, "Units per row", 1, 40, 1, "unitsPerColumn", R, -46)
+        MakeSlider(f, "Max rows", 1, 40, 1, "maxColumns", R, -100)
+
+        MakeHeader(f, "Spacing", L, -140, 210)
+        MakeSlider(f, "Between members (row)", -40, 40, 1, "growXOffset", L, -180)
+        MakeSlider(f, "Between rows", -40, 60, 1, "columnSpacing", R, -180)
+
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
+        note:SetPoint("TOPLEFT", L, -222); note:SetWidth(430); note:SetJustifyH("LEFT")
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        note:SetText("The grid always grows in rows: each row fills horizontally (left or right), and new rows stack either upward or downward. Member size is fixed to match AzeriteUI exactly.")
+    end
+    -- Raid / Pos (posicion del CONTENEDOR completo; se arrastra en Lock).
+    do
+        local f = Section("r_pos")
+        MakeEditBox(f, "Anchor to (empty = screen)", "anchorFrame", L, -10, 200)
+        -- Sin selector "Point" propio: el header SIEMPRE se ancla por su
+        -- CENTER (fix 2026-07-20 de "los botones bloquean mover" -- asi
+        -- SetSize agranda parejo hacia los 4 lados y los members, anclados a
+        -- los bordes reales del header, siempre coinciden sin importar la
+        -- direccion de crecimiento elegida en Layout).
+        MakeCycle(f, "Rel. point", ns.POINT_VALUES, "relativePoint", L, -54)
+        MakeSlider(f, "Offset X", -2000, 2000, 1, "offsetX", R, -10)
+        MakeSlider(f, "Offset Y", -2000, 2000, 1, "offsetY", R, -54)
+        MakeSlider(f, "Scale (wheel in Lock too)", 0.3, 3, 0.02, "scale", R, -98)
+
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
+        note:SetPoint("TOPLEFT", L, -140); note:SetWidth(430); note:SetJustifyH("LEFT")
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        note:SetText("Only the whole grid moves as one in Lock mode — individual members are positioned by the grid itself, not draggable one by one.")
+    end
+    -- Nameplates / General. 2026-07-18 (pedido del usuario): TODO el control
+    -- de posicion/tamaño (offsets, font size, width/height, icon size) vive
+    -- ahora EXCLUSIVAMENTE en el Nameplate Designer (drag + rueda) -- los
+    -- sliders equivalentes que habia aca se sacaron. Este menu de texto solo
+    -- conserva lo que el Designer NO cubre: on/off, distancia/fade (CVars
+    -- nativos), y colores (pestaña Colors).
+    do
+        local f = Section("np_general")
+
+        -- Grupo 1: on/off + accesos rapidos (reorganizado 2026-07-19, pedido
+        -- del usuario "organice un poco el menu de nameplates").
+        MakeHeader(f, "General", L, -6, 430)
+        MakeCheckbox(f, "Enabled", "enabled", L, -30)
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
+        note:SetPoint("TOPLEFT", L, -54); note:SetWidth(430); note:SetJustifyH("LEFT")
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        -- Acortado 2026-07-19 (pedido del usuario: "aun siento que hay mucho
+        -- texto, intenta resumirlo").
+        note:SetText("Reskins Blizzard's nameplates to match this preset. Position/size are set in the Nameplate Designer, not here.")
+        local resetBtn = MakeButton(f, "Reset nameplates", 200, 22)
+        resetBtn:SetPoint("TOPLEFT", L, -84)
+        resetBtn:SetScript("OnClick", function() ns.ResetUnit(ns.currentEdit) end)
+
+        -- Canvas de diseño (drag + rueda) -- ver NameplateDesigner.lua. TODO
+        -- el control de posicion/tamaño vive aca, no en sliders de texto.
+        -- SetActive(true) (pedido del usuario: "que resalte mas") -- mismo
+        -- estilo dorado que StyleButton ya usa para botones "activos", asi
+        -- se distingue de Reset como la accion PRINCIPAL de esta pagina.
+        local designBtn = MakeButton(f, "Open Nameplate Designer", 200, 24)
+        designBtn:SetPoint("TOPLEFT", R, -83)
+        designBtn:SetActive(true)
+        -- Pedido del usuario 2026-07-19: "quiero que cuando abras el panel del
+        -- nameplate, se cierre el menu" -- antes quedaban superpuestos.
+        designBtn:SetScript("OnClick", function()
+            if ns.ToggleNameplateDesigner then ns.ToggleNameplateDesigner() end
+            if ns.CloseMainPanel then ns.CloseMainPanel() end
+        end)
+
+        -- Grupo 2: rango (CVar nativo de Blizzard).
+        MakeHeader(f, "Range", L, -126, 430)
+        MakeSlider(f, "Max distance", 10, 60, 1, "maxDistance", L, -176)
+        local distNote = f:CreateFontString(nil, "ARTWORK"); setFont(distNote, 10)
+        distNote:SetPoint("TOPLEFT", L, -220); distNote:SetWidth(210); distNote:SetJustifyH("LEFT")
+        distNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        distNote:SetText("How far away nameplates render.")
+
+        -- Grupo 3: modo "solo nombre" para jugadores + NPCs amistosos (sin pets).
+        MakeHeader(f, "Name-only mode (friendly)", L, -252, 430)
+        -- CAMBIADO (2026-07-19): jugadores amistosos (nombre con color de
+        -- CLASE) + NPCs amistosos como vendedores/guardias (nombre con el
+        -- color preestablecido del perfil) -- excluye mascotas/totems/
+        -- guardianes con dueño jugador. El campo interno sigue llamandose
+        -- nameOnlyFriendlyNeutral, no vale la pena migrarlo. Ver
+        -- ShouldHideExceptName/ReassertNameGeometry en Nameplates.lua.
+        MakeCheckbox(f, "Only show name on friendly players/NPCs", "nameOnlyFriendlyNeutral", L, -276)
+        -- Pedido del usuario 2026-07-19: solo nombre para NPCs de escolta/
+        -- mision EN DUNGEON, via CVars nativos (funciona incluso en
+        -- ForbiddenNamePlate, confirmado en vivo -- ver ApplyMaxDistanceNow
+        -- en Nameplates.lua). Independiente del checkbox de arriba.
+        MakeCheckbox(f, "Dungeon escort NPCs (native)", "showFriendlyNPCPlates", R, -276)
+        local onlyNameNote = f:CreateFontString(nil, "ARTWORK"); setFont(onlyNameNote, 10)
+        onlyNameNote:SetPoint("TOPLEFT", L, -300); onlyNameNote:SetWidth(430); onlyNameNote:SetJustifyH("LEFT")
+        onlyNameNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        onlyNameNote:SetText("Players: colored by class. NPCs (vendors, guards, etc): preset color. Excludes pets and hostiles.")
+
+        -- Offset PROPIO del modo de arriba (pedido del usuario): sin la barra
+        -- visible, la posicion normal del nombre puede no quedar bien.
+        MakeSlider(f, "Offset X", -100, 100, 1, "nameOnlyOffsetX", L, -350)
+        MakeSlider(f, "Offset Y", -100, 100, 1, "nameOnlyOffsetY", R, -350)
+    end
+
+    -- Nueva pestaña "Alpha" (2026-07-19, pedido del usuario): 5 controles
+    -- nativos de Blizzard (CVars) para la opacidad segun estado -- separados
+    -- de "Gen" porque el panel no tiene scroll y no entraban todos juntos
+    -- sin salirse de la ventana. Ver ApplyMaxDistanceNow/NameplateDefaults
+    -- en Nameplates.lua.
+    do
+        local f = Section("np_alpha")
+        MakeHeader(f, "Alpha", L, -6, 430)
+        local intro = f:CreateFontString(nil, "ARTWORK"); setFont(intro, 10)
+        intro:SetPoint("TOPLEFT", L, -30); intro:SetWidth(430); intro:SetJustifyH("LEFT")
+        intro:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        intro:SetText("Native Blizzard nameplate opacity CVars, per state.")
+
+        MakeSlider(f, "Min alpha", 0, 1, 0.05, "fadeMinAlpha", L, -80)
+        MakeSlider(f, "Max alpha", 0, 1, 0.05, "alphaMax", R, -80)
+        local minMaxNote = f:CreateFontString(nil, "ARTWORK"); setFont(minMaxNote, 10)
+        minMaxNote:SetPoint("TOPLEFT", L, -124); minMaxNote:SetWidth(430); minMaxNote:SetJustifyH("LEFT")
+        minMaxNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        minMaxNote:SetText("Opacity range across the max distance (see Gen tab).")
+
+        MakeSlider(f, "Non-selected alpha", 0, 1, 0.05, "alphaNotSelected", L, -174)
+        MakeSlider(f, "Target alpha", 0, 1, 0.05, "alphaTarget", R, -174)
+        local selNote = f:CreateFontString(nil, "ARTWORK"); setFont(selNote, 10)
+        selNote:SetPoint("TOPLEFT", L, -218); selNote:SetWidth(430); selNote:SetJustifyH("LEFT")
+        selNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        selNote:SetText("Opacity override for your current target vs everything else.")
+
+        MakeSlider(f, "Occluded alpha", 0, 1, 0.05, "alphaOccluded", L, -268)
+        local occNote = f:CreateFontString(nil, "ARTWORK"); setFont(occNote, 10)
+        occNote:SetPoint("TOPLEFT", L, -312); occNote:SetWidth(430); occNote:SetJustifyH("LEFT")
+        occNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        occNote:SetText("Opacity when the plate is behind walls/objects.")
     end
 
     -- =========================== SECCION PARTY AURAS (TEST, 2026-07-16) ===========================
@@ -2678,6 +3331,95 @@ local function BuildPanel()
             function() if ns.RefreshPartyAuraSize then ns.RefreshPartyAuraSize() end end)
     end
 
+    -- =========================== SECCION ARENA AURAS (2026-07-19) ===========================
+    -- Mismo patron que Party Auras (SINGLETON, settings GLOBALES db.arenaAuraDirection/
+    -- arenaAuraIconSize) -- pedido del usuario: "todas esta auras esten en una casilla juntas
+    -- de arena, asi como las de party", direccion por defecto "down".
+    do
+        local f = Section("aa_general")
+        MakeHeader(f, "Arena Auras  —  hover/combat reveal", L, -6, 430)
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
+        note:SetPoint("TOPLEFT", L, -32); note:SetWidth(430); note:SetJustifyH("LEFT")
+        note:SetTextColor(0.8, 0.8, 0.8)
+        note:SetText("Applies to ALL 6 arena frames at once (allies + enemies). Shows up to 4 auras " ..
+            "(debuffs take priority, buffs fill empty slots) on mouseover, or fixed while the unit is " ..
+            "in combat. Arena-only. Try /mcfarenaauratest to preview without a real match.")
+
+        local dirBtn = MakeButton(f, "", 220, 24)
+        dirBtn:SetPoint("TOPLEFT", L, -76)
+        local function DirText()
+            local d = ns.GetDB() and ns.GetDB().arenaAuraDirection or "down"
+            dirBtn.text:SetText("Direction: " .. d)
+        end
+        dirBtn:SetScript("OnClick", function()
+            local list = ns.ARENA_AURA_DIRECTIONS or { "left", "right", "up", "down" }
+            local d = ns.GetDB(); if not d then return end
+            local cur, idx = d.arenaAuraDirection or "down", 1
+            for i, v in ipairs(list) do if v == cur then idx = i break end end
+            d.arenaAuraDirection = list[(idx % #list) + 1]
+            DirText()
+            if ns.RefreshArenaAuraDirection then ns.RefreshArenaAuraDirection() end
+        end)
+        refreshers[#refreshers + 1] = DirText
+
+        MakeSlider(f, "Icon size", 12, 48, 1, "arenaAuraIconSize", L, -120,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshArenaAuraSize then ns.RefreshArenaAuraSize() end end)
+    end
+
+    -- =========================== SECCION CLASS POWER (2026-07-19) ===========================
+    -- Singleton (como Party Auras/Tracker/Glow) -- combo points/holy power/chi/soul shards/
+    -- arcane charges/essence, layout+texturas portadas de AzeriteUI. db.classpower es una
+    -- SUB-TABLA (no el root de db), por eso getTbl devuelve ns.GetDB().classpower en vez de
+    -- ns.GetDB() directo (patron distinto al de Party Auras, que SI guarda en el root).
+    do
+        local f = Section("cp_general")
+        local function CPDB() return ns.GetDB() and ns.GetDB().classpower end
+        MakeHeader(f, "Class Power", L, -6, 430)
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
+        note:SetPoint("TOPLEFT", L, -32); note:SetWidth(430); note:SetJustifyH("LEFT")
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        note:SetText("Combo points, Holy Power, Chi, Soul Shards, Arcane Charges, Essence — auto-detects your class/spec's resource. Same layout and textures as AzeriteUI. Runes (Death Knight), Stagger (Brewmaster) and Soul Fragments (Demon Hunter) aren't supported yet. Try /mcfclasspowerdiag to check detection live.")
+
+        local function Refresh() if ns.RefreshClassPower then ns.RefreshClassPower() end end
+        local function RefreshRelayout()
+            if ns.ClassPowerForceRelayout then ns.ClassPowerForceRelayout() end
+            Refresh()
+        end
+
+        MakeToggle(f, "Enabled", L, -90,
+            function() local d = CPDB(); return d and d.enabled end,
+            function(v) local d = CPDB(); if d then d.enabled = v end; Refresh() end)
+
+        MakeSlider(f, "Offset X", -800, 800, 1, "offsetX", L, -134, CPDB, Refresh)
+        MakeSlider(f, "Offset Y", -800, 800, 1, "offsetY", R, -134, CPDB, Refresh)
+        MakeSlider(f, "Scale", 0.3, 3, 0.02, "scale", L, -176, CPDB, Refresh)
+
+        local ebLbl = f:CreateFontString(nil, "ARTWORK"); setFont(ebLbl, 11)
+        ebLbl:SetPoint("TOPLEFT", R, -176); ebLbl:SetTextColor(COLOR_OPTION[1], COLOR_OPTION[2], COLOR_OPTION[3])
+        ebLbl:SetText("Anchor to (frame; empty = screen)")
+        local eb = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
+        eb:SetSize(180, 20); eb:SetPoint("TOPLEFT", ebLbl, "BOTTOMLEFT", 4, -4)
+        eb:SetAutoFocus(false)
+        eb:SetScript("OnShow", function(self) local d = CPDB(); self:SetText((d and d.anchorFrame) or "") end)
+        eb:SetScript("OnEnterPressed", function(self)
+            local d = CPDB(); if d then d.anchorFrame = self:GetText() or "" end
+            Refresh(); self:ClearFocus()
+        end)
+        eb:SetScript("OnEditFocusLost", function(self)
+            local d = CPDB(); self:SetText((d and d.anchorFrame) or "")
+        end)
+        refreshers[#refreshers + 1] = function() local d = CPDB(); eb:SetText((d and d.anchorFrame) or "") end
+
+        MakeToggle(f, "Use resource color for lit points", L, -220,
+            function() local d = CPDB(); return d and d.useClassColor ~= false end,
+            function(v) local d = CPDB(); if d then d.useClassColor = v end; RefreshRelayout() end)
+        MakeSlider(f, "Unlit point opacity", 0, 1, 0.05, "dimAlpha", R, -220, CPDB, Refresh)
+
+        MakeGlobalColor(f, "Case/backdrop color", function() local d = CPDB(); return d and d.caseColor end,
+            L, -252, RefreshRelayout)
+    end
+
     -- =========================== SECCION SETUP (integracion + perfiles) ===========================
     -- 2026-07-17: reorganizada — los 2 parrafos densos ahora son bullets (via
     -- MakeBulletList) y todo el flujo vertical se calcula dinamicamente en vez
@@ -2686,16 +3428,11 @@ local function BuildPanel()
     do
         local f = Section("setup")
         MakeHeader(f, "Setup  —  addon integration & profiles", L, -6, 440)
+        MakeHeader(f, "Apply bundled addon profiles", L, -32, 440)
         local y = MakeBulletList(f, {
-            "AzeriteUI runtime injection is re-enabled to re-test (2026-07-15) — the taint issue that led to removing it was traced to unrelated bugs (StaticPopupDialogs + Calendar), not this injection.",
-            "AzeriteUI's own toggles/colors live in its own panel (/az -> Gonkast Preset). If you see taint errors, open that panel and turn OFF the master toggle first.",
-        }, L, -36, 440)
-
-        MakeHeader(f, "Apply bundled addon profiles", L, y - 14, 440)
-        y = MakeBulletList(f, {
-            "Installs the bundled profiles for detected addons (Bartender4, DynamicCam, Masque, Chattynator, AzeriteUI) plus the Blizzard HUD Edit Mode layout, then reloads.",
+            "Installs the bundled profiles for detected addons (Bartender4, DynamicCam, Masque, Chattynator) plus the Blizzard HUD Edit Mode layout, then reloads.",
             "|cffff5555Warning:|r this REPLACES those addons' current configuration.",
-        }, L, y - 44, 440)
+        }, L, -62, 440)
 
         local applyBtn = MakeButton(f, "Apply Profiles", 160, 24)
         applyBtn:SetPoint("TOPLEFT", L, y - 16)
@@ -2760,7 +3497,7 @@ local function BuildPanel()
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", L, -222); note:SetWidth(210); note:SetJustifyH("LEFT")
         note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        note:SetText("Per-unit outline width/height live in each unit's Bar tab. Move/Lock and Copy/Paste stay in the footer. 'Apply addon profiles' sets Bartender4/DynamicCam profiles and disables the AzeriteUI modules this addon replaces.")
+        note:SetText("Per-unit outline width/height live in each unit's Bar tab. Move/Lock and Copy/Paste stay in the footer. 'Apply addon profiles' sets Bartender4/DynamicCam/Masque/Chattynator profiles.")
         -- B4: ocultar SAMPLE de elementos SOLO en preview (no afecta el juego real).
         local lhdr = f:CreateFontString(nil, "ARTWORK"); setFont(lhdr, 12)
         lhdr:SetPoint("TOPLEFT", R, -142); lhdr:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
@@ -2776,6 +3513,28 @@ local function BuildPanel()
                     if lk == "names" and ns.RefreshOutlineNames then ns.RefreshOutlineNames()
                     elseif lk == "tracker" and ns.ApplyTrackerPreviewHide then ns.ApplyTrackerPreviewHide()
                     elseif ns.RefreshAll then ns.RefreshAll() end
+                end)
+        end
+        -- Segunda columna de "Hide in preview" (2026-07-20): la lista de arriba
+        -- ya no tenia lugar vertical para mas entradas (se salia del panel,
+        -- "no veo el panel" reportado) -- estas van en L, debajo de las demas
+        -- opciones de esta seccion.
+        local lhdr2 = f:CreateFontString(nil, "ARTWORK"); setFont(lhdr2, 12)
+        lhdr2:SetPoint("TOPLEFT", L, -300); lhdr2:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+        lhdr2:SetText("Hide in preview (cont.):")
+        -- 2 mini-columnas (3 + 2) en vez de apilar las 5 en una sola columna:
+        -- una sola columna se salia del panel (altura fija, sin scroll).
+        local LH2 = { { "Minimap", "minimap" }, { "Portraits", "portraits" }, { "Info bar", "infobar" },
+                      { "Micro menu", "micromenu" }, { "Raid frames", "raidframes" } }
+        for i, e in ipairs(LH2) do
+            local lk = e[2]
+            local col = (i <= 3) and L or (L + 110)
+            local row = (i <= 3) and i or (i - 3)
+            MakeToggle(f, e[1], col, -322 - (row - 1) * 24,
+                function() return ns.GetDB().lockHide[lk] end,
+                function(v)
+                    ns.GetDB().lockHide[lk] = v or nil
+                    if ns.RefreshAll then ns.RefreshAll() end
                 end)
         end
     end
@@ -2794,7 +3553,7 @@ local function BuildPanel()
             { "Target portrait", "portrait_target" },
             { "Player auras", "aura_player" },
             { "Pet portrait", "portrait_pet" },
-            { "Focus portrait", "portrait_focus" },
+            { "Focus unit frame", "focus" },
         }
         -- Toggle MAESTRO: apaga el Explorer entero (los toggles por elemento se conservan).
         MakeToggle(f, "Enable Explorer (master switch)", L, -36,
@@ -2885,6 +3644,15 @@ local function BuildPanel()
     -- salto brusco de SetAlpha.
     local editAlphaActive = false
     local function UpdatePanelAlpha()
+        -- FIX (2026-07-20, "el edit mode nativo me abre el menu del addon"):
+        -- UIFrameFadeIn/UIFrameFadeOut llaman Show() INTERNAMENTE para poder
+        -- animar el fade -- si esta funcion corre con el panel CERRADO (ej.
+        -- ns.OnUnlockChanged disparado por el hook de Edit Mode nativo, sin
+        -- que el usuario haya abierto el panel el mismo), esos Show() lo
+        -- abren solo. El dimming al entrar/salir de Lock solo tiene sentido
+        -- si el panel YA esta abierto -- si esta cerrado, no hay nada que
+        -- atenuar, listo.
+        if not panel:IsShown() then return end
         local target = (editAlphaActive and not panel:IsMouseOver()) and 0.3 or 1
         if UIFrameFadeIn and UIFrameFadeOut then
             if target == 1 then UIFrameFadeIn(panel, 0.25, panel:GetAlpha(), 1)
@@ -2937,10 +3705,36 @@ local function BuildPanel()
     panelButtons[#panelButtons + 1] = wizardBtn
     AddTooltip(wizardBtn, "Setup Wizard", "Reopens the first-install wizard (addon integration, profiles, Explorer Mode, etc).")
 
+    -- Pedido del usuario 2026-07-19: boton para testear el hover de las
+    -- auras de Party + Arena sin necesitar grupo/partido real -- togglea
+    -- AMBOS sistemas a la vez (PartyAuraPreview.lua/ArenaAuraPreview.lua).
+    local auraTestBtn = MakeTabButton(panel, "Test Aura Hover", 150, 24)
+    auraTestBtn:SetPoint("LEFT", wizardBtn, "RIGHT", 6, 0)
+    auraTestBtn:SetScript("OnClick", function()
+        local state = false
+        if ns.TogglePartyAuraTest then state = ns.TogglePartyAuraTest() end
+        if ns.ToggleArenaAuraTest then state = ns.ToggleArenaAuraTest() end
+        auraTestBtn:SetActive(state and true or false)
+    end)
+    panelButtons[#panelButtons + 1] = auraTestBtn
+    AddTooltip(auraTestBtn, "Test Aura Hover", "Shows placeholder auras on Party + Arena frames to test the hover/combat reveal, without needing a real group or match. Same as /mcfpartytest + /mcfarenaauratest.")
+
+    -- Pedido del usuario 2026-07-19: mismo boton "Set default" de la pestaña
+    -- Profile, tambien accesible desde el footer (usa el preset seleccionado
+    -- ahi mismo -- ver ns.SetDefaultToSelectedPreset/GetSelectedPresetName).
+    local setDefaultBtn = MakeTabButton(panel, "Set Default", 110, 24)
+    setDefaultBtn:SetPoint("LEFT", auraTestBtn, "RIGHT", 6, 0)
+    setDefaultBtn:SetScript("OnClick", function()
+        if ns.SetDefaultToSelectedPreset then ns.SetDefaultToSelectedPreset() end
+    end)
+    panelButtons[#panelButtons + 1] = setDefaultBtn
+    AddTooltip(setDefaultBtn, "Set Default", "Marks the preset currently selected in the Profile tab as the default (used by Reset ALL and fresh installs).")
+
     -- 2026-07-17: centrar el grupo entero (estaba pegado a la izquierda). Como
-    -- greenBtn/resetAllFooterBtn/wizardBtn estan anclados EN CADENA relativos a
-    -- moveBtn, alcanza con re-anclar solo moveBtn — el resto se mueve con el.
-    local totalW = wizardBtn:GetRight() - moveBtn:GetLeft()
+    -- greenBtn/resetAllFooterBtn/wizardBtn/auraTestBtn/setDefaultBtn estan
+    -- anclados EN CADENA relativos a moveBtn, alcanza con re-anclar solo
+    -- moveBtn — el resto se mueve con el.
+    local totalW = setDefaultBtn:GetRight() - moveBtn:GetLeft()
     moveBtn:ClearAllPoints()
     moveBtn:SetPoint("BOTTOM", panel, "BOTTOM", -totalW / 2 + moveBtn:GetWidth() / 2, 22)
 
@@ -3121,7 +3915,13 @@ builder:SetScript("OnEvent", function(self)
     end)
     mmBtn:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
 
+    -- Shift+click abre el Nameplate Designer directo (pedido del usuario
+    -- 2026-07-19) -- click normal sigue abriendo el panel de siempre.
     mmBtn:SetScript("OnClick", function()
+        if IsShiftKeyDown() then
+            if ns.ToggleNameplateDesigner then ns.ToggleNameplateDesigner() end
+            return
+        end
         if not built and ns.GetDB() then BuildPanel(); built = true end
         if built then ns.ToggleControlCenter() end
     end)
@@ -3130,6 +3930,7 @@ builder:SetScript("OnEvent", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
         GameTooltip:SetText("AzeriteUI - Gonkast Preset", COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
         GameTooltip:AddLine("Click to open the options panel.", 1, 1, 1)
+        GameTooltip:AddLine("Shift+click to open the Nameplate Designer.", 1, 1, 1)
         GameTooltip:AddLine("Drag to move this button.", 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end)

@@ -24,15 +24,39 @@ local applied = false
 
 local function Restore(bar)
     if applied and savedPoint then
-        bar:ClearAllPoints()
-        bar:SetPoint(savedPoint[1], savedPoint[2], savedPoint[3], savedPoint[4], savedPoint[5])
+        pcall(bar.ClearAllPoints, bar)
+        pcall(bar.SetPoint, bar, savedPoint[1], savedPoint[2], savedPoint[3], savedPoint[4], savedPoint[5])
     end
     applied = false
+end
+
+-- FIX 2026-07-19 (error reportado por el usuario en vivo:
+-- "ADDON_ACTION_BLOCKED... AddOn 'Bartender4' tried to call the protected
+-- function 'BT4Bar5:ClearAllPoints()'") -- el supuesto de arriba ("BT4Bar5
+-- no es un frame protegido") resulto ser falso en este cliente: cuando la
+-- barra de vehiculo/possess tiene botones de accion activos (montado +
+-- alguna habilidad de montura utilizable), el frame se vuelve protegido de
+-- verdad y mover/reposicionar en combate tira ADDON_ACTION_BLOCKED -- mismo
+-- patron ya usado en el resto del addon (SetCVar de Nameplates.lua, etc.):
+-- si estas en combate, difiere y reintenta al salir (PLAYER_REGEN_ENABLED),
+-- ademas de un pequeño helper `SafeReposition` con pcall como red de
+-- seguridad extra (por si el bloqueo llega de una forma que
+-- InCombatLockdown() no anticipa).
+local pendingUpdate = false
+
+local function SafeClearAndSet(bar, point, relTo, relPoint, x, y)
+    local ok1 = pcall(bar.ClearAllPoints, bar)
+    local ok2 = pcall(bar.SetPoint, bar, point, relTo, relPoint, x, y)
+    return ok1 and ok2
 end
 
 local function UpdatePosition()
     local db = ns.GetDB()
     local bar = _G["BT4Bar5"]
+    if bar and InCombatLockdown() then
+        pendingUpdate = true
+        return
+    end
     if not (db and db.barReposition and bar) then
         if bar then Restore(bar) end
         return
@@ -48,8 +72,7 @@ local function UpdatePosition()
         if UnitExists("target") then
             targetX, targetY = MOUNT_TARGET_X, MOUNT_TARGET_Y
         end
-        bar:ClearAllPoints()
-        bar:SetPoint(savedPoint[1], savedPoint[2], savedPoint[3], targetX, targetY)
+        SafeClearAndSet(bar, savedPoint[1], savedPoint[2], savedPoint[3], targetX, targetY)
     else
         Restore(bar)
     end
@@ -59,7 +82,15 @@ ns.RefreshBarReposition = UpdatePosition
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:RegisterEvent("PLAYER_MOUNT_DISPLAY_CHANGED")
 f:RegisterEvent("PLAYER_TARGET_CHANGED")
+f:RegisterEvent("PLAYER_REGEN_ENABLED")
 
 f:SetScript("OnEvent", function(self, event, unit)
+    if event == "PLAYER_REGEN_ENABLED" then
+        if pendingUpdate then
+            pendingUpdate = false
+            UpdatePosition()
+        end
+        return
+    end
     UpdatePosition()
 end)

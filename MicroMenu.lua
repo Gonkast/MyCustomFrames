@@ -191,6 +191,11 @@ local function MM_Place()
     micromenu:SetPoint(p.point, parent, p.relPoint, p.offsetX, p.offsetY)
     micromenu:SetScale(p.scale or 1)
     micromenu:SetFrameStrata(p.strata)
+    -- "Hide in preview (Lock only)" (lockHide.micromenu): oculta SOLO en preview.
+    if ns.IsUnlocked() and ns.GetDB().lockHide and ns.GetDB().lockHide.micromenu then
+        micromenu:Hide()
+        return
+    end
     micromenu:SetShown(p.enabled or ns.IsUnlocked())
 end
 

@@ -1,1 +1,3 @@
 backup/
+*.bak
+*.bak_*

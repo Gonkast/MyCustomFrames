@@ -45,9 +45,29 @@ local function RegisterSkin()
             end
         end)
     end
+    -- El pcall de ANTES solo protegia el REGISTRO del hook -- el hook en si
+    -- corre SIN pcall cada vez que CUALQUIER Cooldown del juego llama
+    -- SetCooldown (via metatable compartida, no solo botones de accion).
+    -- Bug real (2026-07-19): con el swipe de las auras de nameplate nuevo,
+    -- self a veces es un Cooldown alimentado con un valor SECRETO -- indexar
+    -- self para llamar :SetDrawBling ahi explota ("attempt to index... a
+    -- secret table value"). El PRIMER intento (`pcall(self.SetDrawBling,
+    -- self, false)`) seguia roto: `self.SetDrawBling` es un ARGUMENTO de
+    -- pcall, se evalua/indexa ANTES de que pcall entre en juego, asi que el
+    -- indexado quedaba SIN proteger igual. Fix real: el indexado tiene que
+    -- pasar DENTRO del cuerpo de la funcion que pcall llama.
+    -- PERF (2026-07-19, "arregla todo"): este hook corre para TODOS los
+    -- cooldowns del juego (metatable compartida), no solo los del addon --
+    -- antes creaba una closure NUEVA `function() self:SetDrawBling(false) end`
+    -- en cada llamada solo para poder envolverla en pcall. DisableBling de
+    -- abajo no captura ningun upvalue (self llega como parametro), asi que se
+    -- puede declarar UNA sola vez a nivel de modulo y pasarla a pcall junto
+    -- con self como argumento -- el indexado sigue pasando DENTRO del cuerpo
+    -- protegido (mismo fix de fondo que antes), pero sin alocar closure.
+    local function DisableBling(self) self:SetDrawBling(false) end
     pcall(function()
         hooksecurefunc(getmetatable(ActionButton1Cooldown).__index, "SetCooldown", function(self)
-            self:SetDrawBling(false)
+            pcall(DisableBling, self)
         end)
     end)
 

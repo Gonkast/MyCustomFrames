@@ -1,8 +1,13 @@
 # AzeriteUI — Gonkast Preset (MyCustomFrames)
 
-Custom unit frames, portraits, auras, info bar, quest tracker coloring, assisted glow and a
-Masque skin, built for World of Warcraft **Midnight (12.0.7)**. Secret-number safe. This is the
-personal preset of **Gonkast**, tuned to sit on top of AzeriteUI.
+A full AzeriteUI-styled HUD replacement: unit frames (player/target/pet/focus/ToT/boss1-5/party1-5/
+arena1-6), a 40-player raid frame system, class resource bars for every spec that has one (combo
+points, holy power, chi, soul shards, arcane charges, essence, runes, soul fragments, maelstrom
+weapon), portraits, buffs/debuffs, a minimap reskin, nameplate reskin, info bar, quest tracker
+recoloring, assisted-rotation glow, and a bundled Masque skin — built for World of Warcraft
+**Midnight (12.0.7)**. Secret-number safe (works around this client's stricter Lua sandboxing on
+other players' unit data). This is the personal preset of **Gonkast**, tuned to sit on top of
+AzeriteUI.
 
 ## Requirements
 
@@ -40,19 +45,44 @@ set them up on your own:
 - **[DF Friendly Nameplates](https://www.curseforge.com/wow/addons/df-friendly-nameplates)** —
   friendly nameplate visibility on Midnight.
 - **Masque Skinner: Blizz Buffs** — Masque skin for the native Blizzard buff/debuff icons.
+- **[ChatBubbleReplacements](https://github.com/Luckyone961/ChatBubbleReplacements)** — replaces
+  Blizzard's chat bubble textures. Pairs well with this preset's own chat bubble text styling
+  (`ChatBubble.lua`, which only reskins the *text*, not the bubble background/border) for a fully
+  reskinned chat bubble.
 
 ## What's inside
 
-- Multi-unitframe health/power/cast bars (player, target, ToT, pet, focus, boss1-5, party1-5).
+- Unit frames: player, target, ToT, pet, focus, boss1-5, party1-5, arena1-6 (health/power/cast
+  bars, hand-built reskins of Blizzard's own secure frames — no oUF).
+- **Raid frames** (`Raid.lua`): up to 40 players, AzeriteUI look, auto-shows in raid groups and
+  battlegrounds only (never in normal 2-4 player parties). Fully code-controlled grid (growth
+  direction, units per row, row/column spacing all configurable from the menu); appearance
+  (textures/colors) is fixed by design, not user-editable.
+- **Class Power** (`ClassPower.lua`): combo points, holy power, chi, soul shards, arcane charges,
+  essence — plus Death Knight runes (with recharge swipe), Demon Hunter soul fragments, and
+  Enhancement Shaman maelstrom weapon stacks. Movable/scalable in Lock mode even for specs without
+  a supported resource, so you can pre-position it.
 - Portraits (3D model or class icon) with cage, background, role/leader/raid-mark badges.
 - Buffs/debuffs with click-to-cancel, dual positioning (in-combat vs idle).
+- **Minimap reskin** (`Minimap.lua`): custom ring/border, coordinates, mail/eye/dismount icons,
+  below-minimap widget.
+- **Nameplate reskin** (`Nameplates.lua` + `NameplateDesigner.lua`): custom health/cast bars, aura
+  filtering (enemy buffs, big debuffs, personal debuffs), a separate visual profile per zone type
+  (dungeon/raid/world/etc.), and an in-game designer tool to build your own.
 - Quest tracker recoloring + context-aware auto-hide (boss fights, combat, hostile target, arena,
   battlegrounds).
 - Info bar (clock, calendar, zone, FPS/MS) in the AzeriteUI style.
-- Micro menu reskin, chat bubble styling, mouselook, native Blizzard unit frame hiding, Explorer
-  Mode (auto-fade on mouseover), assisted-rotation glow.
-- **First-run Setup Wizard** (`/mcfsetup`): a 7-page walkthrough that explains the addon, detects
+- Micro menu reskin, chat bubble text styling, mouselook, native Blizzard unit frame hiding,
+  Explorer Mode (auto-fade on mouseover), assisted-rotation glow, mirror timer reskin, tooltip
+  reskin, extra action button reskin.
+- **Lock/Edit mode** (`/mcf`): drag, scale and reposition almost every element above without
+  affecting normal gameplay display; a floating "Hide in Lock" panel lets you temporarily hide
+  groups of elements (by unit, or whole systems like the raid frames/minimap/tracker) just to get
+  a clear view while editing something else. Auto-syncs with Blizzard's native Edit Mode.
+- **First-run Setup Wizard** (`/mcfsetup`): a multi-page walkthrough that explains the addon, detects
   installed addons with a bundled profile, and applies the whole preset in a few clicks.
+- Full preset/profile system: save, load, export as a copy-paste string, and import — covers every
+  subsystem above in one shot (see `core.lua`'s `PRESET_TABLE_KEYS`).
 
 ## Slash commands
 

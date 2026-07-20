@@ -92,14 +92,18 @@ end
 -- de NPC en calabozos, pero `true` en este cliente devuelve basura (literalmente WorldFrame,
 -- confirmado con el error "bad argument #1 ... Usage: GetChildren()" al intentar iterar sus
 -- miles de hijos) — se descarta esa via, vuelta a solo `false` (la que sí funciona).
-local function CB_IterateBubbles(fn)
+-- PERF (2026-07-19, "arregla todo"): `extra` se pasa DIRECTO a fn (en vez de
+-- que el llamador tenga que armar una closure `function(...) ... p end` para
+-- capturar `p`) -- ambos call sites de abajo ahora pasan CB_SkinBubble tal
+-- cual, sin closure nueva en cada tick del ticker de 0.1s.
+local function CB_IterateBubbles(fn, extra)
     if not (C_ChatBubbles and C_ChatBubbles.GetAllChatBubbles) then return end
     local ok, list = pcall(C_ChatBubbles.GetAllChatBubbles, false)
     if not ok or type(list) ~= "table" then return end
     for _, obj in pairs(list) do
         local bubble = obj.GetChildren and obj:GetChildren() or nil
         if bubble and bubble.String and bubble.String:GetObjectType() == "FontString" then
-            fn(obj, bubble, bubble.String)
+            fn(obj, bubble, bubble.String, extra)
         end
     end
 end
@@ -115,7 +119,7 @@ local function RefreshChatBubble()
         pcall(ChatBubbleFont.SetFont, ChatBubbleFont, p.font or "Fonts\\FRIZQT__.TTF", p.fontSize or 13, CB_Flags(p))
         if p.useColor and p.color then pcall(ChatBubbleFont.SetTextColor, ChatBubbleFont, p.color.r, p.color.g, p.color.b) end
     end
-    CB_IterateBubbles(function(outer, frame, fs) CB_SkinBubble(outer, frame, fs, p) end)
+    CB_IterateBubbles(CB_SkinBubble, p)
 end
 ns.RefreshChatBubble = RefreshChatBubble
 
@@ -124,8 +128,7 @@ if C_Timer and C_Timer.NewTicker then
     C_Timer.NewTicker(0.1, function()
         local db = ns.GetDB()
         if db and db.chatbubble and db.chatbubble.enabled then
-            local p = db.chatbubble
-            CB_IterateBubbles(function(outer, frame, fs) CB_SkinBubble(outer, frame, fs, p) end)
+            CB_IterateBubbles(CB_SkinBubble, db.chatbubble)
         end
     end)
 end

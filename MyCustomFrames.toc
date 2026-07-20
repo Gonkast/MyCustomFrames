@@ -6,15 +6,81 @@
 ## Category: Unit Frames
 ## IconTexture: Interface\AddOns\MyCustomFrames\Assets\addon_icon.tga
 ## SavedVariables: MyCustomFramesDB
-## OptionalDeps: AzeriteUI5_JuNNeZ_Edition, Bartender4, DynamicCam, Masque, Chattynator
+## OptionalDeps: Bartender4, DynamicCam, Masque, Chattynator
+
+# Librerias vendorizadas (MIT) para el Minimap (ver Minimap.lua).
+Libs\LibStub\LibStub.lua
+Libs\LibSpinBar-1.0\LibSpinBar-1.0.lua
 
 Defaults.lua
 core.lua
+
+# Puente centralizado a APIs de Blizzard que cambian de comportamiento entre
+# versiones (ej. UnitHealthPercent/UnitPowerPercent + curva) -- un solo lugar
+# para arreglar en vez de N copias sueltas por archivo. Carga temprano para
+# que el resto del addon pueda usarlo.
+API.lua
+
+# UNIDADES (barras vida/poder/cast): extraido de core.lua (limite de 200 locals),
+# mismo patron que Glow/ChatBubble/MicroMenu (ns.GetDB()/ns.IsUnlocked()).
+Units.lua
+
+# RAID FRAMES (hasta 40, estilo AzeriteUI): SecureGroupHeaderTemplate + child
+# pooling dinamico (a diferencia de party1-5, que son 5 frames fijos). Raid.xml
+# es el UNICO XML del addon -- necesario para el OnLoad del template de cada
+# member (unico gancho no restringido para construir sus barras/texto/cage).
+Raid.xml
+Raid.lua
+
+# PORTRAITS (modelo 3D/icono de clase, badges, doble posicion): extraido de core.lua,
+# mismo patron/motivo que Units.lua.
+Portraits.lua
+
+# AURAS (buffs/debuffs, grid, cancelar buff con clic derecho): extraido de core.lua,
+# mismo patron/motivo que Units.lua/Portraits.lua.
+Auras.lua
+
+# INFO BAR (hora/fps/ms/zona + reloj-calendario): extraido de core.lua,
+# mismo patron/motivo que Units.lua/Portraits.lua/Auras.lua.
+InfoBar.lua
+
+# MODO EDICION/PREVIEW (grid, snap, SetUnlocked, copiar/pegar): extraido de core.lua,
+# mismo patron/motivo que Units.lua/Portraits.lua/Auras.lua/InfoBar.lua.
+Editing.lua
+
+# MINIMAPA estilo AzeriteUI (mascara redonda + borde + brujula + coordenadas +
+# correo + eye de LFG + anillo de XP/Reputacion/Honor con LibSpinBar). Standalone.
+Minimap.lua
+
+# NAMEPLATES estilo AzeriteUI: reskin de textura/tamaño de los CompactUnitFrame
+# NATIVOS de Blizzard (sin oUF, sin tocar color/logica -- cero riesgo de taint).
+Nameplates.lua
+
+# Canvas de diseño (drag + rueda) para tamaño/posicion de los elementos del
+# nameplate -- pedido del usuario, calcado del tab "Designer" de Platynator
+# pero adaptado a los elementos reales de Nameplates.lua. Carga DESPUES de
+# Nameplates.lua (usa ns.NameplateDefaults/ns.RefreshNameplateStyle/GetDB().nameplates).
+NameplateDesigner.lua
+
 Glow.lua
+
+# Reskin de tooltips (GameTooltip y familia) y del boton de Extra Action
+# estilo AzeriteUI. Standalone, mismo patron que Minimap.lua/Nameplates.lua.
+Tooltip.lua
+ExtraButton.lua
+
+# Reskin de las barras "Mirror Timer" nativas (respiracion, descanso,
+# fingir muerte). Standalone, mismo patron que Tooltip.lua/ExtraButton.lua.
+MirrorTimers.lua
+
 ChatBubble.lua
 MicroMenu.lua
 Grouping.lua
 MasqueSkin.lua
+
+# Class power (combo points/holy power/chi/soul shards/arcane charges/essence): layout y
+# texturas portadas 1:1 de AzeriteUI5. Standalone, mismo patron que Glow.lua.
+ClassPower.lua
 
 # Reposiciona la barra possess/vehicle de Bartender4 (BT4Bar5) a una posicion fija
 # SOLO mientras el jugador esta MONTADO (db.barReposition, toggle en Options.lua/Setup.lua).
@@ -23,10 +89,13 @@ BarReposition.lua
 # Auras de Party1-5 reveladas por hover/combate, direccion configurable.
 PartyAuraPreview.lua
 
-# Bridge con AzeriteUI (reintegrado 2026-07-15 para re-probar con taint.log: la causa real del
-# taint persistente resulto ser StaticPopupDialogs/Calendario, NO la mutacion de tablas de config
-# de AzeriteUI — esa hipotesis quedo marcada como "parcial o erronea" en su momento).
-Integration_AzeriteUI.lua
+# Auras de las 6 unitframes de arena (arena_player/party1/party2/enemy1-3),
+# mismo patron que PartyAuraPreview pero exclusivo de arena y direccion "down".
+ArenaAuraPreview.lua
+
+# Detector del trinket de PvP (Gladiator's Medallion) via COMBAT_LOG_EVENT_UNFILTERED,
+# solo para Arena Enemy 1-3 -- API publica unicamente, sin leer inventario/cooldowns ajenos.
+ArenaTrinket.lua
 
 # --- Perfiles de otros addons (carga SEGURA: Pre guarda globales vivos, copias, Post restaura) ---
 Profiles_Pre.lua
@@ -34,7 +103,6 @@ Profiles\Bartender4\Bartender4.lua
 Profiles\DynamicCam\DynamicCam.lua
 Profiles\Masque\Masque.lua
 Profiles\Chattynator\Chattynator.lua
-Profiles\AzeriteUI5_JuNNeZ_Edition\AzeriteUI5_JuNNeZ_Edition.lua
 Profiles_Post.lua
 Profiles\_Exports.lua
 ProfilesApply.lua

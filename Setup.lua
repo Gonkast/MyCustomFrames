@@ -1,8 +1,9 @@
 -- ==========================================================================
 -- Setup.lua — asistente de PRIMERA INSTALACION (6 paginas: que hace el addon, que addons
 -- con perfil incluido tenes instalados, opciones globales reducidas, hide-when-mounted +
--- auto-hide del tracker, Explorer Mode, e inyectar el preset Gonkast en AzeriteUI + el HUD
--- de Blizzard Edit Mode). Se muestra UNA sola vez (db.setupSeen); reabrible a mano con /mcfsetup.
+-- auto-hide del tracker, Explorer Mode, y aplicar el preset Gonkast (perfiles de Bartender4/
+-- DynamicCam/Masque/Chattynator) + el HUD de Blizzard Edit Mode). Se muestra UNA sola vez
+-- (db.setupSeen); reabrible a mano con /mcfsetup.
 -- Reusa el toolkit visual de Options.lua (ns.UI) y la deteccion/aplicacion de
 -- perfiles de ProfilesApply.lua (ns.ProfilesStatus/ns.ProfilesInfo/ns.ApplyProfilesFiltered).
 -- Carga al final del toc: necesita ns.UI, ns.PL, ns.GetDB y el sistema de perfiles ya listos.
@@ -142,7 +143,7 @@ end
 -- el resto del texto en vez de mezclarse con el.
 local REC = "  |cffd6b896(recommended)|r"
 
-local PAGE_COUNT = 7
+local PAGE_COUNT = 8
 local frame, contentPages, selected = nil, {}, {}
 local curPage = 1
 local pageDots, backBtn, nextBtn, skipBtn, stepLabel
@@ -244,7 +245,7 @@ local function BuildFrame()
     SF(title, 20)
     title:SetPoint("TOP", 0, -80)
     title:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
-    title:SetText("Welcome to AzeriteUI — Gonkast Preset")
+    title:SetText("Welcome to Gonkast Preset")
 
     local tdiv = f:CreateTexture(nil, "ARTWORK")
     tdiv:SetTexture(ART.DIVIDER)
@@ -307,13 +308,15 @@ end
 -- divisor, para usar el espacio de forma pareja en vez de un bloque de texto con hueco al final.
 local FEATURES = {
     { title = "Unit frames",   desc = "Health/power/cast for player, target, pet, focus, boss1-5 and party1-5." },
+    { title = "Raid frames",   desc = "Up to 40 players, AzeriteUI look. Raid groups and battlegrounds only." },
     { title = "Portraits",     desc = "Cage, background, model, role, leader and raid marker." },
+    { title = "Class power",   desc = "All class resource points/runes, for every spec that has one." },
     { title = "Auras",         desc = "Buffs/debuffs with click-to-cancel, dual in-combat/idle positions." },
     { title = "Quest tracker", desc = "Colors the tracker, auto-hides in combat/boss/hostile target/PvP." },
     { title = "Info bar",      desc = "Clock, calendar, zone, FPS/MS, above the minimap." },
     { title = "Micro menu",    desc = "Replaces Blizzard's micro buttons with the preset's style." },
 }
-local EXTRAS_LINE = "Extras — mouselook, hide Blizzard UI, assisted glow, chat bubbles, Explorer Mode (fade on mouseover)."
+local EXTRAS_LINE = "Extras — minimap and nameplate reskins, mouselook, hide Blizzard UI, assisted glow, chat bubbles, Explorer Mode (fade on mouseover)."
 
 local function FeatureCard(parent, x, y, w, title, desc)
     local icon = parent:CreateTexture(nil, "ARTWORK")
@@ -342,13 +345,18 @@ local function BuildPage1(content)
 
     local colW = (CONTENT_W - 24) / 2
     local L, R = 0, colW + 24
-    local ROW_H = 64
+    -- ROW_H mas chico que antes (2026-07-20: se sumaron Raid Frames/Class
+    -- Power, 6->8 features = 3->4 filas) para que las 4 filas + la fila
+    -- "Extras" sigan entrando en el alto fijo de la pagina sin superponerse
+    -- con el parrafo/boton de navegacion de abajo.
+    local ROW_H = 56
+    local numRows = math.ceil(#FEATURES / 2)
     for i, f in ipairs(FEATURES) do
         local col = ((i - 1) % 2 == 0) and L or R
         local row = math.floor((i - 1) / 2)
         FeatureCard(p, col, -34 - row * ROW_H, colW, f.title, f.desc)
     end
-    local extrasY = -34 - 3 * ROW_H
+    local extrasY = -34 - numRows * ROW_H
     FeatureCard(p, L, extrasY, CONTENT_W, "Extras", EXTRAS_LINE)
 
     local divY = extrasY - 46
@@ -385,7 +393,7 @@ local function RefreshPage2(p)
     local y = -50
     if #list == 0 then
         local fs = Paragraph(p, 4, y, 12,
-            "No supported addons detected (Bartender4, DynamicCam, Masque, Chattynator, AzeriteUI).")
+            "No supported addons detected (Bartender4, DynamicCam, Masque, Chattynator).")
         table.insert(p._list, fs)
         return
     end
@@ -558,7 +566,7 @@ local EXPLORER_LIST = {
     { "Player unit frame", "player", true }, { "Player portrait", "portrait_player" },
     { "Micro menu", "micromenu", true }, { "Info bar", "infobar" }, { "Pet unit frame", "pet", true },
     { "Target unit frame", "target" }, { "Target portrait", "portrait_target" },
-    { "Player auras", "aura_player" }, { "Pet portrait", "portrait_pet", true }, { "Focus portrait", "portrait_focus", true },
+    { "Player auras", "aura_player" }, { "Pet portrait", "portrait_pet", true }, { "Focus unit frame", "focus", true },
 }
 local EXPLORER_ZONES = {
     { "Open world", "world", true }, { "Dungeons", "dungeon" }, { "Raids", "raid" },
@@ -646,7 +654,7 @@ local function BuildPage6(content)
     Header(p, "Apply the Gonkast preset", 0, -2)
     Paragraph(p, 4, -30, 12,
         "This REPLACES the SavedVariables of the addons you kept ticked on the previous page " ..
-        "with the bundled Gonkast profile (AzeriteUI layout, Bartender4 bars, DynamicCam, Masque skin, " ..
+        "with the bundled Gonkast profile (Bartender4 bars, DynamicCam, Masque skin, " ..
         "Chattynator chat). A manual /reload is required afterwards. Only one profile is bundled per " ..
         "addon (\"Default\" for Bartender4/DynamicCam) — that's the recommended one, applied automatically.")
 
@@ -820,6 +828,60 @@ local function BuildPage7(content)
     return p
 end
 
+-- ---------------- Pagina 8: Nameplates (pedido del usuario 2026-07-19, "que salga esta
+-- pestaña de nameplate para configurar el nameplate") ----------------
+-- No duplica los controles finos (esos viven en el Nameplate Designer, /mcfnpdesigner) -- esta
+-- pagina es solo el punto de entrada: encender el reskin, y un boton grande para abrir el
+-- Designer directo desde el wizard, asi el usuario no tiene que buscarlo despues en el menu.
+local function BuildPage8(content)
+    local p = CreateFrame("Frame", nil, content)
+    p:SetAllPoints()
+    Header(p, "Nameplates", 0, -2)
+    Paragraph(p, 4, -26, 12,
+        "Reskins Blizzard's own nameplates (health/cast bar, name, target highlight, auras, " ..
+        "elite/rare/boss icon, raid marks) to match this preset's look — the underlying frames " ..
+        "and coloring logic stay 100% Blizzard's own, no oUF, no addon replacement.")
+
+    local enableCB = Toggle(p, "Enable nameplate reskin", 4, -74,
+        function() local d = ns.GetDB(); return d and d.nameplates and d.nameplates.enabled end,
+        function(v)
+            local d = ns.GetDB(); if not d then return end
+            d.nameplates = d.nameplates or {}
+            d.nameplates.enabled = v
+            if ns.RefreshNameplateStyle then ns.RefreshNameplateStyle() end
+        end)
+
+    Paragraph(p, 4, -104, 11,
+        "Position, size, colors, aura categories, classification/raid mark icons — everything " ..
+        "is drag-and-scroll editable in the Nameplate Designer, a visual panel (not sliders/text " ..
+        "fields). Open it now to set it up, or later anytime with |cffffff00/mcfnpdesigner|r.")
+
+    local designBtn = TexButton(p, CUSTOM.APPLY, 220, 40, "Open Nameplate Designer", 14)
+    designBtn:SetPoint("TOPLEFT", 2, -148)
+    designBtn:SetScript("OnClick", function()
+        -- Pedido del usuario 2026-07-19: abrir el Designer desde el Setup NO
+        -- debe quedar superpuesto/detras del wizard -- corre el wizard a la
+        -- izquierda y el Designer a la derecha (960+480 de ancho con margen
+        -- entre los dos, ver numeros abajo) para poder previsualizar ambos
+        -- a la vez.
+        if frame then
+            frame:ClearAllPoints()
+            frame:SetPoint("CENTER", UIParent, "CENTER", -380, 0)
+        end
+        if ns.ToggleNameplateDesigner then ns.ToggleNameplateDesigner() end
+        local designer = _G["MyCF_NameplateDesigner"]
+        if designer then
+            designer:ClearAllPoints()
+            designer:SetPoint("CENTER", UIParent, "CENTER", 380, 60)
+        end
+    end)
+
+    Paragraph(p, 4, -204, 10,
+        "Max render distance, non-target fade opacity, and colors also live in the full menu " ..
+        "(|cffffff00/mcfmenu|r > NAMEPLATES) if you'd rather type exact numbers than drag.")
+    return p
+end
+
 -- ---------------- Navegacion ----------------
 function ns.SetupGoTo(page)
     if not frame then return end
@@ -874,6 +936,7 @@ function ns.ShowSetupWizard()
         contentPages[5] = BuildPage5(content)
         contentPages[6] = BuildPage6(content)
         contentPages[7] = BuildPage7(content)
+        contentPages[8] = BuildPage8(content)
     end
     if UIFrameFadeIn then
         frame:Show(); frame:SetAlpha(0)

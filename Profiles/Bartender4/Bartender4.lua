@@ -11,6 +11,15 @@ Bartender4DB = {
 },
 ["version"] = 3,
 },
+["Darkwoat - Ragnaros"] = {
+["enabled"] = true,
+["version"] = 3,
+["position"] = {
+["y"] = 29,
+["x"] = -289.5,
+["point"] = "BOTTOM",
+},
+},
 },
 },
 ["QueueStatus"] = {
@@ -24,6 +33,13 @@ Bartender4DB = {
 ["scale"] = 0.699999988079071,
 },
 ["version"] = 3,
+},
+["Darkwoat - Ragnaros"] = {
+["version"] = 3,
+["position"] = {
+["y"] = 40.5,
+["x"] = -324,
+},
 },
 },
 },
@@ -68,12 +84,12 @@ nil,
 ["textJustifyH"] = "CENTER",
 },
 },
-["fadeoutalpha"] = 0,
+["version"] = 3,
 ["visibility"] = {
 ["custom"] = true,
 ["customdata"] = "[@player,dead] fade; [overridebar][possessbar][bonusbar][vehicleui] hide; [mounted] hide; [@target,dead] hide; [combat][@target,exists,harm][@focus,exists] show; fade\n",
 },
-["version"] = 3,
+["fadeoutalpha"] = 0,
 ["position"] = {
 ["y"] = 213,
 ["x"] = -250,
@@ -98,6 +114,13 @@ nil,
 ["WoW10Layout"] = true,
 },
 {
+["flyoutDirection"] = "LEFT",
+["showgrid"] = true,
+["rows"] = 6,
+["fadeout"] = true,
+["enabled"] = false,
+["buttons"] = 4,
+["version"] = 3,
 ["elements"] = {
 ["macro"] = {
 ["fontSize"] = 14,
@@ -128,13 +151,6 @@ nil,
 },
 },
 },
-["showgrid"] = true,
-["rows"] = 6,
-["fadeoutdelay"] = 0,
-["enabled"] = false,
-["buttons"] = 4,
-["version"] = 3,
-["flyoutDirection"] = "LEFT",
 ["WoW10Layout"] = true,
 ["fadeoutalpha"] = 0,
 ["position"] = {
@@ -143,7 +159,7 @@ nil,
 ["point"] = "BOTTOM",
 ["scale"] = 0.6000000238418579,
 },
-["fadeout"] = true,
+["fadeoutdelay"] = 0,
 ["padding"] = 20,
 ["visibility"] = {
 ["nopet"] = false,
@@ -207,14 +223,14 @@ nil,
 {
 ["showgrid"] = true,
 ["rows"] = 2,
-["fadeoutdelay"] = 0,
+["fadeout"] = true,
 ["visibility"] = {
 ["custom"] = true,
 ["customdata"] = "[@player,dead] fade; [overridebar][possessbar][bonusbar][vehicleui] hide; [mounted] hide; [@target,dead] hide; [combat][@target,exists,harm][@focus,exists] show; fade\n\n\n",
 ["overridebar"] = false,
 ["vehicleui"] = false,
 },
-["fadeout"] = true,
+["fadeoutdelay"] = 0,
 ["elements"] = {
 ["hotkey"] = {
 ["fontSize"] = 15,
@@ -272,6 +288,92 @@ nil,
 },
 },
 },
+["Darkwoat - Ragnaros"] = {
+["actionbars"] = {
+{
+["showgrid"] = true,
+["WoW10Layout"] = true,
+["version"] = 3,
+["position"] = {
+["y"] = 82,
+["x"] = -285,
+["point"] = "BOTTOM",
+},
+},
+{
+["enabled"] = false,
+["WoW10Layout"] = true,
+["version"] = 3,
+["position"] = {
+["y"] = -223.9998168945313,
+["x"] = -284.5,
+["point"] = "CENTER",
+},
+},
+{
+["flyoutDirection"] = "LEFT",
+["position"] = {
+["y"] = 193,
+["x"] = -54,
+["point"] = "RIGHT",
+},
+["rows"] = 12,
+["WoW10Layout"] = true,
+["version"] = 3,
+},
+{
+["flyoutDirection"] = "LEFT",
+["position"] = {
+["y"] = 193,
+["x"] = -104,
+["point"] = "RIGHT",
+},
+["rows"] = 12,
+["WoW10Layout"] = true,
+["version"] = 3,
+},
+{
+["enabled"] = false,
+["WoW10Layout"] = true,
+["version"] = 3,
+["position"] = {
+["y"] = 184,
+["x"] = -285,
+["point"] = "BOTTOM",
+},
+},
+{
+["WoW10Layout"] = true,
+["version"] = 3,
+["position"] = {
+["y"] = 133,
+["x"] = -285,
+["point"] = "BOTTOM",
+},
+},
+{
+["WoW10Layout"] = true,
+},
+{
+["WoW10Layout"] = true,
+},
+{
+["WoW10Layout"] = true,
+},
+{
+["WoW10Layout"] = true,
+},
+[14] = {
+["WoW10Layout"] = true,
+},
+[13] = {
+["WoW10Layout"] = true,
+},
+[15] = {
+["WoW10Layout"] = true,
+},
+},
+},
 },
 },
 ["LibDualSpec-1.0"] = {
@@ -284,7 +386,7 @@ nil,
 ["ExtraActionBar"] = {
 ["profiles"] = {
 ["Default"] = {
-["version"] = 3,
+["fadeoutalpha"] = 0.65,
 ["position"] = {
 ["y"] = 209.6499964296818,
 ["x"] = -321.6500028056762,
@@ -297,7 +399,15 @@ nil,
 ["customdata"] = "[@player,dead] fade; [overridebar][possessbar][bonusbar][vehicleui] hide; [mounted] hide; [@target,dead] hide; [combat][@target,exists,harm][@focus,exists] show; fade\n",
 ["nocombat"] = true,
 },
-["fadeoutalpha"] = 0.65,
+["version"] = 3,
+},
+["Darkwoat - Ragnaros"] = {
+["version"] = 3,
+["position"] = {
+["y"] = -252.4999389648438,
+["x"] = -63.50006103515625,
+["point"] = "CENTER",
+},
 },
 },
 },
@@ -313,18 +423,33 @@ nil,
 },
 ["version"] = 3,
 },
+["Darkwoat - Ragnaros"] = {
+["version"] = 3,
+["position"] = {
+["y"] = 42,
+["x"] = -284,
+["point"] = "BOTTOMRIGHT",
+},
+},
 },
 },
 ["BagBar"] = {
 ["profiles"] = {
 ["Default"] = {
-["enabled"] = false,
 ["version"] = 3,
 ["position"] = {
 ["y"] = 105.9981909919679,
 ["x"] = 464.0569709131305,
 ["point"] = "BOTTOM",
 ["scale"] = 0.8500000238418579,
+},
+},
+["Darkwoat - Ragnaros"] = {
+["version"] = 3,
+["position"] = {
+["y"] = 80,
+["x"] = -212,
+["point"] = "BOTTOMRIGHT",
 },
 },
 },
@@ -340,6 +465,16 @@ nil,
 ["scale"] = 0.7000000000000001,
 },
 ["version"] = 3,
+},
+["Darkwoat - Ragnaros"] = {
+["enabled"] = true,
+["artLayout"] = "MODERN",
+["version"] = 3,
+["position"] = {
+["y"] = 87,
+["x"] = -288.5,
+["point"] = "BOTTOM",
+},
 },
 },
 },
@@ -360,6 +495,15 @@ nil,
 ["scale"] = 1.1,
 },
 },
+["Darkwoat - Ragnaros"] = {
+["version"] = 3,
+["position"] = {
+["scale"] = 1,
+["x"] = -285,
+["point"] = "BOTTOM",
+["y"] = 168,
+},
+},
 },
 },
 ["PetBar"] = {
@@ -367,7 +511,7 @@ nil,
 ["Default"] = {
 ["showgrid"] = true,
 ["fadeout"] = true,
-["fadeoutalpha"] = 0,
+["version"] = 3,
 ["position"] = {
 ["y"] = 259.5743797203068,
 ["x"] = -189.0499420166016,
@@ -384,7 +528,15 @@ nil,
 ["customdata"] = "[overridebar][possessbar][bonusbar][vehicleui] hide; [mounted] hide; [nopet] hide; [pet,@target,dead] hide; [pet,combat][pet,@target,exists,harm][pet,@focus,exists] show; fade\n\n",
 ["vehicleui"] = false,
 },
+["fadeoutalpha"] = 0,
+},
+["Darkwoat - Ragnaros"] = {
 ["version"] = 3,
+["position"] = {
+["y"] = 168,
+["x"] = -41,
+["point"] = "BOTTOM",
+},
 },
 },
 },
@@ -400,19 +552,35 @@ nil,
 },
 ["version"] = 3,
 },
+["Darkwoat - Ragnaros"] = {
+["version"] = 3,
+["position"] = {
+["y"] = 153,
+["x"] = -337,
+["point"] = "BOTTOM",
+},
+},
 },
 },
 },
 ["profileKeys"] = {
+["Darkwoat - Ragnaros"] = "Default",
+["Gnomegoat - Ragnaros"] = "Default",
 },
 ["profiles"] = {
 ["Default"] = {
 ["blizzardVehicle"] = true,
-["snapping"] = false,
 ["focuscastmodifier"] = false,
+["snapping"] = false,
 ["minimapIcon"] = {
+["minimapPos"] = 175.3062338099355,
 ["hide"] = false,
 },
+["outofrange"] = "hotkey",
+},
+["Darkwoat - Ragnaros"] = {
+["focuscastmodifier"] = false,
+["blizzardVehicle"] = true,
 ["outofrange"] = "hotkey",
 },
 },

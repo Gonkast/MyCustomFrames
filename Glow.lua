@@ -38,6 +38,9 @@ local function GlowDefaults()
         scale = 1.1,
         onlyVisible = true,       -- GetNextCastSpell(onlyVisible)
         checkUsable = true,       -- no brillar si no hay recurso/CD
+        -- Pedido del usuario 2026-07-19: control de strata -- antes hardcodeado
+        -- a "HIGH" en el overlay (ver GlowGetOverlay/GlowStart mas abajo).
+        strata = "HIGH",
     }
 end
 ns.GlowDefaults = GlowDefaults
@@ -181,6 +184,10 @@ local function GlowStart(btn, p)
     f:ClearAllPoints()
     f:SetPoint("CENTER", btn, "CENTER", 0, 0)
     f:SetFrameLevel(btn:GetFrameLevel() + 8)
+    -- Pedido del usuario 2026-07-19 ("me gustaria poder controlar el strata"):
+    -- se reaplica en CADA GlowStart (el ticker llama esto seguido, ~0.1-0.2s)
+    -- asi el cambio del menu se ve casi al instante sin necesitar refresh especial.
+    f:SetFrameStrata(p.strata or "HIGH")
     f:SetScale(p.scale or 1)
     local w, h = btn:GetWidth(), btn:GetHeight()
     local col = p.color or { r = 1, g = 0.85, b = 0.1 }

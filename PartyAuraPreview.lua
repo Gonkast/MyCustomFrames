@@ -67,6 +67,47 @@ local function SafeInCombat(unit)
     return r and true or false
 end
 
+-- Pedido del usuario 2026-07-19: "las auras de party estan saliendo en
+-- arena" -- el "fijo visible en combate" (ver Recompute/refreshTicker mas
+-- abajo) se disparaba tambien en arena, donde estas CASI SIEMPRE en combate
+-- -- termina siendo un overlay permanente sobre tus companeros durante todo
+-- el match, mas clutter del que sirve en un contexto tan rapido. El hover
+-- manual sigue funcionando igual en arena, solo se desactiva el auto-show
+-- por combate.
+-- 2026-07-19 (2): confirmado con /mcfarenadiag en vivo -- el usuario estaba
+-- en un BATTLEGROUND, no una arena clasica: IsInInstance() devuelve
+-- instanceType="pvp" para BGs ("arena" es SOLO para arenas 2v2/3v3/shuffle
+-- en la terminologia de Blizzard). Como en ambos estas casi siempre en
+-- combate, se tratan igual aca -- "pvp" O "arena" desactivan el auto-show.
+-- Pedido del usuario 2026-07-19: "necesito que las auras de party sean
+-- exclusivos de dungeons" -- instanceType == "party" es justamente como
+-- Blizzard identifica mazmorras (5-man) en IsInInstance(); mundo abierto,
+-- raids, escenarios, arena y battleground quedan todos afuera.
+local function InDungeon()
+    local ok, _, instanceType = pcall(IsInInstance)
+    return ok and instanceType == "party"
+end
+
+-- PERF (2026-07-19, "arregla todo"): InArena() se llama desde un ticker de
+-- 0.3s POR unidad de party (x5) -- antes creaba 3 closures descartables
+-- (`function() return C_PvP... end`) en CADA llamada solo para poder
+-- pcall-earlas. Hoisteadas a nivel de modulo (no capturan nada que cambie),
+-- se crean UNA vez.
+local function CheckIsArena() return C_PvP and C_PvP.IsArena and C_PvP.IsArena() end
+local function CheckIsRatedArena() return C_PvP and C_PvP.IsRatedArena and C_PvP.IsRatedArena() end
+local function CheckIsSoloShuffle() return C_PvP and C_PvP.IsSoloShuffle and C_PvP.IsSoloShuffle() end
+local function InArena()
+    local ok1, isArena = pcall(CheckIsArena)
+    if ok1 and isArena then return true end
+    local ok2, isRated = pcall(CheckIsRatedArena)
+    if ok2 and isRated then return true end
+    local ok3, isShuffle = pcall(CheckIsSoloShuffle)
+    if ok3 and isShuffle then return true end
+    local ok4, _, instanceType = pcall(IsInInstance)
+    if ok4 and (instanceType == "arena" or instanceType == "pvp") then return true end
+    return false
+end
+
 -- Debuffs TIENEN PRIORIDAD; si hay menos de MAX_ICONS debuffs, se rellena con buffs normales
 -- (se recalcula de cero en cada refresh, los buffs ceden apenas aparece un debuff nuevo).
 -- `onlyBuffs` (pedido del usuario 2026-07-16, para party5/player): salta los debuffs del todo —
@@ -329,7 +370,16 @@ local function Setup(key)
 
     local hoverActive = false
     local function Recompute()
-        target = (hoverActive or inCombat) and 1 or 0
+        -- Exclusivo de dungeons -- ni el hover ni el auto-show por combate
+        -- funcionan afuera de una mazmorra (mundo abierto, raid, arena, BG).
+        -- FIX (2026-07-19, mismo bug ya arreglado en ArenaAuraPreview.lua
+        -- pero que se me paso replicar aca: "no esta funcionando asi en las
+        -- de party"): /mcfpartytest fuerza target=1 al activarse, pero fuera
+        -- de una mazmorra real el PRIMER hover disparaba este Recompute y lo
+        -- pisaba de vuelta a 0 (InDungeon() daba false) -- se veian y se
+        -- escondian al pasar el mouse. testMode ahora tambien pasa el gate,
+        -- igual que ya hacia RefreshIcons().
+        target = ((InDungeon() or testMode) and (hoverActive or inCombat)) and 1 or 0
         StartDriver()
     end
 
@@ -359,7 +409,13 @@ local function Setup(key)
     for i = 1, MAX_ICONS do
         local b = icons[i]
         b:SetScript("OnEnter", function(self)
-            if GameTooltip:IsForbidden() or not self:IsVisible() then return end
+            -- Pedido del usuario 2026-07-19: "aunque desaparecieron en BG,
+            -- puedo ver el tooltip" -- el fade es por ALPHA (carrier:SetAlpha),
+            -- que NO afecta IsVisible() ni la interactividad del mouse: un
+            -- icono con alpha 0 sigue siendo "visible" para IsVisible() y
+            -- totalmente hoverable. InDungeon() es el chequeo real que
+            -- corresponde aca (mismo gate que Recompute()).
+            if GameTooltip:IsForbidden() or not self:IsVisible() or not InDungeon() then return end
             if self._fake then
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 GameTooltip:SetText("Test Aura " .. tostring(i), 1, 1, 1)
@@ -388,7 +444,7 @@ local function Setup(key)
     end
 
     local refreshTicker = C_Timer.NewTicker(0.3, function()
-        local nowCombat = SafeInCombat(u.unit)
+        local nowCombat = (not InArena()) and SafeInCombat(u.unit)
         if nowCombat ~= inCombat then
             inCombat = nowCombat
             if inCombat then RefreshIcons() end
@@ -425,6 +481,24 @@ ns.RefreshPartyAuraSize = ns.RefreshPartyAuraDirection
 -- pestañas por-unidad.
 ns.IsPartyAura = function(key) return key == "aura_party" end
 
+-- Pedido del usuario 2026-07-19: boton en el menu para testear el hover sin
+-- necesitar grupo real -- antes esto solo era accesible seteando `testMode`
+-- a mano (no habia ni slash command). Devuelve el nuevo estado para que el
+-- boton del footer (Options.lua) pueda reflejarlo visualmente.
+local function SetTestMode(on)
+    testMode = on and true or false
+    for _, t in pairs(ns.PartyAuraPreviewTest) do
+        if t then if testMode then t.Show() else t.Hide() end end
+    end
+    return testMode
+end
+ns.TogglePartyAuraTest = function() return SetTestMode(not testMode) end
+
+SLASH_MCFPARTYTEST1 = "/mcfpartytest"
+SlashCmdList["MCFPARTYTEST"] = function()
+    print("|cff00ff00[MCF party aura test]|r " .. (ns.TogglePartyAuraTest() and "ON" or "off"))
+end
+
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_LOGIN")
 f:SetScript("OnEvent", function(self)
@@ -433,3 +507,18 @@ f:SetScript("OnEvent", function(self)
         for _, key in ipairs(PARTY_KEYS) do pcall(Setup, key) end
     end)
 end)
+
+-- Diagnostico 2026-07-19 (pedido del usuario: "se siguen mostrando en
+-- arena" despues del primer intento) -- vuelca que metodo de deteccion de
+-- arena esta devolviendo que, para confirmar si InArena() esta fallando.
+SLASH_MCFARENADIAG1 = "/mcfarenadiag"
+SlashCmdList["MCFARENADIAG"] = function()
+    local ok1, isArena = pcall(function() return C_PvP and C_PvP.IsArena and C_PvP.IsArena() end)
+    local ok2, isRated = pcall(function() return C_PvP and C_PvP.IsRatedArena and C_PvP.IsRatedArena() end)
+    local ok3, isShuffle = pcall(function() return C_PvP and C_PvP.IsSoloShuffle and C_PvP.IsSoloShuffle() end)
+    local ok4, inInst, instanceType = pcall(IsInInstance)
+    print(("|cff00ff00[MCF arena diag]|r C_PvP.IsArena=%s/%s  IsRatedArena=%s/%s  IsSoloShuffle=%s/%s"):format(
+        tostring(ok1), tostring(isArena), tostring(ok2), tostring(isRated), tostring(ok3), tostring(isShuffle)))
+    print(("  IsInInstance: ok=%s inInstance=%s instanceType=%s"):format(tostring(ok4), tostring(inInst), tostring(instanceType)))
+    print("  InArena() final result = " .. tostring(InArena()))
+end

@@ -19,7 +19,6 @@ local ADDON, ns = ...
 
 -- global de SavedVariables → addon que lo posee (para detectar si esta instalado).
 local OWNER = {
-    AzeriteUI5_DB          = "AzeriteUI5_JuNNeZ_Edition",
     Bartender4DB           = "Bartender4",
     CHATTYNATOR_CONFIG     = "Chattynator",
     CHATTYNATOR_MESSAGE_LOG= "Chattynator",
@@ -29,7 +28,6 @@ local OWNER = {
 }
 -- Etiqueta + perfil objetivo (solo informativo; el SV reemplazado ya trae su perfil activo).
 local INFO = {
-    AzeriteUI5_JuNNeZ_Edition = "AzeriteUI (SavedVariables)",
     Bartender4 = "Bartender4 (profile: GonkastUI)",
     DynamicCam = "DynamicCam (profile: default)",
     Masque     = "Masque (default profile + \"Azerite HEX\" skin)",

@@ -19,6 +19,14 @@ local DRAG_FOLLOW = {
     portrait_target = { { "target" }, { "targetpower" } },
     pet             = { { "portrait_pet", true } },
     targettarget    = { { "portrait_tot", true } },
+    -- ARENA (pedido del usuario 2026-07-19): "el portrait debe seguir al
+    -- unitframe" -- mismo patron que pet/targettarget (unitframe = lider).
+    arena_player = { { "portrait_arena_player", true } },
+    arena_party1 = { { "portrait_arena_party1", true } },
+    arena_party2 = { { "portrait_arena_party2", true } },
+    arena_enemy1 = { { "portrait_arena_enemy1", true } },
+    arena_enemy2 = { { "portrait_arena_enemy2", true } },
+    arena_enemy3 = { { "portrait_arena_enemy3", true } },
 }
 local PARTY_PORTRAITS = {
     "portrait_party1", "portrait_party2", "portrait_party3", "portrait_party4", "portrait_party5",

@@ -1,21 +1,74 @@
--- Profiles\Chattynator\Chattynator.lua -- copia SEGURA de CHATTYNATOR_CONFIG (perfil
--- 'Gonkast': ventanas, colores, tabs, fuente) para el sistema de Aplicar Perfiles.
--- Re-capturado Thu Jul 16 18:58:23 2026 desde el SavedVariables real de la cuenta.
--- DELIBERADAMENTE excluye CHATTYNATOR_MESSAGE_LOG (historial de chat con nombres reales de
--- otros jugadores) -- ver Profiles_Pre.lua/ProfilesApply.lua: al no setear ese global aqui,
--- ns.Profiles.CHATTYNATOR_MESSAGE_LOG queda nil y "Apply Profiles" simplemente lo saltea
--- (no se distribuye ni se sobreescribe nada de eso).
+
 CHATTYNATOR_CONFIG = {
+["Version"] = 1,
 ["CharacterSpecific"] = {
 },
-["Version"] = 1,
 ["Profiles"] = {
 ["DEFAULT"] = {
-["store_messages"] = false,
+["tab_flash_on"] = "all",
 ["shorten_format"] = "letter",
 ["enable_message_fade"] = true,
 ["message_fade_time"] = 33,
-["locked"] = true,
+["windows"] = {
+{
+["position"] = {
+"BOTTOMLEFT",
+"UIParent",
+"BOTTOMLEFT",
+99.39607238769531,
+179.5231170654297,
+},
+["tabs"] = {
+{
+["tabColor"] = "06a1ff",
+["channels"] = {
+},
+["whispersTemp"] = {
+},
+["isTemporary"] = false,
+["name"] = "GENERAL",
+["invert"] = true,
+["groups"] = {
+["COMBAT_MISC_INFO"] = false,
+["OPENING"] = false,
+["COMBAT_XP_GAIN"] = false,
+["PET_BATTLE_COMBAT_LOG"] = false,
+["VOICE_TEXT"] = false,
+["PET_INFO"] = false,
+["TRADESKILLS"] = false,
+},
+["addons"] = {
+},
+["backgroundColor"] = "1a1a1a",
+["filters"] = {
+},
+},
+{
+["tabColor"] = "309944",
+["channels"] = {
+},
+["whispersTemp"] = {
+},
+["name"] = "GUILD",
+["groups"] = {
+["GUILD_ACHIEVEMENT"] = true,
+["OFFICER"] = true,
+["GUILD"] = true,
+},
+["isTemporary"] = false,
+["addons"] = {
+},
+["backgroundColor"] = "1a1a1a",
+["filters"] = {
+},
+},
+},
+["size"] = {
+372.1748352050781,
+198.7303924560547,
+},
+},
+},
 ["message_spacing"] = 4,
 ["message_font"] = "Friz Quadrata TT",
 ["debug"] = false,
@@ -63,10 +116,10 @@ CHATTYNATOR_CONFIG = {
 ["g"] = 0.7529412508010864,
 ["r"] = 1,
 },
-["CHANNEL_LocalDefense"] = {
-["b"] = 0.7529412508010864,
-["g"] = 0.7529412508010864,
-["r"] = 1,
+["SKILL"] = {
+["b"] = 1,
+["g"] = 0.3333333432674408,
+["r"] = 0.3333333432674408,
 },
 ["CHANNEL1"] = {
 ["b"] = 0.7529412508010864,
@@ -108,10 +161,10 @@ CHATTYNATOR_CONFIG = {
 ["g"] = 1,
 ["r"] = 1,
 },
-["CHANNEL_General"] = {
-["b"] = 0.7529412508010864,
+["OFFICER"] = {
+["b"] = 0.250980406999588,
 ["g"] = 0.7529412508010864,
-["r"] = 1,
+["r"] = 0.250980406999588,
 },
 ["YELL"] = {
 ["b"] = 0.250980406999588,
@@ -128,10 +181,10 @@ CHATTYNATOR_CONFIG = {
 ["g"] = 0.501960813999176,
 ["r"] = 0.501960813999176,
 },
-["SAY"] = {
-["b"] = 1,
+["BN_WHISPER"] = {
+["b"] = 0.9647059440612793,
 ["g"] = 1,
-["r"] = 1,
+["r"] = 0,
 },
 ["DND"] = {
 ["b"] = 1,
@@ -213,29 +266,29 @@ CHATTYNATOR_CONFIG = {
 ["g"] = 0.7529412508010864,
 ["r"] = 0.7529412508010864,
 },
-["OFFICER"] = {
-["b"] = 0.250980406999588,
-["g"] = 0.7529412508010864,
-["r"] = 0.250980406999588,
-},
-["SKILL"] = {
+["SAY"] = {
 ["b"] = 1,
-["g"] = 0.3333333432674408,
-["r"] = 0.3333333432674408,
-},
-["BN_WHISPER"] = {
-["b"] = 0.9647059440612793,
 ["g"] = 1,
-["r"] = 0,
-},
-["BG_SYSTEM_NEUTRAL"] = {
-["b"] = 0.03921568766236305,
-["g"] = 0.4705882668495178,
 ["r"] = 1,
 },
-["FILTERED"] = {
+["CHANNEL_General"] = {
+["b"] = 0.7529412508010864,
+["g"] = 0.7529412508010864,
+["r"] = 1,
+},
+["MONSTER_SAY"] = {
+["b"] = 0.6235294342041016,
+["g"] = 1,
+["r"] = 1,
+},
+["CHANNEL_Trade"] = {
+["b"] = 0.7529412508010864,
+["g"] = 0.7529412508010864,
+["r"] = 1,
+},
+["MONEY"] = {
 ["b"] = 0,
-["g"] = 0,
+["g"] = 1,
 ["r"] = 1,
 },
 ["TEXT_EMOTE"] = {
@@ -253,9 +306,9 @@ CHATTYNATOR_CONFIG = {
 ["g"] = 1,
 ["r"] = 0.250980406999588,
 },
-["MONSTER_SAY"] = {
-["b"] = 0.6235294342041016,
-["g"] = 1,
+["FILTERED"] = {
+["b"] = 0,
+["g"] = 0,
 ["r"] = 1,
 },
 ["CHANNEL15"] = {
@@ -278,14 +331,14 @@ CHATTYNATOR_CONFIG = {
 ["g"] = 0.6666666865348816,
 ["r"] = 0.6666666865348816,
 },
-["CHANNEL16"] = {
-["b"] = 0.7529412508010864,
-["g"] = 0.7529412508010864,
-["r"] = 1,
-},
 ["INSTANCE_CHAT_LEADER"] = {
 ["b"] = 0.03529411926865578,
 ["g"] = 0.2823529541492462,
+["r"] = 1,
+},
+["CHANNEL3"] = {
+["b"] = 0.7529412508010864,
+["g"] = 0.7529412508010864,
 ["r"] = 1,
 },
 ["COMBAT_FACTION_CHANGE"] = {
@@ -438,9 +491,9 @@ CHATTYNATOR_CONFIG = {
 ["g"] = 1,
 ["r"] = 1,
 },
-["MONEY"] = {
-["b"] = 0,
-["g"] = 1,
+["CHANNEL16"] = {
+["b"] = 0.7529412508010864,
+["g"] = 0.7529412508010864,
 ["r"] = 1,
 },
 ["BN_INLINE_TOAST_CONVERSATION"] = {
@@ -448,9 +501,9 @@ CHATTYNATOR_CONFIG = {
 ["g"] = 0.7725490927696228,
 ["r"] = 0.5098039507865906,
 },
-["CHANNEL3"] = {
-["b"] = 0.7529412508010864,
-["g"] = 0.7529412508010864,
+["BG_SYSTEM_NEUTRAL"] = {
+["b"] = 0.03921568766236305,
+["g"] = 0.4705882668495178,
 ["r"] = 1,
 },
 ["BN_INLINE_TOAST_BROADCAST"] = {
@@ -463,7 +516,7 @@ CHATTYNATOR_CONFIG = {
 ["g"] = 0.4980392456054688,
 ["r"] = 1,
 },
-["CHANNEL_Trade"] = {
+["CHANNEL_LocalDefense"] = {
 ["b"] = 0.7529412508010864,
 ["g"] = 0.7529412508010864,
 ["r"] = 1,
@@ -489,14 +542,14 @@ CHATTYNATOR_CONFIG = {
 ["r"] = 1,
 },
 },
-["enable_combat_messages"] = false,
-["keep_edit_box_visible"] = true,
+["reduce_redundant_text"] = true,
+["show_tabs_1"] = "hover",
 ["enable_smooth_scrolling_combat"] = false,
 ["show_font_shadow"] = true,
 ["disabled_skins"] = {
 },
 ["remove_old_messages"] = true,
-["show_buttons"] = "always",
+["whisper_sounds"] = "first",
 ["skins"] = {
 ["blizzard"] = {
 ["tab_transparency"] = 1,
@@ -510,155 +563,37 @@ CHATTYNATOR_CONFIG = {
 },
 ["applied_player_table_5"] = true,
 ["timestamp_format"] = " ",
-["windows"] = {
-{
-["position"] = {
-"TOPLEFT",
-"UIParent",
-"TOPLEFT",
-26.39688873291016,
--729.7464599609375,
-},
-["tabs"] = {
-{
-["tabColor"] = "06a1ff",
-["addons"] = {
-},
-["whispersTemp"] = {
-},
-["name"] = "GENERAL",
-["groups"] = {
-["COMBAT_MISC_INFO"] = false,
-["PET_BATTLE_COMBAT_LOG"] = false,
-["COMBAT_XP_GAIN"] = false,
-["OPENING"] = false,
-["VOICE_TEXT"] = false,
-["PET_INFO"] = false,
-["TRADESKILLS"] = false,
-},
-["invert"] = true,
-["channels"] = {
-},
-["isTemporary"] = false,
-["backgroundColor"] = "1a1a1a",
-["filters"] = {
-},
-},
-{
-["tabColor"] = "309944",
-["addons"] = {
-},
-["whispersTemp"] = {
-},
-["isTemporary"] = false,
-["name"] = "GUILD",
-["groups"] = {
-["GUILD_ACHIEVEMENT"] = true,
-["OFFICER"] = true,
-["GUILD"] = true,
-},
-["channels"] = {
-},
-["backgroundColor"] = "1a1a1a",
-["filters"] = {
-},
-},
-},
-["size"] = {
-409.1748962402344,
-146.7303924560547,
-},
-},
-},
+["locked"] = true,
 ["edit_box_position"] = "bottom",
 ["copy_timestamps"] = true,
-["whisper_sounds"] = "first",
-["tab_flash_on"] = "all",
-["show_tabs_1"] = "hover",
+["combat_log_migration"] = 1,
+["store_messages"] = false,
+["keep_edit_box_visible"] = true,
 ["message_font_size"] = 11,
-["reduce_redundant_text"] = true,
+["enable_combat_messages"] = false,
 ["show_buttons_on_hover"] = false,
 ["current_skin"] = "blizzard",
 ["link_urls"] = true,
 ["button_position"] = "outside_tabs",
 ["timestamp_spacing"] = 2,
 ["new_whisper_new_tab"] = 0,
-["combat_log_migration"] = 1,
+["show_buttons"] = "hover",
 ["line_spacing_2"] = 0,
 ["show_combat_log"] = true,
 ["class_colors"] = true,
 ["message_font_outline"] = "none",
 },
 ["Gonkast"] = {
-["tab_flash_on"] = "all",
+["store_messages"] = false,
 ["shorten_format"] = "letter",
 ["enable_message_fade"] = true,
 ["message_fade_time"] = 33,
-["windows"] = {
-{
-["size"] = {
-409.1748962402344,
-146.7303924560547,
-},
-["tabs"] = {
-{
-["tabColor"] = "06a1ff",
-["channels"] = {
-},
-["whispersTemp"] = {
-},
-["name"] = "GENERAL",
-["isTemporary"] = false,
-["backgroundColor"] = "1a1a1a",
-["addons"] = {
-},
-["groups"] = {
-["COMBAT_MISC_INFO"] = false,
-["OPENING"] = false,
-["VOICE_TEXT"] = false,
-["PET_BATTLE_COMBAT_LOG"] = false,
-["COMBAT_XP_GAIN"] = false,
-["PET_INFO"] = false,
-["TRADESKILLS"] = false,
-},
-["invert"] = true,
-["filters"] = {
-},
-},
-{
-["tabColor"] = "309944",
-["channels"] = {
-},
-["whispersTemp"] = {
-},
-["name"] = "GUILD",
-["groups"] = {
-["GUILD_ACHIEVEMENT"] = true,
-["OFFICER"] = true,
-["GUILD"] = true,
-},
-["isTemporary"] = false,
-["addons"] = {
-},
-["backgroundColor"] = "1a1a1a",
-["filters"] = {
-},
-},
-},
-["position"] = {
-"TOPLEFT",
-"UIParent",
-"TOPLEFT",
-26.39688873291016,
--729.7464599609375,
-},
-},
-},
+["locked"] = true,
 ["message_spacing"] = 4,
 ["message_font"] = "Friz Quadrata TT",
 ["debug"] = false,
-["show_timestamp_separator"] = true,
-["force_tab_overflow"] = false,
+["combat_log_migration"] = 1,
+["remove_old_messages"] = true,
 ["applied_message_ids"] = true,
 ["chat_colors"] = {
 ["CHANNEL12"] = {
@@ -676,10 +611,10 @@ CHATTYNATOR_CONFIG = {
 ["g"] = 0.7529412508010864,
 ["b"] = 0.7529412508010864,
 },
-["CHANNEL20"] = {
-["r"] = 1,
-["g"] = 0.7529412508010864,
-["b"] = 0.7529412508010864,
+["PARTY"] = {
+["r"] = 0.6666666865348816,
+["g"] = 0.6666666865348816,
+["b"] = 1,
 },
 ["CHANNEL_LIST"] = {
 ["r"] = 0.7529412508010864,
@@ -746,10 +681,10 @@ CHATTYNATOR_CONFIG = {
 ["g"] = 1,
 ["b"] = 0,
 },
-["OFFICER"] = {
-["r"] = 0.250980406999588,
+["CHANNEL_General"] = {
+["r"] = 1,
 ["g"] = 0.7529412508010864,
-["b"] = 0.250980406999588,
+["b"] = 0.7529412508010864,
 },
 ["YELL"] = {
 ["r"] = 1,
@@ -766,10 +701,10 @@ CHATTYNATOR_CONFIG = {
 ["g"] = 0.501960813999176,
 ["b"] = 1,
 },
-["BN_WHISPER"] = {
-["r"] = 0,
+["SAY"] = {
+["r"] = 1,
 ["g"] = 1,
-["b"] = 0.9647059440612793,
+["b"] = 1,
 },
 ["DND"] = {
 ["r"] = 1,
@@ -851,29 +786,29 @@ CHATTYNATOR_CONFIG = {
 ["g"] = 0,
 ["b"] = 0,
 },
-["SAY"] = {
-["r"] = 1,
-["g"] = 1,
-["b"] = 1,
-},
-["CHANNEL_General"] = {
-["r"] = 1,
-["g"] = 0.7529412508010864,
-["b"] = 0.7529412508010864,
-},
 ["MONSTER_SAY"] = {
 ["r"] = 1,
 ["g"] = 1,
 ["b"] = 0.6235294342041016,
+},
+["BN_WHISPER"] = {
+["r"] = 0,
+["g"] = 1,
+["b"] = 0.9647059440612793,
+},
+["OFFICER"] = {
+["r"] = 0.250980406999588,
+["g"] = 0.7529412508010864,
+["b"] = 0.250980406999588,
 },
 ["CHANNEL_Trade"] = {
 ["r"] = 1,
 ["g"] = 0.7529412508010864,
 ["b"] = 0.7529412508010864,
 },
-["MONEY"] = {
+["FILTERED"] = {
 ["r"] = 1,
-["g"] = 1,
+["g"] = 0,
 ["b"] = 0,
 },
 ["TEXT_EMOTE"] = {
@@ -886,10 +821,10 @@ CHATTYNATOR_CONFIG = {
 ["g"] = 0.501960813999176,
 ["b"] = 1,
 },
-["GUILD_ITEM_LOOTED"] = {
-["r"] = 0.250980406999588,
-["g"] = 1,
-["b"] = 0.250980406999588,
+["CHANNEL13"] = {
+["r"] = 1,
+["g"] = 0.7529412508010864,
+["b"] = 0.7529412508010864,
 },
 ["CHANNEL_LocalDefense"] = {
 ["r"] = 1,
@@ -916,10 +851,10 @@ CHATTYNATOR_CONFIG = {
 ["g"] = 0.6666666865348816,
 ["b"] = 1,
 },
-["INSTANCE_CHAT_LEADER"] = {
+["MONEY"] = {
 ["r"] = 1,
-["g"] = 0.2823529541492462,
-["b"] = 0.03529411926865578,
+["g"] = 1,
+["b"] = 0,
 },
 ["BG_SYSTEM_NEUTRAL"] = {
 ["r"] = 1,
@@ -941,12 +876,12 @@ CHATTYNATOR_CONFIG = {
 ["g"] = 0.501960813999176,
 ["b"] = 0.501960813999176,
 },
-["CHANNEL_Services"] = {
+["CHANNEL18"] = {
 ["r"] = 1,
 ["g"] = 0.7529412508010864,
 ["b"] = 0.7529412508010864,
 },
-["CHANNEL18"] = {
+["CHANNEL_Services"] = {
 ["r"] = 1,
 ["g"] = 0.7529412508010864,
 ["b"] = 0.7529412508010864,
@@ -1071,15 +1006,15 @@ CHATTYNATOR_CONFIG = {
 ["g"] = 0.8666667342185974,
 ["b"] = 0,
 },
-["PARTY"] = {
-["r"] = 0.6666666865348816,
-["g"] = 0.6666666865348816,
-["b"] = 1,
-},
-["CHANNEL13"] = {
+["CHANNEL20"] = {
 ["r"] = 1,
 ["g"] = 0.7529412508010864,
 ["b"] = 0.7529412508010864,
+},
+["INSTANCE_CHAT_LEADER"] = {
+["r"] = 1,
+["g"] = 0.2823529541492462,
+["b"] = 0.03529411926865578,
 },
 ["BN_INLINE_TOAST_CONVERSATION"] = {
 ["r"] = 0.5098039507865906,
@@ -1101,10 +1036,10 @@ CHATTYNATOR_CONFIG = {
 ["g"] = 0.7529412508010864,
 ["b"] = 0.7529412508010864,
 },
-["FILTERED"] = {
-["r"] = 1,
-["g"] = 0,
-["b"] = 0,
+["GUILD_ITEM_LOOTED"] = {
+["r"] = 0.250980406999588,
+["g"] = 1,
+["b"] = 0.250980406999588,
 },
 ["PET_BATTLE_COMBAT_LOG"] = {
 ["r"] = 0.9058824181556702,
@@ -1127,8 +1062,8 @@ CHATTYNATOR_CONFIG = {
 ["b"] = 0.7529412508010864,
 },
 },
-["reduce_redundant_text"] = true,
-["show_tabs_1"] = "hover",
+["enable_combat_messages"] = false,
+["keep_edit_box_visible"] = true,
 ["enable_smooth_scrolling_combat"] = false,
 ["show_font_shadow"] = true,
 ["disabled_skins"] = {
@@ -1148,25 +1083,92 @@ CHATTYNATOR_CONFIG = {
 ["tab_transparency"] = 1,
 },
 },
-["locked"] = true,
+["show_timestamp_separator"] = true,
 ["edit_box_position"] = "bottom",
 ["show_buttons"] = "hover",
-["combat_log_migration"] = 1,
-["store_messages"] = false,
-["keep_edit_box_visible"] = true,
+["copy_timestamps"] = true,
+["tab_flash_on"] = "all",
+["show_tabs_1"] = "hover",
 ["link_urls"] = true,
-["enable_combat_messages"] = false,
+["reduce_redundant_text"] = true,
 ["show_buttons_on_hover"] = false,
 ["current_skin"] = "blizzard",
 ["message_font_size"] = 11,
 ["button_position"] = "outside_left",
 ["timestamp_spacing"] = 2,
 ["new_whisper_new_tab"] = 0,
-["copy_timestamps"] = true,
+["windows"] = {
+{
+["size"] = {
+409.1748962402344,
+146.7303924560547,
+},
+["tabs"] = {
+{
+["tabColor"] = "06a1ff",
+["addons"] = {
+},
+["whispersTemp"] = {
+},
+["groups"] = {
+["COMBAT_MISC_INFO"] = false,
+["PET_BATTLE_COMBAT_LOG"] = false,
+["VOICE_TEXT"] = false,
+["OPENING"] = false,
+["COMBAT_XP_GAIN"] = false,
+["PET_INFO"] = false,
+["TRADESKILLS"] = false,
+},
+["name"] = "GENERAL",
+["backgroundColor"] = "1a1a1a",
+["isTemporary"] = false,
+["channels"] = {
+},
+["invert"] = true,
+["filters"] = {
+},
+},
+{
+["tabColor"] = "309944",
+["addons"] = {
+},
+["whispersTemp"] = {
+},
+["groups"] = {
+["GUILD_ACHIEVEMENT"] = true,
+["OFFICER"] = true,
+["GUILD"] = true,
+},
+["isTemporary"] = false,
+["name"] = "GUILD",
+["channels"] = {
+},
+["backgroundColor"] = "1a1a1a",
+["filters"] = {
+},
+},
+},
+["position"] = {
+"TOPLEFT",
+"UIParent",
+"TOPLEFT",
+26.39688873291016,
+-729.7464599609375,
+},
+},
+},
 ["line_spacing_2"] = 0,
 ["applied_player_table_5"] = true,
 ["timestamp_format"] = " ",
-["remove_old_messages"] = true,
+["force_tab_overflow"] = false,
 },
+},
+}
+CHATTYNATOR_MESSAGE_LOG = {
+["cleanIndex"] = 0,
+["current"] = {
+},
+["version"] = 1,
+["historical"] = {
 },
 }

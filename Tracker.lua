@@ -557,7 +557,16 @@ local function ApplyPreviewHide()
     end
 end
 ns.ApplyTrackerPreviewHide = ApplyPreviewHide   -- expuesto para reaccionar AL TOQUE (ver Options.lua OnUnlockChanged)
-C_Timer.NewTicker(0.4, function()
+-- PERF (2026-07-19, "arregla todo"): RecolorTracker hace wipe(visitedFrames)
+-- + un recorrido COMPLETO del arbol del Objective Tracker (GetRegions/
+-- GetChildren recursivo) en cada disparo. El camino real de actualizacion ya
+-- es por evento (ScheduleRecolor, arriba, con debounce de 0.05s) -- este
+-- ticker es SOLO la red de seguridad lenta para el caso mouseover/recolor
+-- nativo que no pasa por esos hooks (ver comentario arriba). Se mantiene
+-- (no se borra, el titulo quedaria flaky) pero a 1s en vez de 0.4s: sigue
+-- corrigiendo cualquier drift en <=1s, imperceptible para este caso de borde,
+-- y reduce el costo del recorrido completo a menos de la mitad.
+C_Timer.NewTicker(1.0, function()
     ApplyPreviewHide()
     RecolorTracker()
 end)

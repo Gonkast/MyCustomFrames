@@ -12,7 +12,6 @@ local ADDON, ns = ...
 
 -- Globales que setean las copias de SavedVariables en Profiles\.
 ns.ProfGlobals = {
-    "AzeriteUI5_DB",
     "Bartender4DB",
     "CHATTYNATOR_CONFIG", "CHATTYNATOR_MESSAGE_LOG",
     "DynamicCamDB", "minZoomValues",

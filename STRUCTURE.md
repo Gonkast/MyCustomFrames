@@ -1,11 +1,115 @@
 # MyCustomFrames — estructura y notas (v8.x, "AzeriteUI — Gonkast Preset")
 
+**MINIMAP (2026-07-17, nuevo, NOT YET VALIDADO EN JUEGO):** primer componente grande del plan
+"completar la UI copiando Map/Nameplates/Raid/Arena de AzeriteUI". `Minimap.lua` (nuevo, standalone,
+NO depende de AzeriteUI/oUF/AceAddon) reproduce el look de AzeriteUI: mascara redonda
+(`minimap-mask-transparent.tga`) + fondo opaco detras (`minimap-mask-opaque.tga`) + borde decorativo
+(`minimap-border.tga`, 398x398, mas grande que el mapa) + brujula (N que rota con
+`GetPlayerFacing()` si el cvar `rotateMinimap` esta activo) + coordenadas (toggle, off por defecto)
++ indicador de correo con tooltip + reparenteo del boton "eye" de cola de LFG (`QueueStatusButton`)
++ anillo circular de XP/Reputacion/Honor/Renown (usa **LibSpinBar-1.0** vendorizada, MIT, en
+`Libs\LibSpinBar-1.0\` + `Libs\LibStub\`) con la MISMA prioridad que AzeriteUI: reputacion vigilada
+paragon > major faction/renown > friendship > reputacion normal > XP.
+**Zoom (rueda del raton), click izquierdo (abre el mapa) y click derecho (menu de tracking) del
+Minimap nativo de Blizzard se conservan GRATIS** — el archivo solo reparenta/enmascara el frame
+`Minimap` real, nunca toca sus scripts nativos (`Minimap_OnClick`, `OnMouseWheel`), a diferencia de
+AzeriteUI que reimplementa una cadena de fallback compleja para el right-click.
+**Simplificaciones deliberadas vs AzeriteUI (para reducir riesgo/alcance en la primera pasada):**
+NO se reposicionan zona/reloj/calendario/dificultad (MCF ya tiene reloj+zona propios en
+`InfoBar.lua`; se dejan donde Blizzard los pone por defecto), NO hay boton de AddonCompartment
+custom, NO hay integracion MBB/Narcissus, el tooltip de correo no incluye el conteo de
+crafting orders. `db.minimap` se registra via `ns.MinimapDefaults()` (FillDefaults en core.lua) y
+se mueve/escala con el modo edicion existente (`/mcf`, mismo `MakeEditHighlight`/`AttachScaleWheel`
+que el resto de elementos) — **aun NO tiene seccion propia en el menu de Options.lua** (pendiente,
+se agrega despues de confirmar el look en juego). Carga al final del bloque de archivos nuevos del
+refactor (despues de Editing.lua, antes de Glow.lua).
+
 Addon de WoW **Midnight 12.0.7**. Barras de vida/poder + cast bar personalizables,
 multi-unitframe, + portraits, auras, info bar, micro menu, chat bubble, quest tracker,
 assisted glow, y varias utilidades globales. Preset del usuario **Gonkast** (corre sobre AzeriteUI5_JuNNeZ_Edition).
 Titulo del toc = "AzeriteUI |cffffcc00—|r Gonkast Preset", author Gonkast; la CARPETA sigue
 siendo `MyCustomFrames` (renombrarla romperia las rutas de `Assets\`). Texto visible en INGLES;
 comentarios en español.
+
+**REFACTOR 2026-07-17 (Fase 1 — extraccion de Units.lua):** primer paso de la reestructuracion
+grande pedida por el usuario ("separar los unitframes, dividir el core en varios .lua"). Se
+extrajo TODO el subsistema de barras de vida/poder/cast (P/UnitColor/UnitUpdateText/Name/Bar/
+Mount/DeadCage/Highlight/Color, UnitApplyLayout/Appearance, RefreshUnit, cast bar completo
+[SetSparkTexture/GetCastProgress/ReadCastMode/CastOnUpdate/ResetCastBar/BarOnUpdate], CreateUnit,
+drivers pet/party) a **`Units.lua`** (nuevo, carga justo despues de core.lua en el toc), mismo
+patron ya probado en Glow/ChatBubble/MicroMenu (`ns.GetDB()`/`ns.IsUnlocked()` en vez de los
+locals `db`/`unlocked` de core). Extraccion mecanica verificada (balance de parentesis/llaves
+antes/despues identico, sin intérprete Lua local disponible — mismo metodo de validacion que
+sesiones previas): **core.lua bajo de 189/200 a 157/200 locals** (32 liberados), Units.lua queda
+en 33/200 (margen enorme). El ticker principal de core (0.1s) ya NO itera las unidades inline:
+llama **`ns.TickUnits()`** (expuesto por Units.lua, mismo loop de antes). `RefreshAll` (core) llama
+**`ns.RefreshAllUnits()`** en vez de iterar `frames` el mismo. Puntos que quedan en core (kernel,
+router central): `CurrentProfile`/`ApplyCurrent`, `RefreshOutlineNames`/`RefreshAll`, InitDB/
+FillDefaults/Presets, el ticker/eventos, Explorer, Hide-Blizzard, Mouselook — todos ahora llaman a
+las funciones movidas via `ns.RefreshUnit/ns.PowerShouldShow/ns.UnitApplyLayout/ns.UpdatePetDriver/
+ns.UpdatePartyDrivers/ns.ReadCastMode/ns.ResetCastBar/ns.P`. Backup pre-split en
+`backup/core_pre_split_*.lua`. **Fase 2 (Portraits.lua) — DONE 2026-07-17, NOT YET VALIDATED IN GAME.** Mismo dia, misma sesion:
+extraido TODO el subsistema de portraits (modelo 3D/icono de clase, badges de faccion/muerte/
+combate/raid-target/rol-lider, doble posicion, `CreatePortrait`) a **`Portraits.lua`** (nuevo,
+carga despues de Units.lua). **core.lua bajo de 157/200 a 139/200 locals** (18 liberados),
+Portraits.lua queda en 19/200. Mismo metodo de verificacion (balance de parentesis/llaves
+identico al original, grep exhaustivo de llamadas sueltas — incluyendo referencias SIN parentesis
+pasadas como valor, ej. `pcall(UpdateFocusPortraitHighlight)`, que el primer grep de "nombre(" no
+detecta y hay que buscar aparte). El ticker llama **`ns.TickPortraits()`** (nuevo, mismo loop de
+antes). Puntos de core que quedaron apuntando a `ns.PP/ns.PortraitUpdateFaction/
+ns.PortraitUpdatePicture/ns.PortraitSetShown/ns.PortraitUpdatePosition/ns.PortraitUpdateState/
+ns.PartyContentAllowed/ns.PortraitShouldShow/ns.UpdateFocusPortraitHighlight`: `LayoutPortraitCharButtons`,
+`SetUnlocked`, `/mcfchar`, el handler de eventos (PLAYER_FLAGS_CHANGED/PLAYER_REGEN_ENABLED/
+UNIT_MODEL_CHANGED/UNIT_PET/PLAYER_FOCUS_CHANGED/PLAYER_TARGET_CHANGED), el Explorer
+(ExplorerReset/ExplorerResetAll) y el ticker principal. Backup en `backup/core_pre_portraits_*.lua`.
+
+**Fase 2b (Auras.lua) — DONE 2026-07-17, NOT YET VALIDATED IN GAME.** Mismo dia: extraido TODO el
+subsistema de auras (buffs/debuffs combinados, grid, overlay seguro de cancelar buff con clic
+derecho, `CreateAuraGroup`) a **`Auras.lua`** (nuevo, carga despues de Portraits.lua). **core.lua
+bajo de 139/200 a 118/200 locals** (21 liberados), Auras.lua queda en 22/200. El ticker llama
+**`ns.TickAuras()`** (reposicion dualPos + opacidad + texto de duracion + overlay de cancelar,
+mismo loop de antes). Puntos de core que quedaron apuntando a `ns.EnsureCancelOverlay/
+ns.UpdateAuraGroup` (evento PLAYER_REGEN_ENABLED/PLAYER_TARGET_CHANGED/UNIT_AURA). Verificado
+tambien contra referencias sin parentesis (leccion de Portraits.lua) — ninguna encontrada esta
+vez. Backup en `backup/core_pre_auras_*.lua`.
+
+**Fase 2c (InfoBar.lua) — DONE 2026-07-17, NOT YET VALIDADO EN JUEGO.** Mismo dia: extraido el
+info bar (hora/fps/ms/zona + reloj-calendario, `CreateInfoBar`) a **`InfoBar.lua`** (nuevo, carga
+despues de Auras.lua). **core.lua bajo de 118/200 a 109/200 locals**, InfoBar.lua queda en 10/200.
+Caso especial de este corte: el frame UNICO `infobar` era un local de core reasignado dentro de
+`CreateInfoBar` (`infobar = ib`) y LEIDO desde ~8 sitios de core fuera del bloque (RefreshOutlineNames,
+CollectSnapLines, SetUnlocked, ToggleGreenZone, GetElementFrame/Explorer, ticker) — al mover
+`CreateInfoBar` a su propio archivo, ese local de core ya NUNCA se habria asignado. Fix: se quito
+el `local infobar` de core y los ~8 sitios pasaron a leer **`ns.infobar`** (que `CreateInfoBar` ya
+sincronizaba ademas del local). Tambien se expuso `ns.UpdateInfoBarValues` (llamada bare desde el
+ticker, no capturada por el primer grep con parentesis en un primer paso — encontrada en el barrido
+final). Backup en `backup/core_pre_infobar_*.lua`.
+
+**Fase 2d (Editing.lua) — DONE 2026-07-17, NOT YET VALIDADO EN JUEGO. CIERRE DE LA FASE 2.**
+Ultimo corte: grid de alineacion, snap entre elementos, `SetUnlocked` (entra/sale de preview,
+funcion mas cross-cutting del addon — toca units/portraits/auras/infobar/micromenu), integracion
+con el Edit Mode de Blizzard, copiar/pegar settings — todo a **`Editing.lua`** (nuevo, carga
+despues de InfoBar.lua). **core.lua bajo de 109/200 a 99/200 locals**, Editing.lua queda en 11/200.
+**Caso especial de este corte:** `unlocked` (el flag global de preview) es un local de core
+ESCRITO solo dentro de `SetUnlocked` (`unlocked = state`) y LEIDO por practicamente todo el addon
+via `ns.IsUnlocked()` (getter ya existente) — pero no habia SETTER expuesto. Se agrego
+**`ns.SetUnlockedFlag = function(v) unlocked = v end`** junto a `ns.IsUnlocked`/`ns.GetDB` en el
+kernel, y `SetUnlocked` (ya en Editing.lua) llama `ns.SetUnlockedFlag(state)` en vez de asignar el
+local directo (mismo patron que se necesito para `infobar` en la Fase 2c). El resto de la
+transformacion (`db`→`ns.GetDB()`, `unlocked`→`ns.IsUnlocked()` en LECTURAS, `frames/portraits/
+auras`→`ns.frames/ns.portraits/ns.auras`, `RefreshAll`→`ns.RefreshAll`) siguio el patron mecanico
+ya establecido. Backup en `backup/core_pre_editing_*.lua`.
+
+**RESUMEN FASE 2 completa (2026-07-17, mismo dia, 4 cortes seguidos tras Units.lua de la sesion
+anterior): core.lua 189/200 → 99/200 locals** (90 liberados en total, mas de la mitad). Archivos
+nuevos: Units.lua (33), Portraits.lua (19), Auras.lua (22), InfoBar.lua (10), Editing.lua (11) —
+todos muy por debajo del limite, margen enorme para features futuras. **PENDIENTE CRITICO: NINGUNO
+de estos 5 cortes fue validado en juego todavia salvo Units.lua** (confirmado por el usuario antes
+de continuar con Portraits/Auras/InfoBar/Editing en la misma sesion, sin pausar a testear cada
+uno). Antes de agregar features nuevas: cargar el addon y verificar que TODO sigue funcionando
+(unitframes, portraits, auras, info bar, modo edicion/preview, grid/snap, copiar/pegar, Edit Mode
+de Blizzard) — si algo falla, los backups en `backup/core_pre_*.lua` permiten revertir cualquier
+fase individual sin perder las demas.
 
 **AUDITORIA 2026-07-17 (limites de Lua + codigo muerto):**
 - **`core.lua` esta AL LIMITE: ~195/200 locals de nivel-archivo** (contado con el mismo metodo
@@ -164,9 +268,14 @@ en extenso, solo el estado FINAL. Ver secciones actualizadas abajo.
    inyectar los globals que el Export no serializa (`groupMoveBoss`/`groupMoveParty`); envolver en
    `local ADDON, ns = ...  ns.BUILTIN = {...}`. Se validan llaves/comillas balanceadas. Backup en
    `backup/Defaults_pre_export_*`.
-2. `core.lua` — TODA la logica (definiciones, DB, relleno, textos, cast, portraits, auras,
-   info bar, micro menu, chat bubble, mouselook, hide-blizzard, fade-in, eventos, preview,
-   presets). API por el namespace `local ADDON, ns = ...`.
+2. `core.lua` — kernel/router (definiciones, DB, portraits, auras, info bar, micro menu, chat
+   bubble, mouselook, hide-blizzard, fade-in, eventos, preview, presets). API por el namespace
+   `local ADDON, ns = ...`. **Barras de vida/poder/cast YA NO estan aca** (extraidas 2026-07-17,
+   ver `Units.lua`); core llama a esas funciones via `ns.RefreshUnit/ns.TickUnits/ns.PowerShouldShow/
+   ns.UnitApplyLayout/ns.UpdatePetDriver/ns.UpdatePartyDrivers/ns.ReadCastMode/ns.ResetCastBar/ns.P`.
+2b. `Units.lua` (nuevo, carga justo despues de core) — TODA la logica de barras de vida/poder/cast:
+   textos, cage, relleno secret-safe, cast bar completo, drivers pet/party, creacion de frames
+   (`CreateUnit`). Mismo patron que Glow/ChatBubble/MicroMenu (`ns.GetDB()`/`ns.IsUnlocked()`).
 3. `Glow.lua` — subsistema ASSISTED GLOW. `ChatBubble.lua` — subsistema CHAT BUBBLE (ticker propio,
    sin acoplamiento; expone ns.RefreshChatBubble/ns.ChatBubbleDefaults/ns.IsChatBubble/ns.CHATBUBBLE_KEY).
    `MicroMenu.lua` — subsistema MICRO MENU (reskin de micro-botones; expone ns.RefreshMicroMenu/
@@ -1393,4 +1502,163 @@ Fuente **FRIZQT** (distinta de la Lato del panel de opciones principal). Carga A
 Copiados de AzeriteUI (texturas de barras/cages) y Plumber (menu). Rutas en core via
 `local A = "Interface\\AddOns\\MyCustomFrames\\Assets\\"`. `PATH_REMAP` + `RemapPaths`
 migran configs guardadas con rutas antiguas de AzeriteUI a las copias locales.
+
+## Sesión 2026-07-19 (grande) — Tooltip, ExtraButton, MirrorTimer, nameplates de dungeon, preset/export centralizado
+
+### `Tooltip.lua` (nuevo, standalone)
+Reskin de `GameTooltip` y familia (`ItemRefTooltip`/`ShoppingTooltip1-3`/etc). **v1/v2 fallaron en
+silencio** (backdrop en frame hijo, luego directo en el tooltip) — la causa real: en este cliente
+(secrets) el motor de `SetBackdrop` puede fallar en silencio si sus callbacks internos
+(`OnBackdropSizeChanged`/`ApplyBackdrop`/`SetupTextureCoordinates`) tocan dimensiones secretas del
+frame, sin tirar error visible. **v3 (funcional, confirmado por el usuario)** replica el patrón real
+de AzeriteUI (`Components/Misc/Tooltips.lua`): frame hijo por tooltip con esos 3 métodos parcheados
+en `pcall`, backdrop = `border-tooltip.tga` + `Interface\Tooltips\UI-Tooltip-Background` (textura
+nativa reusada), hook a `SharedTooltip_SetBackdropStyle` (cubre toda la familia) + `HookScript`
+"OnShow"/"OnTooltipSetItem/Unit/Spell" como red de seguridad. `db.tooltip` (`enabled`, `scale`,
+`backdropColor`, `borderColor`), `ns.RefreshTooltipSkin()`. Controlable desde el menú, pestaña
+**Extras** (ver más abajo) — checkbox + slider de escala.
+
+### `ExtraButton.lua` (nuevo, standalone)
+Reskin circular estilo AzeriteUI del botón de Extra Action (`ExtraActionButton1`) **y** de los
+botones de Zone Ability (`ZoneAbilityFrame.SpellButtonContainer`, ej. NPCs de escolta con habilidad
+propia) — mismo `StyleButton()` para ambos. Ícono propio enmascarado en círculo
+(`actionbutton-mask-circular.tga`, copiada de AzeriteUI), borde decorativo
+(`actionbutton-border.tga`, ya existía en Assets), cooldown con el mismo mask como swipe texture +
+número de cuenta regresiva **nativo** del widget (`SetHideCountdownNumbers(false)`, secret-safe —
+ver nota de Nameplates.lua más abajo). `Blizzard_ZoneAbility` es de carga diferida — se engancha vía
+`ADDON_LOADED`, no se asume que `ZoneAbilityFrame` ya exista al login. `db.extrabutton`
+(`enabled`, `size`, `borderScale`, `borderColor`) — `borderScale` default 1.25 (el 2.1x que usa
+AzeriteUI es para SU textura de borde, con `actionbutton-border.tga` se veía gigante).
+
+### `MirrorTimers.lua` (nuevo, standalone) — el más iterado de la sesión
+Reskin de las barras nativas de respiración/descanso/fingir muerte. Varios hallazgos "sorpresa" en
+este cliente, cada uno confirmado en vivo:
+- **`_G.MirrorTimer1/2/3` NO EXISTEN** como globales en este cliente (a diferencia de lo que asumía
+  el código viejo de AzeriteUI que se uso de referencia) — las barras viven como hijos ANÓNIMOS
+  dentro de `MirrorTimerContainer.mirrorTimers` (tabla). `GetMirrorTimerBars(container)` los busca
+  ahí primero, con 2 fallbacks (`timerPool:EnumerateActive()`, luego cualquier hijo `StatusBar`).
+- Cada entrada de `mirrorTimers` es un **Frame wrapper** (`MirrorTimer.xml`, sin nombre global) con
+  `.StatusBar`/`.Text`/`.Border`/`.TextBorder` como hijos — NO la StatusBar en sí. `frame:GetName()`
+  devuelve `nil` en estos wrappers (ojo con concatenar sin guard).
+- Blizzard **reafirma su propia textura/color de barra en cada tick de progreso** — un `SetStatusBarTexture`
+  una sola vez no alcanza, hace falta `hooksecurefunc` sobre `SetStatusBarTexture`/`SetStatusBarColor`
+  forzando el valor propio de vuelta (mismo patrón que ExtraButton.lua). Mismo problema con el
+  borde/fondo nativo: hay una región ANÓNIMA sin campo de nombre asignado (confirmada con
+  `/framestack`) además de `.Border`/`.TextBorder` — se resuelve iterando `wrapper:GetRegions()` y
+  ocultando TODO lo que no sea nuestro (en vez de adivinar nombres uno por uno), con el mismo hook
+  de reafirmación.
+- Texturas: **fijas** (`cast_bar.tga`/`cast_back.tga`, copiadas de AzeriteUI — pedido explícito del
+  usuario "que se vea igual a AzeriteUI, no me dejes elegir texturas"), sin selector en el menú.
+  `cageWidth`/`cageHeight` independientes del tamaño de la barra (antes derivados por proporción
+  fija, se veían mal en tamaños no-default).
+- **Mirror Timer SÍ es un sistema manejado por el Edit Mode nativo de Blizzard** (confirmado por el
+  usuario — aparece arrastrable ahí también) → peleaba con nuestra posición. Reafirmar después
+  (`hooksecurefunc` en `SetPoint`) dejaba una ventana visible con la posición vieja. **Fix real**
+  (mismo técnica que usa Bartender4 con `MainMenuBarVehicleLeaveButton`, investigado en el código
+  de Bartender4 en disco): Blizzard le asigna a la INSTANCIA del frame (no a la clase Frame) su
+  propio `SetPoint`/`ClearAllPoints`/`SetScale` que redirige a su sistema de Edit Mode —
+  `container.SetPoint = nil` (guardando la función original antes) elimina ESE override puntual, el
+  frame vuelve a su comportamiento nativo, y las llamadas propias dejan de ser interceptadas.
+  Reenganchado si `EditModeManagerFrame` se vuelve a mostrar (`OnShow` hook, `pcall` defensivo).
+- Preview/drag: NO hay botón de "test mode" separado — se integró al sistema de Lock estándar del
+  addon (`ns.IsUnlocked()`, `ns.MakeEditHighlight`, reevaluado en `ns.RefreshAll()` vía
+  `ns.RefreshMirrorTimerPreview`, agregado a `RefreshAll` en core.lua junto a `RefreshMinimap`).
+  Frame de preview propio (`StatusBar`+`Text`, mismo skin) que se muestra SOLO en Lock, arrastrable,
+  con rueda-de-mouse para escala (`ns.AttachScaleWheel`) — usa **`ns.CompensateScale`** para que la
+  escala no corra la posición (mismo mecanismo que ya usa Minimap.lua). El contenedor REAL nunca se
+  escala individualmente por-bar (eso duplicaba la escala con el contenedor) — `SkinOne(wrapper,
+  standalone)`: `standalone=true` solo para el preview (hijo directo de UIParent, sin contenedor que
+  lo escale); las barras reales heredan la escala del contenedor.
+- `db.mirrortimer`: `enabled`, `width`/`height` (barra), `cageWidth`/`cageHeight`, `offsetX`/`offsetY`,
+  `scale`, `barColor`, `labelColor`/`labelFontSize`/`labelOffsetX`/`labelOffsetY`. Menú en **Extras**.
+- `/mcfmirrordiag` y `/mcfmirror toggle|width|height|offsetx|offsety` para debug.
+
+### Nameplates.lua — hallazgos de la sesión
+- **Absorb/heal prediction se salía del cage**: `myHealPrediction`/`otherHealPrediction`/
+  `myHealAbsorb(+shadows)`/`overHealAbsorbGlow`/`totalAbsorb(+Overlay)`/`overAbsorbGlow` son
+  overlays nativos dimensionados por Blizzard para el tamaño ORIGINAL de la barra — se ocultan en
+  `SkinHealthBar` (mismo `HideNativeBorder`, este addon no tiene visual propio para esto).
+- **Cast bar: soporte de interrupción** (pedido "algo relacionado sobre si interrumpo un cast?"):
+  `notInterruptible` (booleano, puede ser SECRETO — mismo guard `type()+issecretvalue()` que el
+  resto del archivo) pinta la barra gris (`castUninterruptibleColor`). Al interrumpir
+  (`UNIT_SPELLCAST_INTERRUPTED`, evento puntual — NO el polling de 0.2s) flash rojo 0.5s con texto
+  fijo "Interrupted" (sin nombre de quien interrumpió — requeriría combat log, confirmado bloqueado
+  para addons en este cliente). Durante el flash se oculta el relleno/fondo de la barra
+  (`fill:Hide()`), dejando solo el texto — un guard en `UpdateCastBar` evita que el ticker de 0.2s
+  pise el flash a mitad de camino (`cb.mcfFlashTicker`).
+- **NPCs de escolta/misión en dungeon usan `ForbiddenNamePlate`** (confirmado 3 veces con
+  `/framestack`, en 2 NPCs distintos) — un tipo de frame que Blizzard bloquea a nivel de motor,
+  ningún addon puede tocarlo (ni Lua directo, ni CVars logran que aparezca la barra — se probó
+  exhaustivamente). **NO es un bug de este addon.** Para NPCs aliados/neutrales GENÉRICOS (sin
+  Forbidden) sí funciona el modo "solo nombre" existente (`nameOnlyFriendlyNeutral`).
+- Se intentó (y se REVIRTIÓ a pedido del usuario) forzar `nameplateShowFriendlyNPCs`/
+  `nameplateShowFriendlyPlayers`/`nameOnlyDungeonOnly` — quedó descartado, no está en el código
+  actual.
+- **Preview de auras en NameplateDesigner.lua**: los íconos mock ahora muestran 2 números en vivo
+  (antes un "2" estático) — `count` (cargas, offset/tamaño/color configurable) + `time` (tiempo
+  restante, texto fijo "5", solo tamaño/color — sin offset porque el REAL usa el contador nativo
+  centrado del widget Cooldown, no un FontString propio).
+
+### Secret-safe "duration/countdown" — corrección importante
+El método `durationObject:EvaluateRemainingTime()` (usado para el texto de tiempo restante de auras
+de nameplate en una sesión anterior) **NO EXISTE** — comparado contra Platynator/Plumber (únicos
+usuarios reales de `C_UnitAuras.GetAuraDuration` en disco), ninguno lo llama; solo usan
+`SetCooldownFromDurationObject` (swipe) y `EvaluateRemainingPercent`/`IsZero` (fracción
+declasificada vía curva). El pcall fallaba en silencio, sin error, dejando el texto siempre vacío.
+**Fix real:** el número de cuenta regresiva del widget `Cooldown` nativo (`SetHideCountdownNumbers(false)`)
+SÍ es secret-safe (lo calcula el motor en C, no Lua) — usado ahora en Nameplates.lua (auras) Y en
+ExtraButton.lua/MirrorTimers.lua (mismo patrón, con `SetCountdownFont`/font object compartido para
+controlar tamaño/color desde el perfil).
+
+### Preset/Export/Reset — centralización (`core.lua`)
+`SavePreset`/`LoadPreset`/`ExportPreset`/`ImportPreset`/`ResetAll` (rama BUILTIN) tenían cada
+sub-tabla escrita a mano por separado y se habían ido quedando atrás cada vez que se agregaba un
+subsistema nuevo — Minimap/Nameplates/ClassPower/Tooltip/ExtraButton/MirrorTimer NO se
+guardaban/exportaban/reseteaban. Centralizado en **`PRESET_TABLE_KEYS`** (declarada antes de
+`ResetAll`, reusada por las 5 funciones): `units, portraits, auras, infobar, micromenu, chatbubble,
+glow, tracker, minimap, nameplates, classpower, tooltip, extrabutton, mirrortimer`. También se
+agregaron 5 ajustes globales reales que faltaban en `GLOBAL_FLAT_KEYS`/`GLOBAL_TABLE_KEYS`:
+`partyAuraDirection`/`partyAuraIconSize`/`arenaAuraDirection`/`arenaAuraIconSize`/
+`hideChatEditBoxTexture` (flat) y `nameplateUserDefault`/`nameplateProfiles` (table). Quedan
+deliberadamente AFUERA (bookkeeping interno, no "apariencia"): `panelScale` (escala de la ventana
+del menú, no del look), `setupSeen`, `bartenderAutoProfile`/`bartenderAutoApplied`, `defaultPreset`.
+- **Bug de export/import encontrado y arreglado:** el `EditBox` de export/import
+  (`GetIOPopup`/`p.eb`) tenía `SetMaxLetters(99999)` — con todas las sub-tablas nuevas el string
+  export ahora supera eso, y `SetText()` lo trunca EN SILENCIO al mostrarlo → el usuario copiaba un
+  string ya cortado → "formato inválido" al importar. Fix: `SetMaxLetters(0)` (sin límite).
+- **Freeze al pegar/importar:** `Serialize()` devuelve todo en una sola línea gigante sin saltos —
+  se agregó un `gsub(",%[", ",\n[")` sobre el resultado (Lua ignora whitespace entre tokens, no
+  cambia el contenido) para que el EditBox multilínea pueda envolver/renderizar mucho más rápido.
+  El freeze en el IMPORT (parseo con `loadstring` de un perfil grande) es esperable dado el tamaño
+  del payload — no se implementó (quedó pendiente si se retoma) un export "diff contra defaults"
+  que reduciría el tamaño real del string.
+
+### `Defaults.lua` (`ns.BUILTIN`) — re-horneado 2026-07-19
+Regenerado directo desde `WTF\Account\<cuenta>\SavedVariables\MyCustomFrames.lua` (el perfil real
+en disco, NO el texto pegado por el usuario — evita transcribir a mano un export de ~40KB) via un
+script one-off (PowerShell invocado desde Bash, el tool PowerShell normal bloqueaba el comando por
+un falso positivo del filtro de seguridad con la ruta `...#1\...`). Extrae los mismos campos que
+`PRESET_TABLE_KEYS` + `GLOBAL_FLAT_KEYS`/`GLOBAL_TABLE_KEYS`, descarta bookkeeping interno. **Ojo:**
+`[System.IO.File]::WriteAllText` con `System.Text.Encoding]::UTF8` agrega un BOM al principio del
+archivo — se sacó a mano (bytes `EF BB BF`) porque WoW no tolera un BOM al inicio de un `.lua`.
+
+### Menú — nueva pestaña **"Extras"** (`Options.lua`)
+Separada de "Profile" (pedido del usuario, antes Tooltip/MirrorTimer vivían apretados ahí) — nuevo
+item en `GLOBAL_NAV_ITEMS`/`GLOBAL_SECTION_TITLE`/`NAVBTN` (mismo patrón que
+Setup/Editing/Explorer/Profile, sin sub-tabs). `Section("extras")`: columna izquierda = Tooltip
+(enable + scale), columna derecha = Mirror Timers (enable + bar W/H + cage W/H + offset X/Y) +
+Mirror Timer Text (offset X/Y + tamaño + color, columna izquierda debajo de Tooltip).
+
+### `BarReposition.lua` — fix de combate
+`BT4Bar5:ClearAllPoints()` asumía "nunca está protegido" — falso en este cliente cuando la barra de
+vehículo/possess tiene botones de acción activos (montado + habilidad de montura usable), tira
+`ADDON_ACTION_BLOCKED` en combate. Fix: `InCombatLockdown()` guard + reintento en
+`PLAYER_REGEN_ENABLED` (mismo patrón ya establecido en el resto del addon) + `pcall` en los
+`SetPoint`/`ClearAllPoints` como red de seguridad extra.
+
+### `Nameplates.lua` — bug de secret-value corregido
+`UnitCreatureType(unit)` (usado para detectar Training Dummies, `creatureType == "Totem"`) puede
+devolver un valor SECRETO — sin el guard `type()+issecretvalue()` tiraba
+`"attempt to compare... a secret string value"`. Ya corregido (mismo patrón que el resto del
+archivo).
 El usuario hace las WeakAuras; el addon solo dibuja las barras.
