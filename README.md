@@ -1,4 +1,4 @@
-# AzeriteUI — Gonkast Preset (MyCustomFrames)
+# Gonkast Preset (MyCustomFrames)
 
 A full AzeriteUI-styled HUD replacement: unit frames (player/target/pet/focus/ToT/boss1-5/party1-5/
 arena1-6), a 40-player raid frame system, class resource bars for every spec that has one (combo
@@ -6,15 +6,14 @@ points, holy power, chi, soul shards, arcane charges, essence, runes, soul fragm
 weapon), portraits, buffs/debuffs, a minimap reskin, nameplate reskin, info bar, quest tracker
 recoloring, assisted-rotation glow, and a bundled Masque skin — built for World of Warcraft
 **Midnight (12.0.7)**. Secret-number safe (works around this client's stricter Lua sandboxing on
-other players' unit data). This is the personal preset of **Gonkast**, tuned to sit on top of
-AzeriteUI.
+other players' unit data). This is the personal preset of **Gonkast**, originally built to run on
+top of AzeriteUI and now fully standalone (see Credits for how much of it still traces back there).
 
 ## Requirements
 
-- **[AzeriteUI5_JuNNeZ_Edition](https://github.com/AzeriteTeam/Azerite5) — essential, required.**
-  This addon is designed to run *on top of* AzeriteUI; it hides AzeriteUI's own Tracker/Info/
-  MicroMenu modules and replaces them, and its whole visual language (colors, fonts, borders)
-  assumes AzeriteUI is present. It will not look right without it.
+None. As of this release, MyCustomFrames is fully standalone — it no longer needs
+AzeriteUI5_JuNNeZ_Edition installed (see Credits below for how much this project owes to that
+codebase).
 
 ## Recommended (optional, but the Setup Wizard can auto-configure these)
 
@@ -111,11 +110,14 @@ Menu styling (fonts, borders, layout patterns) is adapted from **[Plumber](https
 by Peterodox — used with real assets copied from Plumber's `Art/` folder. Because of that, this
 project ships under the **same license as Plumber (GPLv3)**.
 
-Many of the bundled unit frame/portrait/cage/badge textures in `Assets/` are **edited versions of
-the original AzeriteUI assets by Daniel Troko and Lars Norberg** — copied and modified from
-[AzeriteUI](https://github.com/AzeriteTeam/Azerite5) to fit this preset. The bundled Masque skin
-("Azerite HEX") is likewise adapted from `Masque_Azerite_Hex`, also by Daniel Troko and Lars
-Norberg. The player-rest flipbook animation data is sourced from **M33kAuras**.
+This project owes an enormous amount to **[AzeriteUI](https://github.com/AzeriteTeam/Azerite5)
+by Daniel Troko and Lars Norberg**. It started as a preset meant to run on top of AzeriteUI, and
+even though it no longer requires it, huge parts of this addon — the unit frame/portrait/cage/badge
+textures in `Assets/`, the raid frame layout and look, the bundled Masque skin ("Azerite HEX",
+adapted from `Masque_Azerite_Hex`), and the overall visual language this whole preset is built
+around — are directly copied, modified, or learned from studying that codebase. This addon would
+not exist in its current form without it. The player-rest flipbook animation data is sourced from
+**M33kAuras**.
 
 ## License
 
