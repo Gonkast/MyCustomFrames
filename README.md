@@ -31,6 +31,8 @@ set them up on your own:
 
 - **[Plumber](https://github.com/Peterodox/Plumber)** — quality-of-life modules; this preset's
   menu styling is based on it (see Credits below).
+- **[Mainmenu-Gonkast](https://github.com/Gonkast/Mainmenu-Gonkast)** — Gonkast's own main menu
+  (Esc) reskin, built to match this preset's look.
 - **[DialogueUI](https://www.curseforge.com/wow/addons/dialogueui)** — cleaner NPC dialogue/quest
   UI. This preset includes a **DynamicCam compatibility fix** (`db.dcFix`, toggle in Global
   options): DialogueUI calls a DynamicCam method that freezes its camera and never releases it,
