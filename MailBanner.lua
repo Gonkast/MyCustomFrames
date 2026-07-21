@@ -6,7 +6,8 @@
 -- usuario, https://wago.io/1wKfUxJ8U) sobre texturas 100% NATIVAS de Blizzard,
 -- sin arte propio:
 --   - Fondo: "Objective-Header-CampaignAlliance"/"...Horde" segun faccion.
---   - Icono en el borde: "communities-icon-invitemail".
+--   - Icono en el borde DERECHO: "communities-icon-invitemail".
+--   - Texto centrado: "You have new mail, check your mailbox!"
 -- START:  fondo+icono aparecen con fade-in MIENTRAS el banner se desliza hacia
 --         abajo desde arriba de su posicion final (pedido explicito del usuario).
 -- MAIN:   el icono pulsa en loop mientras el banner queda mostrado.
@@ -40,10 +41,19 @@ local function ApplyFactionTexture()
     if w and w > 0 then banner:SetSize(w, h) end
 end
 
--- Icono en el borde (pedido del usuario): borde IZQUIERDO del banner.
+-- Icono en el borde DERECHO (pedido del usuario, ronda 2 -- antes iba a la
+-- izquierda, corregido segun captura de referencia).
 local icon = banner:CreateTexture(nil, "OVERLAY")
 icon:SetAtlas("communities-icon-invitemail", true)
-icon:SetPoint("LEFT", banner, "LEFT", 10, 0)
+icon:SetPoint("RIGHT", banner, "RIGHT", -14, 2)
+
+-- Texto centrado (pedido del usuario, ronda 2, con captura de referencia):
+-- "You have new mail, check your mailbox!".
+local text = banner:CreateFontString(nil, "OVERLAY")
+text:SetFont("Fonts\\FRIZQT__.TTF", 13, "OUTLINE")
+text:SetPoint("CENTER", banner, "CENTER", -6, 2)
+text:SetTextColor(1, 0.882, 0.608)
+text:SetText("You have new mail, check your mailbox!")
 
 banner:SetPoint("TOP", UIParent, "TOP", 0, REST_Y + SLIDE_DIST)
 
