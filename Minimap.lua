@@ -507,15 +507,16 @@ local function CreateMail()
     end)
 
     -- Pedido del usuario 2026-07-21: "que solo salga [el icono del minimapa] si
-    -- el header desaparecio" -- y misma regla de supresion que el banner (nada
-    -- en combate/dungeon/raid/pvp/arena). MailBanner.lua expone ns.IsMailBannerShown
-    -- / ns.IsMailNotificationSuppressed; nil-safe por si ese archivo no cargo.
+    -- el header desaparecio" -- pero la supresion por combate/dungeon/raid/pvp
+    -- es SOLO del header (correccion del usuario: "el del minimap si puede salir
+    -- en dungeon o raids etc, no el header") -- este icono NO consulta
+    -- ns.IsMailNotificationSuppressed. MailBanner.lua expone ns.IsMailBannerShown;
+    -- nil-safe por si ese archivo no cargo.
     local function Update()
         local p = P()
         local hasMail = HasNewMail and HasNewMail()
         local bannerShown = ns.IsMailBannerShown and ns.IsMailBannerShown()
-        local suppressed = ns.IsMailNotificationSuppressed and ns.IsMailNotificationSuppressed()
-        local show = (p and p.showMail) and hasMail and not bannerShown and not suppressed
+        local show = (p and p.showMail) and hasMail and not bannerShown
         fs:SetShown(show and true or false)
         icon:SetShown(show and true or false)
         btn:SetShown(show and true or false)
