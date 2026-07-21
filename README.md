@@ -23,6 +23,11 @@ codebase).
   bundles its own "Azerite HEX" Masque skin (`MasqueSkin.lua`), so you don't need a separate skin
   addon for it.
 - **[Chattynator](https://www.curseforge.com/wow/addons/chattynator)** — chat.
+- **[BetterBags](https://www.curseforge.com/wow/addons/better-bags)** — bag management. There's a
+  matching skin for it, **[BetterBagsSkinGonkast](https://github.com/Gonkast/BetterBagsSkinGonkast)**,
+  built to fit this preset's look.
+- **[Mainmenu-Gonkast](https://github.com/Gonkast/Mainmenu-Gonkast)** — Gonkast's own main menu
+  (Esc) reskin, built to match this preset's look.
 
 ## Other recommended addons (not part of the Setup Wizard)
 
@@ -31,8 +36,6 @@ set them up on your own:
 
 - **[Plumber](https://github.com/Peterodox/Plumber)** — quality-of-life modules; this preset's
   menu styling is based on it (see Credits below).
-- **[Mainmenu-Gonkast](https://github.com/Gonkast/Mainmenu-Gonkast)** — Gonkast's own main menu
-  (Esc) reskin, built to match this preset's look.
 - **[DialogueUI](https://www.curseforge.com/wow/addons/dialogueui)** — cleaner NPC dialogue/quest
   UI. This preset includes a **DynamicCam compatibility fix** (`db.dcFix`, toggle in Global
   options): DialogueUI calls a DynamicCam method that freezes its camera and never releases it,
@@ -40,9 +43,6 @@ set them up on your own:
   if you run both DialogueUI and DynamicCam together, and DialogueUI's own "Camera Movement"
   option must be turned off for it to work.
 - **[WaypointUI](https://www.curseforge.com/wow/addons/waypointui)** — waypoint/map arrow display.
-- **[BetterBags](https://www.curseforge.com/wow/addons/better-bags)** — bag management. There's a
-  matching skin for it, **[BetterBagsSkinGonkast](https://github.com/Gonkast/BetterBagsSkinGonkast)**,
-  built to fit this preset's look.
 - **[Bartender4 Animations](https://www.curseforge.com/wow/addons/bartender4-animations)** — extra
   button-press animations for Bartender4.
 - **[DF Friendly Nameplates](https://www.curseforge.com/wow/addons/df-friendly-nameplates)** —
