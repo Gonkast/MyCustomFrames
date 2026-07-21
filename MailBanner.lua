@@ -121,8 +121,19 @@ finishAnim:SetScript("OnFinished", function()
     banner:Hide()
 end)
 
+-- Supresion por contenido (pedido del usuario 2026-07-21: "que no aparezca si
+-- estoy en combate, dungeon, raid o pvp"). instanceType: "party"=dungeon,
+-- "raid"=raid, "pvp"=battleground, "arena"=arena -- los 4 se tapan.
+local SUPPRESSED_INSTANCE_TYPES = { party = true, raid = true, pvp = true, arena = true }
+local function IsSuppressed()
+    if InCombatLockdown() then return true end
+    local inInstance, instanceType = IsInInstance()
+    return inInstance and SUPPRESSED_INSTANCE_TYPES[instanceType] and true or false
+end
+
 local function ShowBanner()
     if not (bg.SetAtlas and icon.SetAtlas) then return end
+    if IsSuppressed() then return end
     ApplyFactionTexture()
     banner:SetPoint("TOP", UIParent, "TOP", 0, REST_Y + SLIDE_DIST)
     banner:SetAlpha(0)
@@ -130,31 +141,20 @@ local function ShowBanner()
     finishAnim:Stop()
     pulseAnim:Stop()
     startAnim:Play()
-    print(("|cffff8800[MCF MailBanner DEBUG]|r t0 shown=%s w=%s h=%s alpha=%s startPlaying=%s"):format(
-        tostring(banner:IsShown()), tostring(banner:GetWidth()), tostring(banner:GetHeight()),
-        tostring(banner:GetAlpha()), tostring(startAnim:IsPlaying())))
-    C_Timer.After(0.6, function()
-        print(("|cffff8800[MCF MailBanner DEBUG]|r t+0.6s shown=%s alpha=%s point=%s,%s pulsePlaying=%s"):format(
-            tostring(banner:IsShown()), tostring(banner:GetAlpha()),
-            tostring(select(4, banner:GetPoint())), tostring(select(5, banner:GetPoint())),
-            tostring(pulseAnim:IsPlaying())))
-    end)
 end
 ns.ShowMailBanner = ShowBanner
-
--- DIAGNOSTICO temporal: /mcfmailtest fuerza el banner sin depender de HasNewMail,
--- para aislar si el problema es la deteccion de correo o el dibujado en si.
-SLASH_MCFMAILTEST1 = "/mcfmailtest"
-SlashCmdList["MCFMAILTEST"] = function()
-    print("|cffff8800[MCF MailBanner DEBUG]|r HasNewMail=" .. tostring(HasNewMail and HasNewMail()))
-    ShowBanner()
-end
 
 local function HideBanner()
     if not banner:IsShown() then return end
     startAnim:Stop()
     finishAnim:Play()
 end
+
+-- Ocultar al pasar el mouse (pedido del usuario 2026-07-21: "si paso el mouse
+-- sobre el, que se oculte con un fade/slide to top suave") -- reusa el MISMO
+-- FINISH (fade-out + slide arriba) que ya usa el cierre normal al leer el correo.
+banner:EnableMouse(true)
+banner:SetScript("OnEnter", function() HideBanner() end)
 
 -- FIX (2026-07-21, reportado por el usuario: "sale un milisegundo y se esconde,
 -- debe quedarse mientras tenga un mail pendiente"): antes se cerraba solo con un
@@ -170,7 +170,16 @@ local hadMail = false
 local ev = CreateFrame("Frame")
 ev:RegisterEvent("UPDATE_PENDING_MAIL")
 ev:RegisterEvent("PLAYER_ENTERING_WORLD")
-ev:SetScript("OnEvent", function()
+-- Si ya esta mostrado y arranca algo de la lista de supresion (entra en combate,
+-- o cambia de zona hacia un dungeon/raid/pvp/arena), lo oculta -- no solo bloquea
+-- que aparezca de nuevo, tambien lo saca si ya estaba en pantalla.
+ev:RegisterEvent("PLAYER_REGEN_DISABLED")
+ev:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+ev:SetScript("OnEvent", function(_, event)
+    if event == "PLAYER_REGEN_DISABLED" or event == "ZONE_CHANGED_NEW_AREA" then
+        if IsSuppressed() then HideBanner() end
+        return
+    end
     local has = HasNewMail and HasNewMail() and true or false
     if has and not hadMail then
         ShowBanner()

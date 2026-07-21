@@ -413,14 +413,14 @@ local function CreateMail()
     btn:SetSize(90, 20)
     btn:SetFrameLevel(Minimap:GetFrameLevel() + 5)
 
-    -- Icono nativo (pedido del usuario 2026-07-21): mismo atlas que usa el propio
-    -- MiniMapMailFrame de Blizzard (Blizzard_Minimap/Mainline/Minimap.xml,
-    -- MiniMapMailIcon, atlas "ui-hud-minimap-mail-up") -- consistencia con el mismo
-    -- criterio que el icono de tracking (atlas nativo, sin arte propio nuevo).
+    -- Icono (pedido del usuario 2026-07-21, ronda 2: "quita el icono viejo del
+    -- minimapa, reemplazalo por el nuevo icono" -- el mismo atlas que usa el
+    -- banner de correo, MailBanner.lua) -- sigue al lado del texto "Mail" que ya
+    -- se controla via el menu (Minimap > Icons 2).
     local icon = btn:CreateTexture(nil, "ARTWORK")
     icon:SetSize(18, 18)
     icon:SetPoint("LEFT", btn, "LEFT", 0, 0)
-    icon:SetAtlas("ui-hud-minimap-mail-up")
+    icon:SetAtlas("communities-icon-invitemail")
     mm.mailIcon = icon
 
     -- Animacion de "correo nuevo" (pedido del usuario 2026-07-21, referencia
