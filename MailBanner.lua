@@ -73,12 +73,20 @@ local finishSlide = finishAnim:CreateAnimation("Translation")
 finishSlide:SetOffset(0, SLIDE_DIST)
 finishSlide:SetDuration(0.4); finishSlide:SetSmoothing("IN")
 
+-- FIX (2026-07-21, medido con /mcfmailtest: a los 0.6s el punto ya estaba en su
+-- lugar -90 pero el alpha seguia en 0): la Translation SI persiste porque el
+-- punto se fija A MANO aca abajo, pero el alpha de la animacion NO persiste solo
+-- -- hay que "clavarlo" a 1 explicitamente aca, igual que ya se hacia con el punto,
+-- o revierte al alpha base (0, el que se puso a mano en ShowBanner) apenas la
+-- animacion termina de tocar.
 startAnim:SetScript("OnFinished", function()
     banner:SetPoint("TOP", UIParent, "TOP", 0, REST_Y)
+    banner:SetAlpha(1)
     pulseAnim:Play()
 end)
 finishAnim:SetScript("OnFinished", function()
     pulseAnim:Stop()
+    banner:SetAlpha(0)
     banner:Hide()
 end)
 
