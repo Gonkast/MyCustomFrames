@@ -50,9 +50,9 @@ None — fully standalone, no other addon required.
 | Command | Effect |
 |---|---|
 | `/mcf` | Toggle Move/Lock (edit mode) |
+| `/mcfmenu` | Open the options panel |
 | `/mcfsetup` | Reopen the setup wizard |
 | `/mcfhud` | Show the Blizzard Edit Mode HUD code (import manually via Esc > Edit Mode > Import Layout) |
-| `/mcfskin` | Diagnostics: AzeriteUI asset-remap bridge |
 | `/mcftrackerdump` | Diagnostics: quest tracker text classification |
 | `/mcfchar` | Diagnostics: portrait "open character panel" button |
 
