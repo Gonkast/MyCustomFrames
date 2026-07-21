@@ -91,8 +91,18 @@ local function ShowBanner()
     finishAnim:Stop()
     pulseAnim:Stop()
     startAnim:Play()
+    print(("|cffff8800[MCF MailBanner DEBUG]|r shown=%s w=%s h=%s alpha=%s"):format(
+        tostring(banner:IsShown()), tostring(banner:GetWidth()), tostring(banner:GetHeight()), tostring(banner:GetAlpha())))
 end
 ns.ShowMailBanner = ShowBanner
+
+-- DIAGNOSTICO temporal: /mcfmailtest fuerza el banner sin depender de HasNewMail,
+-- para aislar si el problema es la deteccion de correo o el dibujado en si.
+SLASH_MCFMAILTEST1 = "/mcfmailtest"
+SlashCmdList["MCFMAILTEST"] = function()
+    print("|cffff8800[MCF MailBanner DEBUG]|r HasNewMail=" .. tostring(HasNewMail and HasNewMail()))
+    ShowBanner()
+end
 
 local function HideBanner()
     if not banner:IsShown() then return end
