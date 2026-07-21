@@ -56,13 +56,14 @@ local icon = banner:CreateTexture(nil, "OVERLAY")
 icon:SetAtlas("communities-icon-invitemail", true)
 local iw, ih = icon:GetSize()
 if iw and iw > 0 then icon:SetSize(iw * 0.65, ih * 0.65) end
-icon:SetPoint("RIGHT", banner, "RIGHT", -18, 2)
+icon:SetPoint("RIGHT", banner, "RIGHT", -10, 2)
 
 -- Texto centrado (pedido del usuario, ronda 2, con captura de referencia):
--- "You have new mail, check your mailbox!".
+-- "You have new mail, check your mailbox!". Ronda 4: ambos corridos un poco
+-- mas a la derecha.
 local text = banner:CreateFontString(nil, "OVERLAY")
 text:SetFont("Fonts\\FRIZQT__.TTF", 14, "OUTLINE")
-text:SetPoint("CENTER", banner, "CENTER", -6, 2)
+text:SetPoint("CENTER", banner, "CENTER", 6, 2)
 text:SetTextColor(1, 0.882, 0.608)
 text:SetText("You have new mail, check your mailbox!")
 
