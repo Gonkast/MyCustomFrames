@@ -91,8 +91,15 @@ local function ShowBanner()
     finishAnim:Stop()
     pulseAnim:Stop()
     startAnim:Play()
-    print(("|cffff8800[MCF MailBanner DEBUG]|r shown=%s w=%s h=%s alpha=%s"):format(
-        tostring(banner:IsShown()), tostring(banner:GetWidth()), tostring(banner:GetHeight()), tostring(banner:GetAlpha())))
+    print(("|cffff8800[MCF MailBanner DEBUG]|r t0 shown=%s w=%s h=%s alpha=%s startPlaying=%s"):format(
+        tostring(banner:IsShown()), tostring(banner:GetWidth()), tostring(banner:GetHeight()),
+        tostring(banner:GetAlpha()), tostring(startAnim:IsPlaying())))
+    C_Timer.After(0.6, function()
+        print(("|cffff8800[MCF MailBanner DEBUG]|r t+0.6s shown=%s alpha=%s point=%s,%s pulsePlaying=%s"):format(
+            tostring(banner:IsShown()), tostring(banner:GetAlpha()),
+            tostring(select(4, banner:GetPoint())), tostring(select(5, banner:GetPoint())),
+            tostring(pulseAnim:IsPlaying())))
+    end)
 end
 ns.ShowMailBanner = ShowBanner
 
