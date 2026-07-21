@@ -3048,10 +3048,11 @@ local function BuildPanel()
         MakeCheckbox(f, "Show mail indicator", "showMail", L, -74)
         MakeCheckbox(f, "Show LFG eye", "showEye", L, -106)
         MakeCheckbox(f, "Show XP/Reputation ring", "showRing", L, -138)
+        MakeCheckbox(f, "Show tracking button", "showTracking", L, -170)
         -- Pedido del usuario 2026-07-19: "quiero poder moverlo, y que siga al
         -- minimap de mi addon" (UIWidgetBelowMinimapContainerFrame nativo --
         -- catch-up buffs, barras de faccion, etc).
-        MakeCheckbox(f, "Follow native below-minimap widget (catch-up buffs, etc)", "showBelowMinimapWidget", L, -170)
+        MakeCheckbox(f, "Follow native below-minimap widget (catch-up buffs, etc)", "showBelowMinimapWidget", L, -202)
     end
     -- Minimap / Icons (offsets del eye y del boton de desmontar). Reorganizado
     -- 2026-07-19 (pedido del usuario, "esta muy desorganizado, los ultimos
@@ -3078,10 +3079,17 @@ local function BuildPanel()
         MakeSlider(f, "Widget offset X", -200, 200, 1, "widgetOffsetX", R, -206)
         MakeSlider(f, "Widget offset Y", -200, 200, 1, "widgetOffsetY", R, -260)
 
+        -- Pedido del usuario 2026-07-21: boton de tracking, arrastrable libremente en
+        -- Lock (ver Minimap.lua CreateTracking) -- estos sliders son el equivalente
+        -- fino/numerico, para cuando arrastrar a mano no alcanza.
+        MakeHeader(f, "Tracking button", L, -326, 200)
+        MakeSlider(f, "Tracking offset X", -200, 200, 1, "trackingOffsetX", L, -366)
+        MakeSlider(f, "Tracking offset Y", -200, 200, 1, "trackingOffsetY", L, -420)
+
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
-        note:SetPoint("TOPLEFT", L, -326); note:SetWidth(430); note:SetJustifyH("LEFT")
+        note:SetPoint("TOPLEFT", L, -486); note:SetWidth(430); note:SetJustifyH("LEFT")
         note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        note:SetText("Offsets are relative to the minimap's own center (LFG eye), top edge (dismount button), bottom edge (coordinates), or bottom edge again (below-minimap widget).")
+        note:SetText("Offsets are relative to the minimap's own center (LFG eye, tracking button), top edge (dismount button), bottom edge (coordinates), or bottom edge again (below-minimap widget). The tracking button can also be dragged freely while in Lock mode.")
     end
     -- Minimap / Textures (borde, fondo, eye — la barra de XP/Reputacion NO se
     -- personaliza, a pedido del usuario, para no romper el layout del anillo).

@@ -479,6 +479,32 @@ local function CreateTracking()
     tex:SetAllPoints()
     mm.trackingBtn = btn
 
+    -- Arrastre libre (pedido del usuario 2026-07-21), SOLO en modo Lock -- mismo criterio
+    -- que el resto del addon (root del minimapa incluido): mouse normal abre el menu de
+    -- tracking, drag solo cuenta si ns.IsUnlocked(). Guarda la posicion como offset
+    -- relativo al CENTRO del minimapa (mm.root), nunca a UIParent -- asi "sigue siempre
+    -- al minimapa": si el usuario despues mueve el minimapa entero, este boton viaja con
+    -- el sin tocarse nada mas (mismo mecanismo que el resto de los iconos, offsetX/Y).
+    btn.editBG = ns.MakeEditHighlight(btn, "Tracking")
+    btn:SetMovable(true)
+    btn:RegisterForDrag("LeftButton")
+    btn:SetScript("OnDragStart", function(self)
+        if ns.IsUnlocked() and not InCombatLockdown() then self:StartMoving() end
+    end)
+    btn:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        local p = P()
+        if not p then return end
+        local s, ps = self:GetEffectiveScale(), mm.root:GetEffectiveScale()
+        local fx, fy = self:GetCenter()
+        local px, py = mm.root:GetCenter()
+        if fx and px then
+            p.trackingOffsetX = (fx * s - px * ps) / s
+            p.trackingOffsetY = (fy * s - py * ps) / s
+        end
+        if mm.LayoutTracking then mm.LayoutTracking() end
+    end)
+
     -- Estado OPTIMISTA: medido en juego (ver mensajes de debug ya sacados), el build del
     -- menu tardaba <1.1ms -- el "no se activan/se demora" que reporto el usuario era
     -- C_Minimap.SetTracking sin confirmar instantaneo, no el armado del menu. Blizzard
@@ -559,6 +585,12 @@ local function CreateTracking()
         btn:SetShown(p and p.showTracking and true or false)
         btn:ClearAllPoints()
         btn:SetPoint("CENTER", mm.root, "CENTER", (p and p.trackingOffsetX) or 0, (p and p.trackingOffsetY) or 0)
+        -- Outline de edicion (mismo criterio que root.editBG en RefreshMinimap): visible
+        -- SOLO en Lock, y respeta el toggle "hideEditOutline" global.
+        local locked_edit = ns.IsUnlocked and ns.IsUnlocked()
+        if btn.editBG then
+            btn.editBG:SetShown(locked_edit and not (ns.GetDB() and ns.GetDB().hideEditOutline))
+        end
     end
     mm.LayoutTracking = Layout
     Layout()
