@@ -1334,7 +1334,7 @@ end
 -- ==========================================================================
 -- Campos GLOBALES (no por-unidad) que un preset/export debe guardar. Lista unica
 -- reutilizada por Save/Load/Export para que nunca queden desincronizadas (antes solo
--- se guardaba/restauraba `hideEditGreen`, perdiendo Move Party/Boss, Mouselook, Hide
+-- se guardaba/restauraba `hideEditOutline`, perdiendo Move Party/Boss, Mouselook, Hide
 -- Blizzard frames, fade-in, grid/snap, Sync Edit Mode, Explorer y sus zonas).
 -- ==========================================================================
 -- 2026-07-19 (pedido del usuario: "revisa si el export esta tomando el 100%
@@ -1346,7 +1346,7 @@ end
 -- bartenderAutoProfile/bartenderAutoApplied/defaultPreset (bookkeeping
 -- interno/por-personaje, no "apariencia" para compartir).
 local GLOBAL_FLAT_KEYS = {
-    "hideEditGreen", "groupMoveParty", "groupMoveBoss", "mouselook", "hideBlizzard", "barReposition",
+    "hideEditOutline", "groupMoveParty", "groupMoveBoss", "mouselook", "hideBlizzard", "barReposition",
     "dcFix", "gridShow", "gridSnap", "snapElements", "syncBlizzEditMode",
     "previewSecureButton", "fadeIn", "fadeDuration",
     "explorerEnabled", "explorerCombat", "explorerTarget", "explorerCasting", "explorerFadeAlpha",
@@ -1447,7 +1447,7 @@ end
 
 -- Exporta un preset (o el layout actual si name==nil) a un string "MCF1:{...}". Incluye
 -- `tracker` + TODOS los globales (ver GLOBAL_FLAT_KEYS/GLOBAL_TABLE_KEYS) — antes solo se
--- exportaba `hideEditGreen`, perdiendo Move Party/Boss, Mouselook, Hide Blizzard, fade-in,
+-- exportaba `hideEditOutline`, perdiendo Move Party/Boss, Mouselook, Hide Blizzard, fade-in,
 -- grid/snap, Sync Edit Mode y Explorer al exportar/importar.
 ns.ExportPreset = function(name)
     local src = { name = name and db.presets and db.presets[name] and name or "Actual" }
@@ -1539,7 +1539,14 @@ local function InitDB()
     if db.tracker.hideInBG == nil then db.tracker.hideInBG = false end
     if db.tracker.titleOffsetX == nil then db.tracker.titleOffsetX = -18 end
     if db.tracker.dungeonTitleOffsetX == nil then db.tracker.dungeonTitleOffsetX = -18 end
-    if db.hideEditGreen == nil then db.hideEditGreen = false end
+    -- Migracion (2026-07-21): la clave se llamaba `hideEditGreen` (nombre viejo, de
+    -- cuando el highlight de edicion era verde -- hoy es un borde cian, ver
+    -- MakeEditHighlight). Preserva el valor que el usuario ya tenia guardado con el
+    -- nombre viejo en vez de resetearlo a false.
+    if db.hideEditOutline == nil then
+        db.hideEditOutline = (db.hideEditGreen ~= nil) and db.hideEditGreen or false
+    end
+    db.hideEditGreen = nil
     if db.groupMoveParty == nil then db.groupMoveParty = false end
     if db.groupMoveBoss == nil then db.groupMoveBoss = false end
     if db.mouselook == nil then db.mouselook = false end

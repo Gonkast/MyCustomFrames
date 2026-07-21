@@ -211,7 +211,7 @@ local function RefreshMicroMenu()
     else
         MM_Restore()
     end
-    if micromenu.editBG then micromenu.editBG:SetShown(ns.IsUnlocked() and not db.hideEditGreen) end
+    if micromenu.editBG then micromenu.editBG:SetShown(ns.IsUnlocked() and not db.hideEditOutline) end
 end
 ns.RefreshMicroMenu = RefreshMicroMenu
 

@@ -978,10 +978,10 @@ function ns.ApplyRaidPreviewHide()
     -- fuerza tambien EXPLICITO por las dudas -- editBG es el unico elemento
     -- de este addon con su propio SetShown independiente del padre.
     if raidHeader.editBG then
-        raidHeader.editBG:SetShown((not hide) and not (ns.GetDB().hideEditGreen))
+        raidHeader.editBG:SetShown((not hide) and not (ns.GetDB().hideEditOutline))
     end
     if raidHeader.thickBorder then
-        raidHeader.thickBorder:SetShown((not hide) and not (ns.GetDB().hideEditGreen))
+        raidHeader.thickBorder:SetShown((not hide) and not (ns.GetDB().hideEditOutline))
     end
 end
 

@@ -1,6 +1,17 @@
 # MyCustomFrames — estructura y notas (v8.x, "AzeriteUI — Gonkast Preset")
 
-**MINIMAP (2026-07-17, nuevo, NOT YET VALIDADO EN JUEGO):** primer componente grande del plan
+> **REGLA FIJA (pedido explicito del usuario, reconfirmado 2026-07-21): TODO agregado nuevo de
+> tamaño considerable (feature, subsistema, varias funciones) va en un `.lua` APARTE, nunca
+> engordando `core.lua` u `Options.lua` directamente.** Motivo real, no solo prolijidad:
+> `core.lua` esta al limite de **200 locals de nivel-archivo** (Lua rompe la carga de TODO el
+> addon con "main function has more than 200 local variables") y la funcion `BuildPanel` de
+> `Options.lua` esta al limite de **60 upvalues por funcion** — ya rompio la carga una vez esta
+> sesion por esto (ver seccion "AUDITORIA 2026-07-17" mas abajo). Patron ya establecido: Units/
+> Portraits/Auras/InfoBar/Editing/Glow/ChatBubble/MicroMenu/Grouping/Tracker/Minimap/Nameplates/
+> Raid/etc, todos archivos propios que exponen `ns.Loquesea` y leen `ns.GetDB()`/`ns.IsUnlocked()`
+> en vez de los locals `db`/`unlocked` de core.
+
+**MINIMAP (2026-07-17, nuevo, VALIDADO EN JUEGO 2026-07-21):** primer componente grande del plan
 "completar la UI copiando Map/Nameplates/Raid/Arena de AzeriteUI". `Minimap.lua` (nuevo, standalone,
 NO depende de AzeriteUI/oUF/AceAddon) reproduce el look de AzeriteUI: mascara redonda
 (`minimap-mask-transparent.tga`) + fondo opaco detras (`minimap-mask-opaque.tga`) + borde decorativo
@@ -48,7 +59,7 @@ router central): `CurrentProfile`/`ApplyCurrent`, `RefreshOutlineNames`/`Refresh
 FillDefaults/Presets, el ticker/eventos, Explorer, Hide-Blizzard, Mouselook — todos ahora llaman a
 las funciones movidas via `ns.RefreshUnit/ns.PowerShouldShow/ns.UnitApplyLayout/ns.UpdatePetDriver/
 ns.UpdatePartyDrivers/ns.ReadCastMode/ns.ResetCastBar/ns.P`. Backup pre-split en
-`backup/core_pre_split_*.lua`. **Fase 2 (Portraits.lua) — DONE 2026-07-17, NOT YET VALIDATED IN GAME.** Mismo dia, misma sesion:
+`backup/core_pre_split_*.lua`. **Fase 2 (Portraits.lua) — DONE 2026-07-17, VALIDATED IN GAME 2026-07-21.** Mismo dia, misma sesion:
 extraido TODO el subsistema de portraits (modelo 3D/icono de clase, badges de faccion/muerte/
 combate/raid-target/rol-lider, doble posicion, `CreatePortrait`) a **`Portraits.lua`** (nuevo,
 carga despues de Units.lua). **core.lua bajo de 157/200 a 139/200 locals** (18 liberados),
@@ -63,7 +74,7 @@ ns.PartyContentAllowed/ns.PortraitShouldShow/ns.UpdateFocusPortraitHighlight`: `
 UNIT_MODEL_CHANGED/UNIT_PET/PLAYER_FOCUS_CHANGED/PLAYER_TARGET_CHANGED), el Explorer
 (ExplorerReset/ExplorerResetAll) y el ticker principal. Backup en `backup/core_pre_portraits_*.lua`.
 
-**Fase 2b (Auras.lua) — DONE 2026-07-17, NOT YET VALIDATED IN GAME.** Mismo dia: extraido TODO el
+**Fase 2b (Auras.lua) — DONE 2026-07-17, VALIDATED IN GAME 2026-07-21.** Mismo dia: extraido TODO el
 subsistema de auras (buffs/debuffs combinados, grid, overlay seguro de cancelar buff con clic
 derecho, `CreateAuraGroup`) a **`Auras.lua`** (nuevo, carga despues de Portraits.lua). **core.lua
 bajo de 139/200 a 118/200 locals** (21 liberados), Auras.lua queda en 22/200. El ticker llama
@@ -73,7 +84,7 @@ ns.UpdateAuraGroup` (evento PLAYER_REGEN_ENABLED/PLAYER_TARGET_CHANGED/UNIT_AURA
 tambien contra referencias sin parentesis (leccion de Portraits.lua) — ninguna encontrada esta
 vez. Backup en `backup/core_pre_auras_*.lua`.
 
-**Fase 2c (InfoBar.lua) — DONE 2026-07-17, NOT YET VALIDADO EN JUEGO.** Mismo dia: extraido el
+**Fase 2c (InfoBar.lua) — DONE 2026-07-17, VALIDADO EN JUEGO 2026-07-21.** Mismo dia: extraido el
 info bar (hora/fps/ms/zona + reloj-calendario, `CreateInfoBar`) a **`InfoBar.lua`** (nuevo, carga
 despues de Auras.lua). **core.lua bajo de 118/200 a 109/200 locals**, InfoBar.lua queda en 10/200.
 Caso especial de este corte: el frame UNICO `infobar` era un local de core reasignado dentro de
@@ -85,7 +96,7 @@ sincronizaba ademas del local). Tambien se expuso `ns.UpdateInfoBarValues` (llam
 ticker, no capturada por el primer grep con parentesis en un primer paso — encontrada en el barrido
 final). Backup en `backup/core_pre_infobar_*.lua`.
 
-**Fase 2d (Editing.lua) — DONE 2026-07-17, NOT YET VALIDADO EN JUEGO. CIERRE DE LA FASE 2.**
+**Fase 2d (Editing.lua) — DONE 2026-07-17, VALIDADO EN JUEGO 2026-07-21. CIERRE DE LA FASE 2.**
 Ultimo corte: grid de alineacion, snap entre elementos, `SetUnlocked` (entra/sale de preview,
 funcion mas cross-cutting del addon — toca units/portraits/auras/infobar/micromenu), integracion
 con el Edit Mode de Blizzard, copiar/pegar settings — todo a **`Editing.lua`** (nuevo, carga
@@ -103,13 +114,10 @@ ya establecido. Backup en `backup/core_pre_editing_*.lua`.
 **RESUMEN FASE 2 completa (2026-07-17, mismo dia, 4 cortes seguidos tras Units.lua de la sesion
 anterior): core.lua 189/200 → 99/200 locals** (90 liberados en total, mas de la mitad). Archivos
 nuevos: Units.lua (33), Portraits.lua (19), Auras.lua (22), InfoBar.lua (10), Editing.lua (11) —
-todos muy por debajo del limite, margen enorme para features futuras. **PENDIENTE CRITICO: NINGUNO
-de estos 5 cortes fue validado en juego todavia salvo Units.lua** (confirmado por el usuario antes
-de continuar con Portraits/Auras/InfoBar/Editing en la misma sesion, sin pausar a testear cada
-uno). Antes de agregar features nuevas: cargar el addon y verificar que TODO sigue funcionando
-(unitframes, portraits, auras, info bar, modo edicion/preview, grid/snap, copiar/pegar, Edit Mode
-de Blizzard) — si algo falla, los backups en `backup/core_pre_*.lua` permiten revertir cualquier
-fase individual sin perder las demas.
+todos muy por debajo del limite, margen enorme para features futuras. **VALIDADO EN JUEGO
+2026-07-21: los 5 cortes (Units/Portraits/Auras/InfoBar/Editing) confirmados funcionando por el
+usuario** (quedaba pendiente desde 2026-07-17, cuando se hicieron los 4 ultimos seguidos sin
+pausar a testear cada uno).
 
 **AUDITORIA 2026-07-17 (limites de Lua + codigo muerto):**
 - **`core.lua` esta AL LIMITE: ~195/200 locals de nivel-archivo** (contado con el mismo metodo

@@ -321,7 +321,7 @@ local function SetUnlocked(state)
         return
     end
     ns.SetUnlockedFlag(state)
-    local hideGreen = ns.GetDB() and ns.GetDB().hideEditGreen
+    local hideGreen = ns.GetDB() and ns.GetDB().hideEditOutline
     for _, u in pairs(ns.frames) do
         u.button:EnableMouseWheel(state)   -- rueda ajusta escala solo en preview
         if state then
@@ -403,9 +403,9 @@ local function SetUnlocked(state)
     print(state and "|cff00ff00[MCF]|r Preview ON." or "|cff00ff00[MCF]|r Preview OFF.")
 end
 ns.SetUnlocked = SetUnlocked
-ns.ToggleGreenZone = function()
+ns.ToggleEditOutline = function()
     if ns.IsUnlocked() then
-        local hideGreen = ns.GetDB() and ns.GetDB().hideEditGreen
+        local hideGreen = ns.GetDB() and ns.GetDB().hideEditOutline
         for _, u in pairs(ns.frames) do u.editBG:SetShown(not hideGreen) end
         for _, u in pairs(ns.portraits) do if u.editBG then u.editBG:SetShown(not hideGreen) end end
         for _, g in pairs(ns.auras) do if g.editBG then g.editBG:SetShown(not hideGreen) end end

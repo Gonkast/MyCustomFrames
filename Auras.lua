@@ -451,7 +451,7 @@ local function UpdateAuraGroup(g)
         return
     end
     g.root:Show()
-    if g.editBG then g.editBG:SetShown(ns.IsUnlocked() and not (ns.GetDB() and ns.GetDB().hideEditGreen)) end
+    if g.editBG then g.editBG:SetShown(ns.IsUnlocked() and not (ns.GetDB() and ns.GetDB().hideEditOutline)) end
 
     local list
     if ns.IsUnlocked() then

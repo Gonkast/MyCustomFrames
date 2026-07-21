@@ -483,7 +483,7 @@ local function Refresh()
         CreateRoot()
     end
     ApplyPosition()
-    root.editBG:SetShown(unlocked and not (ns.GetDB() and ns.GetDB().hideEditGreen))
+    root.editBG:SetShown(unlocked and not (ns.GetDB() and ns.GetDB().hideEditOutline))
     root:EnableMouse(unlocked)
 
     local layoutName, powerType, colorKey = DetectResource()

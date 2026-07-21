@@ -2331,8 +2331,8 @@ local function BuildPanel()
         -- ===== DERECHA: opciones globales + quest tracker =====
         MakeHeader(f, "Global options", R, -6, 200)
         MakeToggle(f, "Hide edit outline in preview", R, -30,
-            function() return ns.GetDB().hideEditGreen end,
-            function(v) ns.GetDB().hideEditGreen = v; ns.ToggleGreenZone() end)
+            function() return ns.GetDB().hideEditOutline end,
+            function(v) ns.GetDB().hideEditOutline = v; ns.ToggleEditOutline() end)
         MakeToggle(f, "Move Party 1-5 together", R, -54,
             function() return ns.GetDB().groupMoveParty end,
             function(v) ns.GetDB().groupMoveParty = v end)
@@ -3463,8 +3463,8 @@ local function BuildPanel()
             function() return ns.IsUnlocked() end,
             function() ns.SetUnlocked(not ns.IsUnlocked()) end)
         MakeToggle(f, "Show edit outline", L, -64,
-            function() return not ns.GetDB().hideEditGreen end,
-            function(v) ns.GetDB().hideEditGreen = not v; if ns.ToggleGreenZone then ns.ToggleGreenZone() end end)
+            function() return not ns.GetDB().hideEditOutline end,
+            function(v) ns.GetDB().hideEditOutline = not v; if ns.ToggleEditOutline then ns.ToggleEditOutline() end end)
         MakeToggle(f, "Secure button preview (hit area)", L, -88,
             function() return ns.GetDB().previewSecureButton end,
             function(v) ns.GetDB().previewSecureButton = v; if ns.RefreshAll then ns.RefreshAll() end end)
@@ -3678,7 +3678,7 @@ local function BuildPanel()
     local greenBtn = MakeTabButton(panel, "Outline: ON", 104, 24)
     greenBtn:SetPoint("LEFT", moveBtn, "RIGHT", 6, 0)
     local function updGreen()
-        local hidden = ns.GetDB().hideEditGreen
+        local hidden = ns.GetDB().hideEditOutline
         local txt = hidden and "Outline: OFF" or "Outline: ON"
         greenBtn.text:SetText(txt)
         greenBtn._label = txt   -- el label es DINAMICO: ReassertLabels debe reaplicar EL ACTUAL, no el de creacion
@@ -3686,12 +3686,12 @@ local function BuildPanel()
     end
     greenBtn:SetScript("OnClick", function()
         local d = ns.GetDB()
-        d.hideEditGreen = not (d.hideEditGreen and true or false)
-        ns.ToggleGreenZone(); updGreen()
+        d.hideEditOutline = not (d.hideEditOutline and true or false)
+        ns.ToggleEditOutline(); updGreen()
     end)
     refreshers[#refreshers + 1] = updGreen
     panelButtons[#panelButtons + 1] = greenBtn
-    AddTooltip(greenBtn, "Outline", "Toggles the green edit outline shown around elements while in Move/Lock mode.")
+    AddTooltip(greenBtn, "Outline", "Toggles the edit outline shown around elements while in Move/Lock mode.")
 
     -- 2026-07-17: Copy/Paste se movieron junto al titulo de unidad (esquina
     -- superior derecha del contenido, ver unitCopyBtn/unitPasteBtn). En su

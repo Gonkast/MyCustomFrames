@@ -259,7 +259,7 @@ local function CreateShape()
     -- ALTO que Minimap y ahora se habilita (EnableMouse/EnableMouseWheel) solo
     -- en Lock (ver RefreshMinimap) -- eso lo pone a EL, no al mapa nativo, a
     -- recibir el click/rueda dentro del circulo. Los hooks sobre Minimap son
-    -- un respaldo (por si editBG esta oculto por "hideEditGreen"); en juego
+    -- un respaldo (por si editBG esta oculto por "hideEditOutline"); en juego
     -- normal, bloqueado, ninguno de los dos interfiere con el click/zoom nativo.
     Minimap:HookScript("OnMouseDown", function(_, button)
         if button == "LeftButton" then StartDrag(root) end
@@ -1077,7 +1077,7 @@ local function RefreshMinimap()
         -- arrastrarlo/soltarlo DESDE su zona vacia mientras se edita.
         root:EnableMouse(locked_edit)
         if root.editBG then
-            root.editBG:SetShown(locked_edit and not ns.GetDB().hideEditGreen)
+            root.editBG:SetShown(locked_edit and not ns.GetDB().hideEditOutline)
             -- A pedido del usuario: en Lock, el outline debe BLOQUEAR el minimapa
             -- real (que esta debajo, con su propio zoom/click nativo) para poder
             -- arrastrarlo/escalarlo sin que la rueda haga zoom al mapa por error.

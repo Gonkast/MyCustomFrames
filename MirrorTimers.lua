@@ -376,7 +376,7 @@ local function RefreshPreview()
         SkinOne(wrapper, true)
         wrapper:EnableMouse(true)
         wrapper:EnableMouseWheel(true)
-        if wrapper.editBG then wrapper.editBG:SetShown(not (ns.GetDB() and ns.GetDB().hideEditGreen)) end
+        if wrapper.editBG then wrapper.editBG:SetShown(not (ns.GetDB() and ns.GetDB().hideEditOutline)) end
         wrapper:Show()
         if container then container:SetAlpha(0) end
     else

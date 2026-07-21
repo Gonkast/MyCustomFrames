@@ -100,7 +100,7 @@ local function RefreshInfoBar()
 
     -- (Botones de calendario y mochila ELIMINADOS: el calendario ahora se abre clickeando el reloj.)
 
-    if ib.editBG then ib.editBG:SetShown(ns.IsUnlocked() and not ns.GetDB().hideEditGreen) end
+    if ib.editBG then ib.editBG:SetShown(ns.IsUnlocked() and not ns.GetDB().hideEditOutline) end
     -- "Hide in preview (Lock only)" (lockHide.infobar): oculta SOLO en preview.
     if ns.IsUnlocked() and ns.GetDB().lockHide and ns.GetDB().lockHide.infobar then
         ib.root:Hide()
@@ -226,7 +226,7 @@ local function CreateInfoBar()
 end
 
 CreateInfoBar()
--- Expuestas para que core.lua (RefreshOutlineNames, SetUnlocked, ToggleGreenZone, CollectSnapLines,
+-- Expuestas para que core.lua (RefreshOutlineNames, SetUnlocked, ToggleEditOutline, CollectSnapLines,
 -- GetElementFrame/Explorer, ticker principal) lean el frame del info bar sin depender de este local.
 ns.InfoBarPlace = InfoBarPlace
 ns.UpdateInfoBarValues = UpdateInfoBarValues

@@ -472,7 +472,7 @@ local function PortraitApplyAppearance(u)
     PortraitUpdateState(u, ns.IsUnlocked())
 
     -- Zona verde de edicion.
-    if u.editBG then u.editBG:SetShown(ns.IsUnlocked() and not (ns.GetDB() and ns.GetDB().hideEditGreen)) end
+    if u.editBG then u.editBG:SetShown(ns.IsUnlocked() and not (ns.GetDB() and ns.GetDB().hideEditOutline)) end
     -- "Hide in preview (Lock only)" (lockHide.portraits): oculta TODOS los
     -- portraits SOLO mientras se edita, sin tocar su showEnabled real.
     if ns.IsUnlocked() and ns.GetDB().lockHide and ns.GetDB().lockHide.portraits then
