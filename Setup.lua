@@ -215,6 +215,31 @@ local function TooltipToggle(parent, label, x, y, getf, setf, tip)
     return cb
 end
 
+-- Glow pulsante para llamar la atencion sobre el boton de accion principal de una pagina
+-- (pedido del usuario 2026-07-20: "la mayoria clickea Next hasta el final" -- necesita algo
+-- OBVIO en los botones Apply de las paginas 6/7, no solo texto que se puede seguir ignorando).
+-- Reusa la misma textura que el glow de action bar del addon (Assets\actionbuttonhighlight.tga)
+-- para que se sienta parte del mismo addon, no un elemento ajeno.
+local GLOW_TEX = A .. "actionbuttonhighlight.tga"
+local function AttentionGlow(btn, pad)
+    pad = pad or 10
+    local g = btn:CreateTexture(nil, "OVERLAY", nil, 1)
+    g:SetTexture(GLOW_TEX)
+    g:SetBlendMode("ADD")
+    g:SetPoint("TOPLEFT", btn, "TOPLEFT", -pad, pad)
+    g:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", pad, -pad)
+    local ag = g:CreateAnimationGroup()
+    ag:SetLooping("BOUNCE")
+    local a = ag:CreateAnimation("Alpha")
+    a:SetFromAlpha(0.25); a:SetToAlpha(1); a:SetDuration(0.7); a:SetSmoothing("IN_OUT")
+    ag:Play()
+    btn.attentionGlow = g
+    -- Al clickear el boton, la pagina ya cumplio su proposito -- apaga el glow para no
+    -- seguir insistiendo despues de que el usuario ya hizo lo que se le pedia.
+    btn:HookScript("OnClick", function() ag:Stop(); g:Hide() end)
+    return g
+end
+
 -- Fade suave al cambiar de pagina (en vez de Show/Hide seco).
 local function FadeIn(f, duration)
     f:Show(); f:SetAlpha(0)
@@ -662,6 +687,7 @@ local function BuildPage6(content)
     -- poco mas del parrafo de arriba (2026-07-16, pedido del usuario: se veian pegados).
     local applyBtn = TexButton(p, CUSTOM.APPLY, 200, 40, "Apply now", 14)
     applyBtn:SetPoint("TOPLEFT", 2, -100)
+    AttentionGlow(applyBtn)
 
     local hudBtn = TexButton(p, CUSTOM.NAVBTN, 180, 40, "Edit Mode Code", 14)
     hudBtn:SetPoint("LEFT", applyBtn, "RIGHT", 14, 0)
@@ -739,6 +765,20 @@ local function BuildPage7(content)
         "Bartender4 is the one addon that sometimes keeps using its own profile even after a /reload. " ..
         "Pick a profile below and click Apply to force it for THIS character specifically.")
 
+    -- Pedido del usuario 2026-07-20: "que señale que deberia activar todo" -- esta pagina se
+    -- construye UNA sola vez por apertura del wizard (ver contentPages[7] = BuildPage7(content)
+    -- en BuildFrame), asi que esto prende los 2 toggles de abajo por default al abrir el wizard
+    -- en vez de dejarlos apagados esperando que el usuario los note. Solo un empujon inicial:
+    -- el usuario los puede apagar de nuevo libremente despues, esto no se vuelve a forzar.
+    do
+        local d = ns.GetDB()
+        if d then
+            if d.bartenderAutoProfile == nil then d.bartenderAutoProfile = selectedBTProfile end
+            d.barReposition = true
+            if ns.RefreshBarReposition then ns.RefreshBarReposition() end
+        end
+    end
+
     local dropBtn = DropdownButton(p, 240, 26, selectedBTProfile, 12)
     dropBtn:SetPoint("TOPLEFT", 4, -76)
 
@@ -799,6 +839,7 @@ local function BuildPage7(content)
 
     local applyBtn = TexButton(p, CUSTOM.APPLY, 240, 40, "Apply to this character", 13)
     applyBtn:SetPoint("TOPLEFT", 2, -184)
+    AttentionGlow(applyBtn)
 
     local resultFs = p:CreateFontString(nil, "ARTWORK")
     SF(resultFs, 11)
