@@ -3240,21 +3240,25 @@ local function BuildPanel()
         -- guardianes con dueño jugador. El campo interno sigue llamandose
         -- nameOnlyFriendlyNeutral, no vale la pena migrarlo. Ver
         -- ShouldHideExceptName/ReassertNameGeometry en Nameplates.lua.
+        -- FIX (2026-07-20, reportado por el usuario con captura: el texto largo de este
+        -- checkbox se pisaba con el de al lado en la columna R -- L/R estan pensados para
+        -- labels cortos, "Only show name on friendly players/NPCs" es demasiado largo para
+        -- 226px de columna). Apilados en la misma columna (L) en vez de lado a lado.
         MakeCheckbox(f, "Only show name on friendly players/NPCs", "nameOnlyFriendlyNeutral", L, -276)
         -- Pedido del usuario 2026-07-19: solo nombre para NPCs de escolta/
         -- mision EN DUNGEON, via CVars nativos (funciona incluso en
         -- ForbiddenNamePlate, confirmado en vivo -- ver ApplyMaxDistanceNow
         -- en Nameplates.lua). Independiente del checkbox de arriba.
-        MakeCheckbox(f, "Dungeon escort NPCs (native)", "showFriendlyNPCPlates", R, -276)
+        MakeCheckbox(f, "Dungeon escort NPCs (native)", "showFriendlyNPCPlates", L, -300)
         local onlyNameNote = f:CreateFontString(nil, "ARTWORK"); setFont(onlyNameNote, 10)
-        onlyNameNote:SetPoint("TOPLEFT", L, -300); onlyNameNote:SetWidth(430); onlyNameNote:SetJustifyH("LEFT")
+        onlyNameNote:SetPoint("TOPLEFT", L, -324); onlyNameNote:SetWidth(430); onlyNameNote:SetJustifyH("LEFT")
         onlyNameNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         onlyNameNote:SetText("Players: colored by class. NPCs (vendors, guards, etc): preset color. Excludes pets and hostiles.")
 
         -- Offset PROPIO del modo de arriba (pedido del usuario): sin la barra
         -- visible, la posicion normal del nombre puede no quedar bien.
-        MakeSlider(f, "Offset X", -100, 100, 1, "nameOnlyOffsetX", L, -350)
-        MakeSlider(f, "Offset Y", -100, 100, 1, "nameOnlyOffsetY", R, -350)
+        MakeSlider(f, "Offset X", -100, 100, 1, "nameOnlyOffsetX", L, -374)
+        MakeSlider(f, "Offset Y", -100, 100, 1, "nameOnlyOffsetY", R, -374)
     end
 
     -- Nueva pestaña "Alpha" (2026-07-19, pedido del usuario): 5 controles

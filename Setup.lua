@@ -218,20 +218,25 @@ end
 -- Glow pulsante para llamar la atencion sobre el boton de accion principal de una pagina
 -- (pedido del usuario 2026-07-20: "la mayoria clickea Next hasta el final" -- necesita algo
 -- OBVIO en los botones Apply de las paginas 6/7, no solo texto que se puede seguir ignorando).
--- Reusa la misma textura que el glow de action bar del addon (Assets\actionbuttonhighlight.tga)
--- para que se sienta parte del mismo addon, no un elemento ajeno.
-local GLOW_TEX = A .. "actionbuttonhighlight.tga"
+-- Textura propia del usuario (Apply_Button_highlight.tga) -- pedido explicito: DETRAS del
+-- boton (efecto halo asomando por los bordes, no encima tapando el texto) y con tinte
+-- DORADO (la textura en si es blanca/escala de grises, pensada para tintar via VertexColor,
+-- por eso se veia blanca). Se crea en el PARENT del boton (no en el boton mismo) para que
+-- quede detras en el orden de dibujado sin importar layer/sublevel.
+local GLOW_TEX = U .. "Apply_Button_highlight.tga"
+local GLOW_COLOR = { 1, 0.82, 0.35 }   -- dorado
 local function AttentionGlow(btn, pad)
-    pad = pad or 10
-    local g = btn:CreateTexture(nil, "OVERLAY", nil, 1)
+    pad = pad or 0
+    local g = btn:GetParent():CreateTexture(nil, "ARTWORK")
     g:SetTexture(GLOW_TEX)
     g:SetBlendMode("ADD")
+    g:SetVertexColor(GLOW_COLOR[1], GLOW_COLOR[2], GLOW_COLOR[3])
     g:SetPoint("TOPLEFT", btn, "TOPLEFT", -pad, pad)
     g:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", pad, -pad)
     local ag = g:CreateAnimationGroup()
     ag:SetLooping("BOUNCE")
     local a = ag:CreateAnimation("Alpha")
-    a:SetFromAlpha(0.25); a:SetToAlpha(1); a:SetDuration(0.7); a:SetSmoothing("IN_OUT")
+    a:SetFromAlpha(0.2); a:SetToAlpha(1); a:SetDuration(0.9); a:SetSmoothing("IN_OUT")
     ag:Play()
     btn.attentionGlow = g
     -- Al clickear el boton, la pagina ya cumplio su proposito -- apaga el glow para no
@@ -897,7 +902,7 @@ local function BuildPage8(content)
         "is drag-and-scroll editable in the Nameplate Designer, a visual panel (not sliders/text " ..
         "fields). Open it now to set it up, or later anytime with |cffffff00/mcfnpdesigner|r.")
 
-    local designBtn = TexButton(p, CUSTOM.APPLY, 220, 40, "Open Nameplate Designer", 14)
+    local designBtn = TexButton(p, CUSTOM.APPLY, 220, 40, "Nameplate Designer", 14)
     designBtn:SetPoint("TOPLEFT", 2, -148)
     designBtn:SetScript("OnClick", function()
         -- Pedido del usuario 2026-07-19: abrir el Designer desde el Setup NO
