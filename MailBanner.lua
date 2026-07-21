@@ -31,26 +31,37 @@ banner:Hide()
 local bg = banner:CreateTexture(nil, "ARTWORK")
 bg:SetPoint("CENTER")
 
--- Tamaño real del banner = tamaño nativo del atlas (useAtlasSize=true), para no
--- estirar/deformar la textura de Blizzard con un tamaño propio inventado.
+-- Tamaño real del banner = tamaño nativo del atlas, escalado por HEADER_SCALE
+-- (pedido del usuario, ronda 3: "haz el header mas grande") -- NO se usa
+-- banner:SetScale() (agrandaria el icono/texto tambien, y el pedido es agrandar
+-- SOLO el header); en cambio se agranda el SIZE de "bg" (y el frame "banner" que
+-- lo envuelve) directamente, dejando icono/texto con su tamaño propio, sin heredar
+-- el escalado.
+local HEADER_SCALE = 1.4
 local function ApplyFactionTexture()
     local faction = UnitFactionGroup and UnitFactionGroup("player")
     local atlas = (faction == "Horde") and "Objective-Header-CampaignHorde" or "Objective-Header-CampaignAlliance"
     bg:SetAtlas(atlas, true)
     local w, h = bg:GetSize()
-    if w and w > 0 then banner:SetSize(w, h) end
+    if w and w > 0 then
+        bg:SetSize(w * HEADER_SCALE, h * HEADER_SCALE)
+        banner:SetSize(w * HEADER_SCALE, h * HEADER_SCALE)
+    end
 end
 
 -- Icono en el borde DERECHO (pedido del usuario, ronda 2 -- antes iba a la
--- izquierda, corregido segun captura de referencia).
+-- izquierda, corregido segun captura de referencia). Tamaño propio mas chico
+-- (pedido ronda 3: "el icono de mail mas pequeño"), independiente de HEADER_SCALE.
 local icon = banner:CreateTexture(nil, "OVERLAY")
 icon:SetAtlas("communities-icon-invitemail", true)
-icon:SetPoint("RIGHT", banner, "RIGHT", -14, 2)
+local iw, ih = icon:GetSize()
+if iw and iw > 0 then icon:SetSize(iw * 0.65, ih * 0.65) end
+icon:SetPoint("RIGHT", banner, "RIGHT", -18, 2)
 
 -- Texto centrado (pedido del usuario, ronda 2, con captura de referencia):
 -- "You have new mail, check your mailbox!".
 local text = banner:CreateFontString(nil, "OVERLAY")
-text:SetFont("Fonts\\FRIZQT__.TTF", 13, "OUTLINE")
+text:SetFont("Fonts\\FRIZQT__.TTF", 14, "OUTLINE")
 text:SetPoint("CENTER", banner, "CENTER", -6, 2)
 text:SetTextColor(1, 0.882, 0.608)
 text:SetText("You have new mail, check your mailbox!")
@@ -67,12 +78,16 @@ startSlide:SetOffset(0, -SLIDE_DIST)
 startSlide:SetDuration(0.4); startSlide:SetSmoothing("OUT")
 
 -- ===================== MAIN: el icono pulsa en loop =====================
+-- Pedido del usuario ronda 3 ("el pulse tiene un rebote extraño al final, que sea
+-- mas suave"): menos amplitud (1.18->1.1) y mas duracion (0.6->0.9) para un
+-- pulso mas calmo -- el "rebote" se notaba mas con un cambio de escala grande en
+-- poco tiempo.
 local pulseAnim = icon:CreateAnimationGroup()
 pulseAnim:SetLooping("BOUNCE")
 local pulseScale = pulseAnim:CreateAnimation("Scale")
 pulseScale:SetOrigin("CENTER", 0, 0)
-pulseScale:SetScale(1.18, 1.18)
-pulseScale:SetDuration(0.6); pulseScale:SetSmoothing("IN_OUT")
+pulseScale:SetScale(1.1, 1.1)
+pulseScale:SetDuration(0.9); pulseScale:SetSmoothing("IN_OUT")
 
 -- ===================== FINISH: fade-out + slide hacia arriba =====================
 local finishAnim = banner:CreateAnimationGroup()
