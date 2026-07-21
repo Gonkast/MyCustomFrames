@@ -61,7 +61,7 @@ local icon = banner:CreateTexture(nil, "OVERLAY")
 icon:SetAtlas("communities-icon-invitemail", true)
 local iw, ih = icon:GetSize()
 if iw and iw > 0 then icon:SetSize(iw * 0.65, ih * 0.65) end
-icon:SetPoint("RIGHT", banner, "RIGHT", 4, 2)
+icon:SetPoint("RIGHT", banner, "RIGHT", 20, 2)
 
 -- Texto centrado (pedido del usuario, ronda 2, con captura de referencia):
 -- "You have new mail, check your mailbox!". Ronda 4: ambos corridos un poco
