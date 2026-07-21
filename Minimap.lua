@@ -418,7 +418,7 @@ local function CreateMail()
     -- banner de correo, MailBanner.lua) -- sigue al lado del texto "Mail" que ya
     -- se controla via el menu (Minimap > Icons 2).
     local icon = btn:CreateTexture(nil, "ARTWORK")
-    icon:SetSize(18, 18)
+    icon:SetSize(26, 26)
     icon:SetPoint("LEFT", btn, "LEFT", 0, 0)
     icon:SetAtlas("communities-icon-invitemail")
     mm.mailIcon = icon
@@ -506,15 +506,22 @@ local function CreateMail()
         if mm.LayoutMail then mm.LayoutMail() end
     end)
 
+    -- Pedido del usuario 2026-07-21: "que solo salga [el icono del minimapa] si
+    -- el header desaparecio" -- y misma regla de supresion que el banner (nada
+    -- en combate/dungeon/raid/pvp/arena). MailBanner.lua expone ns.IsMailBannerShown
+    -- / ns.IsMailNotificationSuppressed; nil-safe por si ese archivo no cargo.
     local function Update()
         local p = P()
         local hasMail = HasNewMail and HasNewMail()
-        local show = (p and p.showMail) and hasMail
+        local bannerShown = ns.IsMailBannerShown and ns.IsMailBannerShown()
+        local suppressed = ns.IsMailNotificationSuppressed and ns.IsMailNotificationSuppressed()
+        local show = (p and p.showMail) and hasMail and not bannerShown and not suppressed
         fs:SetShown(show and true or false)
         icon:SetShown(show and true or false)
         btn:SetShown(show and true or false)
     end
     mm.UpdateMail = Update
+    ns.RefreshMailIndicator = Update
 
     mm.LayoutMail = function()
         local p = P()

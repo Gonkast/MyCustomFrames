@@ -110,6 +110,15 @@ finishSlide:SetDuration(0.4); finishSlide:SetSmoothing("IN")
 -- -- hay que "clavarlo" a 1 explicitamente aca, igual que ya se hacia con el punto,
 -- o revierte al alpha base (0, el que se puso a mano en ShowBanner) apenas la
 -- animacion termina de tocar.
+-- Pedido del usuario 2026-07-21: "que solo salga [el icono del minimapa] si el
+-- header desaparecio" -- Minimap.lua consulta esto (ns.IsMailBannerShown) para
+-- decidir si mostrar su propio icono, y se le avisa (ns.RefreshMailIndicator)
+-- en cada transicion de mostrado/ocultado de este banner.
+ns.IsMailBannerShown = function() return banner:IsShown() end
+local function NotifyMinimapIcon()
+    if ns.RefreshMailIndicator then ns.RefreshMailIndicator() end
+end
+
 startAnim:SetScript("OnFinished", function()
     banner:SetPoint("TOP", UIParent, "TOP", 0, REST_Y)
     banner:SetAlpha(1)
@@ -119,17 +128,21 @@ finishAnim:SetScript("OnFinished", function()
     pulseAnim:Stop()
     banner:SetAlpha(0)
     banner:Hide()
+    NotifyMinimapIcon()
 end)
 
 -- Supresion por contenido (pedido del usuario 2026-07-21: "que no aparezca si
 -- estoy en combate, dungeon, raid o pvp"). instanceType: "party"=dungeon,
--- "raid"=raid, "pvp"=battleground, "arena"=arena -- los 4 se tapan.
+-- "raid"=raid, "pvp"=battleground, "arena"=arena -- los 4 se tapan. Expuesta
+-- (ns.IsMailNotificationSuppressed) para que Minimap.lua aplique la MISMA regla
+-- a su propio icono.
 local SUPPRESSED_INSTANCE_TYPES = { party = true, raid = true, pvp = true, arena = true }
 local function IsSuppressed()
     if InCombatLockdown() then return true end
     local inInstance, instanceType = IsInInstance()
     return inInstance and SUPPRESSED_INSTANCE_TYPES[instanceType] and true or false
 end
+ns.IsMailNotificationSuppressed = IsSuppressed
 
 local function ShowBanner()
     if not (bg.SetAtlas and icon.SetAtlas) then return end
@@ -141,6 +154,7 @@ local function ShowBanner()
     finishAnim:Stop()
     pulseAnim:Stop()
     startAnim:Play()
+    NotifyMinimapIcon()
 end
 ns.ShowMailBanner = ShowBanner
 
