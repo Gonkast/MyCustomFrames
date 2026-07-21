@@ -73,6 +73,7 @@ local function MinimapDefaults()
         eyeOffsetX = 82, eyeOffsetY = 82,
         -- Al lado de las coordenadas (pedido del usuario 2026-07-21), no espejando al eye.
         trackingOffsetX = -26, trackingOffsetY = 23,
+        mailOffsetX = 0, mailOffsetY = 30,
         dismountOffsetX = 0, dismountOffsetY = 42,
         coordsOffsetX = 3, coordsOffsetY = 23,
         -- Pedido del usuario 2026-07-19: "quiero poder moverlo, y que siga al
@@ -409,29 +410,77 @@ end
 -- ==========================================================================
 local function CreateMail()
     local btn = CreateFrame("Button", nil, mm.root)
-    btn:SetSize(70, 20)
-    btn:SetPoint("BOTTOM", mm.root, "BOTTOM", 0, 30)
+    btn:SetSize(90, 20)
     btn:SetFrameLevel(Minimap:GetFrameLevel() + 5)
+
+    -- Icono nativo (pedido del usuario 2026-07-21): mismo atlas que usa el propio
+    -- MiniMapMailFrame de Blizzard (Blizzard_Minimap/Mainline/Minimap.xml,
+    -- MiniMapMailIcon, atlas "ui-hud-minimap-mail-up") -- consistencia con el mismo
+    -- criterio que el icono de tracking (atlas nativo, sin arte propio nuevo).
+    local icon = btn:CreateTexture(nil, "ARTWORK")
+    icon:SetSize(18, 18)
+    icon:SetPoint("LEFT", btn, "LEFT", 0, 0)
+    icon:SetAtlas("ui-hud-minimap-mail-up")
+    mm.mailIcon = icon
 
     -- fs se ancla a btn (su propio padre), NUNCA al reves: btn:SetAllPoints(fs)
     -- crearia una dependencia circular ("Cannot anchor to a region dependent on it").
     local fs = btn:CreateFontString(nil, "OVERLAY", nil, 1)
     fs:SetFont("Fonts\\FRIZQT__.TTF", 15, "OUTLINE")
     fs:SetTextColor(0.77, 0.77, 0.77, 0.85)
-    fs:SetJustifyH("CENTER")
+    fs:SetJustifyH("LEFT")
     fs:SetJustifyV("BOTTOM")
-    fs:SetAllPoints(btn)
+    fs:SetPoint("LEFT", icon, "RIGHT", 4, 0)
+    fs:SetPoint("RIGHT", btn, "RIGHT", 0, 0)
+    fs:SetHeight(20)
     fs:SetText(MAIL_LABEL or "Mail")
     mm.mailText, mm.mailBtn = fs, btn
+
+    -- Arrastre libre (mismo mecanismo que el boton de tracking, ver CreateTracking) --
+    -- ANCLA "BOTTOM" (no CENTER) para no cambiar la posicion default de toda la vida
+    -- (offsetX=0, offsetY=30 = exactamente donde estaba antes de poder arrastrarse):
+    -- el delta se calcula sobre el punto BOTTOM-centro de self vs de mm.root, no sobre
+    -- GetCenter() (que daria un numero distinto para el mismo punto visual).
+    btn.editBG = ns.MakeEditHighlight(btn, "Mail")
+    btn:SetMovable(true)
+    btn:RegisterForDrag("LeftButton")
+    btn:SetScript("OnDragStart", function(self)
+        if ns.IsUnlocked() and not InCombatLockdown() then self:StartMoving() end
+    end)
+    btn:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        local p = P()
+        if not p then return end
+        local s, ps = self:GetEffectiveScale(), mm.root:GetEffectiveScale()
+        local l, r, b = self:GetLeft(), self:GetRight(), self:GetBottom()
+        local pl, pr, pb = mm.root:GetLeft(), mm.root:GetRight(), mm.root:GetBottom()
+        if l and pl then
+            p.mailOffsetX = (((l + r) / 2) * s - ((pl + pr) / 2) * ps) / s
+            p.mailOffsetY = (b * s - pb * ps) / s
+        end
+        if mm.LayoutMail then mm.LayoutMail() end
+    end)
 
     local function Update()
         local p = P()
         local hasMail = HasNewMail and HasNewMail()
         local show = (p and p.showMail) and hasMail
         fs:SetShown(show and true or false)
+        icon:SetShown(show and true or false)
         btn:SetShown(show and true or false)
     end
     mm.UpdateMail = Update
+
+    mm.LayoutMail = function()
+        local p = P()
+        btn:ClearAllPoints()
+        btn:SetPoint("BOTTOM", mm.root, "BOTTOM", (p and p.mailOffsetX) or 0, (p and p.mailOffsetY) or 30)
+        local locked_edit = ns.IsUnlocked and ns.IsUnlocked()
+        if btn.editBG then
+            btn.editBG:SetShown(locked_edit and not (ns.GetDB() and ns.GetDB().hideEditOutline))
+        end
+    end
+    mm.LayoutMail()
 
     btn:SetScript("OnEnter", function(self)
         GameTooltip_SetDefaultAnchor(GameTooltip, self)
@@ -1242,6 +1291,7 @@ local function RefreshMinimap()
     if mm.coords then mm.coords:SetShown(p.showCoordinates and true or false) end
     if mm.LayoutCoords then mm.LayoutCoords() end
     if mm.UpdateMail then mm.UpdateMail() end
+    if mm.LayoutMail then mm.LayoutMail() end
     if mm.LayoutTracking then mm.LayoutTracking() end
     LayoutEye()
     LayoutBelowMinimapWidget()

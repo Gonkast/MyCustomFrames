@@ -3067,6 +3067,10 @@ local function BuildPanel()
         MakeSlider(f, "Eye offset X", -200, 200, 1, "eyeOffsetX", L, -46)
         MakeSlider(f, "Eye offset Y", -200, 200, 1, "eyeOffsetY", L, -100)
 
+        MakeHeader(f, "Mail indicator", R, -326, 210)
+        MakeSlider(f, "Mail offset X", -200, 200, 1, "mailOffsetX", R, -366)
+        MakeSlider(f, "Mail offset Y", -200, 200, 1, "mailOffsetY", R, -420)
+
         MakeHeader(f, "Coordinates", L, -166, 200)
         MakeSlider(f, "Coords offset X", -200, 200, 1, "coordsOffsetX", L, -206)
         MakeSlider(f, "Coords offset Y", -200, 200, 1, "coordsOffsetY", L, -260)
@@ -3089,7 +3093,7 @@ local function BuildPanel()
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", L, -486); note:SetWidth(430); note:SetJustifyH("LEFT")
         note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        note:SetText("Offsets are relative to the minimap's own center (LFG eye, tracking button), top edge (dismount button), bottom edge (coordinates), or bottom edge again (below-minimap widget). The tracking button can also be dragged freely while in Lock mode.")
+        note:SetText("Offsets are relative to the minimap's own center (LFG eye, tracking button), top edge (dismount button), bottom edge (coordinates, mail indicator), or bottom edge again (below-minimap widget). The tracking button and mail indicator can also be dragged freely while in Lock mode.")
     end
     -- Minimap / Textures (borde, fondo, eye — la barra de XP/Reputacion NO se
     -- personaliza, a pedido del usuario, para no romper el layout del anillo).
