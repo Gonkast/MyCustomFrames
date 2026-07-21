@@ -124,6 +124,8 @@ Big thanks to the people whose work this preset is built on top of:
   layout patterns) is adapted from it, using real assets copied straight from Plumber's `Art/`
   folder. Because of that, this whole project ships under **Plumber's license (GPLv3)**.
 - **M33kAuras** — source of the player-rest flipbook animation data.
+- **["You've got mail!"](https://wago.io/1wKfUxJ8U)** WeakAura — inspired the new-mail banner
+  (slide-in/pulse/slide-out feel), rebuilt here with native Blizzard textures instead of the aura itself.
 
 ## License
 
