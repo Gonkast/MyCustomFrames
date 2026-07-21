@@ -38,10 +38,15 @@ bg:SetPoint("CENTER")
 -- lo envuelve) directamente, dejando icono/texto con su tamaño propio, sin heredar
 -- el escalado.
 local HEADER_SCALE = 1.4
+-- Mismo color dorado del texto (pedido del usuario, ronda 5: "coloriza el header
+-- con el mismo color del texto, pero no el icono") -- se tiñe SOLO "bg" via
+-- SetVertexColor, el icono ("icon") queda sin tocar/con sus colores nativos.
+local TEXT_COLOR = { 1, 0.882, 0.608 }
 local function ApplyFactionTexture()
     local faction = UnitFactionGroup and UnitFactionGroup("player")
     local atlas = (faction == "Horde") and "Objective-Header-CampaignHorde" or "Objective-Header-CampaignAlliance"
     bg:SetAtlas(atlas, true)
+    bg:SetVertexColor(TEXT_COLOR[1], TEXT_COLOR[2], TEXT_COLOR[3])
     local w, h = bg:GetSize()
     if w and w > 0 then
         bg:SetSize(w * HEADER_SCALE, h * HEADER_SCALE)
@@ -56,7 +61,7 @@ local icon = banner:CreateTexture(nil, "OVERLAY")
 icon:SetAtlas("communities-icon-invitemail", true)
 local iw, ih = icon:GetSize()
 if iw and iw > 0 then icon:SetSize(iw * 0.65, ih * 0.65) end
-icon:SetPoint("RIGHT", banner, "RIGHT", -10, 2)
+icon:SetPoint("RIGHT", banner, "RIGHT", 4, 2)
 
 -- Texto centrado (pedido del usuario, ronda 2, con captura de referencia):
 -- "You have new mail, check your mailbox!". Ronda 4: ambos corridos un poco
@@ -64,7 +69,7 @@ icon:SetPoint("RIGHT", banner, "RIGHT", -10, 2)
 local text = banner:CreateFontString(nil, "OVERLAY")
 text:SetFont("Fonts\\FRIZQT__.TTF", 14, "OUTLINE")
 text:SetPoint("CENTER", banner, "CENTER", 6, 2)
-text:SetTextColor(1, 0.882, 0.608)
+text:SetTextColor(TEXT_COLOR[1], TEXT_COLOR[2], TEXT_COLOR[3])
 text:SetText("You have new mail, check your mailbox!")
 
 banner:SetPoint("TOP", UIParent, "TOP", 0, REST_Y + SLIDE_DIST)
