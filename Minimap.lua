@@ -423,6 +423,51 @@ local function CreateMail()
     icon:SetAtlas("ui-hud-minimap-mail-up")
     mm.mailIcon = icon
 
+    -- Animacion de "correo nuevo" (pedido del usuario 2026-07-21, referencia
+    -- https://wago.io/1wKfUxJ8U): en vez de una WeakAura aparte, se replica el sistema
+    -- NATIVO de Blizzard para esto mismo (mismo MiniMapMailFrame que ya investigamos para
+    -- el atlas del icono) -- 2 flipbooks atlas propios del juego, sin arte nuevo: uno
+    -- llamativo la PRIMERA vez que llega correo nuevo, y uno mas sutil de "recordatorio"
+    -- las veces siguientes (mismo criterio/cvar "notifiedOfNewMail" que usa Blizzard).
+    local newFlip = btn:CreateTexture(nil, "ARTWORK", nil, 1)
+    newFlip:SetSize(52, 52)
+    newFlip:SetPoint("CENTER", icon, "CENTER")
+    newFlip:SetAtlas("UI-HUD-Minimap-Mail-New-Flipbook")
+    newFlip:SetAlpha(0)
+    local reminderFlip = btn:CreateTexture(nil, "ARTWORK", nil, 1)
+    reminderFlip:SetSize(52, 52)
+    reminderFlip:SetPoint("CENTER", icon, "CENTER")
+    reminderFlip:SetAtlas("UI-HUD-Minimap-Mail-Reminder-Flipbook")
+    reminderFlip:SetAlpha(0)
+
+    local function MakeMailAnim(flipTex, duration, rows, cols, frames)
+        local ag = flipTex:CreateAnimationGroup()
+        local a = ag:CreateAnimation("Alpha")
+        a:SetDuration(0); a:SetFromAlpha(1); a:SetToAlpha(1); a:SetOrder(1)
+        local fb = ag:CreateAnimation("FlipBook")
+        fb:SetDuration(duration); fb:SetOrder(2); fb:SetSmoothing("NONE")
+        fb:SetFlipBookRows(rows); fb:SetFlipBookColumns(cols); fb:SetFlipBookFrames(frames)
+        ag:SetScript("OnPlay", function() icon:SetShown(false) end)
+        ag:SetScript("OnFinished", function()
+            flipTex:SetAlpha(0)
+            icon:SetShown((HasNewMail and HasNewMail()) and true or false)
+        end)
+        return ag
+    end
+    local newMailAnim = MakeMailAnim(newFlip, 0.5, 5, 4, 20)
+    local reminderAnim = MakeMailAnim(reminderFlip, 0.4, 3, 4, 12)
+
+    local function PlayMailNotification()
+        if newMailAnim:IsPlaying() or reminderAnim:IsPlaying() then return end
+        if GetCVarBool and GetCVarBool("notifiedOfNewMail") then
+            reminderAnim:Play()
+        else
+            newMailAnim:Play()
+            if SetCVar then SetCVar("notifiedOfNewMail", true) end
+        end
+    end
+    mm.PlayMailNotification = PlayMailNotification
+
     -- fs se ancla a btn (su propio padre), NUNCA al reves: btn:SetAllPoints(fs)
     -- crearia una dependencia circular ("Cannot anchor to a region dependent on it").
     local fs = btn:CreateFontString(nil, "OVERLAY", nil, 1)
@@ -500,7 +545,15 @@ local function CreateMail()
     local f = CreateFrame("Frame")
     f:RegisterEvent("UPDATE_PENDING_MAIL")
     f:RegisterEvent("PLAYER_ENTERING_WORLD")
-    f:SetScript("OnEvent", Update)
+    f:SetScript("OnEvent", function(_, event)
+        Update()
+        -- Solo dispara la animacion en UPDATE_PENDING_MAIL (mismo evento que usa
+        -- Blizzard para esto), nunca en PLAYER_ENTERING_WORLD -- asi no aparece un
+        -- flash cada /reload/login si ya tenias correo pendiente de antes.
+        if event == "UPDATE_PENDING_MAIL" and HasNewMail and HasNewMail() and P() and P().showMail then
+            PlayMailNotification()
+        end
+    end)
 end
 
 -- ==========================================================================

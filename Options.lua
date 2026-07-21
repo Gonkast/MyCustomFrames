@@ -2009,6 +2009,11 @@ local function BuildPanel()
         { key = "mn_general",  label = "Gen" },
         { key = "mn_display",  label = "Display" },
         { key = "mn_icons",    label = "Icons" },
+        -- Pedido del usuario 2026-07-21 ("el menu esta algo estrecho, los sliders
+        -- estan sobre otros elementos"): Tracking/Mail no entraban en "Icons" sin
+        -- pisar el footer del panel (que no tiene scroll) -- mismo criterio ya usado
+        -- en Nameplates (separar en Alpha) cuando algo no entra en una sola pestaña.
+        { key = "mn_icons2",   label = "Icons 2" },
         { key = "mn_textures", label = "Textures" },
     }
     BuildTabRow(minimapSecList, 40, true)
@@ -3067,10 +3072,6 @@ local function BuildPanel()
         MakeSlider(f, "Eye offset X", -200, 200, 1, "eyeOffsetX", L, -46)
         MakeSlider(f, "Eye offset Y", -200, 200, 1, "eyeOffsetY", L, -100)
 
-        MakeHeader(f, "Mail indicator", R, -326, 210)
-        MakeSlider(f, "Mail offset X", -200, 200, 1, "mailOffsetX", R, -366)
-        MakeSlider(f, "Mail offset Y", -200, 200, 1, "mailOffsetY", R, -420)
-
         MakeHeader(f, "Coordinates", L, -166, 200)
         MakeSlider(f, "Coords offset X", -200, 200, 1, "coordsOffsetX", L, -206)
         MakeSlider(f, "Coords offset Y", -200, 200, 1, "coordsOffsetY", L, -260)
@@ -3083,17 +3084,28 @@ local function BuildPanel()
         MakeSlider(f, "Widget offset X", -200, 200, 1, "widgetOffsetX", R, -206)
         MakeSlider(f, "Widget offset Y", -200, 200, 1, "widgetOffsetY", R, -260)
 
-        -- Pedido del usuario 2026-07-21: boton de tracking, arrastrable libremente en
-        -- Lock (ver Minimap.lua CreateTracking) -- estos sliders son el equivalente
-        -- fino/numerico, para cuando arrastrar a mano no alcanza.
-        MakeHeader(f, "Tracking button", L, -326, 200)
-        MakeSlider(f, "Tracking offset X", -200, 200, 1, "trackingOffsetX", L, -366)
-        MakeSlider(f, "Tracking offset Y", -200, 200, 1, "trackingOffsetY", L, -420)
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
+        note:SetPoint("TOPLEFT", L, -326); note:SetWidth(430); note:SetJustifyH("LEFT")
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        note:SetText("Offsets are relative to the minimap's own center (LFG eye), top edge (dismount button), bottom edge (coordinates), or bottom edge again (below-minimap widget).")
+    end
+    -- Minimap / Icons 2 (Tracking button + Mail indicator, pedido del usuario 2026-07-21:
+    -- no entraban en "Icons" sin pisar el footer del panel -- panel sin scroll, mismo
+    -- criterio ya usado en Nameplates cuando algo no entraba en una sola pestaña).
+    do
+        local f = Section("mn_icons2")
+        MakeHeader(f, "Tracking button", L, -6, 200)
+        MakeSlider(f, "Tracking offset X", -200, 200, 1, "trackingOffsetX", L, -46)
+        MakeSlider(f, "Tracking offset Y", -200, 200, 1, "trackingOffsetY", L, -100)
+
+        MakeHeader(f, "Mail indicator", R, -6, 210)
+        MakeSlider(f, "Mail offset X", -200, 200, 1, "mailOffsetX", R, -46)
+        MakeSlider(f, "Mail offset Y", -200, 200, 1, "mailOffsetY", R, -100)
 
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
-        note:SetPoint("TOPLEFT", L, -486); note:SetWidth(430); note:SetJustifyH("LEFT")
+        note:SetPoint("TOPLEFT", L, -166); note:SetWidth(430); note:SetJustifyH("LEFT")
         note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        note:SetText("Offsets are relative to the minimap's own center (LFG eye, tracking button), top edge (dismount button), bottom edge (coordinates, mail indicator), or bottom edge again (below-minimap widget). The tracking button and mail indicator can also be dragged freely while in Lock mode.")
+        note:SetText("Offsets are relative to the minimap's own center (tracking button) or bottom edge (mail indicator). Both can also be dragged freely while in Lock mode.")
     end
     -- Minimap / Textures (borde, fondo, eye — la barra de XP/Reputacion NO se
     -- personaliza, a pedido del usuario, para no romper el layout del anillo).
