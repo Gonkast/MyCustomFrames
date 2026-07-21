@@ -516,9 +516,17 @@ local function CreateTracking()
                 info.name,
                 function(data) return data.active end,
                 function(data)
-                    predicted[data.index] = not data.active
-                    pcall(C_Minimap.SetTracking, data.index, predicted[data.index])
-                    return MenuResponse.Refresh
+                    -- FIX (bug real encontrado 2026-07-21, "tengo que salir del panel y
+                    -- volver a entrar para que se actualice"): isSelectedFn (arriba) leia
+                    -- SIEMPRE data.active, el snapshot congelado de cuando se armo el menu
+                    -- -- nunca se volvia a leer nada tras el clic dentro de la MISMA
+                    -- apertura. Mutar data.active ACA (ademas de "predicted", que persiste
+                    -- entre aperturas hasta que la API real confirme) hace que el propio
+                    -- checkbox se vea tildado/destildado al toque, sin cerrar el menu.
+                    local newVal = not data.active
+                    predicted[data.index] = newVal
+                    data.active = newVal
+                    pcall(C_Minimap.SetTracking, data.index, newVal)
                 end,
                 info)
             if info.texture then
