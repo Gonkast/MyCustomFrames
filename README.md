@@ -75,3 +75,7 @@ None — fully standalone, no other addon required.
 ## License
 
 GNU General Public License v3.0 — see [LICENSE](LICENSE).
+
+## Note
+
+Claude (Anthropic) helped organize the git repository and this README.
