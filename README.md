@@ -110,21 +110,22 @@ set them up on your own:
 
 ## Credits
 
-Menu styling (fonts, borders, layout patterns) is adapted from **[Plumber](https://github.com/Peterodox/Plumber)**
-by Peterodox — used with real assets copied from Plumber's `Art/` folder. Because of that, this
-project ships under the **same license as Plumber (GPLv3)**.
+Big thanks to the people whose work this preset is built on top of:
 
-This project owes an enormous amount to **[AzeriteUI](https://github.com/AzeriteTeam/Azerite5)
-by Daniel Troko and Lars Norberg**. It started as a preset meant to run on top of AzeriteUI, and
-even though it no longer requires it, huge parts of this addon — the unit frame/portrait/cage/badge
-textures in `Assets/`, the raid frame layout and look, the bundled Masque skin ("Azerite HEX",
-adapted from `Masque_Azerite_Hex`), and the overall visual language this whole preset is built
-around — are directly copied, modified, or learned from studying that codebase. This addon would
-not exist in its current form without it. Also credit to
-**[AzeriteUI JuNNeZ Edition (Midnight)](https://www.curseforge.com/wow/addons/azeriteui-junnez-edition-wow12)**
-for the updated-for-Midnight version of that codebase, which this preset originally ran on top of
-and leaned on heavily during development. The player-rest flipbook animation data is sourced from
-**M33kAuras**.
+- **[AzeriteUI](https://github.com/AzeriteTeam/Azerite5)** by Daniel Troko and Lars Norberg — the
+  real MVP here. This whole addon started as a preset meant to run on top of AzeriteUI, and even
+  though it's fully standalone now, huge chunks of it are directly copied, modified, or learned
+  from studying that codebase: the unit frame/portrait/cage/badge textures in `Assets/`, the raid
+  frame layout and look, the bundled Masque skin ("Azerite HEX", adapted from
+  `Masque_Azerite_Hex`), and honestly the whole visual language this preset is built around.
+  Wouldn't exist without it.
+- **[AzeriteUI JuNNeZ Edition (Midnight)](https://www.curseforge.com/wow/addons/azeriteui-junnez-edition-wow12)**
+  — the updated-for-Midnight fork of AzeriteUI that this preset originally ran on top of and
+  leaned on heavily during development.
+- **[Plumber](https://github.com/Peterodox/Plumber)** by Peterodox — the menu (fonts, borders,
+  layout patterns) is adapted from it, using real assets copied straight from Plumber's `Art/`
+  folder. Because of that, this whole project ships under **Plumber's license (GPLv3)**.
+- **M33kAuras** — source of the player-rest flipbook animation data.
 
 ## License
 
