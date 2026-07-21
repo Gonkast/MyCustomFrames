@@ -1161,6 +1161,24 @@ local function FillDefaults()
         local isNewUnit = db.units[def.key] == nil
         db.units[def.key] = db.units[def.key] or {}
         local prof = db.units[def.key]
+        -- FIX (2026-07-20, reportado por el usuario: "instale desde 0 y mis arenas
+        -- estaban movidas" -- confirmado con su SavedVariables real: NO era una
+        -- instalacion limpia de verdad, sino una cuenta con SavedVariables de una
+        -- version VIEJA del addon, de antes de que existieran las 6 unidades de
+        -- arena. En ese caso freshInstall es false (MyCustomFramesDB ya existe) asi
+        -- que ns.BUILTIN nunca se aplica -- pero para las claves REALMENTE nuevas
+        -- (arena_*, que no estan en su SavedVariables vieja), isNewUnit da true
+        -- igual, y este loop solo rellenaba con DefaultsFor() (posiciones GENERICAS,
+        -- muy juntas entre si -- 30px de separacion en vez de los ~130px del layout
+        -- horneado) en vez de con el layout curado del autor. Se agrega este paso:
+        -- para una unidad REALMENTE NUEVA, preferir ns.BUILTIN.units[key] (mismo
+        -- criterio que ya usa ResetDefault/ns.ResetUnit para el reset individual)
+        -- ANTES de caer en los valores genericos de DefaultsFor.
+        if isNewUnit and ns.BUILTIN and ns.BUILTIN.units and ns.BUILTIN.units[def.key] then
+            for k, v in pairs(ns.BUILTIN.units[def.key]) do
+                if prof[k] == nil then prof[k] = (type(v) == "table") and DeepCopy(v) or v end
+            end
+        end
         for k, v in pairs(DefaultsFor(def.key)) do
             if prof[k] == nil then prof[k] = v end
         end
@@ -1173,7 +1191,15 @@ local function FillDefaults()
         -- antes que arena_* en esta misma tabla UNITS), asi que refleja
         -- cualquier ajuste que el usuario ya le haya hecho a ToT, no solo los
         -- defaults de fabrica.
-        if isNewUnit and CLONE_ARENA_FROM_TOT[def.key] then
+        -- CORREGIDO (2026-07-20): este clon pisaba SIN CHEQUEAR NIL (prof[k] = v
+        -- directo) lo que el paso de arriba (ns.BUILTIN.units[def.key]) recien
+        -- habia rellenado con el layout curado del autor -- quedaba dando vueltas
+        -- en circulo: BUILTIN rellenaba bien, esto lo pisaba con ToT de nuevo.
+        -- Ahora se salta ENTERO si BUILTIN ya tenia datos para esta clave (ya
+        -- quedo completa arriba); solo corre para instalaciones viejas sin ese
+        -- bake (BUILTIN sin ns.BUILTIN.units[def.key]).
+        local hasBuiltinArena = ns.BUILTIN and ns.BUILTIN.units and ns.BUILTIN.units[def.key]
+        if isNewUnit and CLONE_ARENA_FROM_TOT[def.key] and not hasBuiltinArena then
             local src = db.units.targettarget
             if src then
                 for k, v in pairs(src) do
