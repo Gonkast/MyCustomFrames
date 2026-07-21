@@ -22,7 +22,6 @@ local ADDON, ns = ...
 -- hacia su posicion final. REST_Y es la posicion final de reposo del banner.
 local REST_Y = -90
 local SLIDE_DIST = 40
-local MAIN_DURATION = 3.5
 
 local banner = CreateFrame("Frame", "MCF_MailBanner", UIParent)
 banner:SetFrameStrata("HIGH")
@@ -83,7 +82,6 @@ finishAnim:SetScript("OnFinished", function()
     banner:Hide()
 end)
 
-local hideTimer
 local function ShowBanner()
     if not (bg.SetAtlas and icon.SetAtlas) then return end
     ApplyFactionTexture()
@@ -93,18 +91,29 @@ local function ShowBanner()
     finishAnim:Stop()
     pulseAnim:Stop()
     startAnim:Play()
-    if hideTimer then hideTimer:Cancel() end
-    hideTimer = C_Timer.NewTimer(MAIN_DURATION, function() finishAnim:Play() end)
 end
 ns.ShowMailBanner = ShowBanner
 
--- Mismo criterio de "flanco ascendente" que Minimap.lua usa para el flipbook del
--- icono (no re-dispara mientras el correo pendiente sigue siendo el mismo).
+local function HideBanner()
+    if not banner:IsShown() then return end
+    startAnim:Stop()
+    finishAnim:Play()
+end
+
+-- FIX (2026-07-21, reportado por el usuario: "sale un milisegundo y se esconde,
+-- debe quedarse mientras tenga un mail pendiente"): antes se cerraba solo con un
+-- timer fijo (MAIN_DURATION) sin importar si seguias con correo sin leer. Ahora
+-- el banner queda mostrado MIENTRAS HasNewMail() sea true, y recien dispara
+-- FINISH cuando deja de haber correo pendiente (lo leiste/recogiste todo).
 local hadMail = false
 local ev = CreateFrame("Frame")
 ev:RegisterEvent("UPDATE_PENDING_MAIL")
 ev:SetScript("OnEvent", function()
-    local has = HasNewMail and HasNewMail()
-    if has and not hadMail then ShowBanner() end
-    hadMail = has and true or false
+    local has = HasNewMail and HasNewMail() and true or false
+    if has and not hadMail then
+        ShowBanner()
+    elseif not has and hadMail then
+        HideBanner()
+    end
+    hadMail = has
 end)
