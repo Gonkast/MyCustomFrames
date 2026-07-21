@@ -2969,18 +2969,23 @@ local function BuildPanel()
         MakeSlider(f, "Dungeon title offset", -100, 100, 1, "dungeonTitleOffsetX", L, -126,
             function() return ns.GetDB().tracker end,
             function() if ns.RefreshTracker then ns.RefreshTracker() end end)
+        -- Pedido del usuario 2026-07-21: "controlar el text alignment leading/justified/
+        -- trailing" -- WoW solo tiene LEFT/CENTER/RIGHT (no un 4to modo "justified" real de
+        -- texto), asi que se mapea a esos 3. Aplica a TODO texto que el tracker toca (headers,
+        -- titulos de mision y lineas de objetivo), no solo headers -- ver Tracker.lua ApplyFontColor.
+        MakeCycle(f, "Text align", { "LEFT", "CENTER", "RIGHT" }, "textAlign", L, -170)
 
-        MakeHeader(f, "Auto-hide", L, -182, 210)
-        MakeCheckbox(f, "Hide in boss fights", "hideInBoss", L, -206)
-        MakeCheckbox(f, "Hide in combat", "hideInCombat", L, -230)
-        MakeCheckbox(f, "Hide on hostile target", "hideOnHostileTarget", L, -254)
-        MakeCheckbox(f, "Hide in arena", "hideInArena", L, -278)
-        MakeCheckbox(f, "Hide in battlegrounds", "hideInBG", L, -302)
+        MakeHeader(f, "Auto-hide", L, -212, 210)
+        MakeCheckbox(f, "Hide in boss fights", "hideInBoss", L, -236)
+        MakeCheckbox(f, "Hide in combat", "hideInCombat", L, -260)
+        MakeCheckbox(f, "Hide on hostile target", "hideOnHostileTarget", L, -284)
+        MakeCheckbox(f, "Hide in arena", "hideInArena", L, -308)
+        MakeCheckbox(f, "Hide in battlegrounds", "hideInBG", L, -332)
 
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", R, -10); note:SetWidth(210); note:SetJustifyH("LEFT")
         note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        note:SetText("Colorize titles: recolors the objective-tracker headers/quests (cosmetic, no taint). Title/Dungeon center offset: fine-tune horizontal centering of quest titles vs. scenario/dungeon titles (e.g. \"Windrunner Spire\") independently — live, no reload needed. Auto-hide toggles fold the tracker (alpha 0) via a secure driver — any combination can be active at once; the tracker reappears as soon as none of the checked conditions apply.")
+        note:SetText("Colorize titles: recolors the objective-tracker headers/quests (cosmetic, no taint). Title/Dungeon center offset: fine-tune horizontal centering of quest titles vs. scenario/dungeon titles (e.g. \"Windrunner Spire\") independently — live, no reload needed. Text align: LEFT/CENTER/RIGHT justification for every line the tracker touches (headers, quest titles, objectives). Auto-hide toggles fold the tracker (alpha 0) via a secure driver — any combination can be active at once; the tracker reappears as soon as none of the checked conditions apply.")
     end
 
     -- =========================== SECCION ASSISTED GLOW ===========================

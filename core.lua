@@ -1539,6 +1539,11 @@ local function InitDB()
     if db.tracker.hideInBG == nil then db.tracker.hideInBG = false end
     if db.tracker.titleOffsetX == nil then db.tracker.titleOffsetX = -18 end
     if db.tracker.dungeonTitleOffsetX == nil then db.tracker.dungeonTitleOffsetX = -18 end
+    -- Alineacion de texto (pedido del usuario 2026-07-21): "LEFT"/"CENTER"/"RIGHT", aplicada via
+    -- SetJustifyH (mismo metodo YA probado seguro que el centrado de headers, ver Tracker.lua
+    -- ApplyFontColor) -- default LEFT = comportamiento nativo de Blizzard, sin cambios visibles
+    -- hasta que el usuario elija otra cosa.
+    if db.tracker.textAlign == nil then db.tracker.textAlign = "LEFT" end
     -- Migracion (2026-07-21): la clave se llamaba `hideEditGreen` (nombre viejo, de
     -- cuando el highlight de edicion era verde -- hoy es un borde cian, ver
     -- MakeEditHighlight). Preserva el valor que el usuario ya tenia guardado con el

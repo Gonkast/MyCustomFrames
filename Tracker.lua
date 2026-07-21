@@ -188,6 +188,15 @@ local function IsHeaderFontString(fs)
     return okN and type(name) == "string" and name:find("Header") ~= nil
 end
 
+-- Alineacion configurable (LEFT/CENTER/RIGHT), aplicada a TODO texto que el tracker toca
+-- (headers, titulos de mision y lineas de objetivo) via SetJustifyH -- mismo metodo que el
+-- centrado de headers ya usaba, ahora elegible por el usuario en vez de hardcodeado a CENTER.
+local function TextAlign()
+    local c = cfg()
+    local a = c and c.textAlign
+    return (a == "CENTER" or a == "RIGHT") and a or "LEFT"
+end
+
 local function ApplyFontColor(fs)
     if not fs or fs:GetObjectType() ~= "FontString" then return end
     local text = fs:GetText()
@@ -200,28 +209,27 @@ local function ApplyFontColor(fs)
     -- de strings continuamente.
     local st = fsState[fs]
     if st and st.txt == text and st.epoch == colorEpoch then
+        if fs.SetJustifyH then pcall(fs.SetJustifyH, fs, TextAlign()) end
         local r = st.r
-        if r == nil then return end   -- decision cacheada: "objetivo, no tocar"
+        if r == nil then return end   -- decision cacheada: "objetivo, no tocar" (solo color)
         local cr, cg, cb, a = fs:GetTextColor()
         if math.abs((cr or 0) - r) > 0.004 or math.abs((cg or 0) - st.g) > 0.004
            or math.abs((cb or 0) - st.b) > 0.004 then
             fs:SetTextColor(r, st.g, st.b, a or 1)
         end
-        if st.isHeader and fs.SetJustifyH then pcall(fs.SetJustifyH, fs, "CENTER") end
         return
     end
 
     local r, g, b = ClassifyText(text)
     if not st then st = {}; fsState[fs] = st end
     st.txt, st.epoch, st.r, st.g, st.b = text, colorEpoch, r, g, b
-    if r == nil then return end   -- objetivo de mision: mantener su color nativo
+    if fs.SetJustifyH then pcall(fs.SetJustifyH, fs, TextAlign()) end
+    if r == nil then return end   -- objetivo de mision: mantener su color nativo (alineacion SI se aplica arriba)
     local a = select(4, fs:GetTextColor()) or 1
     fs:SetTextColor(r, g, b, a)
-    -- Centrado en el eje X: SOLO para headers de categoria ("Quests", "All Objectives"...),
-    -- NO para titulos de mision individuales (el usuario los quiere con su alineacion nativa).
-    -- isHeader se clasifica UNA vez por fontstring (via IsHeaderFontString, chequea la fuente).
+    -- isHeader se sigue clasificando (usado mas abajo para el offset de centrado propio de
+    -- headers/escenario, independiente de la alineacion general de arriba).
     if st.isHeader == nil then st.isHeader = IsHeaderFontString(fs) end
-    if st.isHeader and fs.SetJustifyH then pcall(fs.SetJustifyH, fs, "CENTER") end
     -- Guarda el ancla ORIGINAL (nativa de Blizzard) UNA sola vez — leerla de nuevo en pases
     -- posteriores devolveria NUESTRO propio anclaje ya modificado, no el original, y los ajustes
     -- del slider se acumularian mal en vez de partir siempre de la misma base. Tambien clasifica
