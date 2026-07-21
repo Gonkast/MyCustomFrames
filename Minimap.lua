@@ -1237,6 +1237,19 @@ local function Init()
     if not (ns.GetDB().minimap) then return end
     initialized = true
 
+    -- Migracion puntual (2026-07-21): el boton de tracking se guardo con su primer
+    -- default (-82,82, copiado del eye) antes de reposicionarse "al lado de las
+    -- coordenadas" (-26,23) un commit despues -- FillDefaults solo llena si esta nil,
+    -- asi que quien ya lo cargo una vez se quedo pegado en el default viejo para
+    -- siempre. Como el feature tiene minutos de vida, es seguro asumir que nadie
+    -- movio esto a mano todavia: si sigue EXACTO en el valor viejo, lo actualiza.
+    do
+        local p = ns.GetDB().minimap
+        if p.trackingOffsetX == -82 and p.trackingOffsetY == 82 then
+            p.trackingOffsetX, p.trackingOffsetY = -26, 23
+        end
+    end
+
     CreateShape()
     CreateCompass()
     CreateCoordinates()
