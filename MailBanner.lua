@@ -105,9 +105,15 @@ end
 -- timer fijo (MAIN_DURATION) sin importar si seguias con correo sin leer. Ahora
 -- el banner queda mostrado MIENTRAS HasNewMail() sea true, y recien dispara
 -- FINISH cuando deja de haber correo pendiente (lo leiste/recogiste todo).
+-- FIX (2026-07-21, reportado por el usuario: "no esta saliendo, y tengo un correo
+-- pendiente"): faltaba PLAYER_ENTERING_WORLD -- UPDATE_PENDING_MAIL solo dispara
+-- cuando el estado CAMBIA, asi que si ya tenias correo pendiente de ANTES de este
+-- login/reload, nunca se disparaba de nuevo y el handler jamas corria (mismo
+-- patron que Minimap.lua SI tiene para el icono, que por eso andaba bien).
 local hadMail = false
 local ev = CreateFrame("Frame")
 ev:RegisterEvent("UPDATE_PENDING_MAIL")
+ev:RegisterEvent("PLAYER_ENTERING_WORLD")
 ev:SetScript("OnEvent", function()
     local has = HasNewMail and HasNewMail() and true or false
     if has and not hadMail then
