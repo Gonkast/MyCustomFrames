@@ -1156,32 +1156,43 @@ local ARENA_PORTRAIT_POSITION_FIELDS = {
     altAnchor = true, altPoint = true, altRelPoint = true, altX = true, altY = true, editPos = true,
 }
 
+-- FIX (2026-07-20, reportado por el usuario: "instale desde 0 y mis arenas
+-- estaban movidas" -- confirmado con su SavedVariables real: NO era una
+-- instalacion limpia de verdad, sino una cuenta con SavedVariables de una
+-- version VIEJA del addon, de antes de que existieran las 6 unidades de
+-- arena/raid/etc. En ese caso freshInstall es false (MyCustomFramesDB ya
+-- existe) asi que ns.BUILTIN nunca se aplica de una -- pero para las claves
+-- REALMENTE nuevas para esa cuenta (que faltan en su SavedVariables vieja),
+-- TODO este archivo rellenaba solo con las funciones DefaultsXxx() (defaults
+-- GENERICOS de codigo) en vez de con ns.BUILTIN (el layout curado del autor).
+-- SEGUNDO REPORTE del mismo bug (2026-07-20, "no esta la posicion correcta de
+-- mis raids, no esta tampoco los cambios al tamaño de mis portraits de arena"):
+-- el mismo problema estaba repetido en TODOS los bloques de abajo (portraits,
+-- auras, infobar, micromenu, chatbubble, glow, minimap, nameplates, classpower,
+-- tooltip, extrabutton, mirrortimer, raid) -- el primer fix solo cubrio units.
+-- Helper unico: para cada campo AUSENTE (nil-guard igual que antes, nunca pisa
+-- nada que el usuario ya tenga), prueba primero el valor horneado
+-- (ns.BUILTIN[domain][key] o ns.BUILTIN[domain] para los singleton), y recien
+-- si BUILTIN tampoco lo tiene cae en el default generico de codigo.
+local function FillProfile(prof, builtinTable, defaultsTable)
+    if type(builtinTable) == "table" then
+        for k, v in pairs(builtinTable) do
+            if prof[k] == nil then prof[k] = (type(v) == "table") and DeepCopy(v) or v end
+        end
+    end
+    if type(defaultsTable) == "table" then
+        for k, v in pairs(defaultsTable) do
+            if prof[k] == nil then prof[k] = v end
+        end
+    end
+end
+
 local function FillDefaults()
     for _, def in ipairs(UNITS) do
         local isNewUnit = db.units[def.key] == nil
         db.units[def.key] = db.units[def.key] or {}
         local prof = db.units[def.key]
-        -- FIX (2026-07-20, reportado por el usuario: "instale desde 0 y mis arenas
-        -- estaban movidas" -- confirmado con su SavedVariables real: NO era una
-        -- instalacion limpia de verdad, sino una cuenta con SavedVariables de una
-        -- version VIEJA del addon, de antes de que existieran las 6 unidades de
-        -- arena. En ese caso freshInstall es false (MyCustomFramesDB ya existe) asi
-        -- que ns.BUILTIN nunca se aplica -- pero para las claves REALMENTE nuevas
-        -- (arena_*, que no estan en su SavedVariables vieja), isNewUnit da true
-        -- igual, y este loop solo rellenaba con DefaultsFor() (posiciones GENERICAS,
-        -- muy juntas entre si -- 30px de separacion en vez de los ~130px del layout
-        -- horneado) en vez de con el layout curado del autor. Se agrega este paso:
-        -- para una unidad REALMENTE NUEVA, preferir ns.BUILTIN.units[key] (mismo
-        -- criterio que ya usa ResetDefault/ns.ResetUnit para el reset individual)
-        -- ANTES de caer en los valores genericos de DefaultsFor.
-        if isNewUnit and ns.BUILTIN and ns.BUILTIN.units and ns.BUILTIN.units[def.key] then
-            for k, v in pairs(ns.BUILTIN.units[def.key]) do
-                if prof[k] == nil then prof[k] = (type(v) == "table") and DeepCopy(v) or v end
-            end
-        end
-        for k, v in pairs(DefaultsFor(def.key)) do
-            if prof[k] == nil then prof[k] = v end
-        end
+        FillProfile(prof, ns.BUILTIN and ns.BUILTIN.units and ns.BUILTIN.units[def.key], DefaultsFor(def.key))
         -- ARENA (pedido del usuario 2026-07-19: "que copien visualmente los
         -- mismos valores y texturas del tot") -- SOLO la primera vez que esta
         -- unidad se crea (isNewUnit), clona el perfil COMPLETO de targettarget
@@ -1236,15 +1247,17 @@ local function FillDefaults()
         local isNewPortrait = db.portraits[def.key] == nil
         db.portraits[def.key] = db.portraits[def.key] or {}
         local prof = db.portraits[def.key]
-        for k, v in pairs(PortraitDefaultsFor(def.key)) do
-            if prof[k] == nil then prof[k] = v end
-        end
+        FillProfile(prof, ns.BUILTIN and ns.BUILTIN.portraits and ns.BUILTIN.portraits[def.key], PortraitDefaultsFor(def.key))
         -- Portraits de arena: portrait_arena_player clona portrait_player
         -- (el jugador real SI tiene modelo 3D) -- el resto clona portrait_tot
         -- (icono), pedido explicito del usuario ("incluso el portrait del
         -- player para arena aliado"). Excluye posicion (center*/alt*).
+        -- CORREGIDO (2026-07-20, mismo motivo que el clon de arena en UNITS de
+        -- arriba): se salta si BUILTIN ya tenia datos para esta clave (ya
+        -- quedo completa arriba via FillProfile), para no pisarla de vuelta.
         local cloneSrcKey = CLONE_ARENA_PORTRAIT_FROM[def.key]
-        if isNewPortrait and cloneSrcKey then
+        local hasBuiltinPortrait = ns.BUILTIN and ns.BUILTIN.portraits and ns.BUILTIN.portraits[def.key]
+        if isNewPortrait and cloneSrcKey and not hasBuiltinPortrait then
             local src = db.portraits[cloneSrcKey]
             if src then
                 for k, v in pairs(src) do
@@ -1259,71 +1272,49 @@ local function FillDefaults()
     for _, def in ipairs(AURAS) do
         db.auras[def.key] = db.auras[def.key] or {}
         local prof = db.auras[def.key]
-        for k, v in pairs(AuraDefaultsFor(def.key)) do
-            if prof[k] == nil then prof[k] = v end
-        end
+        FillProfile(prof, ns.BUILTIN and ns.BUILTIN.auras and ns.BUILTIN.auras[def.key], AuraDefaultsFor(def.key))
     end
     db.infobar = db.infobar or {}
-    for k, v in pairs(InfoBarDefaults()) do
-        if db.infobar[k] == nil then db.infobar[k] = v end
-    end
+    FillProfile(db.infobar, ns.BUILTIN and ns.BUILTIN.infobar, InfoBarDefaults())
     db.micromenu = db.micromenu or {}
-    for k, v in pairs(ns.MicroMenuDefaults()) do
-        if db.micromenu[k] == nil then db.micromenu[k] = v end
-    end
+    FillProfile(db.micromenu, ns.BUILTIN and ns.BUILTIN.micromenu, ns.MicroMenuDefaults())
     db.chatbubble = db.chatbubble or {}
-    for k, v in pairs(ns.ChatBubbleDefaults()) do
-        if db.chatbubble[k] == nil then db.chatbubble[k] = v end
-    end
+    FillProfile(db.chatbubble, ns.BUILTIN and ns.BUILTIN.chatbubble, ns.ChatBubbleDefaults())
     db.glow = db.glow or {}
     if ns.GlowDefaults then
-        for k, v in pairs(ns.GlowDefaults()) do
-            if db.glow[k] == nil then db.glow[k] = v end
-        end
+        FillProfile(db.glow, ns.BUILTIN and ns.BUILTIN.glow, ns.GlowDefaults())
     end
     if ns.MinimapDefaults then
         db.minimap = db.minimap or {}
-        for k, v in pairs(ns.MinimapDefaults()) do
-            if db.minimap[k] == nil then db.minimap[k] = v end
-        end
+        FillProfile(db.minimap, ns.BUILTIN and ns.BUILTIN.minimap, ns.MinimapDefaults())
     end
     if ns.NameplateDefaults then
         db.nameplates = db.nameplates or {}
-        for k, v in pairs(ns.NameplateDefaults()) do
-            if db.nameplates[k] == nil then db.nameplates[k] = v end
-        end
+        FillProfile(db.nameplates, ns.BUILTIN and ns.BUILTIN.nameplates, ns.NameplateDefaults())
     end
     if ns.ClassPowerDefaults then
         db.classpower = db.classpower or {}
-        for k, v in pairs(ns.ClassPowerDefaults()) do
-            if db.classpower[k] == nil then db.classpower[k] = v end
-        end
+        FillProfile(db.classpower, ns.BUILTIN and ns.BUILTIN.classpower, ns.ClassPowerDefaults())
     end
     if ns.TooltipDefaults then
         db.tooltip = db.tooltip or {}
-        for k, v in pairs(ns.TooltipDefaults()) do
-            if db.tooltip[k] == nil then db.tooltip[k] = v end
-        end
+        FillProfile(db.tooltip, ns.BUILTIN and ns.BUILTIN.tooltip, ns.TooltipDefaults())
     end
     if ns.ExtraButtonDefaults then
         db.extrabutton = db.extrabutton or {}
-        for k, v in pairs(ns.ExtraButtonDefaults()) do
-            if db.extrabutton[k] == nil then db.extrabutton[k] = v end
-        end
+        FillProfile(db.extrabutton, ns.BUILTIN and ns.BUILTIN.extrabutton, ns.ExtraButtonDefaults())
     end
     if ns.MirrorTimerDefaults then
         db.mirrortimer = db.mirrortimer or {}
-        for k, v in pairs(ns.MirrorTimerDefaults()) do
-            if db.mirrortimer[k] == nil then db.mirrortimer[k] = v end
-        end
+        FillProfile(db.mirrortimer, ns.BUILTIN and ns.BUILTIN.mirrortimer, ns.MirrorTimerDefaults())
     end
     -- RAID FRAMES (Raid.lua): perfil UNICO compartido por los 40 members,
-    -- vive en db.units.raid (mismo shape que cualquier otra unidad).
+    -- vive en db.units.raid (mismo shape que cualquier otra unidad). Mismo bug
+    -- que el resto: usaba solo ns.RaidUnitDefaults() (generico), nunca el
+    -- layout horneado -- ver comentario grande arriba de FillProfile.
     if ns.RaidUnitDefaults then
         db.units.raid = db.units.raid or {}
-        for k, v in pairs(ns.RaidUnitDefaults()) do
-            if db.units.raid[k] == nil then db.units.raid[k] = v end
-        end
+        FillProfile(db.units.raid, ns.BUILTIN and ns.BUILTIN.units and ns.BUILTIN.units.raid, ns.RaidUnitDefaults())
     end
 end
 ns.FillDefaults = FillDefaults
