@@ -59,6 +59,7 @@ local function MinimapDefaults()
         showMail = true,
         showEye = true,
         showRing = true,
+        showTracking = true,
         -- Texturas personalizables (default = las mismas que ya tenia el addon).
         -- Solo el RELLENO/arco del anillo (minimap-bars-single) queda fijo, a
         -- pedido del usuario, para no romper la lectura del progreso de XP/Rep.
@@ -70,6 +71,8 @@ local function MinimapDefaults()
         dismountTexture = "",
         -- Offsets de los iconos.
         eyeOffsetX = 82, eyeOffsetY = 82,
+        -- Al lado de las coordenadas (pedido del usuario 2026-07-21), no espejando al eye.
+        trackingOffsetX = -26, trackingOffsetY = 23,
         dismountOffsetX = 0, dismountOffsetY = 42,
         coordsOffsetX = 3, coordsOffsetY = 23,
         -- Pedido del usuario 2026-07-19: "quiero poder moverlo, y que siga al
@@ -449,6 +452,108 @@ local function CreateMail()
     f:RegisterEvent("UPDATE_PENDING_MAIL")
     f:RegisterEvent("PLAYER_ENTERING_WORLD")
     f:SetScript("OnEvent", Update)
+end
+
+-- ==========================================================================
+-- TRACKING (icono + menu propio, pedido del usuario 2026-07-21 -- ya se habia
+-- intentado antes y se saco por una demora perceptible al clickear sin poder
+-- diagnosticar la causa. Reintentado copiando el patron REAL de Blizzard
+-- (Blizzard_Minimap/Mainline/Minimap.lua, MiniMapTrackingButtonMixin:OnLoad,
+-- via wow-ui-source) en vez de reinventar uno propio: Blizzard TAMBIEN
+-- reconstruye el menu entero en cada clic (nada de cache), asi que reconstruir
+-- no era la causa real -- se sospecha que el intento anterior hacia algo mas
+-- caro adentro del generador (por eso este va con timing real, ver abajo).
+--
+-- DropdownButton (mismo tipo de widget que usa el boton nativo de Blizzard,
+-- MinimapCluster.Tracking) trae soporte de :SetupMenu(generador) integrado --
+-- no hace falta MenuUtil.CreateContextMenu a mano. Atlas nativo
+-- "ui-hud-minimap-tracking-up" (el mismo binocular que usa Blizzard), sin
+-- necesitar arte propio.
+-- ==========================================================================
+local function CreateTracking()
+    local btn = CreateFrame("DropdownButton", nil, mm.root)
+    btn:SetSize(20, 20)
+    btn:SetFrameLevel(Minimap:GetFrameLevel() + 5)
+    local tex = btn:CreateTexture(nil, "ARTWORK")
+    tex:SetAtlas("ui-hud-minimap-tracking-up")
+    tex:SetAllPoints()
+    mm.trackingBtn = btn
+
+    -- Estado OPTIMISTA: medido en juego (ver mensajes de debug ya sacados), el build del
+    -- menu tardaba <1.1ms -- el "no se activan/se demora" que reporto el usuario era
+    -- C_Minimap.SetTracking sin confirmar instantaneo, no el armado del menu. Blizzard
+    -- resuelve esto mismo con su propio wrapper interno "trackingState", no expuesto a
+    -- addons. Version liviana: guarda el valor que el usuario eligio por indice y lo
+    -- muestra de una, hasta que la API real confirme lo mismo (ahi se limpia solo).
+    local predicted = {}
+
+    btn:SetupMenu(function(dropdown, rootDescription)
+        rootDescription:SetTag("MCF_MINIMAP_TRACKING")
+
+        if not (C_Minimap and C_Minimap.GetNumTrackingTypes) then return end
+        local class = select(2, UnitClass("player"))
+        local isHunter = class == "HUNTER"
+        local hunterInfo, otherInfo = {}, {}
+
+        for index = 1, C_Minimap.GetNumTrackingTypes() do
+            local ok, info = pcall(C_Minimap.GetTrackingInfo, index)
+            if ok and info then
+                info.index = index
+                if predicted[index] ~= nil then
+                    if predicted[index] == info.active then predicted[index] = nil
+                    else info.active = predicted[index] end
+                end
+                if isHunter and info.subType == HUNTER_TRACKING then
+                    table.insert(hunterInfo, info)
+                else
+                    table.insert(otherInfo, info)
+                end
+            end
+        end
+
+        local function AddEntry(parentDesc, info)
+            local desc = parentDesc:CreateCheckbox(
+                info.name,
+                function(data) return data.active end,
+                function(data)
+                    predicted[data.index] = not data.active
+                    pcall(C_Minimap.SetTracking, data.index, predicted[data.index])
+                    return MenuResponse.Refresh
+                end,
+                info)
+            if info.texture then
+                desc:AddInitializer(function(button)
+                    local icon = button:AttachTexture()
+                    icon:SetSize(16, 16)
+                    icon:SetPoint("RIGHT")
+                    icon:SetTexture(info.texture)
+                    if info.type == "spell" then icon:SetTexCoord(0.0625, 0.9, 0.0625, 0.9) end
+                end)
+            end
+        end
+
+        if #hunterInfo > 0 then
+            local hunterMenu = (#hunterInfo > 1) and rootDescription:CreateButton(HUNTER_TRACKING_TEXT or "Hunter Tracking") or rootDescription
+            for _, info in ipairs(hunterInfo) do AddEntry(hunterMenu, info) end
+        end
+        for _, info in ipairs(otherInfo) do AddEntry(rootDescription, info) end
+    end)
+
+    btn:SetScript("OnEnter", function(self)
+        GameTooltip_SetDefaultAnchor(GameTooltip, self)
+        GameTooltip:SetText(TRACKING or "Tracking")
+        GameTooltip:Show()
+    end)
+    btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    local function Layout()
+        local p = P()
+        btn:SetShown(p and p.showTracking and true or false)
+        btn:ClearAllPoints()
+        btn:SetPoint("CENTER", mm.root, "CENTER", (p and p.trackingOffsetX) or 0, (p and p.trackingOffsetY) or 0)
+    end
+    mm.LayoutTracking = Layout
+    Layout()
 end
 
 -- ==========================================================================
@@ -1097,6 +1202,7 @@ local function RefreshMinimap()
     if mm.coords then mm.coords:SetShown(p.showCoordinates and true or false) end
     if mm.LayoutCoords then mm.LayoutCoords() end
     if mm.UpdateMail then mm.UpdateMail() end
+    if mm.LayoutTracking then mm.LayoutTracking() end
     LayoutEye()
     LayoutBelowMinimapWidget()
     if mm.LayoutDismount then mm.LayoutDismount() end
@@ -1127,6 +1233,7 @@ local function Init()
     CreateCompass()
     CreateCoordinates()
     CreateMail()
+    CreateTracking()
     CreateDismountButton()
     CreateRing()
     RefreshMinimap()
