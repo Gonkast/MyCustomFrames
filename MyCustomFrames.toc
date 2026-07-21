@@ -52,6 +52,11 @@ Editing.lua
 # correo + eye de LFG + anillo de XP/Reputacion/Honor con LibSpinBar). Standalone.
 Minimap.lua
 
+# BANNER de correo nuevo (pedido del usuario 2026-07-21): header estilo Start/Main/
+# Finish (WeakAuras) que se desliza desde arriba con correo nuevo. Archivo aparte
+# (regla del addon: nada nuevo grande directo en core.lua/Options.lua).
+MailBanner.lua
+
 # NAMEPLATES estilo AzeriteUI: reskin de textura/tamaño de los CompactUnitFrame
 # NATIVOS de Blizzard (sin oUF, sin tocar color/logica -- cero riesgo de taint).
 Nameplates.lua
