@@ -1599,15 +1599,21 @@ end)
 -- anima la escala, asi que las auras quedaban con la contra-escala
 -- congelada desde el instante en que se crearon. Se suman al mismo driver
 -- sin throttle -- barato (mismo costo por nameplate que el nombre).
+-- PERF (2026-07-20, pedido del usuario: "lo de OnUpdate para nameplates"):
+-- este driver corre SIN throttle (todos los frames, a proposito, ver
+-- comentario de arriba) -- C_NamePlate.GetNamePlates() ALOCA UNA TABLA
+-- NUEVA cada vez que se llama (comportamiento documentado/conocido de esta
+-- API), asi que llamarla 60 veces por segundo generaba basura constante
+-- (GC) solo para este driver, con nameplates visibles en pantalla. Se
+-- reemplaza por `activeUF` (set mantenido por evento, ver NAME_PLATE_UNIT_
+-- ADDED/REMOVED mas abajo y SkinExistingNamePlates) -- cero allocations por
+-- frame, mismo resultado.
+local activeUF = setmetatable({}, { __mode = "k" })
 local nameScaleDriver = CreateFrame("Frame")
 nameScaleDriver:SetScript("OnUpdate", function()
-    if not C_NamePlate or not C_NamePlate.GetNamePlates then return end
-    for _, frame in ipairs(C_NamePlate.GetNamePlates()) do
-        local uf = frame.UnitFrame or frame
-        if uf then
-            if uf.mcfNameHolder then ReassertNameGeometry(uf) end
-            if uf.mcfAuraGroups then ReassertAurasGeometry(uf) end
-        end
+    for uf in pairs(activeUF) do
+        if uf.mcfNameHolder then ReassertNameGeometry(uf) end
+        if uf.mcfAuraGroups then ReassertAurasGeometry(uf) end
     end
 end)
 
@@ -1619,6 +1625,11 @@ local function SkinExistingNamePlates()
     if not C_NamePlate or not C_NamePlate.GetNamePlates then return end
     for _, frame in ipairs(C_NamePlate.GetNamePlates()) do
         SkinNamePlate(frame)
+        -- Semilla de activeUF (ver nameScaleDriver arriba) -- cubre plates que
+        -- ya estaban visibles ANTES de que este addon se enganchara a
+        -- NAME_PLATE_UNIT_ADDED (reload/zona nueva con NPCs ya en pantalla).
+        local uf = frame.UnitFrame or frame
+        if uf then activeUF[uf] = true end
     end
 end
 
@@ -1667,6 +1678,7 @@ ev:SetScript("OnEvent", function(self, event, unit)
             -- perceptible sobre todo al entrar en zonas con muchos NPCs.
             local uf = plate and (plate.UnitFrame or plate)
             if uf then
+                activeUF[uf] = true   -- ver nameScaleDriver arriba
                 -- Reset defensivo ACA, antes de leer nada de la unidad nueva
                 -- (ver ResetNameplateState arriba) -- el peor caso pasa a ser
                 -- "sin icono/aura/cast un instante" en vez de "dato de la
@@ -1685,6 +1697,7 @@ ev:SetScript("OnEvent", function(self, event, unit)
         if C_NamePlate and C_NamePlate.GetNamePlateForUnit then
             local plate = C_NamePlate.GetNamePlateForUnit(unit)
             local uf = plate and (plate.UnitFrame or plate)
+            if uf then activeUF[uf] = nil end   -- ver nameScaleDriver arriba
             ResetNameplateState(uf)
         end
     else
