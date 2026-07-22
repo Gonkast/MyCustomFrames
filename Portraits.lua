@@ -77,11 +77,11 @@ local function PortraitClassCoords(unit)
     end
 end
 
--- Color de clase del player (nunca secreto: es la propia unidad). Usado por
--- mirrorTarget para pintar el fondo segun a quien se esta mostrando.
-local function PlayerClassColor()
-    local _, classFile = UnitClass("player")
-    if not classFile then return end
+-- Color de clase de una unidad. Para "player" nunca es secreto; para "target"
+-- (mirrorTarget) se valida con issecretvalue igual que PortraitClassCoords.
+local function UnitClassColorSafe(unit)
+    local ok, _, classFile = pcall(UnitClass, unit)
+    if not ok or type(classFile) ~= "string" or (issecretvalue and issecretvalue(classFile)) then return end
     return (C_ClassColor and C_ClassColor.GetClassColor and C_ClassColor.GetClassColor(classFile))
         or (RAID_CLASS_COLORS and RAID_CLASS_COLORS[classFile])
 end
@@ -140,9 +140,25 @@ local function PortraitUpdatePicture(u)
     end)
     if u.key == "portrait_player" and p.mirrorTarget and u.bg then
         if mirroring then
-            u.bg:SetVertexColor(1, 0, 0, p.bgAlpha)
+            local ok, isPlayer = pcall(UnitIsPlayer, "target")
+            local c = ok and isPlayer and UnitClassColorSafe("target")
+            if c then
+                -- Target es un jugador: color de clase (igual que el player solo).
+                u.bg:SetVertexColor(c.r, c.g, c.b, p.bgAlpha)
+            else
+                -- Target es NPC: color por reaccion (hostil/neutral/amistoso).
+                local okR, reaction = pcall(UnitReaction, "target", "player")
+                reaction = okR and type(reaction) == "number" and reaction or nil
+                if reaction and reaction >= 5 then
+                    u.bg:SetVertexColor(0.15, 0.85, 0.15, p.bgAlpha)       -- amistoso
+                elseif reaction == 4 then
+                    u.bg:SetVertexColor(1, 0.9, 0.1, p.bgAlpha)           -- neutral
+                else
+                    u.bg:SetVertexColor(1, 0.1, 0.1, p.bgAlpha)           -- hostil (o desconocido)
+                end
+            end
         else
-            local c = PlayerClassColor()
+            local c = UnitClassColorSafe("player")
             if c then
                 u.bg:SetVertexColor(c.r, c.g, c.b, p.bgAlpha)
             else
