@@ -77,6 +77,15 @@ local function PortraitClassCoords(unit)
     end
 end
 
+-- Color de clase del player (nunca secreto: es la propia unidad). Usado por
+-- mirrorTarget para pintar el fondo segun a quien se esta mostrando.
+local function PlayerClassColor()
+    local _, classFile = UnitClass("player")
+    if not classFile then return end
+    return (C_ClassColor and C_ClassColor.GetClassColor and C_ClassColor.GetClassColor(classFile))
+        or (RAID_CLASS_COLORS and RAID_CLASS_COLORS[classFile])
+end
+
 -- Actualiza el "retrato": modelo 3D (kind=model) o icono de clase (kind=icon).
 local function PortraitUpdatePicture(u)
     local p = PP(u)
@@ -113,12 +122,34 @@ local function PortraitUpdatePicture(u)
     if not u.model then return end
     if not p.showModel then u.model:Hide() return end
     u.model:Show()
+    -- mirrorTarget (solo portrait_player): muestra el modelo 3D del target en
+    -- vez del propio, si hay target. u.unit NO se toca (sigue usandose tal
+    -- cual en el resto de features: faction/death/combat/etc). El patron
+    -- SetUnit("target") ya esta probado y funcionando en portrait_target/tot.
+    local modelUnit = u.unit
+    local mirroring = false
+    if u.key == "portrait_player" and p.mirrorTarget and UnitExists("target") then
+        modelUnit = "target"
+        mirroring = true
+    end
     pcall(function()
         u.model:ClearModel()
-        u.model:SetUnit(u.unit)
+        u.model:SetUnit(modelUnit)
         u.model:SetPortraitZoom(ns.clamp(p.modelZoom, 0, 1))
         u.model:SetPosition(0, 0, 0)
     end)
+    if u.key == "portrait_player" and p.mirrorTarget and u.bg then
+        if mirroring then
+            u.bg:SetVertexColor(1, 0, 0, p.bgAlpha)
+        else
+            local c = PlayerClassColor()
+            if c then
+                u.bg:SetVertexColor(c.r, c.g, c.b, p.bgAlpha)
+            else
+                u.bg:SetVertexColor(p.bgColor.r, p.bgColor.g, p.bgColor.b, p.bgAlpha)
+            end
+        end
+    end
 end
 
 local function PortraitUpdateFaction(u)

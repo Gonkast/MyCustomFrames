@@ -2535,6 +2535,7 @@ local function BuildPanel()
         VIS.portraitPlayerOnly[#VIS.portraitPlayerOnly + 1] = playerOnly
         MakeCheckbox(playerOnly, "Left-click opens Character panel", "clickOpenChar", L, -216)
         MakeSlider(playerOnly, "Click area size", 0.3, 3, 0.05, "charBtnScale", L, -258)
+        MakeCheckbox(playerOnly, "Show target's model instead (if targeting)", "mirrorTarget", L, -300)
 
         -- Doble posicion (solo portraits con dualPos: player/pet/focus).
         local dual = MakeGroup(f)

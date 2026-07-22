@@ -373,6 +373,7 @@ local function PortraitDefaultsFor(key)
         enabled = true,
         clickOpenChar = (key == "portrait_player"),   -- click abre el panel de personaje (solo player)
         charBtnScale = 1.0,   -- multiplicador del area de click del boton de personaje (solo player)
+        mirrorTarget = false,   -- mostrar el modelo 3D del target en vez del player, si hay target (solo player)
         size = 90, scale = 1.0, strata = "MEDIUM",
         -- Posicion "centro" / principal
         centerAnchor = "", centerPoint = "CENTER", centerRelPoint = "CENTER",
@@ -1636,7 +1637,7 @@ end
 -- PERF (2026-07-19, "arregla todo"): antes era una tabla LITERAL nueva
 -- creada en cada PLAYER_TARGET_CHANGED (dispara muy seguido en combate/
 -- questing). Hoisteada a modulo-nivel, se reusa siempre.
-local TARGET_PORTRAIT_KEYS = { "portrait_target", "portrait_tot" }
+local TARGET_PORTRAIT_KEYS = { "portrait_target", "portrait_tot", "portrait_player" }
 
 local events = CreateFrame("Frame")
 events:RegisterEvent("ADDON_LOADED")
