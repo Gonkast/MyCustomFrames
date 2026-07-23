@@ -3862,22 +3862,65 @@ local function BuildPanel()
     panelButtons[#panelButtons + 1] = auraTestBtn
     AddTooltip(auraTestBtn, "Test Aura Hover", "Shows placeholder auras on Party + Arena frames to test the hover/combat reveal, without needing a real group or match. Same as /mcfpartytest + /mcfarenaauratest.")
 
-    -- Pedido del usuario 2026-07-19: mismo boton "Set default" de la pestaña
-    -- Profile, tambien accesible desde el footer (usa el preset seleccionado
-    -- ahi mismo -- ver ns.SetDefaultToSelectedPreset/GetSelectedPresetName).
-    local setDefaultBtn = MakeTabButton(panel, "Set Default", 110, 24)
-    setDefaultBtn:SetPoint("LEFT", auraTestBtn, "RIGHT", 6, 0)
-    setDefaultBtn:SetScript("OnClick", function()
-        if ns.SetDefaultToSelectedPreset then ns.SetDefaultToSelectedPreset() end
-    end)
-    panelButtons[#panelButtons + 1] = setDefaultBtn
-    AddTooltip(setDefaultBtn, "Set Default", "Marks the preset currently selected in the Profile tab as the default (used by Reset ALL and fresh installs).")
+    -- Pedido del usuario 2026-07-23: reemplaza "Set Default" (que sigue
+    -- disponible en la pestaña Profile, esto solo saca el ATAJO del footer)
+    -- por un dropdown de SKINS globales -- aplica ns.TEX_SKINS a TODO el
+    -- addon de una (ver ns.ApplySkin en core.lua).
+    local skinsPopup
+    local function GetSkinsPopup()
+        if skinsPopup then return skinsPopup end
+        local p = CreateFrame("Frame", "MyCF_SkinsPopup", UIParent)
+        p:SetSize(160, 20 + (#(ns.TEX_SKINS or {}) * 22))
+        p:SetFrameStrata("FULLSCREEN_DIALOG")
+        p:EnableMouse(true)
+        p:Hide()
+        tinsert(UISpecialFrames, "MyCF_SkinsPopup")
+        local bg = p:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(0.04, 0.04, 0.05, 0.96)
+        local bd = p:CreateTexture(nil, "BORDER"); bd:SetAllPoints()
+        bd:SetColorTexture(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.5)
+        p.rows = {}
+        skinsPopup = p
+        return p
+    end
+    local function OpenSkinsPopup(anchor)
+        local p = GetSkinsPopup()
+        local activeFolder = ns.ActiveSkinFolder or ""
+        for i, skin in ipairs(ns.TEX_SKINS or {}) do
+            local r = p.rows[i]
+            if not r then
+                r = CreateFrame("Button", nil, p)
+                r:SetSize(150, 20)
+                local hl = r:CreateTexture(nil, "HIGHLIGHT"); hl:SetAllPoints(); hl:SetColorTexture(1, 0.82, 0.2, 0.14)
+                local tx = r:CreateFontString(nil, "OVERLAY"); setFont(tx, 12)
+                tx:SetPoint("LEFT", 6, 0); tx:SetTextColor(COLOR_OPTION[1], COLOR_OPTION[2], COLOR_OPTION[3])
+                r.tx = tx
+                p.rows[i] = r
+            end
+            r.tx:SetText(skin.label or skin.folder)
+            r.tx:SetTextColor(skin.folder == activeFolder and 1 or COLOR_OPTION[1],
+                skin.folder == activeFolder and 0.82 or COLOR_OPTION[2],
+                skin.folder == activeFolder and 0.2 or COLOR_OPTION[3])
+            r:SetPoint("TOPLEFT", 4, -6 - (i - 1) * 22)
+            r:SetScript("OnClick", function()
+                if ns.ApplySkin then ns.ApplySkin(skin.folder) end
+                p:Hide()
+            end)
+            r:Show()
+        end
+        p:ClearAllPoints(); p:SetPoint("BOTTOM", anchor, "TOP", 0, 4)
+        p:Show(); p:Raise()
+    end
+    local skinsBtn = MakeTabButton(panel, "Skins", 90, 24)
+    skinsBtn:SetPoint("LEFT", auraTestBtn, "RIGHT", 6, 0)
+    skinsBtn:SetScript("OnClick", function() OpenSkinsPopup(skinsBtn) end)
+    panelButtons[#panelButtons + 1] = skinsBtn
+    AddTooltip(skinsBtn, "Skins", "Switch every texture in the addon at once to a different skin folder (Assets\\<folder>\\<same filenames>). Missing files fall back to Default automatically.")
 
     -- 2026-07-17: centrar el grupo entero (estaba pegado a la izquierda). Como
-    -- greenBtn/resetAllFooterBtn/wizardBtn/auraTestBtn/setDefaultBtn estan
+    -- greenBtn/resetAllFooterBtn/wizardBtn/auraTestBtn/skinsBtn estan
     -- anclados EN CADENA relativos a moveBtn, alcanza con re-anclar solo
     -- moveBtn — el resto se mueve con el.
-    local totalW = setDefaultBtn:GetRight() - moveBtn:GetLeft()
+    local totalW = skinsBtn:GetRight() - moveBtn:GetLeft()
     moveBtn:ClearAllPoints()
     moveBtn:SetPoint("BOTTOM", panel, "BOTTOM", -totalW / 2 + moveBtn:GetWidth() / 2, 22)
 

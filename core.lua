@@ -86,7 +86,6 @@ ns.AURA_PREVIEW_ICON = AURA_PREVIEW_ICON
 ns.ASSETS = A
 ns.TEX_SKINS = {
     { folder = "",          label = "Default" },
-    
     -- { folder = "Neon\\",  label = "Neon" },   -- ejemplo: Assets\Neon\<mismos archivos>
 }
 ns.TEX_LIB = {
@@ -109,6 +108,98 @@ ns.TEX_LIB = {
     ringbutton      = { "point_plate.tga" },
     dismount        = { "icon_exit_flight.tga" },
 }
+
+-- ==========================================================================
+-- SKINS GLOBALES (pedido del usuario 2026-07-23: "un dropdown que aplique la
+-- skin a TODO el addon automaticamente, si un archivo no existe en la carpeta
+-- de la skin sigue usando el de Assets"). Se prueba cada archivo con
+-- Texture:SetTexture(), que devuelve un booleano de exito real (confirmado
+-- contra Blizzard_APIDocumentationGenerated/SimpleTextureBaseAPIDocumentation.lua
+-- -- no es un truco, es la API documentada). Sin eso no habria forma de saber
+-- si un archivo existe: Lua en WoW no puede leer el disco.
+-- ==========================================================================
+local skinProbeTex = CreateFrame("Frame"):CreateTexture(nil, "BACKGROUND")
+local function SkinResolve(filename)
+    local folder = ns.ActiveSkinFolder or ""
+    if folder ~= "" then
+        local path = A .. folder .. filename
+        if skinProbeTex:SetTexture(path) then return path end
+    end
+    return A .. filename
+end
+ns.SkinResolve = SkinResolve
+
+-- (domain, dbKey, category): la lista completa de "slots" de textura que ya
+-- expone el selector manual de Options.lua (MakeTexturePicker) -- reusada
+-- aca para saber CUALES campos existen y a que categoria de TEX_LIB
+-- pertenecen, sin duplicar el inventario a mano.
+local SKIN_SLOTS = {
+    { domain = "units",     dbKey = "texture",            category = "bar" },
+    { domain = "units",     dbKey = "cageTexture",         category = "cage" },
+    { domain = "units",     dbKey = "highlightTexture",    category = "highlight" },
+    { domain = "units",     dbKey = "castTexture",         category = "bar" },
+    { domain = "portraits", dbKey = "bgTexture",           category = "portraitbg" },
+    { domain = "portraits", dbKey = "cageTexture",         category = "portraitcage" },
+    { domain = "portraits", dbKey = "raidTargetTexture",   category = "raidtarget" },
+    { domain = "auras",     dbKey = "borderTexture",       category = "auraborder" },
+    { domain = "infobar",   dbKey = "bgTexture",           category = "infobg" },
+    { domain = "glow",      dbKey = "glowTexture",         category = "glow" },
+    { domain = "minimap",   dbKey = "borderTexture",       category = "minimapborder" },
+    { domain = "minimap",   dbKey = "backdropTexture",     category = "minimapbackdrop" },
+    { domain = "minimap",   dbKey = "eyeTexture",          category = "eye" },
+    { domain = "minimap",   dbKey = "dismountTexture",     category = "dismount" },
+    { domain = "minimap",   dbKey = "ringBackdropTexture", category = "ringbackdrop" },
+    { domain = "minimap",   dbKey = "ringButtonTexture",   category = "ringbutton" },
+}
+
+local function BasenameOf(path)
+    if type(path) ~= "string" or path == "" then return nil end
+    return path:match("([^\\]+)$")
+end
+
+-- Solo reescribe el campo si su valor actual (sin importar que carpeta/skin
+-- tenga puesta ahora) es uno de los archivos CONOCIDOS de esa categoria --
+-- una ruta totalmente custom que el usuario escribio a mano se deja intacta.
+local function ApplySkinToTable(t, slot)
+    if not t then return end
+    local base = BasenameOf(t[slot.dbKey])
+    if not base then return end
+    for _, f in ipairs(ns.TEX_LIB[slot.category] or {}) do
+        if f == base then t[slot.dbKey] = SkinResolve(base); return end
+    end
+end
+
+-- Aplica una skin a TODO el addon: cambia tanto los campos ya guardados
+-- (baked-in en cada unidad/portrait/aura) como las constantes "vacio =
+-- default" (aura border/info bar) que se leen en vivo en cada refresh.
+ns.ApplySkin = function(folderKey)
+    ns.ActiveSkinFolder = folderKey or ""
+    local db = ns.GetDB and ns.GetDB()
+    if not db then return end
+    db.activeSkin = ns.ActiveSkinFolder
+    for _, slot in ipairs(SKIN_SLOTS) do
+        if slot.domain == "units" or slot.domain == "portraits" or slot.domain == "auras" then
+            for _, t in pairs(db[slot.domain] or {}) do ApplySkinToTable(t, slot) end
+        else
+            ApplySkinToTable(db[slot.domain], slot)
+        end
+    end
+    -- Constantes leidas en vivo cuando el campo guardado esta vacio (ver
+    -- InfoBar.lua/Auras.lua: `p.field ~= "" and p.field or ns.CONSTANTE`).
+    ns.TEXTURE_DEFAULT = SkinResolve("hp_lowmid_bar_miror_s.tga")
+    ns.POWER_TEXTURE = SkinResolve("power_cap_s.tga")
+    ns.HIGHLIGHT_TEX = SkinResolve("hp_low_case_miror_s_highlight.tga")
+    ns.PORTRAIT_BG = SkinResolve("Circle_Smooth_Border.tga")
+    ns.PORTRAIT_ORB = SkinResolve("orb_case_low.tga")
+    ns.AURA_BORDER = SkinResolve("actionbutton-border square.tga")
+    ns.RAIDTARGET_TEX = SkinResolve("raid_target_icons.tga")
+    ns.INFOBAR_BG_TEX = SkinResolve("info_bg.tga")
+    if ns.RefreshAll then ns.RefreshAll() end
+    if ns.RefreshInfoBar then ns.RefreshInfoBar() end
+    if ns.RefreshMinimap then ns.RefreshMinimap() end
+    if ns.RefreshGlow then ns.RefreshGlow(true) end
+    print("|cff00ff00[MCF]|r Skin applied: " .. ((folderKey == "" or not folderKey) and "Default" or folderKey:gsub("\\", "")))
+end
 
 -- Rutas antiguas (AzeriteUI) -> copias locales, para migrar configs guardadas.
 local PATH_REMAP = {
@@ -1689,6 +1780,11 @@ events:RegisterEvent("ARENA_OPPONENT_UPDATE")
 events:SetScript("OnEvent", function(self, event, arg1)
     if event == "ADDON_LOADED" and arg1 == ADDON then
         InitDB()
+        -- Restaura CUAL skin esta activa (solo para que el picker del menu la
+        -- preseleccione/resalte correctamente) -- los valores ya resueltos de
+        -- la ultima vez que se aplico la skin ya quedaron guardados en cada
+        -- unidad/portrait/aura, no hace falta re-aplicar en cada login.
+        ns.ActiveSkinFolder = (db and db.activeSkin) or ""
         RefreshAll()
     elseif event == "PLAYER_ENTERING_WORLD" then
         if ns.ApplyDcFix then ns.ApplyDcFix() end
