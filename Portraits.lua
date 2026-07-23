@@ -140,7 +140,24 @@ local function PortraitUpdatePicture(u)
     local ok, err = pcall(function()
         u.model:ClearModel()
         u.model:SetUnit(modelUnit)
-        u.model:SetPortraitZoom(ns.clamp(p.modelZoom, 0, 1))
+        -- FIX (2026-07-23, "no se muestra el portrait 3d del target hostil, sale
+        -- vacio"): confirmado que SetUnit no tiraba error (ok=true en el diagnostico)
+        -- pero la camara quedaba vacia para criaturas. SetPortraitZoom asume un
+        -- anclaje de "cabeza" que Blizzard define para esqueletos de
+        -- jugador/humanoide -- muchos modelos de mob no lo tienen, y la camara
+        -- termina mirando a un punto vacio o metida dentro de la malla. Portraits
+        -- que mirrorean el target (mirroring==true) y el target NO es un jugador
+        -- usan un encuadre por distancia de camara en vez de zoom-a-cabeza.
+        local useHeadZoom = true
+        if mirroring then
+            local okP, isPlayerModel = pcall(UnitIsPlayer, modelUnit)
+            useHeadZoom = okP and isPlayerModel and true or false
+        end
+        if useHeadZoom then
+            u.model:SetPortraitZoom(ns.clamp(p.modelZoom, 0, 1))
+        else
+            u.model:SetCamDistanceScale(1)
+        end
         u.model:SetPosition(0, 0, 0)
     end)
     if mirroring then
