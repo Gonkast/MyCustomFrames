@@ -974,7 +974,7 @@ local UpdatePreview   -- asignada en BuildPanel (3ra columna estilo Plumber, ver
 -- mostrando los sub-tabs de la ULTIMA unidad seleccionada (ej: entrar a Explorer
 -- dejaba visible "Gen/Bar/Cage/Sel/Health/Name/Spell/Cast/Color" de ToT debajo),
 -- dando la sensacion de estar en dos secciones a la vez. Se ocultan explicito aca.
-local GLOBAL_SECTION_TITLE = { presets = "Profile", explorer = "Explorer", explorer2 = "Explorer 2", editing = "Editing", setup = "Setup", extras = "Extras", extras2 = "Extras 2" }
+local GLOBAL_SECTION_TITLE = { presets = "Profile", explorer = "Explorer", editing = "Editing", setup = "Setup", extras = "Extras" }
 
 local function ShowSection(key)
     if not sections[key] then return end
@@ -1002,8 +1002,6 @@ local function ShowSection(key)
     if NAVBTN.editing then NAVBTN.editing:SetActive(key == "editing") end
     if NAVBTN.setup then NAVBTN.setup:SetActive(key == "setup") end
     if NAVBTN.extras then NAVBTN.extras:SetActive(key == "extras") end
-    if NAVBTN.extras2 then NAVBTN.extras2:SetActive(key == "extras2") end
-    if NAVBTN.explorer2 then NAVBTN.explorer2:SetActive(key == "explorer2") end
     if UpdatePreview then UpdatePreview() end
     -- Nudge: fuerza el relayout de la seccion recien mostrada. El canvas de Settings a
     -- veces no posiciona/renderiza los widgets hasta un Hide/Show (de ahi el bug de
@@ -1189,8 +1187,8 @@ local function SelectUnit(key)
        or IsGlowSection(currentSection) or IsPartyAuraSection(currentSection) or IsArenaAuraSection(currentSection)
        or IsMinimapSection(currentSection)
        or IsNameplatesSection(currentSection) or IsClassPowerSection(currentSection) or IsRaidSection(currentSection)
-       or currentSection == "presets" or currentSection == "explorer" or currentSection == "explorer2" or currentSection == "editing"
-       or currentSection == "setup" or currentSection == "extras" or currentSection == "extras2"
+       or currentSection == "presets" or currentSection == "explorer" or currentSection == "editing"
+       or currentSection == "setup" or currentSection == "extras"
        or (HIDEGRP.nameSectionKeys[currentSection] and not hasName)
        or ((currentSection == "cast" or currentSection == "highlight") and isPower) then
         ShowSection("general")
@@ -1419,10 +1417,8 @@ local function BuildPanel()
         { key = "setup",    label = "Setup" },
         { key = "editing",  label = "Editing" },
         { key = "explorer", label = "Explorer" },
-        { key = "explorer2", label = "Explorer 2" },
         { key = "presets",  label = "Profile" },
         { key = "extras",   label = "Extras" },
-        { key = "extras2",  label = "Extras 2" },
     }
     local navDiv = sidebar:CreateTexture(nil, "ARTWORK")
     navDiv:SetTexture(PL.DIV_H)
@@ -1437,10 +1433,8 @@ local function BuildPanel()
         if e.key == "setup" then NAVBTN.setup = b
         elseif e.key == "editing" then NAVBTN.editing = b
         elseif e.key == "explorer" then NAVBTN.explorer = b
-        elseif e.key == "explorer2" then NAVBTN.explorer2 = b
         elseif e.key == "presets" then NAVBTN.presets = b
-        elseif e.key == "extras" then NAVBTN.extras = b
-        elseif e.key == "extras2" then NAVBTN.extras2 = b end
+        elseif e.key == "extras" then NAVBTN.extras = b end
     end
 
     -- Reposiciona/filtra los items globales por busqueda (2026-07-17: antes
@@ -1768,16 +1762,12 @@ local function BuildPanel()
             "Save and load full profiles.", "Export and import across accounts." } },
         { test = function(k) return k == "explorer" end, title = "Explorer", desc = {
             "Auto-hide UI elements.", "Revealed on mouseover." } },
-        { test = function(k) return k == "explorer2" end, title = "Explorer 2", desc = {
-            "Always-show conditions, hidden opacity.", "Content-type filter (world/dungeon/raid/...)." } },
         { test = function(k) return k == "editing" end, title = "Editing", desc = {
             "Grid, snap and layout preview.", "Lock mode to move elements." } },
         { test = function(k) return k == "setup" end, title = "Setup", desc = {
             "Integration with other addons.", "Bundled profiles ready to apply." } },
         { test = function(k) return k == "extras" end, title = "Extras", desc = {
-            "Tooltip skin and Mirror Timers (breath/rested/feign death).", "Global, not per-unit." } },
-        { test = function(k) return k == "extras2" end, title = "Extras 2", desc = {
-            "Top-center widget (zone events, delve progress).", "Drag/scroll to move and resize in Lock mode." } },
+            "Tooltip skin, Mirror Timers, and the top-center widget.", "Global, not per-unit." } },
     }
     -- Pedido del usuario 2026-07-19 ("me gustaria que sea PER UNIDAD... si
     -- estoy en tot me resuma lo que puedo hacer ahi"): antes esto era una UNICA
@@ -2474,67 +2464,93 @@ local function BuildPanel()
     -- (no por-unidad), separados de Profile en su propia pestaña de sidebar.
     do
         local f = Section("extras")
+        -- Grupo local (el MakeGroup compartido de mas abajo, usado por las
+        -- secciones Portrait, se declara DESPUES de este bloque en el archivo
+        -- -- no esta en scope aca todavia, asi que se define uno propio).
+        local function MakeGroup(parent)
+            local g = CreateFrame("Frame", nil, parent)
+            g:SetAllPoints(parent)
+            return g
+        end
 
-        MakeHeader(f, "Tooltip", L, -6, 210)
+        -- Sub-tabs internos (Tooltip & Timers / Top Widget) -- pedido del
+        -- usuario 2026-07-23, mismo criterio que Explorer. "Extras" ya estaba
+        -- lleno de borde a borde (Mirror Timer Text llega a -370/-386) --
+        -- las pestañas van en el hueco horizontal libre entre los headers de
+        -- Tooltip (L) y Mirror Timers (R), asi el contenido existente NO se
+        -- corre ni un pixel (evita repetir el desborde de la vez pasada).
+        -- Labels cortos a proposito: van en el HUECO horizontal libre entre el
+        -- header "Tooltip" (L) y "Mirror Timers..." (R) -- ese hueco es angosto
+        -- (~158px), no entra un label largo sin desbordar sobre el header de R.
+        local tabMain = MakeTabButton(f, "Main", 40, 18)
+        local tabTopWidget = MakeTabButton(f, "Widget", 55, 18)
+        tabMain:SetPoint("TOPLEFT", 90, -6)
+        tabTopWidget:SetPoint("TOPLEFT", tabMain, "TOPRIGHT", 4, 0)
+        local mainGroup = MakeGroup(f)
+        local topWidgetGroup = MakeGroup(f)
+        local function ShowExtrasTab(which)
+            mainGroup:SetShown(which == "main")
+            topWidgetGroup:SetShown(which == "topwidget")
+            tabMain:SetActive(which == "main")
+            tabTopWidget:SetActive(which == "topwidget")
+        end
+        tabMain:SetScript("OnClick", function() ShowExtrasTab("main") end)
+        tabTopWidget:SetScript("OnClick", function() ShowExtrasTab("topwidget") end)
+
+        MakeHeader(mainGroup, "Tooltip", L, -6, 210)
         local function TTDB() return ns.GetDB() and ns.GetDB().tooltip end
-        MakeToggle(f, "Enable tooltip skin", L, -30,
+        MakeToggle(mainGroup, "Enable tooltip skin", L, -30,
             function() return TTDB() and TTDB().enabled end,
             function(v) if TTDB() then TTDB().enabled = v end; if ns.RefreshTooltipSkin then ns.RefreshTooltipSkin() end end)
-        MakeSlider(f, "Scale", 0.5, 2, 0.05, "scale", L, -74, TTDB,
+        MakeSlider(mainGroup, "Scale", 0.5, 2, 0.05, "scale", L, -74, TTDB,
             function() if ns.RefreshTooltipSkin then ns.RefreshTooltipSkin() end end)
-        local ttNote = f:CreateFontString(nil, "ARTWORK"); setFont(ttNote, 10)
+        local ttNote = mainGroup:CreateFontString(nil, "ARTWORK"); setFont(ttNote, 10)
         ttNote:SetPoint("TOPLEFT", L, -128); ttNote:SetWidth(210); ttNote:SetJustifyH("LEFT")
         ttNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         ttNote:SetText("Reskins GameTooltip and related tooltips (items, units, comparisons) to match this preset.")
 
-        MakeHeader(f, "Mirror Timers (breath/rested/feign death)", R, -6, 210)
+        MakeHeader(mainGroup, "Mirror Timers (breath/rested/feign death)", R, -6, 210)
         local function MTDB() return ns.GetDB() and ns.GetDB().mirrortimer end
         local function RefreshMT() if ns.RefreshMirrorTimers then ns.RefreshMirrorTimers() end end
-        MakeToggle(f, "Enable", R, -30,
+        MakeToggle(mainGroup, "Enable", R, -30,
             function() return MTDB() and MTDB().enabled end,
             function(v) if MTDB() then MTDB().enabled = v end; RefreshMT() end)
-        MakeSlider(f, "Bar Width", 60, 400, 5, "width", R, -74, MTDB, RefreshMT)
-        MakeSlider(f, "Bar Height", 8, 40, 1, "height", R, -126, MTDB, RefreshMT)
+        MakeSlider(mainGroup, "Bar Width", 60, 400, 5, "width", R, -74, MTDB, RefreshMT)
+        MakeSlider(mainGroup, "Bar Height", 8, 40, 1, "height", R, -126, MTDB, RefreshMT)
         -- Pedido del usuario 2026-07-19: "dejame elegir el w h de ambas" --
         -- cage (fondo/marco) con tamaño INDEPENDIENTE de la barra, ya no
         -- derivado por proporcion fija.
-        MakeSlider(f, "Cage Width", 60, 500, 5, "cageWidth", R, -178, MTDB, RefreshMT)
-        MakeSlider(f, "Cage Height", 20, 200, 2, "cageHeight", R, -230, MTDB, RefreshMT)
-        MakeSlider(f, "Offset X", -500, 500, 1, "offsetX", R, -282, MTDB, RefreshMT)
-        MakeSlider(f, "Offset Y", -300, 100, 1, "offsetY", R, -334, MTDB, RefreshMT)
+        MakeSlider(mainGroup, "Cage Width", 60, 500, 5, "cageWidth", R, -178, MTDB, RefreshMT)
+        MakeSlider(mainGroup, "Cage Height", 20, 200, 2, "cageHeight", R, -230, MTDB, RefreshMT)
+        MakeSlider(mainGroup, "Offset X", -500, 500, 1, "offsetX", R, -282, MTDB, RefreshMT)
+        MakeSlider(mainGroup, "Offset Y", -300, 100, 1, "offsetY", R, -334, MTDB, RefreshMT)
         -- Pedido del usuario 2026-07-19: "no me dejes elegir texturas desde
         -- el menu" -- textura fija (misma que AzeriteUI, ver MirrorTimers.lua),
         -- sin selector. Solo tamaño/posicion/color quedan configurables.
-        local mtNote = f:CreateFontString(nil, "ARTWORK"); setFont(mtNote, 10)
+        local mtNote = mainGroup:CreateFontString(nil, "ARTWORK"); setFont(mtNote, 10)
         mtNote:SetPoint("TOPLEFT", R, -386); mtNote:SetWidth(210); mtNote:SetJustifyH("LEFT")
         mtNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         mtNote:SetText("Fixed texture (same as AzeriteUI). To move it: enter Lock (top bar) — it shows with a draggable outline.")
 
         -- Texto (pedido del usuario 2026-07-19: "quiero controlar el texto,
         -- x y size y color tambien") -- columna izquierda, debajo de Tooltip.
-        MakeHeader(f, "Mirror Timer Text", L, -180, 210)
-        MakeSlider(f, "Text Offset X", -100, 100, 1, "labelOffsetX", L, -224, MTDB, RefreshMT)
-        MakeSlider(f, "Text Offset Y", -100, 100, 1, "labelOffsetY", L, -276, MTDB, RefreshMT)
-        MakeSlider(f, "Text Size", 6, 24, 1, "labelFontSize", L, -328, MTDB, RefreshMT)
-        MakeGlobalColor(f, "Text Color", function() return MTDB() and MTDB().labelColor end, L, -370, RefreshMT)
-    end
+        MakeHeader(mainGroup, "Mirror Timer Text", L, -180, 210)
+        MakeSlider(mainGroup, "Text Offset X", -100, 100, 1, "labelOffsetX", L, -224, MTDB, RefreshMT)
+        MakeSlider(mainGroup, "Text Offset Y", -100, 100, 1, "labelOffsetY", L, -276, MTDB, RefreshMT)
+        MakeSlider(mainGroup, "Text Size", 6, 24, 1, "labelFontSize", L, -328, MTDB, RefreshMT)
+        MakeGlobalColor(mainGroup, "Text Color", function() return MTDB() and MTDB().labelColor end, L, -370, RefreshMT)
 
-    -- Extras 2 (2026-07-23): "Extras" ya estaba lleno hasta el borde (Mirror
-    -- Timer Text terminaba en -370/-386, el footer de botones empieza mucho
-    -- antes de lo que parecia) -- el bloque de Top Widget quedaba tapado
-    -- detras de la barra de botones inferior. Mismo criterio ya usado con
-    -- Explorer/Explorer 2: pestaña nueva en vez de forzar mas contenido.
-    do
-        local f = Section("extras2")
-        MakeHeader(f, "Top Widget (event/delve progress bars)", L, -6, 430)
+        MakeHeader(topWidgetGroup, "Top Widget (event/delve progress bars)", L, -6, 430)
         local function TWDB() return ns.GetDB() and ns.GetDB().topwidget end
-        MakeToggle(f, "Enable repositioning", L, -30,
+        MakeToggle(topWidgetGroup, "Enable repositioning", L, -30,
             function() return TWDB() and TWDB().enabled end,
             function(v) if TWDB() then TWDB().enabled = v end; if ns.RefreshTopWidget then ns.RefreshTopWidget() end end)
-        local twNote = f:CreateFontString(nil, "ARTWORK"); setFont(twNote, 10)
+        local twNote = topWidgetGroup:CreateFontString(nil, "ARTWORK"); setFont(twNote, 10)
         twNote:SetPoint("TOPLEFT", L, -58); twNote:SetWidth(430); twNote:SetJustifyH("LEFT")
         twNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         twNote:SetText("The native top-center widget (zone events, delve progress). Enter Lock (top bar) to drag it; scroll wheel over it to resize.")
+
+        ShowExtrasTab("main")
     end
 
     -- =========================== SECCIONES PORTRAIT ===========================
@@ -3603,83 +3619,95 @@ local function BuildPanel()
     do
         local f = Section("explorer")
         MakeHeader(f, "Explorer  —  auto-hide, reveal on mouseover", L, -6, 430)
+
+        -- Sub-tabs internos (Elements / Conditions), mismo estilo pildora que
+        -- Gen/Bar/Cage de las unidades -- pedido del usuario 2026-07-23: "que
+        -- explorer2 este dentro de explorer, como los headers de gen/bar/cage".
+        -- Debajo del header (no al lado): el titulo es largo y se hubiera
+        -- superpuesto con las pestañas si iban a la misma altura.
+        local tabElements = MakeTabButton(f, "Elements", 90, 22)
+        local tabConditions = MakeTabButton(f, "Conditions", 90, 22)
+        tabElements:SetPoint("TOPLEFT", L, -30)
+        tabConditions:SetPoint("TOPLEFT", tabElements, "TOPRIGHT", 4, 0)
+        local elementsGroup = MakeGroup(f)
+        local conditionsGroup = MakeGroup(f)
+        local function ShowExplorerTab(which)
+            elementsGroup:SetShown(which == "elements")
+            conditionsGroup:SetShown(which == "conditions")
+            tabElements:SetActive(which == "elements")
+            tabConditions:SetActive(which == "conditions")
+        end
+        tabElements:SetScript("OnClick", function() ShowExplorerTab("elements") end)
+        tabConditions:SetScript("OnClick", function() ShowExplorerTab("conditions") end)
+
+        -- Pedido del usuario 2026-07-23: fusionar frame+portrait en UNA sola
+        -- opcion para party1-5, player (frame+power bar), pet, y ToT -- no
+        -- tiene sentido tenerlos separados. El player portrait queda aparte
+        -- a proposito (es el unico con mirrorTarget). keys[] en vez de una
+        -- key unica: el toggle lee/escribe TODAS las keys juntas.
         local EXPLORER_LIST = {
-            { "Player unit frame", "player" },
-            { "Player portrait", "portrait_player" },
-            { "Micro menu", "micromenu" },
-            { "Info bar", "infobar" },
-            { "Pet unit frame", "pet" },
-            { "Pet portrait", "portrait_pet" },
-            { "Target unit frame", "target" },
-            { "Target portrait", "portrait_target" },
-            { "Target of Target frame", "targettarget" },
-            { "Target of Target portrait", "portrait_tot" },
-            { "Focus unit frame", "focus" },
-            { "Player power bar", "playerpower" },
-            { "Target power bar", "targetpower" },
-            { "Player auras", "aura_player" },
-            { "Target auras", "aura_target" },
-            { "Party 1 frame", "party1" },
-            { "Party 2 frame", "party2" },
-            { "Party 3 frame", "party3" },
-            { "Party 4 frame", "party4" },
-            { "Party 5 frame", "party5" },
-            { "Party 1 portrait", "portrait_party1" },
-            { "Party 2 portrait", "portrait_party2" },
-            { "Party 3 portrait", "portrait_party3" },
-            { "Party 4 portrait", "portrait_party4" },
-            { "Party 5 portrait", "portrait_party5" },
+            { "Player", { "player", "playerpower" } },
+            { "Player portrait", { "portrait_player" } },
+            { "Micro menu", { "micromenu" } },
+            { "Info bar", { "infobar" } },
+            { "Pet", { "pet", "portrait_pet" } },
+            { "Target unit frame", { "target" } },
+            { "Target portrait", { "portrait_target" } },
+            { "Target of Target", { "targettarget", "portrait_tot" } },
+            { "Focus unit frame", { "focus" } },
+            { "Target power bar", { "targetpower" } },
+            { "Player auras", { "aura_player" } },
+            { "Target auras", { "aura_target" } },
+            { "Party 1", { "party1", "portrait_party1" } },
+            { "Party 2", { "party2", "portrait_party2" } },
+            { "Party 3", { "party3", "portrait_party3" } },
+            { "Party 4", { "party4", "portrait_party4" } },
+            { "Party 5", { "party5", "portrait_party5" } },
         }
+        -- Ambos grupos arrancan debajo de las pestañas (tabs terminan ~-52).
+        local TOP = -62
         -- Toggle MAESTRO: apaga el Explorer entero (los toggles por elemento se conservan).
-        MakeToggle(f, "Enable Explorer (master switch)", L, -36,
+        MakeToggle(elementsGroup, "Enable Explorer (master switch)", L, TOP,
             function() return ns.GetDB().explorerEnabled ~= false end,
             function(v)
                 ns.GetDB().explorerEnabled = v and true or false
                 if not v and ns.ExplorerResetAll then ns.ExplorerResetAll() end
             end)
-        -- Grid a 2 columnas (llenado por columna, no por fila: 1ra mitad en L,
-        -- 2da mitad en R) para caber sin scroll con la lista ya extendida
-        -- (boss/arena quedan fuera a proposito, muy situacionales — pedido
-        -- del usuario 2026-07-22: agregar "los utiles" y no todo el universo).
+        -- Grid a 2 columnas (llenado por columna, no por fila).
         local ROWS = math.ceil(#EXPLORER_LIST / 2)
         for i, e in ipairs(EXPLORER_LIST) do
             local col = (i <= ROWS) and L or R
             local row = (i <= ROWS) and (i - 1) or (i - ROWS - 1)
-            local yy = -70 - row * 21
-            local key = e[2]
-            MakeToggle(f, e[1], col, yy,
-                function() return ns.GetDB().explorer[key] end,
+            local yy = TOP - 34 - row * 21
+            local keys = e[2]
+            MakeToggle(elementsGroup, e[1], col, yy,
+                function() return ns.GetDB().explorer[keys[1]] end,
                 function(v)
-                    ns.GetDB().explorer[key] = v or nil
-                    if not v and ns.ExplorerReset then ns.ExplorerReset(key) end
+                    for _, k in ipairs(keys) do
+                        ns.GetDB().explorer[k] = v or nil
+                        if not v and ns.ExplorerReset then ns.ExplorerReset(k) end
+                    end
                 end)
         end
-        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
-        note:SetPoint("TOPLEFT", L, -70 - ROWS * 21 - 14); note:SetWidth(430); note:SetJustifyH("LEFT")
-        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        note:SetText("Enabled elements fade out and reappear when you hover where they are (works even while hidden). See 'Explorer 2' for always-show conditions, opacity, and content-type filters.")
-    end
+        local elNote = elementsGroup:CreateFontString(nil, "ARTWORK"); setFont(elNote, 10)
+        elNote:SetPoint("TOPLEFT", L, TOP - 34 - ROWS * 21 - 14); elNote:SetWidth(430); elNote:SetJustifyH("LEFT")
+        elNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        elNote:SetText("Enabled elements fade out and reappear when you hover where they are (works even while hidden). See 'Conditions' for always-show rules, opacity, and content-type filters.")
 
-    -- Explorer 2 (2026-07-22: la lista de elementos de Explorer crecio bastante
-    -- -- se movio aca el resto de opciones para no desbordar el panel, que no
-    -- tiene scroll -- mismo criterio ya usado con "Icons 2" de Minimap).
-    do
-        local f = Section("explorer2")
-        MakeHeader(f, "Explorer 2  —  conditions & filters", L, -6, 430)
-        MakeToggle(f, "Always show in combat", L, -36,
+        MakeToggle(conditionsGroup, "Always show in combat", L, TOP,
             function() return ns.GetDB().explorerCombat end,
             function(v) ns.GetDB().explorerCombat = v end)
-        MakeToggle(f, "Always show on target", L, -60,
+        MakeToggle(conditionsGroup, "Always show on target", L, TOP - 24,
             function() return ns.GetDB().explorerTarget end,
             function(v) ns.GetDB().explorerTarget = v end)
-        MakeToggle(f, "Always show while casting", L, -84,
+        MakeToggle(conditionsGroup, "Always show while casting", L, TOP - 48,
             function() return ns.GetDB().explorerCasting end,
             function(v) ns.GetDB().explorerCasting = v end)
-        MakeSlider(f, "Hidden opacity", 0, 1, 0.05, "explorerFadeAlpha", L, -126,
+        MakeSlider(conditionsGroup, "Hidden opacity", 0, 1, 0.05, "explorerFadeAlpha", L, TOP - 90,
             function() return ns.GetDB() end, function() end)
         -- Filtro por TIPO DE CONTENIDO: donde el Explorer esta activo (B1b).
-        local zhdr = f:CreateFontString(nil, "ARTWORK"); setFont(zhdr, 12)
-        zhdr:SetPoint("TOPLEFT", R, -6); zhdr:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+        local zhdr = conditionsGroup:CreateFontString(nil, "ARTWORK"); setFont(zhdr, 12)
+        zhdr:SetPoint("TOPLEFT", R, TOP); zhdr:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
         zhdr:SetText("Active in:")
         local ZONES = {
             { "Open world", "world" }, { "Dungeons", "dungeon" }, { "Raids", "raid" },
@@ -3687,17 +3715,19 @@ local function BuildPanel()
         }
         for i, z in ipairs(ZONES) do
             local zk = z[2]
-            MakeToggle(f, z[1], R, -28 - (i - 1) * 24,
+            MakeToggle(conditionsGroup, z[1], R, TOP - 22 - (i - 1) * 24,
                 function() return ns.GetDB().explorerZones[zk] ~= false end,
                 function(v)
                     ns.GetDB().explorerZones[zk] = v and true or false
                     if not v and ns.ExplorerResetAll then ns.ExplorerResetAll() end
                 end)
         end
-        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
-        note:SetPoint("TOPLEFT", L, -172); note:SetWidth(430); note:SetJustifyH("LEFT")
-        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        note:SetText("Combat/target/casting force enabled elements fully visible. 'Active in' limits the whole Explorer to the chosen content types.")
+        local condNote = conditionsGroup:CreateFontString(nil, "ARTWORK"); setFont(condNote, 10)
+        condNote:SetPoint("TOPLEFT", L, TOP - 136); condNote:SetWidth(430); condNote:SetJustifyH("LEFT")
+        condNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        condNote:SetText("Combat/target/casting force enabled elements fully visible. 'Active in' limits the whole Explorer to the chosen content types.")
+
+        ShowExplorerTab("elements")
     end
 
     -- ===== FOOTER: acciones =====
