@@ -15,7 +15,11 @@ ns.TOPWIDGET_KEY = TOPWIDGET_KEY
 local function TopWidgetDefaults()
     return {
         enabled = true,
-        point = "TOP", relPoint = "TOP", offsetX = 0, offsetY = -12,
+        -- Mismo anclaje que usa Blizzard nativamente (confirmado contra
+        -- Blizzard_UIWidgetTopCenterFrame.xml, fuente real via wow-ui-source):
+        -- TOP, 0, -15 -- por default el widget queda exactamente donde
+        -- Blizzard lo pone, sin ningun offset artistico nuestro.
+        point = "TOP", relPoint = "TOP", offsetX = 0, offsetY = -15,
         anchor = "", scale = 1.0, strata = "MEDIUM",
     }
 end
