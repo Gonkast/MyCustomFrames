@@ -3884,7 +3884,10 @@ local function BuildPanel()
     end
     local function OpenSkinsPopup(anchor)
         local p = GetSkinsPopup()
-        local activeFolder = ns.ActiveSkinFolder or ""
+        -- Se resalta por LABEL, no folder: los addons-skin separados (basePath)
+        -- siempre tienen folder="" (igual que Default), folder solo alcanza
+        -- para distinguir subcarpetas internas de Assets\.
+        local activeLabel = (ns.GetDB() and ns.GetDB().activeSkinLabel) or "Default"
         for i, skin in ipairs(ns.TEX_SKINS or {}) do
             local r = p.rows[i]
             if not r then
@@ -3896,13 +3899,14 @@ local function BuildPanel()
                 r.tx = tx
                 p.rows[i] = r
             end
+            local isActive = skin.label == activeLabel
             r.tx:SetText(skin.label or skin.folder)
-            r.tx:SetTextColor(skin.folder == activeFolder and 1 or COLOR_OPTION[1],
-                skin.folder == activeFolder and 0.82 or COLOR_OPTION[2],
-                skin.folder == activeFolder and 0.2 or COLOR_OPTION[3])
+            r.tx:SetTextColor(isActive and 1 or COLOR_OPTION[1],
+                isActive and 0.82 or COLOR_OPTION[2],
+                isActive and 0.2 or COLOR_OPTION[3])
             r:SetPoint("TOPLEFT", 4, -6 - (i - 1) * 22)
             r:SetScript("OnClick", function()
-                if ns.ApplySkin then ns.ApplySkin(skin.folder) end
+                if ns.ApplySkin then ns.ApplySkin(skin) end
                 p:Hide()
             end)
             r:Show()

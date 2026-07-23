@@ -86,7 +86,10 @@ ns.AURA_PREVIEW_ICON = AURA_PREVIEW_ICON
 ns.ASSETS = A
 ns.TEX_SKINS = {
     { folder = "",          label = "Default" },
+
     -- { folder = "Neon\\",  label = "Neon" },   -- ejemplo: Assets\Neon\<mismos archivos>
+    -- Las skins como addons separados (ej. MyCustomFrames_Murloc) se agregan
+    -- SOLAS via _G.MCF_RegisterSkin, no hace falta declararlas aca.
 }
 ns.TEX_LIB = {
     bar          = { "hp_lowmid_bar_miror_s.tga", "hp_lowmid_bar_miror_b.tga", "power_cap_s.tga", "hp_cap_bar.tga", "hp_cap_bar mirror.tga", "hp_pet_bar.tga", "hp_party_bar.tga", },
@@ -125,6 +128,14 @@ ns.TEX_LIB = {
 -- ==========================================================================
 local skinProbeTex = CreateFrame("Frame"):CreateTexture(nil, "BACKGROUND")
 local function SkinResolve(filename)
+    -- ActiveSkinBasePath (addon-skin SEPARADO, ej. MyCustomFrames_Murloc) tiene
+    -- prioridad sobre ActiveSkinFolder (subcarpeta interna de Assets\, ej. el
+    -- ejemplo "Neon"): son dos formas de declarar una skin, mutuamente excluyentes.
+    local base = ns.ActiveSkinBasePath
+    if base then
+        local path = base .. filename
+        if skinProbeTex:SetTexture(path) then return path end
+    end
     local folder = ns.ActiveSkinFolder or ""
     if folder ~= "" then
         local path = A .. folder .. filename
@@ -133,6 +144,25 @@ local function SkinResolve(filename)
     return A .. filename
 end
 ns.SkinResolve = SkinResolve
+
+-- ==========================================================================
+-- API PUBLICA para addons-skin SEPARADOS (pedido del usuario 2026-07-23:
+-- "instalar las skins como addons individuales... para no tener tantas
+-- carpetas de assets en mi addon principal"). Un addon-skin (ej.
+-- MyCustomFrames_Murloc, con `## RequiredDeps: MyCustomFrames` en su .toc
+-- para garantizar que cargue DESPUES) llama a esta funcion GLOBAL desde su
+-- propio archivo de carga -- NO puede usar el `ns` de este addon, cada addon
+-- tiene el suyo propio, privado (eso es lo que devuelve `...` en cada .lua).
+-- basePath = ruta COMPLETA a la carpeta de assets de ESE addon (no un
+-- subfolder de nuestro propio Assets\).
+-- ==========================================================================
+_G.MCF_RegisterSkin = function(label, basePath)
+    if type(label) ~= "string" or label == "" or type(basePath) ~= "string" then return end
+    for _, skin in ipairs(ns.TEX_SKINS) do
+        if skin.label == label then return end   -- ya registrado (ej. /reload), no duplicar
+    end
+    table.insert(ns.TEX_SKINS, { folder = "", label = label, basePath = basePath })
+end
 
 -- (domain, dbKey, category): la lista completa de "slots" de textura que ya
 -- expone el selector manual de Options.lua (MakeTexturePicker) -- reusada
@@ -177,11 +207,17 @@ end
 -- Aplica una skin a TODO el addon: cambia tanto los campos ya guardados
 -- (baked-in en cada unidad/portrait/aura) como las constantes "vacio =
 -- default" (aura border/info bar) que se leen en vivo en cada refresh.
-ns.ApplySkin = function(folderKey)
-    ns.ActiveSkinFolder = folderKey or ""
+-- `skin` acepta: la tabla completa de ns.TEX_SKINS (preferido), o por
+-- compatibilidad un string suelto = folder (uso viejo, subcarpeta interna).
+ns.ApplySkin = function(skin)
+    if type(skin) == "string" or skin == nil then
+        skin = { folder = skin or "", label = (skin and skin ~= "") and skin or "Default" }
+    end
+    ns.ActiveSkinFolder = skin.folder or ""
+    ns.ActiveSkinBasePath = skin.basePath   -- nil para skins internas (folder) o Default
     local db = ns.GetDB and ns.GetDB()
     if not db then return end
-    db.activeSkin = ns.ActiveSkinFolder
+    db.activeSkinLabel = skin.label
     for _, slot in ipairs(SKIN_SLOTS) do
         if slot.domain == "units" or slot.domain == "portraits" or slot.domain == "auras" then
             for _, t in pairs(db[slot.domain] or {}) do ApplySkinToTable(t, slot) end
@@ -204,7 +240,7 @@ ns.ApplySkin = function(folderKey)
     if ns.RefreshInfoBar then ns.RefreshInfoBar() end
     if ns.RefreshMinimap then ns.RefreshMinimap() end
     if ns.RefreshGlow then ns.RefreshGlow(true) end
-    print("|cff00ff00[MCF]|r Skin applied: " .. ((folderKey == "" or not folderKey) and "Default" or folderKey:gsub("\\", "")))
+    print("|cff00ff00[MCF]|r Skin applied: " .. skin.label)
 end
 
 -- Rutas antiguas (AzeriteUI) -> copias locales, para migrar configs guardadas.
@@ -1786,14 +1822,27 @@ events:RegisterEvent("ARENA_OPPONENT_UPDATE")
 events:SetScript("OnEvent", function(self, event, arg1)
     if event == "ADDON_LOADED" and arg1 == ADDON then
         InitDB()
-        -- Restaura CUAL skin esta activa (solo para que el picker del menu la
-        -- preseleccione/resalte correctamente) -- los valores ya resueltos de
-        -- la ultima vez que se aplico la skin ya quedaron guardados en cada
-        -- unidad/portrait/aura, no hace falta re-aplicar en cada login.
-        ns.ActiveSkinFolder = (db and db.activeSkin) or ""
         RefreshAll()
     elseif event == "PLAYER_ENTERING_WORLD" then
         if ns.ApplyDcFix then ns.ApplyDcFix() end
+        -- Restaura la skin activa UNA sola vez (label, no folder -- persiste
+        -- igual para skins internas y addons-skin separados). Se hace aca (no
+        -- en ADDON_LOADED de este addon) para dar tiempo a que un addon-skin
+        -- separado (## RequiredDeps: MyCustomFrames) ya se haya registrado
+        -- via _G.MCF_RegisterSkin -- todos los addons normales cargan antes
+        -- de PLAYER_ENTERING_WORLD, sin importar el orden relativo exacto.
+        -- Los campos ya HORNEADOS (texture/cageTexture/etc) no necesitan
+        -- reaplicarse -- esto es solo para las constantes "vacio = default"
+        -- que se leen en vivo (aura border, minimap mask, etc).
+        if db and not ns._skinRestored then
+            ns._skinRestored = true
+            local label = db.activeSkinLabel
+            if label and label ~= "Default" then
+                for _, skin in ipairs(ns.TEX_SKINS) do
+                    if skin.label == label then ns.ApplySkin(skin); break end
+                end
+            end
+        end
         if db then ns.UpdatePetDriver() ns.UpdatePartyDrivers()
             if ns.UpdateArenaDrivers then ns.UpdateArenaDrivers() end
             RefreshAll()
