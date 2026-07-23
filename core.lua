@@ -1023,6 +1023,13 @@ ns.ResetUnit = function(key)
         print("|cff00ff00[MCF]|r Chat bubble reset.")
         return
     end
+    if key == ns.TOPWIDGET_KEY then
+        if ns.TopWidgetDefaults then db.topwidget = ResetDefault("topwidget", nil, ns.TopWidgetDefaults) end
+        if ns.RefreshTopWidget then ns.RefreshTopWidget() end
+        if ns.OnProfilePasted then ns.OnProfilePasted() end
+        print("|cff00ff00[MCF]|r Top Widget position reset.")
+        return
+    end
     if key == GLOW_KEY then
         if ns.GlowDefaults then db.glow = ResetDefault("glow", nil, ns.GlowDefaults) end
         if ns.RefreshGlow then ns.RefreshGlow(true) end

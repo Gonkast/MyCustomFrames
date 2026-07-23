@@ -2561,8 +2561,16 @@ local function BuildPanel()
         MakeSlider(topWidgetGroup, "Offset X", -2000, 2000, 1, "offsetX", L, -116, TWDB, RefreshTW)
         MakeSlider(topWidgetGroup, "Offset Y", -2000, 2000, 1, "offsetY", L, -168, TWDB, RefreshTW)
         MakeSlider(topWidgetGroup, "Scale", 0.3, 3, 0.02, "scale", L, -220, TWDB, RefreshTW)
+        -- Boton de reset (2026-07-23, "se posiciona en la esquina inferior
+        -- izquierda, el punto original no es el centro"): un export viejo
+        -- dejo point/relPoint guardados en CENTER/BOTTOMLEFT en vez del
+        -- default limpio (TOP/TOP) -- FillDefaults no pisa un valor YA
+        -- guardado, asi que solo tocar offsetX/Y no alcanzaba para arreglarlo.
+        local resetTWBtn = MakeButton(topWidgetGroup, "Reset position", 150, 22)
+        resetTWBtn:SetPoint("TOPLEFT", L, -252)
+        resetTWBtn:SetScript("OnClick", function() ns.ResetUnit(ns.TOPWIDGET_KEY) end)
         local twNote = topWidgetGroup:CreateFontString(nil, "ARTWORK"); setFont(twNote, 10)
-        twNote:SetPoint("TOPLEFT", L, -264); twNote:SetWidth(400); twNote:SetJustifyH("LEFT")
+        twNote:SetPoint("TOPLEFT", L, -284); twNote:SetWidth(400); twNote:SetJustifyH("LEFT")
         twNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         twNote:SetText("The native top-center widget (zone events, delve progress). You can also drag it (and scroll wheel to resize) while in Lock (top bar).")
 
