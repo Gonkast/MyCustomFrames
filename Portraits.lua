@@ -128,8 +128,16 @@ local function PortraitUpdatePicture(u)
     local modelUnit = u.unit
     local mirroring = false
     if u.key == "portrait_player" and p.mirrorTarget and UnitExists("target") then
-        modelUnit = "target"
-        mirroring = true
+        -- FIX (2026-07-23, "en dungeon solo se muestre el del player"): el 3D de
+        -- criaturas dentro de dungeons no resuelve pase lo que pase con la camara
+        -- (ver nota abajo) -- en vez de intentarlo y quedar en blanco, directamente
+        -- no mirrorea ahi adentro y muestra el player normal.
+        local okInst, inInst, it = pcall(IsInInstance)
+        local inDungeon = okInst and inInst and it == "party"
+        if not inDungeon then
+            modelUnit = "target"
+            mirroring = true
+        end
     end
     -- NOTA (2026-07-23): se probaron 3 variantes de encuadre de camara para
     -- mirrorTarget en criaturas (zoom-a-cabeza normal, SetCamDistanceScale,
@@ -759,14 +767,16 @@ ns.TickPortraits = function()
             PortraitSetShown(u, true)
             if u.kind == "icon" then
                 if u.key == "portrait_tot" or slowTier or not u._wasShown then PortraitUpdatePicture(u) end
-            -- portrait_player con mirrorTarget: a diferencia del resto de portraits de
-            -- modelo (que solo se refrescan al pasar de oculto a visible), este SIEMPRE
-            -- esta visible -- sin este refresh periodico, PortraitUpdatePicture solo
-            -- corria en PLAYER_TARGET_CHANGED, asi que si ya tenias target puesto antes
-            -- de activar el toggle (o antes de un /reload), nunca se actualizaba.
-            elseif u.key == "portrait_player" and PP(u).mirrorTarget then
-                if slowTier or not u._wasShown then PortraitUpdatePicture(u) end
             elseif not u._wasShown then
+                -- FIX (2026-07-23, "la animacion salta/se corta en mitad del idle"):
+                -- habia un refresh periodico (slowTier, ~cada 0.3s) solo para
+                -- portrait_player+mirrorTarget, agregado para que el cambio de
+                -- target se reflejara sin re-targetear. Pero hacia ClearModel()+
+                -- SetUnit() cada vez, reseteando la animacion de idle constantemente
+                -- -- se ve como un salto/corte. Sacado: PLAYER_TARGET_CHANGED (core.lua,
+                -- TARGET_PORTRAIT_KEYS) YA refresca al cambiar de target, y tocar el
+                -- checkbox del menu YA refresca via PortraitApplyAppearance -- los dos
+                -- casos reales que hacian falta cubrir, sin pagar el costo del tick.
                 PortraitUpdatePicture(u)
             end
             u._wasShown = true
