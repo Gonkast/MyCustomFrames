@@ -151,7 +151,12 @@ local function PortraitUpdatePicture(u)
     if useFallback then
         u.model:Hide()
         u.mirrorFallback:Show()
-        ok, err = pcall(function() u.mirrorFallback:SetPortraitTexture(modelUnit) end)
+        -- SetPortraitTexture es una FUNCION GLOBAL (textureObject, unit[, disableMask]),
+        -- no un metodo del texture -- confirmado contra Blizzard_UnitFrame/UnitFrame.lua
+        -- (fuente real via wow-ui-source). Documentada con SecretArguments=
+        -- "AllowedWhenUntainted": acepta unidades potencialmente secretas desde
+        -- codigo sin taint, que es exactamente nuestro caso.
+        ok, err = pcall(SetPortraitTexture, u.mirrorFallback, modelUnit)
     else
         if u.mirrorFallback then u.mirrorFallback:Hide() end
         u.model:Show()
