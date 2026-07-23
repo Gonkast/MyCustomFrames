@@ -145,10 +145,13 @@ local function PortraitUpdatePicture(u)
     end)
     if mirroring then
         local okInst, inInst, it = pcall(IsInInstance)
+        -- FIX: u.model:HasModel() no existe en este cliente (era mi propio bug en el
+        -- diagnostico) -- tiraba "attempt to call a nil value" y crasheaba la funcion
+        -- ANTES de llegar a la logica de color de fondo (mas abajo), en TODOS los
+        -- refrescos de mirrorTarget, no solo con enemigos. Sacado.
         ns._mirrorTargetDiag = {
             ok = ok, err = err, modelUnit = modelUnit,
             inInst = okInst and inInst or nil, instType = okInst and it or nil,
-            hasModel = ok and u.model:HasModel() or nil,
             time = GetTime(),
         }
     end
@@ -791,5 +794,4 @@ SlashCmdList["MCFMIRRORTARGETDIAG"] = function()
     print("|cff00ff00[MCF diag]|r mirrorTarget hace " .. string.format("%.1f", GetTime() - d.time) .. "s:")
     print("  unit=" .. tostring(d.modelUnit) .. "  pcall ok=" .. tostring(d.ok) .. "  err=" .. tostring(d.err))
     print("  inInstance=" .. tostring(d.inInst) .. "  instanceType=" .. tostring(d.instType))
-    print("  model:HasModel()=" .. tostring(d.hasModel))
 end
