@@ -131,30 +131,18 @@ local function PortraitUpdatePicture(u)
         modelUnit = "target"
         mirroring = true
     end
-    -- FIX (2026-07-23, intento 3): OnModelLoaded tampoco resolvio (mismo
-    -- resultado: ok=true, blanco). Descarta timing/async como causa. Nuevo
-    -- intento: zoom=0 (cuerpo completo) para criaturas, en vez de zoom-a-cabeza
-    -- (ns.clamp(p.modelZoom,0,1), que puede acercarse mucho a 1 = cabeza) -- si
-    -- el problema es el anclaje de "cabeza" que le falta a muchos modelos de mob,
-    -- zoom=0 no depende de ese anclaje en absoluto (encuadra el modelo entero).
-    local function ApplyFraming(self)
-        if mirroring then
-            local okP, isPlayerModel = pcall(UnitIsPlayer, modelUnit)
-            if okP and isPlayerModel then
-                self:SetPortraitZoom(ns.clamp(p.modelZoom, 0, 1))
-            else
-                self:SetPortraitZoom(0)
-            end
-        else
-            self:SetPortraitZoom(ns.clamp(p.modelZoom, 0, 1))
-        end
-        self:SetPosition(0, 0, 0)
-    end
+    -- NOTA (2026-07-23): se probaron 3 variantes de encuadre de camara para
+    -- mirrorTarget en criaturas (zoom-a-cabeza normal, SetCamDistanceScale,
+    -- OnModelLoaded diferido, zoom=0 cuerpo completo) -- ninguna cambio el
+    -- resultado (pcall ok=true, modelo blanco). El usuario confirmo que NO es
+    -- un tema de zoom/camara/timing. Sin causa confirmada todavia; se vuelve a
+    -- la version simple (sin la complejidad extra que no ayudo en nada) y se
+    -- deja el diagnostico para retomar la investigacion mas adelante.
     local ok, err = pcall(function()
         u.model:ClearModel()
         u.model:SetUnit(modelUnit)
-        u.model:SetScript("OnModelLoaded", ApplyFraming)
-        ApplyFraming(u.model)
+        u.model:SetPortraitZoom(ns.clamp(p.modelZoom, 0, 1))
+        u.model:SetPosition(0, 0, 0)
     end)
     -- DIAG TEMPORAL: sacar este bloque una vez confirmado.
     if mirroring then
