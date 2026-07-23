@@ -2546,13 +2546,18 @@ local function BuildPanel()
         -- entre elementos ya que esta pestaña tiene lugar de sobra.
         MakeHeader(topWidgetGroup, "Top Widget (event/delve progress bars)", L, -40, 430)
         local function TWDB() return ns.GetDB() and ns.GetDB().topwidget end
+        local function RefreshTW() if ns.RefreshTopWidget then ns.RefreshTopWidget() end end
         MakeToggle(topWidgetGroup, "Enable repositioning", L, -72,
             function() return TWDB() and TWDB().enabled end,
-            function(v) if TWDB() then TWDB().enabled = v end; if ns.RefreshTopWidget then ns.RefreshTopWidget() end end)
+            function(v) if TWDB() then TWDB().enabled = v end; RefreshTW() end)
+        -- Pedido del usuario 2026-07-23: sliders ademas de arrastrar/rueda en Lock.
+        MakeSlider(topWidgetGroup, "Offset X", -960, 960, 1, "offsetX", L, -116, TWDB, RefreshTW)
+        MakeSlider(topWidgetGroup, "Offset Y", -400, 400, 1, "offsetY", L, -168, TWDB, RefreshTW)
+        MakeSlider(topWidgetGroup, "Scale", 0.3, 3, 0.02, "scale", L, -220, TWDB, RefreshTW)
         local twNote = topWidgetGroup:CreateFontString(nil, "ARTWORK"); setFont(twNote, 10)
-        twNote:SetPoint("TOPLEFT", L, -104); twNote:SetWidth(400); twNote:SetJustifyH("LEFT")
+        twNote:SetPoint("TOPLEFT", L, -264); twNote:SetWidth(400); twNote:SetJustifyH("LEFT")
         twNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        twNote:SetText("The native top-center widget (zone events, delve progress). Enter Lock (top bar) to drag it; scroll wheel over it to resize.")
+        twNote:SetText("The native top-center widget (zone events, delve progress). You can also drag it (and scroll wheel to resize) while in Lock (top bar).")
 
         ShowExtrasTab("main")
     end
