@@ -24,6 +24,21 @@ local RING_BACKDROP_TEX  = A .. "minimap-onebar-backdrop.tga"
 local RING_TEX           = A .. "minimap-bars-single.tga"
 local DISMOUNT_TEX       = A .. "icon_exit_flight.tga"
 
+-- Skins globales (2026-07-23, ns.ApplySkin en core.lua): estos 6 defaults
+-- arrancan VACIOS en db.minimap ("" = usar esta constante, ver mas abajo
+-- "... or BORDER_TEX") -- a diferencia de units/portraits, que hornean la
+-- ruta concreta en el db en vez de dejarla vacia. Sin este setter, ApplySkin
+-- no tenia forma de tocarlos: son locals de ESTE archivo, no expuestos.
+ns.ApplyMinimapSkin = function()
+    if not ns.SkinResolve then return end
+    MASK_OPAQUE = ns.SkinResolve("minimap-mask-opaque.tga")
+    BORDER_TEX = ns.SkinResolve("minimap-border.tga")
+    EYE_TEX = ns.SkinResolve("group-finder-eye-orange.tga")
+    BUTTON_TEX = ns.SkinResolve("point_plate.tga")
+    RING_BACKDROP_TEX = ns.SkinResolve("minimap-onebar-backdrop.tga")
+    DISMOUNT_TEX = ns.SkinResolve("icon_exit_flight.tga")
+end
+
 -- ---- Colores (extraidos de AzeriteUI Core/Common/Colors.lua) ----
 local UI_COLOR           = { 192/255, 192/255, 192/255 }
 -- Paleta propia del addon (mismo dorado/ambar que el resto de MyCustomFrames)

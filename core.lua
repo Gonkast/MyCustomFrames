@@ -194,6 +194,7 @@ ns.ApplySkin = function(folderKey)
     ns.AURA_BORDER = SkinResolve("actionbutton-border square.tga")
     ns.RAIDTARGET_TEX = SkinResolve("raid_target_icons.tga")
     ns.INFOBAR_BG_TEX = SkinResolve("info_bg.tga")
+    if ns.ApplyMinimapSkin then ns.ApplyMinimapSkin() end
     if ns.RefreshAll then ns.RefreshAll() end
     if ns.RefreshInfoBar then ns.RefreshInfoBar() end
     if ns.RefreshMinimap then ns.RefreshMinimap() end
