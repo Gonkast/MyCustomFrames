@@ -3410,6 +3410,7 @@ ns.BUILTIN = {
 ["r"]=1},
 ["roleOffsetX"]=18,
 ["clickOpenChar"]=true,
+["mirrorTarget"]=false,
 ["centerY"]=-212.16,
 ["factionAlpha"]=1,
 ["bgAlpha"]=1,

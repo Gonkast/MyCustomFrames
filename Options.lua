@@ -976,7 +976,7 @@ local UpdatePreview   -- asignada en BuildPanel (3ra columna estilo Plumber, ver
 -- mostrando los sub-tabs de la ULTIMA unidad seleccionada (ej: entrar a Explorer
 -- dejaba visible "Gen/Bar/Cage/Sel/Health/Name/Spell/Cast/Color" de ToT debajo),
 -- dando la sensacion de estar en dos secciones a la vez. Se ocultan explicito aca.
-local GLOBAL_SECTION_TITLE = { presets = "Profile", explorer = "Explorer", editing = "Editing", setup = "Setup", extras = "Extras" }
+local GLOBAL_SECTION_TITLE = { presets = "Profile", explorer = "Explorer", explorer2 = "Explorer 2", editing = "Editing", setup = "Setup", extras = "Extras" }
 
 local function ShowSection(key)
     if not sections[key] then return end
@@ -1004,6 +1004,7 @@ local function ShowSection(key)
     if NAVBTN.editing then NAVBTN.editing:SetActive(key == "editing") end
     if NAVBTN.setup then NAVBTN.setup:SetActive(key == "setup") end
     if NAVBTN.extras then NAVBTN.extras:SetActive(key == "extras") end
+    if NAVBTN.explorer2 then NAVBTN.explorer2:SetActive(key == "explorer2") end
     if UpdatePreview then UpdatePreview() end
     -- Nudge: fuerza el relayout de la seccion recien mostrada. El canvas de Settings a
     -- veces no posiciona/renderiza los widgets hasta un Hide/Show (de ahi el bug de
@@ -1189,7 +1190,7 @@ local function SelectUnit(key)
        or IsGlowSection(currentSection) or IsPartyAuraSection(currentSection) or IsArenaAuraSection(currentSection)
        or IsMinimapSection(currentSection)
        or IsNameplatesSection(currentSection) or IsClassPowerSection(currentSection) or IsRaidSection(currentSection)
-       or currentSection == "presets" or currentSection == "explorer" or currentSection == "editing"
+       or currentSection == "presets" or currentSection == "explorer" or currentSection == "explorer2" or currentSection == "editing"
        or currentSection == "setup" or currentSection == "extras"
        or (HIDEGRP.nameSectionKeys[currentSection] and not hasName)
        or ((currentSection == "cast" or currentSection == "highlight") and isPower) then
@@ -1419,6 +1420,7 @@ local function BuildPanel()
         { key = "setup",    label = "Setup" },
         { key = "editing",  label = "Editing" },
         { key = "explorer", label = "Explorer" },
+        { key = "explorer2", label = "Explorer 2" },
         { key = "presets",  label = "Profile" },
         { key = "extras",   label = "Extras" },
     }
@@ -1435,6 +1437,7 @@ local function BuildPanel()
         if e.key == "setup" then NAVBTN.setup = b
         elseif e.key == "editing" then NAVBTN.editing = b
         elseif e.key == "explorer" then NAVBTN.explorer = b
+        elseif e.key == "explorer2" then NAVBTN.explorer2 = b
         elseif e.key == "presets" then NAVBTN.presets = b
         elseif e.key == "extras" then NAVBTN.extras = b end
     end
@@ -1764,6 +1767,8 @@ local function BuildPanel()
             "Save and load full profiles.", "Export and import across accounts." } },
         { test = function(k) return k == "explorer" end, title = "Explorer", desc = {
             "Auto-hide UI elements.", "Revealed on mouseover." } },
+        { test = function(k) return k == "explorer2" end, title = "Explorer 2", desc = {
+            "Always-show conditions, hidden opacity.", "Content-type filter (world/dungeon/raid/...)." } },
         { test = function(k) return k == "editing" end, title = "Editing", desc = {
             "Grid, snap and layout preview.", "Lock mode to move elements." } },
         { test = function(k) return k == "setup" end, title = "Setup", desc = {
@@ -3583,11 +3588,26 @@ local function BuildPanel()
             { "Micro menu", "micromenu" },
             { "Info bar", "infobar" },
             { "Pet unit frame", "pet" },
+            { "Pet portrait", "portrait_pet" },
             { "Target unit frame", "target" },
             { "Target portrait", "portrait_target" },
-            { "Player auras", "aura_player" },
-            { "Pet portrait", "portrait_pet" },
+            { "Target of Target frame", "targettarget" },
+            { "Target of Target portrait", "portrait_tot" },
             { "Focus unit frame", "focus" },
+            { "Player power bar", "playerpower" },
+            { "Target power bar", "targetpower" },
+            { "Player auras", "aura_player" },
+            { "Target auras", "aura_target" },
+            { "Party 1 frame", "party1" },
+            { "Party 2 frame", "party2" },
+            { "Party 3 frame", "party3" },
+            { "Party 4 frame", "party4" },
+            { "Party 5 frame", "party5" },
+            { "Party 1 portrait", "portrait_party1" },
+            { "Party 2 portrait", "portrait_party2" },
+            { "Party 3 portrait", "portrait_party3" },
+            { "Party 4 portrait", "portrait_party4" },
+            { "Party 5 portrait", "portrait_party5" },
         }
         -- Toggle MAESTRO: apaga el Explorer entero (los toggles por elemento se conservan).
         MakeToggle(f, "Enable Explorer (master switch)", L, -36,
@@ -3596,9 +3616,15 @@ local function BuildPanel()
                 ns.GetDB().explorerEnabled = v and true or false
                 if not v and ns.ExplorerResetAll then ns.ExplorerResetAll() end
             end)
+        -- Grid a 2 columnas (llenado por columna, no por fila: 1ra mitad en L,
+        -- 2da mitad en R) para caber sin scroll con la lista ya extendida
+        -- (boss/arena quedan fuera a proposito, muy situacionales — pedido
+        -- del usuario 2026-07-22: agregar "los utiles" y no todo el universo).
+        local ROWS = math.ceil(#EXPLORER_LIST / 2)
         for i, e in ipairs(EXPLORER_LIST) do
-            local col = (i <= 5) and L or R
-            local yy = -70 - ((i - 1) % 5) * 28
+            local col = (i <= ROWS) and L or R
+            local row = (i <= ROWS) and (i - 1) or (i - ROWS - 1)
+            local yy = -70 - row * 21
             local key = e[2]
             MakeToggle(f, e[1], col, yy,
                 function() return ns.GetDB().explorer[key] end,
@@ -3607,20 +3633,32 @@ local function BuildPanel()
                     if not v and ns.ExplorerReset then ns.ExplorerReset(key) end
                 end)
         end
-        MakeToggle(f, "Always show in combat", L, -206,
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
+        note:SetPoint("TOPLEFT", L, -70 - ROWS * 21 - 14); note:SetWidth(430); note:SetJustifyH("LEFT")
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        note:SetText("Enabled elements fade out and reappear when you hover where they are (works even while hidden). See 'Explorer 2' for always-show conditions, opacity, and content-type filters.")
+    end
+
+    -- Explorer 2 (2026-07-22: la lista de elementos de Explorer crecio bastante
+    -- -- se movio aca el resto de opciones para no desbordar el panel, que no
+    -- tiene scroll -- mismo criterio ya usado con "Icons 2" de Minimap).
+    do
+        local f = Section("explorer2")
+        MakeHeader(f, "Explorer 2  —  conditions & filters", L, -6, 430)
+        MakeToggle(f, "Always show in combat", L, -36,
             function() return ns.GetDB().explorerCombat end,
             function(v) ns.GetDB().explorerCombat = v end)
-        MakeToggle(f, "Always show on target", L, -230,
+        MakeToggle(f, "Always show on target", L, -60,
             function() return ns.GetDB().explorerTarget end,
             function(v) ns.GetDB().explorerTarget = v end)
-        MakeToggle(f, "Always show while casting", R, -206,
+        MakeToggle(f, "Always show while casting", L, -84,
             function() return ns.GetDB().explorerCasting end,
             function(v) ns.GetDB().explorerCasting = v end)
-        MakeSlider(f, "Hidden opacity", 0, 1, 0.05, "explorerFadeAlpha", L, -272,
+        MakeSlider(f, "Hidden opacity", 0, 1, 0.05, "explorerFadeAlpha", L, -126,
             function() return ns.GetDB() end, function() end)
         -- Filtro por TIPO DE CONTENIDO: donde el Explorer esta activo (B1b).
         local zhdr = f:CreateFontString(nil, "ARTWORK"); setFont(zhdr, 12)
-        zhdr:SetPoint("TOPLEFT", R, -236); zhdr:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+        zhdr:SetPoint("TOPLEFT", R, -6); zhdr:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
         zhdr:SetText("Active in:")
         local ZONES = {
             { "Open world", "world" }, { "Dungeons", "dungeon" }, { "Raids", "raid" },
@@ -3628,7 +3666,7 @@ local function BuildPanel()
         }
         for i, z in ipairs(ZONES) do
             local zk = z[2]
-            MakeToggle(f, z[1], R, -258 - (i - 1) * 24,
+            MakeToggle(f, z[1], R, -28 - (i - 1) * 24,
                 function() return ns.GetDB().explorerZones[zk] ~= false end,
                 function(v)
                     ns.GetDB().explorerZones[zk] = v and true or false
@@ -3636,9 +3674,9 @@ local function BuildPanel()
                 end)
         end
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
-        note:SetPoint("TOPLEFT", L, -302); note:SetWidth(210); note:SetJustifyH("LEFT")
+        note:SetPoint("TOPLEFT", L, -172); note:SetWidth(430); note:SetJustifyH("LEFT")
         note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        note:SetText("Enabled elements fade out and reappear when you hover where they are (works even while hidden). Combat keeps them visible. 'Active in' limits Explorer to the chosen content types.")
+        note:SetText("Combat/target/casting force enabled elements fully visible. 'Active in' limits the whole Explorer to the chosen content types.")
     end
 
     -- ===== FOOTER: acciones =====
