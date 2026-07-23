@@ -2540,13 +2540,17 @@ local function BuildPanel()
         MakeSlider(mainGroup, "Text Size", 6, 24, 1, "labelFontSize", L, -328, MTDB, RefreshMT)
         MakeGlobalColor(mainGroup, "Text Color", function() return MTDB() and MTDB().labelColor end, L, -370, RefreshMT)
 
-        MakeHeader(topWidgetGroup, "Top Widget (event/delve progress bars)", L, -6, 430)
+        -- FIX (2026-07-23, "se superpone con el texto de las pestañas"): el
+        -- header arrancaba en la MISMA fila que los tabs (L,-6) -- se corre
+        -- debajo de la fila de pestañas (que termina en ~-24), con mas aire
+        -- entre elementos ya que esta pestaña tiene lugar de sobra.
+        MakeHeader(topWidgetGroup, "Top Widget (event/delve progress bars)", L, -40, 430)
         local function TWDB() return ns.GetDB() and ns.GetDB().topwidget end
-        MakeToggle(topWidgetGroup, "Enable repositioning", L, -30,
+        MakeToggle(topWidgetGroup, "Enable repositioning", L, -72,
             function() return TWDB() and TWDB().enabled end,
             function(v) if TWDB() then TWDB().enabled = v end; if ns.RefreshTopWidget then ns.RefreshTopWidget() end end)
         local twNote = topWidgetGroup:CreateFontString(nil, "ARTWORK"); setFont(twNote, 10)
-        twNote:SetPoint("TOPLEFT", L, -58); twNote:SetWidth(430); twNote:SetJustifyH("LEFT")
+        twNote:SetPoint("TOPLEFT", L, -104); twNote:SetWidth(400); twNote:SetJustifyH("LEFT")
         twNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         twNote:SetText("The native top-center widget (zone events, delve progress). Enter Lock (top bar) to drag it; scroll wheel over it to resize.")
 
@@ -3651,13 +3655,9 @@ local function BuildPanel()
             { "Micro menu", { "micromenu" } },
             { "Info bar", { "infobar" } },
             { "Pet", { "pet", "portrait_pet" } },
-            { "Target unit frame", { "target" } },
-            { "Target portrait", { "portrait_target" } },
             { "Target of Target", { "targettarget", "portrait_tot" } },
             { "Focus unit frame", { "focus" } },
-            { "Target power bar", { "targetpower" } },
             { "Player auras", { "aura_player" } },
-            { "Target auras", { "aura_target" } },
             { "Party 1", { "party1", "portrait_party1" } },
             { "Party 2", { "party2", "portrait_party2" } },
             { "Party 3", { "party3", "portrait_party3" } },
