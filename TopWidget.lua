@@ -20,7 +20,7 @@ local function TopWidgetDefaults()
         -- TOP, 0, -15 -- por default el widget queda exactamente donde
         -- Blizzard lo pone, sin ningun offset artistico nuestro.
         point = "TOP", relPoint = "TOP", offsetX = 0, offsetY = -15,
-        anchor = "", scale = 1.0, strata = "MEDIUM",
+        anchor = "", scale = 0.70, strata = "MEDIUM",
     }
 end
 ns.TopWidgetDefaults = TopWidgetDefaults
