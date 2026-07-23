@@ -44,6 +44,10 @@ Auras.lua
 # mismo patron/motivo que Units.lua/Portraits.lua/Auras.lua.
 InfoBar.lua
 
+# EXPLORER (auto-hide/reveal on mouseover): extraido de core.lua (2026-07-22),
+# mismo patron/motivo que Units.lua/Portraits.lua/Auras.lua/InfoBar.lua.
+Explorer.lua
+
 # MODO EDICION/PREVIEW (grid, snap, SetUnlocked, copiar/pegar): extraido de core.lua,
 # mismo patron/motivo que Units.lua/Portraits.lua/Auras.lua/InfoBar.lua.
 Editing.lua
