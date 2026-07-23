@@ -25,6 +25,9 @@ Bartender4DB = {
 },
 ["version"] = 3,
 },
+["Gonkast - Ragnaros"] = {
+["version"] = 3,
+},
 },
 },
 ["ActionBars"] = {
@@ -34,7 +37,7 @@ Bartender4DB = {
 {
 ["showgrid"] = true,
 ["rows"] = 2,
-["fadeoutdelay"] = 0,
+["fadeout"] = true,
 ["elements"] = {
 ["macro"] = {
 ["fontColor"] = {
@@ -55,32 +58,32 @@ nil,
 ["textOffsetX"] = 10,
 },
 ["count"] = {
+["textAnchor"] = "CENTER",
 ["font"] = "Friz Quadrata TT",
-["fontSize"] = 21,
 ["fontColor"] = {
 nil,
 0.8823530077934265,
 0.6078431606292725,
 },
-["textOffsetY"] = 2,
-["textAnchor"] = "CENTER",
-["textOffsetX"] = 2,
 ["textJustifyH"] = "CENTER",
+["textOffsetY"] = 2,
+["textOffsetX"] = 2,
+["fontSize"] = 21,
 },
 },
-["version"] = 3,
+["fadeoutalpha"] = 0,
 ["visibility"] = {
 ["custom"] = true,
 ["customdata"] = "[@player,dead] fade; [overridebar][possessbar][bonusbar][vehicleui] hide; [mounted] hide; [@target,dead] hide; [combat][@target,exists,harm][@focus,exists] show; fade\n",
 },
-["fadeoutalpha"] = 0,
+["version"] = 3,
 ["position"] = {
 ["y"] = 213,
 ["x"] = -250,
 ["point"] = "BOTTOM",
 ["scale"] = 0.6700000166893005,
 },
-["fadeout"] = true,
+["fadeoutdelay"] = 0,
 ["padding"] = 17,
 ["WoW10Layout"] = true,
 ["states"] = {
@@ -98,13 +101,6 @@ nil,
 ["WoW10Layout"] = true,
 },
 {
-["flyoutDirection"] = "LEFT",
-["showgrid"] = true,
-["rows"] = 6,
-["fadeout"] = true,
-["enabled"] = false,
-["buttons"] = 4,
-["version"] = 3,
 ["elements"] = {
 ["macro"] = {
 ["fontSize"] = 14,
@@ -135,6 +131,13 @@ nil,
 },
 },
 },
+["showgrid"] = true,
+["rows"] = 6,
+["fadeout"] = true,
+["enabled"] = false,
+["buttons"] = 4,
+["version"] = 3,
+["flyoutDirection"] = "LEFT",
 ["WoW10Layout"] = true,
 ["fadeoutalpha"] = 0,
 ["position"] = {
@@ -272,6 +275,76 @@ nil,
 },
 },
 },
+["Gonkast - Ragnaros"] = {
+["actionbars"] = {
+{
+["WoW10Layout"] = true,
+["version"] = 3,
+["position"] = {
+["y"] = -223.9998168945313,
+["x"] = -284.5,
+["point"] = "CENTER",
+},
+},
+{
+["WoW10Layout"] = true,
+["version"] = 3,
+["position"] = {
+["y"] = -223.9998168945313,
+["x"] = -284.5,
+["point"] = "CENTER",
+},
+},
+{
+["WoW10Layout"] = true,
+["version"] = 3,
+["position"] = {
+["y"] = -223.9998168945313,
+["x"] = -284.5,
+["point"] = "CENTER",
+},
+},
+{
+["WoW10Layout"] = true,
+["version"] = 3,
+["position"] = {
+["y"] = -223.9998168945313,
+["x"] = -284.5,
+["point"] = "CENTER",
+},
+},
+{
+["WoW10Layout"] = true,
+["version"] = 3,
+["position"] = {
+["y"] = -223.9998168945313,
+["x"] = -284.5,
+["point"] = "CENTER",
+},
+},
+{
+["WoW10Layout"] = true,
+["version"] = 3,
+["position"] = {
+["y"] = -223.9998168945313,
+["x"] = -284.5,
+["point"] = "CENTER",
+},
+},
+{
+},
+{
+},
+{
+},
+{
+},
+[13] = {
+},
+[15] = {
+},
+},
+},
 },
 },
 ["LibDualSpec-1.0"] = {
@@ -284,7 +357,7 @@ nil,
 ["ExtraActionBar"] = {
 ["profiles"] = {
 ["Default"] = {
-["fadeoutalpha"] = 0.65,
+["version"] = 3,
 ["position"] = {
 ["y"] = 209.6499964296818,
 ["x"] = -321.6500028056762,
@@ -297,7 +370,15 @@ nil,
 ["customdata"] = "[@player,dead] fade; [overridebar][possessbar][bonusbar][vehicleui] hide; [mounted] hide; [@target,dead] hide; [combat][@target,exists,harm][@focus,exists] show; fade\n",
 ["nocombat"] = true,
 },
+["fadeoutalpha"] = 0.65,
+},
+["Gonkast - Ragnaros"] = {
 ["version"] = 3,
+["position"] = {
+["y"] = -252.4999389648438,
+["x"] = -63.50006103515625,
+["point"] = "CENTER",
+},
 },
 },
 },
@@ -313,17 +394,35 @@ nil,
 },
 ["version"] = 3,
 },
+["Gonkast - Ragnaros"] = {
+["version"] = 3,
+["position"] = {
+["y"] = 53.50006103515625,
+["x"] = -261.9999084472656,
+["point"] = "CENTER",
+},
+},
 },
 },
 ["BagBar"] = {
 ["profiles"] = {
 ["Default"] = {
+["onebagreagents"] = false,
+["onebag"] = true,
 ["version"] = 3,
 ["position"] = {
-["y"] = 105.9981909919679,
-["x"] = 464.0569709131305,
-["point"] = "BOTTOM",
+["y"] = 185.997698851128,
+["x"] = -139.5184803322773,
+["point"] = "BOTTOMRIGHT",
 ["scale"] = 0.8500000238418579,
+},
+},
+["Gonkast - Ragnaros"] = {
+["version"] = 3,
+["position"] = {
+["y"] = 0.5001220703125,
+["x"] = 43.49984741210938,
+["point"] = "CENTER",
 },
 },
 },
@@ -345,8 +444,8 @@ nil,
 ["StanceBar"] = {
 ["profiles"] = {
 ["Default"] = {
-["fadeoutalpha"] = 0,
 ["version"] = 3,
+["fadeoutalpha"] = 0,
 ["padding"] = 9,
 ["visibility"] = {
 ["custom"] = true,
@@ -357,6 +456,14 @@ nil,
 ["x"] = -63.80000839233399,
 ["point"] = "BOTTOM",
 ["scale"] = 1.1,
+},
+},
+["Gonkast - Ragnaros"] = {
+["version"] = 3,
+["position"] = {
+["y"] = -14.99996185302734,
+["x"] = -82.5,
+["point"] = "CENTER",
 },
 },
 },
@@ -385,6 +492,14 @@ nil,
 },
 ["fadeoutalpha"] = 0,
 },
+["Gonkast - Ragnaros"] = {
+["version"] = 3,
+["position"] = {
+["y"] = 88.5001220703125,
+["x"] = -162.5,
+["point"] = "CENTER",
+},
+},
 },
 },
 ["Vehicle"] = {
@@ -399,10 +514,19 @@ nil,
 },
 ["version"] = 3,
 },
+["Gonkast - Ragnaros"] = {
+["version"] = 3,
+["position"] = {
+["y"] = 42.50006103515625,
+["x"] = 104.5,
+["point"] = "CENTER",
+},
+},
 },
 },
 },
 ["profileKeys"] = {
+["Gonkast - Ragnaros"] = "Default",
 ["Gnomegoat - Ragnaros"] = "Default",
 },
 ["profiles"] = {
@@ -415,6 +539,9 @@ nil,
 ["hide"] = false,
 },
 ["outofrange"] = "hotkey",
+},
+["Gonkast - Ragnaros"] = {
+["snapping"] = false,
 },
 },
 }
