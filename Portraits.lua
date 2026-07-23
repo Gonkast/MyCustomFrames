@@ -828,3 +828,19 @@ SlashCmdList["MCFMIRRORTARGETDIAG"] = function()
     print("  inInstance=" .. tostring(d.inInst) .. "  instanceType=" .. tostring(d.instType))
     print("  usedFallback(2D SetPortraitTexture)=" .. tostring(d.usedFallback))
 end
+
+-- DIAG TEMPORAL: estado REAL (Shown/Hidden) de model vs mirrorFallback en TODOS
+-- los portraits de tipo modelo -- para el reporte "el pet tambien sale con
+-- retrato 2D" (no debería pasar nunca, mirroring esta gateado a portrait_player).
+SLASH_MCFPORTRAITSTATEDIAG1 = "/mcfportraitstatediag"
+SlashCmdList["MCFPORTRAITSTATEDIAG"] = function()
+    print("|cff00ff00[MCF diag]|r estado de portraits (modelo):")
+    for key, u in pairs(ns.portraits) do
+        if u.kind ~= "icon" then
+            local modelShown = u.model and u.model:IsShown()
+            local fbShown = u.mirrorFallback and u.mirrorFallback:IsShown()
+            print(string.format("  %-22s model=%-5s fallback=%-5s mirrorTarget(cfg)=%s",
+                key, tostring(modelShown), tostring(fbShown), tostring(PP(u).mirrorTarget)))
+        end
+    end
+end
