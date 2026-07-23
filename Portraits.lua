@@ -758,6 +758,13 @@ ns.TickPortraits = function()
             PortraitSetShown(u, true)
             if u.kind == "icon" then
                 if u.key == "portrait_tot" or slowTier or not u._wasShown then PortraitUpdatePicture(u) end
+            -- portrait_player con mirrorTarget: a diferencia del resto de portraits de
+            -- modelo (que solo se refrescan al pasar de oculto a visible), este SIEMPRE
+            -- esta visible -- sin este refresh periodico, PortraitUpdatePicture solo
+            -- corria en PLAYER_TARGET_CHANGED, asi que si ya tenias target puesto antes
+            -- de activar el toggle (o antes de un /reload), nunca se actualizaba.
+            elseif u.key == "portrait_player" and PP(u).mirrorTarget then
+                if slowTier or not u._wasShown then PortraitUpdatePicture(u) end
             elseif not u._wasShown then
                 PortraitUpdatePicture(u)
             end
