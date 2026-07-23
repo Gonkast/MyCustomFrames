@@ -3866,45 +3866,72 @@ local function BuildPanel()
     -- disponible en la pestaña Profile, esto solo saca el ATAJO del footer)
     -- por un dropdown de SKINS globales -- aplica ns.TEX_SKINS a TODO el
     -- addon de una (ver ns.ApplySkin en core.lua).
+    -- Rediseño (2026-07-23, "que se vea mas organizado"): titulo + divisor
+    -- fijos arriba, filas con mas aire y una marca de check (no solo color)
+    -- en la skin activa, mismo lenguaje visual que el resto del panel
+    -- (COLOR_TITLE para el header, PL.DIV_H para el divisor).
+    local ROW_H, TOP_PAD = 22, 30
     local skinsPopup
     local function GetSkinsPopup()
         if skinsPopup then return skinsPopup end
         local p = CreateFrame("Frame", "MyCF_SkinsPopup", UIParent)
-        p:SetSize(160, 20 + (#(ns.TEX_SKINS or {}) * 22))
         p:SetFrameStrata("FULLSCREEN_DIALOG")
         p:EnableMouse(true)
         p:Hide()
         tinsert(UISpecialFrames, "MyCF_SkinsPopup")
-        local bg = p:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(0.04, 0.04, 0.05, 0.96)
+        local bg = p:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(0.04, 0.04, 0.05, 0.97)
         local bd = p:CreateTexture(nil, "BORDER"); bd:SetAllPoints()
-        bd:SetColorTexture(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.5)
+        bd:SetColorTexture(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.6)
+        local title = p:CreateFontString(nil, "OVERLAY"); setFont(title, 12)
+        title:SetPoint("TOPLEFT", 8, -7)
+        title:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+        title:SetText("Skins")
+        local div = p:CreateTexture(nil, "ARTWORK")
+        div:SetTexture(PL.DIV_H)
+        div:SetPoint("TOPLEFT", 4, -22); div:SetPoint("TOPRIGHT", -4, -22)
+        div:SetHeight(4); div:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3], 0.5)
         p.rows = {}
         skinsPopup = p
         return p
     end
     local function OpenSkinsPopup(anchor)
         local p = GetSkinsPopup()
+        local skins = ns.TEX_SKINS or {}
+        -- Ancho automatico segun el label mas largo, con un piso razonable.
+        local widest = 90
+        for _, skin in ipairs(skins) do
+            local w = 8 * #(skin.label or skin.folder or "")
+            if w > widest then widest = w end
+        end
+        p:SetSize(widest + 40, TOP_PAD + (#skins * ROW_H) + 6)
         -- Se resalta por LABEL, no folder: los addons-skin separados (basePath)
         -- siempre tienen folder="" (igual que Default), folder solo alcanza
         -- para distinguir subcarpetas internas de Assets\.
         local activeLabel = (ns.GetDB() and ns.GetDB().activeSkinLabel) or "Default"
-        for i, skin in ipairs(ns.TEX_SKINS or {}) do
+        for i, skin in ipairs(skins) do
             local r = p.rows[i]
             if not r then
                 r = CreateFrame("Button", nil, p)
-                r:SetSize(150, 20)
+                r:SetHeight(ROW_H)
                 local hl = r:CreateTexture(nil, "HIGHLIGHT"); hl:SetAllPoints(); hl:SetColorTexture(1, 0.82, 0.2, 0.14)
+                local check = r:CreateFontString(nil, "OVERLAY"); setFont(check, 12)
+                check:SetPoint("LEFT", 6, 0); check:SetWidth(14); check:SetJustifyH("LEFT")
+                check:SetTextColor(0.4, 0.9, 0.4)
+                r.check = check
                 local tx = r:CreateFontString(nil, "OVERLAY"); setFont(tx, 12)
-                tx:SetPoint("LEFT", 6, 0); tx:SetTextColor(COLOR_OPTION[1], COLOR_OPTION[2], COLOR_OPTION[3])
+                tx:SetPoint("LEFT", check, "RIGHT", 2, 0); tx:SetJustifyH("LEFT")
+                tx:SetTextColor(COLOR_OPTION[1], COLOR_OPTION[2], COLOR_OPTION[3])
                 r.tx = tx
                 p.rows[i] = r
             end
             local isActive = skin.label == activeLabel
+            r.check:SetText(isActive and "\226\156\147" or "")   -- checkmark UTF-8
             r.tx:SetText(skin.label or skin.folder)
             r.tx:SetTextColor(isActive and 1 or COLOR_OPTION[1],
                 isActive and 0.82 or COLOR_OPTION[2],
                 isActive and 0.2 or COLOR_OPTION[3])
-            r:SetPoint("TOPLEFT", 4, -6 - (i - 1) * 22)
+            r:SetPoint("TOPLEFT", 2, -TOP_PAD - (i - 1) * ROW_H)
+            r:SetPoint("TOPRIGHT", -2, -TOP_PAD - (i - 1) * ROW_H)
             r:SetScript("OnClick", function()
                 if ns.ApplySkin then ns.ApplySkin(skin) end
                 p:Hide()
@@ -3918,7 +3945,6 @@ local function BuildPanel()
     skinsBtn:SetPoint("LEFT", auraTestBtn, "RIGHT", 6, 0)
     skinsBtn:SetScript("OnClick", function() OpenSkinsPopup(skinsBtn) end)
     panelButtons[#panelButtons + 1] = skinsBtn
-    AddTooltip(skinsBtn, "Skins", "Switch every texture in the addon at once to a different skin folder (Assets\\<folder>\\<same filenames>). Missing files fall back to Default automatically.")
 
     -- 2026-07-17: centrar el grupo entero (estaba pegado a la izquierda). Como
     -- greenBtn/resetAllFooterBtn/wizardBtn/auraTestBtn/skinsBtn estan
