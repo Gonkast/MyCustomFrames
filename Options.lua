@@ -2512,6 +2512,19 @@ local function BuildPanel()
         MakeSlider(f, "Text Offset Y", -100, 100, 1, "labelOffsetY", L, -276, MTDB, RefreshMT)
         MakeSlider(f, "Text Size", 6, 24, 1, "labelFontSize", L, -328, MTDB, RefreshMT)
         MakeGlobalColor(f, "Text Color", function() return MTDB() and MTDB().labelColor end, L, -370, RefreshMT)
+
+        -- Top Widget (pedido del usuario 2026-07-23: "cambiar el tamaño y mover
+        -- el Widget top") -- mismo criterio que Mirror Timers: sin sliders de
+        -- posicion/tamaño en el menu, se arrastra/escala en modo Lock.
+        MakeHeader(f, "Top Widget (event/delve progress bars)", L, -410, 430)
+        local function TWDB() return ns.GetDB() and ns.GetDB().topwidget end
+        MakeToggle(f, "Enable repositioning", L, -434,
+            function() return TWDB() and TWDB().enabled end,
+            function(v) if TWDB() then TWDB().enabled = v end; if ns.RefreshTopWidget then ns.RefreshTopWidget() end end)
+        local twNote = f:CreateFontString(nil, "ARTWORK"); setFont(twNote, 10)
+        twNote:SetPoint("TOPLEFT", L, -462); twNote:SetWidth(430); twNote:SetJustifyH("LEFT")
+        twNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        twNote:SetText("The native top-center widget (zone events, delve progress). Enter Lock (top bar) to drag it; scroll wheel over it to resize.")
     end
 
     -- =========================== SECCIONES PORTRAIT ===========================

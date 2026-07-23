@@ -1093,7 +1093,7 @@ end
 -- verla.
 local PRESET_TABLE_KEYS = {
     "units", "portraits", "auras", "infobar", "micromenu", "chatbubble", "glow", "tracker",
-    "minimap", "nameplates", "classpower", "tooltip", "extrabutton", "mirrortimer",
+    "minimap", "nameplates", "classpower", "tooltip", "extrabutton", "mirrortimer", "topwidget",
 }
 
 -- Restablece TODO. Si hay un preset marcado como Default, "Reset ALL" carga
@@ -1315,6 +1315,10 @@ local function FillDefaults()
         db.mirrortimer = db.mirrortimer or {}
         FillProfile(db.mirrortimer, ns.BUILTIN and ns.BUILTIN.mirrortimer, ns.MirrorTimerDefaults())
     end
+    if ns.TopWidgetDefaults then
+        db.topwidget = db.topwidget or {}
+        FillProfile(db.topwidget, ns.BUILTIN and ns.BUILTIN.topwidget, ns.TopWidgetDefaults())
+    end
     -- RAID FRAMES (Raid.lua): perfil UNICO compartido por los 40 members,
     -- vive en db.units.raid (mismo shape que cualquier otra unidad). Mismo bug
     -- que el resto: usaba solo ns.RaidUnitDefaults() (generico), nunca el
@@ -1411,6 +1415,7 @@ ns.LoadPreset = function(name)
     if ns.RefreshClassPower then ns.RefreshClassPower() end
     if ns.RefreshTooltipSkin then ns.RefreshTooltipSkin() end
     if ns.RefreshMirrorTimers then ns.RefreshMirrorTimers() end
+    if ns.RefreshTopWidget then ns.RefreshTopWidget() end
     print("|cff00ff00[MCF]|r Profile loaded: " .. name)
 end
 ns.DeletePreset = function(name)

@@ -82,6 +82,10 @@ ExtraButton.lua
 # fingir muerte). Standalone, mismo patron que Tooltip.lua/ExtraButton.lua.
 MirrorTimers.lua
 
+# Reposiciona/escala el widget top-center nativo (barras de progreso de
+# eventos/delves) -- pedido del usuario 2026-07-23. Standalone, sin arte propio.
+TopWidget.lua
+
 ChatBubble.lua
 MicroMenu.lua
 Grouping.lua

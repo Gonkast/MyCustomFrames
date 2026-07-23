@@ -364,6 +364,10 @@ local function SetUnlocked(state)
         g.root:EnableMouseWheel(state)
     end
     if ns.infobar then ns.infobar.root:EnableMouse(state and true or false); ns.infobar.root:EnableMouseWheel(state) end
+    if ns.topWidgetHolder then
+        ns.topWidgetHolder:EnableMouse(state and true or false)
+        ns.topWidgetHolder:EnableMouseWheel(state)
+    end
     if ns.micromenu then ns.micromenu:EnableMouse(state and true or false); ns.micromenu:EnableMouseWheel(state) end
     if _G.MyCF_RaidHeader then
         local rh = _G.MyCF_RaidHeader
@@ -410,6 +414,7 @@ ns.ToggleEditOutline = function()
         for _, u in pairs(ns.portraits) do if u.editBG then u.editBG:SetShown(not hideGreen) end end
         for _, g in pairs(ns.auras) do if g.editBG then g.editBG:SetShown(not hideGreen) end end
         if ns.infobar and ns.infobar.editBG then ns.infobar.editBG:SetShown(not hideGreen) end
+        if ns.topWidgetHolder and ns.topWidgetHolder.editBG then ns.topWidgetHolder.editBG:SetShown(not hideGreen) end
         if _G.MyCF_RaidHeader then
             local rh = _G.MyCF_RaidHeader
             if rh.editBG then rh.editBG:SetShown(not hideGreen) end
