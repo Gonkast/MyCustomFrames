@@ -1944,7 +1944,6 @@ end
 -- numbers" de este parche) parecen ser lo que tainteaba. El state driver solo alcanza para
 -- mantenerlos ocultos.
 -- ==========================================================================
-local blizzHidden = {}
 local blizzNeedsApply = false
 -- FIX 2026-07-19 (pedido del usuario, analizando HideUnitFrames/PartyHide):
 -- ninguno de esos 2 addons de referencia usa nada mas bulletproof que lo que
@@ -2002,7 +2001,6 @@ local function HB_Handle(frame)
     pcall(function() RegisterStateDriver(frame, "visibility", "hide") end)
     if frame.SetAlpha then frame:SetAlpha(0) end
     HB_HookShowAlpha(frame)
-    blizzHidden[frame] = true
 end
 
 -- 2026-07-15: FIX "la cast bar nativa aparece un instante al castear". Causa: el
@@ -2034,7 +2032,6 @@ local function HB_HandleCastBar(frame)
         blizzShowHooked[frame] = true
         pcall(hooksecurefunc, frame, "Show", function(self) self:Hide() end)
     end
-    blizzHidden[frame] = true
 end
 
 -- Ocultar por ALPHA (sin Hide/UnregisterAllEvents/RegisterStateDriver): puramente cosmetico,

@@ -721,8 +721,8 @@ local function BuildPage6(content)
         -- el panel de Masque y aplicarse solo a las barras cuya config (recien copiada de MasqueDB)
         -- ya lo tenia seleccionado, tras el /reload.
         local masqueOk, masqueInfo
-        if applied.Masque then
-            masqueOk, masqueInfo = ns.ApplyMasqueSkinAll and ns.ApplyMasqueSkinAll()
+        if applied.Masque and ns.ApplyMasqueSkinAll then
+            masqueOk, masqueInfo = ns.ApplyMasqueSkinAll()
         end
 
         local msg
