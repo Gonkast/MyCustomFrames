@@ -128,13 +128,15 @@ local function PortraitUpdatePicture(u)
     local modelUnit = u.unit
     local mirroring = false
     if u.key == "portrait_player" and p.mirrorTarget and UnitExists("target") then
-        -- FIX (2026-07-23, "en dungeon solo se muestre el del player"): el 3D de
-        -- criaturas dentro de dungeons no resuelve pase lo que pase con la camara
+        -- FIX (2026-07-23, "en instancia que siempre se vea el player"): el 3D de
+        -- criaturas dentro de instancias no resuelve pase lo que pase con la camara
         -- (ver nota abajo) -- en vez de intentarlo y quedar en blanco, directamente
-        -- no mirrorea ahi adentro y muestra el player normal.
-        local okInst, inInst, it = pcall(IsInInstance)
-        local inDungeon = okInst and inInst and it == "party"
-        if not inDungeon then
+        -- no mirrorea en NINGUN tipo de instancia (party/raid/arena/pvp/scenario) y
+        -- muestra el player normal. Pedido originalmente solo para dungeon, extendido
+        -- a cualquier instancia.
+        local okInst, inInst = pcall(IsInInstance)
+        local inAnyInstance = okInst and inInst and true or false
+        if not inAnyInstance then
             modelUnit = "target"
             mirroring = true
         end
