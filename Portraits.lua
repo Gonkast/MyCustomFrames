@@ -132,12 +132,26 @@ local function PortraitUpdatePicture(u)
         modelUnit = "target"
         mirroring = true
     end
-    pcall(function()
+    -- DIAG TEMPORAL (2026-07-23, "el portrait 3d no funciona para enemigos en
+    -- dungeon, es un limite de la API?"): se guarda el resultado del pcall +
+    -- contexto (unidad, tipo de instancia) para el diagnostico /mcfportraitdiag
+    -- de mas abajo -- sacar este bloque de guardado (no el pcall en si) una vez
+    -- confirmada la causa real.
+    local ok, err = pcall(function()
         u.model:ClearModel()
         u.model:SetUnit(modelUnit)
         u.model:SetPortraitZoom(ns.clamp(p.modelZoom, 0, 1))
         u.model:SetPosition(0, 0, 0)
     end)
+    if mirroring then
+        local okInst, inInst, it = pcall(IsInInstance)
+        ns._mirrorTargetDiag = {
+            ok = ok, err = err, modelUnit = modelUnit,
+            inInst = okInst and inInst or nil, instType = okInst and it or nil,
+            hasModel = ok and u.model:HasModel() or nil,
+            time = GetTime(),
+        }
+    end
     if u.key == "portrait_player" and p.mirrorTarget and u.bg then
         if mirroring then
             local ok, isPlayer = pcall(UnitIsPlayer, "target")
@@ -755,4 +769,20 @@ ns.TickPortraits = function()
             u._wasShown = false
         end
     end
+end
+
+-- DIAG TEMPORAL (ver comentario en PortraitUpdatePicture): imprime el ultimo
+-- intento de mirrorTarget (SetUnit("target") sobre portrait_player). Sacar
+-- junto con el bloque que llena ns._mirrorTargetDiag una vez resuelto.
+SLASH_MCFMIRRORTARGETDIAG1 = "/mcfmirrortargetdiag"
+SlashCmdList["MCFMIRRORTARGETDIAG"] = function()
+    local d = ns._mirrorTargetDiag
+    if not d then
+        print("|cff00ff00[MCF diag]|r sin datos todavia -- necesitas tener mirrorTarget activo y un target puesto al menos una vez.")
+        return
+    end
+    print("|cff00ff00[MCF diag]|r mirrorTarget hace " .. string.format("%.1f", GetTime() - d.time) .. "s:")
+    print("  unit=" .. tostring(d.modelUnit) .. "  pcall ok=" .. tostring(d.ok) .. "  err=" .. tostring(d.err))
+    print("  inInstance=" .. tostring(d.inInst) .. "  instanceType=" .. tostring(d.instType))
+    print("  model:HasModel()=" .. tostring(d.hasModel))
 end
