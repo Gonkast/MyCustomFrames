@@ -2551,8 +2551,15 @@ local function BuildPanel()
             function() return TWDB() and TWDB().enabled end,
             function(v) if TWDB() then TWDB().enabled = v end; RefreshTW() end)
         -- Pedido del usuario 2026-07-23: sliders ademas de arrastrar/rueda en Lock.
-        MakeSlider(topWidgetGroup, "Offset X", -960, 960, 1, "offsetX", L, -116, TWDB, RefreshTW)
-        MakeSlider(topWidgetGroup, "Offset Y", -400, 400, 1, "offsetY", L, -168, TWDB, RefreshTW)
+        -- FIX (2026-07-23, "entre al menu y se desposiciona"): el rango de estos
+        -- sliders era mas angosto que una posicion real ya arrastrada a mano
+        -- (ej. offsetY < -400) -- el refresher del slider hace SetValue(clamp(...))
+        -- al mostrar el menu, y OnValueChanged escribe ESE valor recortado de
+        -- vuelta a la db incondicionalmente (no solo mientras se arrastra), asi
+        -- que con solo ABRIR el menu ya se pisaba/recortaba la posicion real.
+        -- Mismo rango que ya usan los offsets de unidades/portraits (±2000).
+        MakeSlider(topWidgetGroup, "Offset X", -2000, 2000, 1, "offsetX", L, -116, TWDB, RefreshTW)
+        MakeSlider(topWidgetGroup, "Offset Y", -2000, 2000, 1, "offsetY", L, -168, TWDB, RefreshTW)
         MakeSlider(topWidgetGroup, "Scale", 0.3, 3, 0.02, "scale", L, -220, TWDB, RefreshTW)
         local twNote = topWidgetGroup:CreateFontString(nil, "ARTWORK"); setFont(twNote, 10)
         twNote:SetPoint("TOPLEFT", L, -264); twNote:SetWidth(400); twNote:SetJustifyH("LEFT")
