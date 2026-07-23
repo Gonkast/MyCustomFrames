@@ -120,54 +120,53 @@ local function PortraitUpdatePicture(u)
         return
     end
     if not u.model then return end
-    if not p.showModel then u.model:Hide() return end
-    u.model:Show()
-    -- mirrorTarget (solo portrait_player): muestra el modelo 3D del target en
-    -- vez del propio, si hay target. u.unit NO se toca (sigue usandose tal
-    -- cual en el resto de features: faction/death/combat/etc). El patron
-    -- SetUnit("target") ya esta probado y funcionando en portrait_target/tot.
+    if not p.showModel then
+        u.model:Hide()
+        if u.mirrorFallback then u.mirrorFallback:Hide() end
+        return
+    end
+    -- mirrorTarget (solo portrait_player): muestra el retrato del target en vez
+    -- del propio, si hay target. u.unit NO se toca (sigue usandose tal cual en
+    -- el resto de features: faction/death/combat/etc).
     local modelUnit = u.unit
     local mirroring = false
     if u.key == "portrait_player" and p.mirrorTarget and UnitExists("target") then
         modelUnit = "target"
         mirroring = true
     end
-    -- DIAG TEMPORAL (2026-07-23, "el portrait 3d no funciona para enemigos en
-    -- dungeon, es un limite de la API?"): se guarda el resultado del pcall +
-    -- contexto (unidad, tipo de instancia) para el diagnostico /mcfportraitdiag
-    -- de mas abajo -- sacar este bloque de guardado (no el pcall en si) una vez
-    -- confirmada la causa real.
-    local ok, err = pcall(function()
-        u.model:ClearModel()
-        u.model:SetUnit(modelUnit)
-        -- FIX (2026-07-23, "no se muestra el portrait 3d del target hostil, sale
-        -- vacio"): confirmado que SetUnit no tiraba error (ok=true en el diagnostico)
-        -- pero la camara quedaba vacia para criaturas. SetPortraitZoom asume un
-        -- anclaje de "cabeza" que Blizzard define para esqueletos de
-        -- jugador/humanoide -- muchos modelos de mob no lo tienen, y la camara
-        -- termina mirando a un punto vacio o metida dentro de la malla. Portraits
-        -- que mirrorean el target (mirroring==true) y el target NO es un jugador
-        -- usan un encuadre por distancia de camara en vez de zoom-a-cabeza.
-        local useHeadZoom = true
-        if mirroring then
-            local okP, isPlayerModel = pcall(UnitIsPlayer, modelUnit)
-            useHeadZoom = okP and isPlayerModel and true or false
-        end
-        if useHeadZoom then
+    -- FIX (2026-07-23, "no se muestra el portrait 3d del target hostil, sale
+    -- vacio"): confirmado con diagnostico que SetUnit no tiraba error (ok=true)
+    -- pero la camara quedaba vacia para criaturas -- PlayerModel/DressUp depende
+    -- de datos de esqueleto/anclaje de "cabeza" que muchos mobs no tienen. En vez
+    -- de intentar 3D para NPCs, se usa SetPortraitTexture (u.mirrorFallback): el
+    -- mismo pipeline 2D que usa el TargetFrame nativo de Blizzard para su circulo
+    -- de retrato, que SI funciona con cualquier unidad. Jugadores mirroreados
+    -- siguen usando el modelo 3D normal (ya confirmado funcionando).
+    local useFallback = false
+    if mirroring and u.mirrorFallback then
+        local okP, isPlayerModel = pcall(UnitIsPlayer, modelUnit)
+        useFallback = not (okP and isPlayerModel)
+    end
+    local ok, err
+    if useFallback then
+        u.model:Hide()
+        u.mirrorFallback:Show()
+        ok, err = pcall(function() u.mirrorFallback:SetPortraitTexture(modelUnit) end)
+    else
+        if u.mirrorFallback then u.mirrorFallback:Hide() end
+        u.model:Show()
+        ok, err = pcall(function()
+            u.model:ClearModel()
+            u.model:SetUnit(modelUnit)
             u.model:SetPortraitZoom(ns.clamp(p.modelZoom, 0, 1))
-        else
-            u.model:SetCamDistanceScale(1)
-        end
-        u.model:SetPosition(0, 0, 0)
-    end)
+            u.model:SetPosition(0, 0, 0)
+        end)
+    end
+    -- DIAG TEMPORAL: sacar este bloque una vez confirmado que el fallback anda.
     if mirroring then
         local okInst, inInst, it = pcall(IsInInstance)
-        -- FIX: u.model:HasModel() no existe en este cliente (era mi propio bug en el
-        -- diagnostico) -- tiraba "attempt to call a nil value" y crasheaba la funcion
-        -- ANTES de llegar a la logica de color de fondo (mas abajo), en TODOS los
-        -- refrescos de mirrorTarget, no solo con enemigos. Sacado.
         ns._mirrorTargetDiag = {
-            ok = ok, err = err, modelUnit = modelUnit,
+            ok = ok, err = err, modelUnit = modelUnit, usedFallback = useFallback,
             inInst = okInst and inInst or nil, instType = okInst and it or nil,
             time = GetTime(),
         }
@@ -600,7 +599,7 @@ local function CreatePortrait(def)
     bg:SetPoint("CENTER")
 
     -- Retrato: modelo 3D (kind=model) o icono de clase (kind=icon), encima del fondo.
-    local model, classIcon, pic
+    local model, classIcon, pic, mirrorFallback
     if def.kind == "icon" then
         classIcon = root:CreateTexture(nil, "ARTWORK", nil, 1)
         classIcon:SetPoint("CENTER")
@@ -611,6 +610,16 @@ local function CreatePortrait(def)
         model:SetFrameLevel(root:GetFrameLevel() + 1)
         model:SetPoint("CENTER")
         pic = model
+        -- Fallback 2D para mirrorTarget (solo portrait_player) cuando el modelo 3D
+        -- no resuelve en criaturas (2026-07-23, "sale vacio para hostiles"):
+        -- SetPortraitTexture es el mismo pipeline que usa el TargetFrame nativo de
+        -- Blizzard para su circulo de retrato -- funciona con CUALQUIER unidad, a
+        -- diferencia de PlayerModel/DressUp (que depende de datos de esqueleto que
+        -- muchos mobs no tienen).
+        mirrorFallback = root:CreateTexture(nil, "ARTWORK", nil, 1)
+        mirrorFallback:SetPoint("CENTER")
+        mirrorFallback:SetSize(64, 64)
+        mirrorFallback:Hide()
     end
 
     -- Capa de iconos por encima del modelo (borde, flipbook, muerte, badges).
@@ -691,6 +700,7 @@ local function CreatePortrait(def)
 
     u.root, u.editBG, u.bg, u.model, u.classIcon, u.pic, u.icons =
         root, editBG, bg, model, classIcon, pic, icons
+    u.mirrorFallback = mirrorFallback
     u.cage, u.rest, u.restAnim, u.death, u.faction, u.combat =
         cage, rest, restAnim, death, faction, combat
     u.combatAnim = combatAnim
@@ -811,4 +821,5 @@ SlashCmdList["MCFMIRRORTARGETDIAG"] = function()
     print("|cff00ff00[MCF diag]|r mirrorTarget hace " .. string.format("%.1f", GetTime() - d.time) .. "s:")
     print("  unit=" .. tostring(d.modelUnit) .. "  pcall ok=" .. tostring(d.ok) .. "  err=" .. tostring(d.err))
     print("  inInstance=" .. tostring(d.inInst) .. "  instanceType=" .. tostring(d.instType))
+    print("  usedFallback(2D SetPortraitTexture)=" .. tostring(d.usedFallback))
 end
