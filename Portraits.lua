@@ -131,29 +131,30 @@ local function PortraitUpdatePicture(u)
         modelUnit = "target"
         mirroring = true
     end
-    -- FIX (2026-07-23, "prefiero el 3d, intenta que funcione tambien con
-    -- enemigos"): la teoria del "anclaje de cabeza" (SetPortraitZoom) y el
-    -- fallback 2D (SetPortraitTexture) se probaron y NO resolvieron/se descartaron
-    -- (el usuario prefiere seguir con 3D). Nueva teoria: SetUnit() en criaturas
-    -- puede ser ASINCRONO (el modelo se streamea desde disco/servidor) -- aplicar
-    -- zoom/posicion INMEDIATAMENTE despues de SetUnit(), antes de que el modelo
-    -- termine de cargar, puede dejar la camara "vacia" aunque el pcall no tire
-    -- error (que es exactamente lo que confirmo el diagnostico: ok=true, blanco).
-    -- Los modelos de jugador estan siempre cacheados (por eso nunca fallan) --
-    -- las criaturas no. Se usa OnModelLoaded para aplicar zoom/posicion recien
-    -- cuando el modelo esta REALMENTE listo, en vez de asumir que SetUnit ya
-    -- termino de forma sincronica.
+    -- FIX (2026-07-23, intento 3): OnModelLoaded tampoco resolvio (mismo
+    -- resultado: ok=true, blanco). Descarta timing/async como causa. Nuevo
+    -- intento: zoom=0 (cuerpo completo) para criaturas, en vez de zoom-a-cabeza
+    -- (ns.clamp(p.modelZoom,0,1), que puede acercarse mucho a 1 = cabeza) -- si
+    -- el problema es el anclaje de "cabeza" que le falta a muchos modelos de mob,
+    -- zoom=0 no depende de ese anclaje en absoluto (encuadra el modelo entero).
+    local function ApplyFraming(self)
+        if mirroring then
+            local okP, isPlayerModel = pcall(UnitIsPlayer, modelUnit)
+            if okP and isPlayerModel then
+                self:SetPortraitZoom(ns.clamp(p.modelZoom, 0, 1))
+            else
+                self:SetPortraitZoom(0)
+            end
+        else
+            self:SetPortraitZoom(ns.clamp(p.modelZoom, 0, 1))
+        end
+        self:SetPosition(0, 0, 0)
+    end
     local ok, err = pcall(function()
         u.model:ClearModel()
         u.model:SetUnit(modelUnit)
-        u.model:SetScript("OnModelLoaded", function(self)
-            self:SetPortraitZoom(ns.clamp(p.modelZoom, 0, 1))
-            self:SetPosition(0, 0, 0)
-        end)
-        -- Por si el modelo YA estaba cargado (ej. jugadores, siempre cacheados)
-        -- y OnModelLoaded no vuelve a disparar: aplicar tambien de una.
-        u.model:SetPortraitZoom(ns.clamp(p.modelZoom, 0, 1))
-        u.model:SetPosition(0, 0, 0)
+        u.model:SetScript("OnModelLoaded", ApplyFraming)
+        ApplyFraming(u.model)
     end)
     -- DIAG TEMPORAL: sacar este bloque una vez confirmado.
     if mirroring then
