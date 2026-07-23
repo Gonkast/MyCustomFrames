@@ -99,12 +99,11 @@ ClassPower.lua
 # SOLO mientras el jugador esta MONTADO (db.barReposition, toggle en Options.lua/Setup.lua).
 BarReposition.lua
 
-# Auras de Party1-5 reveladas por hover/combate, direccion configurable.
-PartyAuraPreview.lua
-
-# Auras de las 6 unitframes de arena (arena_player/party1/party2/enemy1-3),
-# mismo patron que PartyAuraPreview pero exclusivo de arena y direccion "down".
-ArenaAuraPreview.lua
+# Auras hover de Party1-5 (dungeon-only) y las 6 unitframes de arena
+# (arena-only): fusionados en un solo modulo data-driven (2026-07-23,
+# eran ~95% el mismo codigo duplicado entre 2 archivos -- ver comentario
+# de cabecera del archivo).
+AuraHoverPreview.lua
 
 # Detector del trinket de PvP (Gladiator's Medallion) via COMBAT_LOG_EVENT_UNFILTERED,
 # solo para Arena Enemy 1-3 -- API publica unicamente, sin leer inventario/cooldowns ajenos.
