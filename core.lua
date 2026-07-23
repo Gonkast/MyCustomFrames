@@ -373,7 +373,6 @@ local function PortraitDefaultsFor(key)
         enabled = true,
         clickOpenChar = (key == "portrait_player"),   -- click abre el panel de personaje (solo player)
         charBtnScale = 1.0,   -- multiplicador del area de click del boton de personaje (solo player)
-        mirrorTarget = false,   -- mostrar el modelo 3D del target en vez del player, si hay target (solo player)
         size = 90, scale = 1.0, strata = "MEDIUM",
         -- Posicion "centro" / principal
         centerAnchor = "", centerPoint = "CENTER", centerRelPoint = "CENTER",
@@ -433,6 +432,13 @@ local function PortraitDefaultsFor(key)
         d.centerX, d.centerY = -430, 140 - (n - 1) * 62   -- apilados a la izquierda
         d.showRest, d.showFaction, d.showCombat = false, false, false
     end
+    -- Mostrar el modelo 3D del target en vez del player, si hay target. Solo tiene
+    -- sentido/UI en portrait_player -- a diferencia de clickOpenChar (que SI se guarda
+    -- en false para el resto), este NI se genera en los demas portraits (nil == ausente,
+    -- no ensucia el SavedVariables/export de nadie mas). NOTA: NO usar el idiom
+    -- `cond and false or nil` para esto -- se rompe porque el "true branch" es `false`
+    -- (el `or` siempre gana), por eso el if explicito.
+    if key == "portrait_player" then d.mirrorTarget = false end
     return d
 end
 ns.PortraitDefaultsFor = PortraitDefaultsFor
