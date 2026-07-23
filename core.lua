@@ -103,6 +103,11 @@ ns.TEX_LIB = {
     highlight    = { "hp_low_case_miror_s_highlight.tga", "actionbuttonhighlight.tga", "hp_pet_highlight.tga", "hp_party_highlight.tga", "hp_boss_highlight.tga", },
     minimapborder   = { "minimap-border.tga" },
     minimapbackdrop = { "minimap-mask-opaque.tga" },
+    -- minimap-mask-transparent.tga: define la FORMA/mascara del minimapa
+    -- (Minimap:SetMaskTexture). No tiene picker propio en el menu (no es un
+    -- "backdrop" visible, es una mascara de recorte) -- solo se puede
+    -- reskinear via el sistema de Skins globales.
+    minimapmask     = { "minimap-mask-transparent.tga" },
     eye             = { "group-finder-eye-orange.tga" },
     ringbackdrop    = { "minimap-onebar-backdrop.tga" },
     ringbutton      = { "point_plate.tga" },

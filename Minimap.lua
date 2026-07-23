@@ -37,6 +37,15 @@ ns.ApplyMinimapSkin = function()
     BUTTON_TEX = ns.SkinResolve("point_plate.tga")
     RING_BACKDROP_TEX = ns.SkinResolve("minimap-onebar-backdrop.tga")
     DISMOUNT_TEX = ns.SkinResolve("icon_exit_flight.tga")
+    -- FIX (2026-07-23, "en la skin de murloc esta minimap-mask-transparent
+    -- pero no parece estar tomandola"): se me habia pasado por completo --
+    -- MASK_TRANSPARENT define la FORMA del minimapa via SetMaskTexture, se
+    -- aplica UNA sola vez al crear el frame (no en un refresh que se pueda
+    -- re-disparar) -- hay que reasignarla Y reaplicarla aca.
+    MASK_TRANSPARENT = ns.SkinResolve("minimap-mask-transparent.tga")
+    if _G.Minimap and _G.Minimap.SetMaskTexture then
+        pcall(_G.Minimap.SetMaskTexture, _G.Minimap, MASK_TRANSPARENT)
+    end
 end
 
 -- ---- Colores (extraidos de AzeriteUI Core/Common/Colors.lua) ----
