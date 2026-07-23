@@ -122,7 +122,6 @@ end
 -- Blizzard NO se toca aca (ver comentario de cabecera): Setup.lua lo ofrece aparte, a mano, con
 -- ns.ShowBlizzardHUDCode().
 function ns.ApplyProfilesFiltered(selected)
-    local db = ns.GetDB and ns.GetDB()
     local copy = ns.DeepCopy or function(t) return t end
     local applied = {}
     local _, seen = DetectAddons()
@@ -140,7 +139,6 @@ ns.ProfilesInfo = INFO
 
 -- Ejecuta el reemplazo (tras confirmar) y recarga.
 local function DoApply()
-    local db = ns.GetDB and ns.GetDB()
     local copy = ns.DeepCopy or function(t) return t end
     local applied = {}
     local _, seen = DetectAddons()

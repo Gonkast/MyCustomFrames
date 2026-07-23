@@ -74,14 +74,12 @@ local COLOR_TITLE  = { 215 / 255, 192 / 255, 163 / 255 }   -- Def.TextColorNorma
 local COLOR_DESC   = { 163 / 255, 157 / 255, 147 / 255 }   -- Def.TextColorReadable
 local COLOR_LINE   = { 148 / 255, 124 / 255, 102 / 255 }   -- Def.TextColorNonInteractable
 local COLOR_OPTION = { 226 / 255, 216 / 255, 199 / 255 }   -- casi blanco calido, mas legible/neutro que TITLE
-local COLOR_HIGHLIGHT = { 1, 1, 1 }                        -- Def.TextColorHighlight (hover/seleccionado)
 local COLOR_GROUP  = { 235 / 255, 175 / 255, 90 / 255 }    -- dorado-ambar vivo, SOLO headers de grupo (sidebar)
 
 -- ==========================================================================
 -- WIDGETS ESTILO PLUMBER (usan los assets reales de Plumber\Art)
 -- ==========================================================================
 local WIDGET = "Interface\\AddOns\\MyCustomFrames\\Assets\\SettingsPanelWidget.png"
-local TOGGLE = "Interface\\AddOns\\MyCustomFrames\\Assets\\OptionToggle"
 -- Atlas 1024x1024 copiado DIRECTO del Plumber real (Modules/ControlCenter/SettingsPanelNew.lua,
 -- Def.TextureFile) — usado SOLO para el buscador (pildora con borde limpio + lupa), que el
 -- usuario pidio explicitamente igualar (2026-07-15). Coords tomadas 1:1 del código fuente de

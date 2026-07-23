@@ -468,10 +468,8 @@ local function LayoutAuraGroupIconsMock(holder, sz, padding)
     end
 end
 
--- Mismo mapeo que AURA_SLOT_ORDER/AURA_ANCHOR_POINT en Nameplates.lua --
--- decide que slot fisico "ocupa" cada aura mostrada segun direccion, y que
--- punto del holder queda FIJO en el offset guardado.
-local AURA_SLOT_ORDER = { right = { 1, 2, 3 }, left = { 3, 2, 1 }, center = { 2, 1, 3 } }
+-- Mismo mapeo que AURA_ANCHOR_POINT en Nameplates.lua -- decide que punto del
+-- holder queda FIJO en el offset guardado, segun direccion.
 local AURA_ANCHOR_POINT = { right = "BOTTOMLEFT", left = "BOTTOMRIGHT", center = "BOTTOM" }
 
 -- Recuadro placeholder cuadrado CON icono de vista previa real (pedido del
