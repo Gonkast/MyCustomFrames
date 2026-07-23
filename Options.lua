@@ -974,7 +974,7 @@ local UpdatePreview   -- asignada en BuildPanel (3ra columna estilo Plumber, ver
 -- mostrando los sub-tabs de la ULTIMA unidad seleccionada (ej: entrar a Explorer
 -- dejaba visible "Gen/Bar/Cage/Sel/Health/Name/Spell/Cast/Color" de ToT debajo),
 -- dando la sensacion de estar en dos secciones a la vez. Se ocultan explicito aca.
-local GLOBAL_SECTION_TITLE = { presets = "Profile", explorer = "Explorer", explorer2 = "Explorer 2", editing = "Editing", setup = "Setup", extras = "Extras" }
+local GLOBAL_SECTION_TITLE = { presets = "Profile", explorer = "Explorer", explorer2 = "Explorer 2", editing = "Editing", setup = "Setup", extras = "Extras", extras2 = "Extras 2" }
 
 local function ShowSection(key)
     if not sections[key] then return end
@@ -1002,6 +1002,7 @@ local function ShowSection(key)
     if NAVBTN.editing then NAVBTN.editing:SetActive(key == "editing") end
     if NAVBTN.setup then NAVBTN.setup:SetActive(key == "setup") end
     if NAVBTN.extras then NAVBTN.extras:SetActive(key == "extras") end
+    if NAVBTN.extras2 then NAVBTN.extras2:SetActive(key == "extras2") end
     if NAVBTN.explorer2 then NAVBTN.explorer2:SetActive(key == "explorer2") end
     if UpdatePreview then UpdatePreview() end
     -- Nudge: fuerza el relayout de la seccion recien mostrada. El canvas de Settings a
@@ -1189,7 +1190,7 @@ local function SelectUnit(key)
        or IsMinimapSection(currentSection)
        or IsNameplatesSection(currentSection) or IsClassPowerSection(currentSection) or IsRaidSection(currentSection)
        or currentSection == "presets" or currentSection == "explorer" or currentSection == "explorer2" or currentSection == "editing"
-       or currentSection == "setup" or currentSection == "extras"
+       or currentSection == "setup" or currentSection == "extras" or currentSection == "extras2"
        or (HIDEGRP.nameSectionKeys[currentSection] and not hasName)
        or ((currentSection == "cast" or currentSection == "highlight") and isPower) then
         ShowSection("general")
@@ -1421,6 +1422,7 @@ local function BuildPanel()
         { key = "explorer2", label = "Explorer 2" },
         { key = "presets",  label = "Profile" },
         { key = "extras",   label = "Extras" },
+        { key = "extras2",  label = "Extras 2" },
     }
     local navDiv = sidebar:CreateTexture(nil, "ARTWORK")
     navDiv:SetTexture(PL.DIV_H)
@@ -1437,7 +1439,8 @@ local function BuildPanel()
         elseif e.key == "explorer" then NAVBTN.explorer = b
         elseif e.key == "explorer2" then NAVBTN.explorer2 = b
         elseif e.key == "presets" then NAVBTN.presets = b
-        elseif e.key == "extras" then NAVBTN.extras = b end
+        elseif e.key == "extras" then NAVBTN.extras = b
+        elseif e.key == "extras2" then NAVBTN.extras2 = b end
     end
 
     -- Reposiciona/filtra los items globales por busqueda (2026-07-17: antes
@@ -1773,6 +1776,8 @@ local function BuildPanel()
             "Integration with other addons.", "Bundled profiles ready to apply." } },
         { test = function(k) return k == "extras" end, title = "Extras", desc = {
             "Tooltip skin and Mirror Timers (breath/rested/feign death).", "Global, not per-unit." } },
+        { test = function(k) return k == "extras2" end, title = "Extras 2", desc = {
+            "Top-center widget (zone events, delve progress).", "Drag/scroll to move and resize in Lock mode." } },
     }
     -- Pedido del usuario 2026-07-19 ("me gustaria que sea PER UNIDAD... si
     -- estoy en tot me resuma lo que puedo hacer ahi"): antes esto era una UNICA
@@ -2512,17 +2517,22 @@ local function BuildPanel()
         MakeSlider(f, "Text Offset Y", -100, 100, 1, "labelOffsetY", L, -276, MTDB, RefreshMT)
         MakeSlider(f, "Text Size", 6, 24, 1, "labelFontSize", L, -328, MTDB, RefreshMT)
         MakeGlobalColor(f, "Text Color", function() return MTDB() and MTDB().labelColor end, L, -370, RefreshMT)
+    end
 
-        -- Top Widget (pedido del usuario 2026-07-23: "cambiar el tamaño y mover
-        -- el Widget top") -- mismo criterio que Mirror Timers: sin sliders de
-        -- posicion/tamaño en el menu, se arrastra/escala en modo Lock.
-        MakeHeader(f, "Top Widget (event/delve progress bars)", L, -410, 430)
+    -- Extras 2 (2026-07-23): "Extras" ya estaba lleno hasta el borde (Mirror
+    -- Timer Text terminaba en -370/-386, el footer de botones empieza mucho
+    -- antes de lo que parecia) -- el bloque de Top Widget quedaba tapado
+    -- detras de la barra de botones inferior. Mismo criterio ya usado con
+    -- Explorer/Explorer 2: pestaña nueva en vez de forzar mas contenido.
+    do
+        local f = Section("extras2")
+        MakeHeader(f, "Top Widget (event/delve progress bars)", L, -6, 430)
         local function TWDB() return ns.GetDB() and ns.GetDB().topwidget end
-        MakeToggle(f, "Enable repositioning", L, -434,
+        MakeToggle(f, "Enable repositioning", L, -30,
             function() return TWDB() and TWDB().enabled end,
             function(v) if TWDB() then TWDB().enabled = v end; if ns.RefreshTopWidget then ns.RefreshTopWidget() end end)
         local twNote = f:CreateFontString(nil, "ARTWORK"); setFont(twNote, 10)
-        twNote:SetPoint("TOPLEFT", L, -462); twNote:SetWidth(430); twNote:SetJustifyH("LEFT")
+        twNote:SetPoint("TOPLEFT", L, -58); twNote:SetWidth(430); twNote:SetJustifyH("LEFT")
         twNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         twNote:SetText("The native top-center widget (zone events, delve progress). Enter Lock (top bar) to drag it; scroll wheel over it to resize.")
     end

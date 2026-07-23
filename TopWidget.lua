@@ -65,6 +65,11 @@ local function Layout()
     end
     holder:Show()
     holder:SetFrameStrata(p.strata or "MEDIUM")
+    -- FIX ("se reposiciona cuando escalo"): offsetX/offsetY se guardan en el
+    -- espacio de coordenadas de ANTES de escalar -- sin compensar, cambiar
+    -- scale corre visualmente el anchor. Mismo utilitario que ya usa InfoBar
+    -- (InfoBarPlace: "reancla offset si la escala cambio").
+    ns.CompensateScale(p, "simple")
     holder:SetScale(p.scale or 1)
 
     local parent = _G[p.anchor]

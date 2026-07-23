@@ -367,6 +367,19 @@ local function SetUnlocked(state)
     if ns.topWidgetHolder then
         ns.topWidgetHolder:EnableMouse(state and true or false)
         ns.topWidgetHolder:EnableMouseWheel(state)
+        -- FIX ("no tiene outline"): a diferencia de ns.frames/portraits/auras
+        -- (que muestran/ocultan su editBG aca mismo en el SetUnlocked
+        -- principal), el holder de TopWidget solo lo tenia cableado en
+        -- ToggleEditOutline (el toggle rapido de "hide outline"), que NUNCA
+        -- se llama automaticamente al entrar en Lock -- por eso nunca aparecia.
+        if ns.topWidgetHolder.editBG then
+            if state then
+                local hideGreen = ns.GetDB() and ns.GetDB().hideEditOutline
+                ns.topWidgetHolder.editBG:SetShown(not hideGreen)
+            else
+                ns.topWidgetHolder.editBG:Hide()
+            end
+        end
     end
     if ns.micromenu then ns.micromenu:EnableMouse(state and true or false); ns.micromenu:EnableMouseWheel(state) end
     if _G.MyCF_RaidHeader then
