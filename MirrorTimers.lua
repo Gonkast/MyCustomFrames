@@ -30,8 +30,12 @@
 local ADDON, ns = ...
 
 local A = ns.ASSETS
-local BAR_TEX = A .. "cast_bar.tga"
-local BACKDROP_TEX = A .. "cast_back.tga"
+-- Funciones, no locals fijos (2026-07-23, "mirror timer tambien se reskinee"):
+-- resuelven contra la skin activa en cada llamada, mismo patron que
+-- ClassPower.lua/Raid.lua -- BAR_TEX/BACKDROP_TEX eran paths horneados una
+-- sola vez al cargar el archivo, nunca se enteraban de un cambio de skin.
+local function BarTex() return (ns.SkinResolve and ns.SkinResolve("cast_bar.tga")) or (A .. "cast_bar.tga") end
+local function BackdropTex() return (ns.SkinResolve and ns.SkinResolve("cast_back.tga")) or (A .. "cast_back.tga") end
 local BAR_TEXCOORD = { 0, 1, 0, 1 }
 
 local function MirrorTimerDefaults()
@@ -123,7 +127,7 @@ local function SkinOne(wrapper, standalone)
         -- ANTES de esconder el resto para poder excluirla del barrido.
         local bg = wrapper:CreateTexture(nil, "BACKGROUND", nil, -1)
         bg:SetPoint("CENTER", 1, -2)
-        bg:SetTexture(BACKDROP_TEX)
+        bg:SetTexture(BackdropTex())
         wrapper.mcfBg = bg
 
         -- FIX 2026-07-19 (reportado por el usuario, confirmado via
@@ -152,12 +156,14 @@ local function SkinOne(wrapper, standalone)
     if not p or not p.enabled then wrapper:SetAlpha(1); return end
 
     if standalone then wrapper:SetScale(p.scale or 1) end
-    wrapper._mcfLastBarTex = BAR_TEX
-    bar:SetStatusBarTexture(BAR_TEX)
+    local barTex = BarTex()
+    wrapper._mcfLastBarTex = barTex
+    bar:SetStatusBarTexture(barTex)
     local tex = bar:GetStatusBarTexture()
     if tex then tex:SetTexCoord(unpack(BAR_TEXCOORD)) end
 
     if wrapper.mcfBg then
+        wrapper.mcfBg:SetTexture(BackdropTex())
         wrapper.mcfBg:SetSize(p.cageWidth or 193, p.cageHeight or 93)
     end
 

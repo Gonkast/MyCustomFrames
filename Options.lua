@@ -1292,10 +1292,39 @@ local function BuildPanel()
         scaleLbl:SetTextColor(COLOR_OPTION[1], COLOR_OPTION[2], COLOR_OPTION[3])
         scaleLbl:SetText("Scale")
 
+        -- FIX (2026-07-23, "cuando cambio la escala se reposiciona la
+        -- ventana"): el panel es arrastrable (StartMoving/StopMovingOrSizing
+        -- arriba) -- una vez movido, su ancla queda con offsets en PIXELES DE
+        -- LA ESCALA VIEJA; al llamar panel:SetScale(v) esos mismos numeros se
+        -- reinterpretan bajo la escala NUEVA (SetPoint offsets se miden en el
+        -- espacio de coordenadas propio del frame, dividido por su escala
+        -- efectiva) -- por eso la ventana "salta". Fix: capturar el centro
+        -- REAL en pantalla (independiente de escala, mismo truco que
+        -- StopRaidHeaderDrag en Raid.lua) ANTES de escalar, y re-anclar a ese
+        -- mismo centro DESPUES -- normaliza cualquier ancla de esquina vieja
+        -- a un CENTER limpio de paso.
+        local function ApplyPanelScale(v)
+            local oldEff = panel:GetEffectiveScale()
+            local fx, fy = panel:GetCenter()
+            local px, py = UIParent:GetCenter()
+            local hasCenter = fx and fy and px and py
+            local realOffX, realOffY
+            if hasCenter then
+                local ps = UIParent:GetEffectiveScale()
+                realOffX = fx * oldEff - px * ps
+                realOffY = fy * oldEff - py * ps
+            end
+            panel:SetScale(v)
+            if hasCenter then
+                local newEff = panel:GetEffectiveScale()
+                panel:ClearAllPoints()
+                panel:SetPoint("CENTER", UIParent, "CENTER", realOffX / newEff, realOffY / newEff)
+            end
+        end
         local function setScale(v)
             v = clampScale(roundScale(v))
             ns.GetDB().panelScale = v
-            panel:SetScale(v)
+            ApplyPanelScale(v)
             scaleVal:SetText(string.format("%.2f", v))
         end
         scalePlus:SetScript("OnClick", function() setScale(((ns.GetDB() and ns.GetDB().panelScale) or 1.0) + step) end)
@@ -1313,8 +1342,26 @@ local function BuildPanel()
         refreshers[#refreshers + 1] = function()
             local v = (ns.GetDB() and ns.GetDB().panelScale) or 1.0
             scaleVal:SetText(string.format("%.2f", v))
-            panel:SetScale(v)
+            ApplyPanelScale(v)
         end
+
+        -- Rueda del mouse sobre el HEADER (pedido del usuario 2026-07-23:
+        -- "mas rapido que clickear +/- 10 veces") -- mismo patron/paso que
+        -- AttachScaleWheel (core.lua) pero para la escala de LA VENTANA, no
+        -- de un elemento del HUD, asi que se arma un handler propio en vez de
+        -- reusar esa funcion (esta no depende de unlocked/InCombatLockdown,
+        -- el menu de opciones no es un frame seguro). Zona: SOLO la franja
+        -- del titulo (izquierda de los controles +/- valor/-/Close), para no
+        -- pisar el mouse de esos botones ni de la searchbox/sidebar de abajo.
+        local headerWheel = CreateFrame("Frame", nil, panel)
+        headerWheel:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -2)
+        headerWheel:SetPoint("TOPRIGHT", scaleLbl, "TOPLEFT", -10, 0)
+        headerWheel:SetHeight(26)
+        headerWheel:EnableMouseWheel(true)
+        headerWheel:SetScript("OnMouseWheel", function(self, delta)
+            local cur = (ns.GetDB() and ns.GetDB().panelScale) or 1.0
+            setScale(cur + (delta > 0 and step or -step))
+        end)
     end
 
     local LABELS = {}
@@ -3871,6 +3918,19 @@ local function BuildPanel()
     -- en la skin activa, mismo lenguaje visual que el resto del panel
     -- (COLOR_TITLE para el header, PL.DIV_H para el divisor).
     local ROW_H, TOP_PAD = 22, 30
+    -- Icono por fila (pedido del usuario 2026-07-23): "que cada skin utilice
+    -- el group-finder-eye-orange que tenga en su propia carpeta de Assets" --
+    -- NO es ns.SkinResolve (esa resuelve contra la skin ACTIVA globalmente),
+    -- aca hace falta resolver contra la skin DE ESA FILA especifica, asi que
+    -- se arma el path a mano con la misma prioridad basePath>folder>Default
+    -- que SkinResolve usa (ver core.lua), sin probe de existencia (si el
+    -- archivo no esta, la fila simplemente no muestra icono, no rompe nada).
+    local ICON_FILE = "group-finder-eye-orange.tga"
+    local function SkinRowIcon(skin)
+        if skin.basePath then return skin.basePath .. ICON_FILE end
+        if skin.folder and skin.folder ~= "" then return (ns.ASSETS or "") .. skin.folder .. ICON_FILE end
+        return (ns.ASSETS or "") .. ICON_FILE
+    end
     local skinsPopup
     local function GetSkinsPopup()
         if skinsPopup then return skinsPopup end
@@ -3903,7 +3963,7 @@ local function BuildPanel()
             local w = 8 * #(skin.label or skin.folder or "")
             if w > widest then widest = w end
         end
-        p:SetSize(widest + 40, TOP_PAD + (#skins * ROW_H) + 6)
+        p:SetSize(widest + 62, TOP_PAD + (#skins * ROW_H) + 6)   -- +22 vs antes: icono de fila
         -- Se resalta por LABEL, no folder: los addons-skin separados (basePath)
         -- siempre tienen folder="" (igual que Default), folder solo alcanza
         -- para distinguir subcarpetas internas de Assets\.
@@ -3914,9 +3974,22 @@ local function BuildPanel()
                 r = CreateFrame("Button", nil, p)
                 r:SetHeight(ROW_H)
                 local hl = r:CreateTexture(nil, "HIGHLIGHT"); hl:SetAllPoints(); hl:SetColorTexture(1, 0.82, 0.2, 0.14)
-                local check = r:CreateFontString(nil, "OVERLAY"); setFont(check, 12)
-                check:SetPoint("LEFT", 6, 0); check:SetWidth(14); check:SetJustifyH("LEFT")
-                check:SetTextColor(0.4, 0.9, 0.4)
+                local icon = r:CreateTexture(nil, "ARTWORK")
+                icon:SetSize(16, 16)
+                icon:SetPoint("LEFT", 6, 0)
+                icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+                r.icon = icon
+                -- FIX (2026-07-23, "rectangulo verde raro"): el check era un
+                -- FontString con el caracter Unicode checkmark (U+2713) -- la
+                -- fuente del addon no tiene ese glifo, asi que salia como
+                -- "tofu" (el cuadro de glifo-faltante generico), tenido de
+                -- verde por SetTextColor. Reemplazado por una TEXTURA real
+                -- (atlas nativo de Blizzard, common-icon-checkmark), que
+                -- siempre existe sin depender de que fuente este cargada.
+                local check = r:CreateTexture(nil, "OVERLAY")
+                check:SetSize(14, 14)
+                check:SetPoint("LEFT", icon, "RIGHT", 4, 0)
+                check:SetAtlas("common-icon-checkmark")
                 r.check = check
                 local tx = r:CreateFontString(nil, "OVERLAY"); setFont(tx, 12)
                 tx:SetPoint("LEFT", check, "RIGHT", 2, 0); tx:SetJustifyH("LEFT")
@@ -3925,7 +3998,8 @@ local function BuildPanel()
                 p.rows[i] = r
             end
             local isActive = skin.label == activeLabel
-            r.check:SetText(isActive and "\226\156\147" or "")   -- checkmark UTF-8
+            r.icon:SetTexture(SkinRowIcon(skin))
+            r.check:SetShown(isActive)
             r.tx:SetText(skin.label or skin.folder)
             r.tx:SetTextColor(isActive and 1 or COLOR_OPTION[1],
                 isActive and 0.82 or COLOR_OPTION[2],
@@ -3943,7 +4017,15 @@ local function BuildPanel()
     end
     local skinsBtn = MakeTabButton(panel, "Skins", 90, 24)
     skinsBtn:SetPoint("LEFT", auraTestBtn, "RIGHT", 6, 0)
-    skinsBtn:SetScript("OnClick", function() OpenSkinsPopup(skinsBtn) end)
+    -- Toggle (pedido del usuario 2026-07-23): apretar el boton de nuevo con
+    -- el popup YA abierto lo CIERRA, en vez de solo re-posicionarlo/mostrarlo.
+    skinsBtn:SetScript("OnClick", function()
+        if skinsPopup and skinsPopup:IsShown() then
+            skinsPopup:Hide()
+        else
+            OpenSkinsPopup(skinsBtn)
+        end
+    end)
     panelButtons[#panelButtons + 1] = skinsBtn
 
     -- 2026-07-17: centrar el grupo entero (estaba pegado a la izquierda). Como

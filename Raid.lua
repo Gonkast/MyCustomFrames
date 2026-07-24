@@ -17,6 +17,24 @@ local ADDON, ns = ...
 -- Mismo prefijo de Assets que core.lua (ahi es local, no expuesto via ns).
 local A = "Interface\\AddOns\\MyCustomFrames\\Assets\\"
 
+-- Sistema de Skins (2026-07-23, "raid frames tambien"): health/cage/highlight
+-- de raid1-40 ya salen gratis via SKIN_SLOTS/TEX_LIB (db.units.raid es una
+-- entrada mas de db.units, ver core.lua) -- pero el icono/plate de ROL
+-- (tank/heal) no viven en la DB (son fijos, sin picker), asi que se resuelven
+-- aca a mano contra la skin activa, mismo patron que ClassPower.lua.
+local function ResolveTex(filename)
+    if ns.SkinResolve then return ns.SkinResolve(filename) end
+    return A .. filename
+end
+-- roleBackdrop se texturea UNA sola vez por member al crearse (no en cada
+-- refresh como roleIcon) -- se registran aca para poder reasignarles la
+-- textura cuando cambia la skin (ns.RefreshRaid llama RefreshRoleBackdrops).
+local roleBackdrops = {}
+local function RefreshRoleBackdrops()
+    local tex = ResolveTex("point_plate.tga")
+    for _, t in ipairs(roleBackdrops) do t:SetTexture(tex) end
+end
+
 -- ==========================================================================
 -- ESTADO
 -- ==========================================================================
@@ -103,8 +121,13 @@ function ns.RaidUnitDefaults()
 
     -- Backdrop de vida (cast_back), EXACTO a HealthBackdropSize/Position de
     -- AzeriteUI: 132x85, centrado con offset (1,-2).
-    d.texture = A .. "cast_bar.tga"
-    d.cageTexture = A .. "cast_back.tga"
+    -- ResolveTex (no A directo): ns.ForceRaidStyle() reaplica estos defaults
+    -- SIEMPRE en cada RefreshRaid (ver APPEARANCE_KEYS arriba, decision
+    -- deliberada para que nada desvie el look) -- asi que para que el raid
+    -- frame siga la skin activa, el default en si tiene que resolverse contra
+    -- la skin, no apuntar siempre al Default hardcodeado.
+    d.texture = ResolveTex("cast_bar.tga")
+    d.cageTexture = ResolveTex("cast_back.tga")
     d.cageWidth, d.cageHeight = 132, 85
     -- NOTA: en AzeriteUI ese offset (1,-2) es relativo al CENTRO DE LA BARRA
     -- DE VIDA (health, no el boton), que esta anclada BOTTOM+16 dentro de un
@@ -122,7 +145,7 @@ function ns.RaidUnitDefaults()
     -- (AzeriteUI no lo anima, solo Show/Hide).
     d.showHighlight = true
     d.highlightGlow = false
-    d.highlightTexture = A .. "cast_back_outline.tga"
+    d.highlightTexture = ResolveTex("cast_back_outline.tga")
     d.highlightWidth, d.highlightHeight = 140, 90
     d.highlightOffsetX, d.highlightOffsetY = 1, -7.5   -- misma compensacion que el cage (ver nota arriba)
     d.highlightColor = { r = 255/255, g = 239/255, b = 169/255 }
@@ -412,9 +435,10 @@ local function BuildMemberVisual(self)
     -- afuera del borde derecho del member (igual GroupRolePosition de AzeriteUI).
     local roleBackdrop = overlay:CreateTexture(nil, "ARTWORK", nil, 1)
     roleBackdrop:SetSize(28, 28)
-    roleBackdrop:SetTexture(A .. "point_plate.tga")
+    roleBackdrop:SetTexture(ResolveTex("point_plate.tga"))
     roleBackdrop:SetPoint("RIGHT", self, "RIGHT", 25, 0)
     roleBackdrop:Hide()
+    roleBackdrops[#roleBackdrops + 1] = roleBackdrop
     local roleIcon = overlay:CreateTexture(nil, "ARTWORK", nil, 2)
     roleIcon:SetSize(20, 20)
     roleIcon:SetPoint("CENTER", roleBackdrop, "CENTER", 0, 0)
@@ -582,7 +606,7 @@ function ns.TickRaid()
                 if u.roleIcon and u.roleBackdrop then
                     local role = ns.safeVal(UnitGroupRolesAssigned, unit)
                     if role == "TANK" or role == "HEALER" then
-                        u.roleIcon:SetTexture(A .. (role == "TANK" and "grouprole-icons-tank.tga" or "grouprole-icons-heal.tga"))
+                        u.roleIcon:SetTexture(ResolveTex(role == "TANK" and "grouprole-icons-tank.tga" or "grouprole-icons-heal.tga"))
                         u.roleIcon:Show(); u.roleBackdrop:Show()
                     else
                         u.roleIcon:Hide(); u.roleBackdrop:Hide()
@@ -670,6 +694,8 @@ function ns.RefreshRaid()
     if InCombatLockdown() then raidNeedsRefresh = true; return end
     raidNeedsRefresh = false
 
+    RefreshRoleBackdrops()
+
     -- Reafirma la apariencia hardcodeada ANTES de leer cfg (asi ningun dato
     -- viejo guardado ni ningun otro codigo puede desviar el look real).
     ns.ForceRaidStyle()
@@ -720,8 +746,17 @@ function ns.RefreshRaid()
     end
     if ghostUnits then
         for i, u in ipairs(ghostUnits) do
+            -- FIX (2026-07-23, "necesito reload para que se vea en el
+            -- preview"): los ghosts (preview de Lock sin raid real) solo se
+            -- texturean UNA vez al crearse (EnsureGhosts) -- a diferencia de
+            -- los members reales (arriba), este loop nunca les reaplicaba la
+            -- apariencia, asi que un cambio de skin/textura solo se veia tras
+            -- reconstruir los ghosts con un /reload.
+            ns.UnitApplyAppearance(u)
+            local pu = ghostPowerUnits and ghostPowerUnits[i]
+            if pu then ns.UnitApplyAppearance(pu) end
             PositionRaidIcons(u)
-            ApplySizeToMember(u, ghostPowerUnits and ghostPowerUnits[i])
+            ApplySizeToMember(u, pu)
         end
     end
 
@@ -790,7 +825,7 @@ local function EnsureGhosts()
             if u.raidTargetIcon then SetRaidTargetIconTexture(u.raidTargetIcon, 8); u.raidTargetIcon:Show() end
             if u.readyCheckIcon then u.readyCheckIcon:SetTexture([[Interface\RaidFrame\ReadyCheck-Ready]]); u.readyCheckIcon:Show() end
             if u.roleIcon and u.roleBackdrop then
-                u.roleIcon:SetTexture(A .. "grouprole-icons-tank.tga")
+                u.roleIcon:SetTexture(ResolveTex("grouprole-icons-tank.tga"))
                 u.roleIcon:Show(); u.roleBackdrop:Show()
             end
         end

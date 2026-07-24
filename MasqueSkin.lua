@@ -142,25 +142,36 @@ local function RegisterSkin()
 end
 ns.RegisterMasqueSkin = RegisterSkin
 
--- IMPORTANTE (fix de un crash real, 2026-07-15): la API PUBLICA de Masque (Core\Groups.lua,
--- Core\Skins.lua) NO expone forma de ENUMERAR los grupos ya registrados por otros addons — no
--- existe `MSQ:GetGroups()` (eso fue un supuesto mio erroneo, causo "attempt to call a nil value").
--- Los unicos metodos publicos son `MSQ:Group(Addon, Group, StaticID)` (crea O devuelve un grupo
--- EXISTENTE, si conoces el Addon/Group/StaticID exactos) y `MSQ:GetGroupByID(StaticID)`. Sin
--- conocer de antemano los nombres de grupo que usa cada addon de barras (Bartender4 los arma
--- dinamicamente por bar id), no hay un "aplicar a todos" generico y seguro. Por eso NO existe
--- ns.ApplyMasqueSkinAll: la unica via confiable es que el skin ESTE REGISTRADO ANTES de que el
--- addon de barras cree sus grupos (Masque NO re-skinea grupos existentes cuando se agrega un
--- skin nuevo — AddSkin no dispara ningun refresh). Por eso se registra EN FILE-LOAD (abajo, sin
--- esperar ningun evento) igual que hacia el addon original Masque_Azerite_Hex (su main.lua
--- llamaba MSQ:AddSkin(...) directo en el cuerpo del archivo, sin diferir a ningun evento) — con
--- el addon declarado en `## OptionalDeps: ..., Masque, ...` del toc, el cliente carga Masque
--- ANTES que MyCustomFrames, asi que LibStub("Masque") ya esta disponible en este punto.
-function ns.ApplyMasqueSkinAll()
+-- IMPORTANTE: la API PUBLICA de Masque (Core\Groups.lua, Core\Skins.lua) NO expone forma de
+-- ENUMERAR grupos ya registrados por otros addons -- no existe `MSQ:GetGroups()` (confirmado
+-- leyendo el codigo fuente actual: los unicos metodos publicos son Group/GetGroupByID/
+-- Get{Normal,Backdrop,Gloss,Shadow}/SetEmpty, ninguno enumera).
+--
+-- 2026-07-23: se probo automatizar esto leyendo bar.MasqueGroup directo de Bartender4 (metodo
+-- "interno" __Set de Masque) -- funcionaba, pero el usuario prefirio revertirlo (mas simple/
+-- predecible: un aviso pidiendo elegir la skin a mano en el panel de Masque). Si se quiere
+-- retomar el auto-reskin de Bartender4 mas adelante, ver el historial de esta sesion.
+--
+-- Llamada desde ns.ApplySkin (core.lua) cada vez que el usuario cambia de skin visual.
+-- `skin` = la entrada de ns.TEX_SKINS recien aplicada. Solo guarda cual skin de Masque
+-- corresponde y le pide al usuario que la seleccione a mano en el panel de Masque (mismo
+-- nombre que la skin visual, ej. "Midnight" -> skin de Masque "Midnight").
+function ns.ApplyMasqueSkinAll(skin)
     local ok = RegisterSkin()
     if not ok then return false, "Masque not loaded" end
-    return true, "skin registered (existing action bars pick it up on their next /reload; " ..
-        "select it manually in Masque's panel if a bar doesn't switch automatically)"
+
+    local db = ns.GetDB and ns.GetDB()
+    local target = skin and skin.msqSkin
+    if db then db.activeMsqSkin = target end
+
+    if not target then
+        return true, "skin registered (this visual skin has no Masque skin declared)"
+    end
+
+    print("|cff00ff00[MCF]|r This skin uses the Masque skin \"" .. target ..
+        "\" for action bars -- open Masque's panel and select \"" .. target ..
+        "\" there (Masque remembers it, so a /reload also picks it up once you've chosen it before).")
+    return true, "skin registered, Masque skin \"" .. target .. "\" noted (pick it manually in Masque's panel)"
 end
 
 -- Registro INMEDIATO en file-load (no diferido a PLAYER_LOGIN): asi el skin esta disponible

@@ -112,6 +112,19 @@ local function ResizeIcon(b, sz)
     b.border:SetPoint("BOTTOMRIGHT", inset, -inset)
 end
 
+-- Registro de TODOS los iconos creados (party+arena) para poder reasignar su
+-- borde en vivo cuando cambia la skin global -- antes este archivo usaba un
+-- AURA_BORDER local fijo, la unica pieza de auras que NO seguia el sistema
+-- de Skins (ver STRUCTURE.md "Hallazgo pendiente" 2026-07-23; Auras.lua y
+-- Nameplates.lua ya usaban ns.AURA_BORDER dinamico).
+local iconRegistry = {}
+ns.RefreshAuraHoverBorder = function()
+    local tex = ns.AURA_BORDER or AURA_BORDER
+    for _, b in ipairs(iconRegistry) do
+        if b.border then b.border:SetTexture(tex) end
+    end
+end
+
 local function CreateIcon(parent)
     local b = CreateFrame("Frame", nil, parent)
 
@@ -127,8 +140,9 @@ local function CreateIcon(parent)
     b.swipe = swipe
 
     local border = b:CreateTexture(nil, "OVERLAY")
-    border:SetTexture(AURA_BORDER)
+    border:SetTexture(ns.AURA_BORDER or AURA_BORDER)
     b.border = border
+    iconRegistry[#iconRegistry + 1] = b
     ResizeIcon(b, DEFAULT_ICON_SIZE)
 
     local count = b:CreateFontString(nil, "OVERLAY")

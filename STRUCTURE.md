@@ -11,6 +11,220 @@
 > Raid/etc, todos archivos propios que exponen `ns.Loquesea` y leen `ns.GetDB()`/`ns.IsUnlocked()`
 > en vez de los locals `db`/`unlocked` de core.
 
+## SESION 2026-07-23 (grande — tooling nuevo, mirrorTarget, Explorer/Extras subtabs,
+## TopWidget, sistema de Skins + skin-addons separados, fusion Party/Arena Aura Preview,
+## limpieza de Assets, varios bakes de Defaults.lua). Documentado ahora porque el ultimo
+## sync completo de este archivo fue 2026-07-17 -- lo de nameplates/minimap-mail/etc. de
+## sesiones intermedias vive en la memoria auto (`project_mycustomframes_*`), no repetido aca.
+
+**TOOLING NUEVO (una sola vez, no vuelve a instalarse cada sesion):** se instalo **Lua 5.4**
+(`C:\Users\MrGon\AppData\Local\Programs\Lua\bin\lua.exe`, via winget `DEVCOM.Lua`) y
+**luacheck** (`C:\Users\MrGon\AppData\Local\Programs\luacheck\luacheck.exe` — binario
+PRECOMPILADO de la release oficial, no via luarocks porque no hay compilador C en esta
+maquina para el modulo nativo `luafilesystem`). Ambos quedaron en el PATH de usuario.
+`.luacheckrc` en la raiz del addon: `std="lua51"`, ignora el codigo 113 (lectura de globals
+no declaradas — la API de WoW tiene miles), whitelist explicita de globals que el addon SI
+escribe (`MyCustomFramesDB`, `SlashCmdList`, `StaticPopupDialogs`, `DynamicCam`, todos los
+`SLASH_MCF*`), excluye `Libs/**` y `Profiles/<addon>/**` (vendorizado/copias de SavedVariables
+ajenas). Correr con: `luacheck.exe .` desde la carpeta del addon. Ya peino ~90-95 warnings
+estables (variables `ADDON`/`self` sin usar, diagnosticos temporales) sin ningun error real;
+**ya encontro 2 bugs reales en su primera corrida** (ver mas abajo, "hallazgos de luacheck").
+El pipeline de re-horneado de `Defaults.lua` desde un export `MCF1:{...}` pegado por el
+usuario TAMBIEN cambio: en vez de splicing manual con PowerShell/sed (fragil, historial de
+bugs de BOM), ahora se usa un script Lua chico que **parsea el export con el interprete real**
+(`load("return " .. s)`), aplana `globals`, saca la clave `name` (metadata de export/import,
+no pertenece al schema de `ns.BUILTIN`), y reserializa — se valida cargandolo de verdad antes
+de instalar, no solo contando llaves. Ver `Read`/`Bash` de esta sesion para el script exacto
+si hace falta repetirlo (no se dejo guardado como archivo permanente, vive en el scratchpad).
+
+**mirrorTarget (portrait_player, Portraits.lua):** toggle nuevo (`db.portraits.portrait_player.
+mirrorTarget`, default **false**, gateado a portrait_player via `PortraitDefaultsFor` —
+`d.mirrorTarget = (key == "portrait_player") and false or nil` NO FUNCIONA por el idiom
+`cond and false or nil` de Lua, que SIEMPRE da nil cuando el "true branch" es `false` — se
+uso un `if key == "portrait_player" then d.mirrorTarget = false end` explicito en su lugar,
+dejar comentado por si se repite el error en otro lado). Si esta ON y hay target, el modelo
+3D de `portrait_player` muestra el TARGET en vez del jugador (`u.unit` NO se toca, solo
+`modelUnit` local en `PortraitUpdatePicture`); el fondo circular se pinta con color de clase
+(target es jugador) o rojo/amarillo/verde por `UnitReaction` (target es NPC hostil/neutral/
+amistoso). **Investigacion larga y sin resolver:** el modelo 3D sale en BLANCO para
+targets NO-jugador (`SetUnit` no tira error, `pcall ok=true`, pero no renderiza nada) —
+se probaron 3 tecnicas de camara (zoom normal, `SetCamDistanceScale`, `OnModelLoaded`
+diferido, zoom=0 cuerpo completo) sin ningun cambio de resultado; tambien se probo un
+fallback 2D real (`SetPortraitTexture`, funcion GLOBAL no metodo — confirmado que SI
+funciona y muestra algo) pero se descarto porque el usuario prefiere 3D puro y ese fallback
+tuvo un bug de regresion (breve) que hizo dudar de su aislamiento. **Estado final:**
+mirrorTarget usa 3D SIEMPRE, pero se DESACTIVA por completo dentro de CUALQUIER instancia
+(`pcall(IsInInstance)`, `inInst==true` sin importar el tipo — dungeon/raid/arena/pvp/
+escenario) mostrando el player normal ahi adentro, porque confirmado que el 3D de NPCs
+nunca resuelve dentro de instancias (mundo abierto no probado con NPCs, solo con jugadores).
+Diagnostico temporal `/mcfmirrortargetdiag` sigue en el codigo (Portraits.lua) por si se
+retoma la investigacion — imprime pcall ok/err + tipo de instancia del ultimo intento.
+
+**Explorer/Extras — sub-tabs internos en vez de botones de sidebar separados
+(2026-07-23):** "Explorer 2"/"Extras 2" (creados horas antes en la MISMA sesion para no
+desbordar el panel sin scroll) se volvieron a fusionar DENTRO de Explorer/Extras como
+pestañas internas estilo pildora (`MakeTabButton`, mismo widget que Gen/Bar/Cage de las
+unidades) en vez de entradas nuevas en la sidebar global. Explorer: "Elements" (lista de
+auto-hide) / "Conditions" (siempre-visible-si + filtro de tipo de contenido). Extras:
+"Main" (Tooltip+Mirror Timers, sin cambios) / "Widget" (Top Widget, ver mas abajo) — los
+tabs de Extras van en el HUECO horizontal libre entre los 2 headers existentes (Tooltip
+izq, Mirror Timers der) para no correr el contenido ya ajustado al limite vertical del
+panel (ese panel ya habia desbordado una vez, confirmado por captura del usuario).
+La lista de elementos de Explorer se **fusiono por unidad** (pedido explicito): "Party 1"
+a "Party 5" ahora cada uno controla FRAME+PORTRAIT juntos (antes 10 entradas separadas,
+`db.explorer["party1"]` y `db.explorer["portrait_party1"]` independientes — ahora un solo
+checkbox escribe ambas keys), igual "Player" (frame+power bar), "Pet" (frame+portrait),
+"Target of Target" (frame+portrait). **"Player portrait" queda separado a proposito**
+(es el unico con mirrorTarget). Se sacaron del todo "Target unit frame"/"Target portrait"/
+"Target power bar"/"Target auras" de la lista (pedido explicito: "no me interesa ocultar
+nada del target con el Explorer"). Mecanismo: `EXPLORER_LIST` en Options.lua ahora tiene
+`{ "Label", {"key1","key2",...} }` (antes `{"Label","key"}`), el toggle itera todas las
+keys del array al leer/escribir/resetear.
+
+**TopWidget.lua (nuevo archivo, standalone):** reposiciona/escala
+`UIWidgetTopCenterContainerFrame` nativo (barras de progreso de eventos de zona/delves) —
+mismo patron que el "below minimap widget" de Minimap.lua (holder propio, el frame nativo
+se reparenta y sigue al holder via `hooksecurefunc(w,"SetPoint",...)` con guard
+anti-recursion). Posicion/escala: arrastre en Lock + rueda del mouse (`ns.AttachScaleWheel`,
+con `ns.CompensateScale(p,"simple")` para que la escala no corra el offset) + sliders
+Offset X/Y/Scale en el menu (Extras > Widget). **Default horneado: `point/relPoint="TOP"`,
+`offsetX=0, offsetY=-15`** (el anclaje EXACTO que usa Blizzard, verificado contra
+`Blizzard_UIWidgetTopCenterFrame.xml` real via el mirror `Gethe/wow-ui-source`), **scale=0.70**
+(pedido explicito, no 1.0). `db.topwidget` en `PRESET_TABLE_KEYS` (export/import/reset ya
+lo cubren). **Bug encontrado y arreglado en el camino:** los sliders de Offset X/Y tenian
+rango mas angosto (±960/±400) que una posicion ya arrastrada a mano — el refresher de
+`MakeSlider` hace `SetValue(clamp(v,min,max))` al SOLO ABRIR el menu, y `OnValueChanged`
+escribe ese valor recortado de vuelta a la db incondicionalmente (no solo en drag real) —
+o sea, con solo entrar a la pestaña Widget se pisaba la posicion real. Ensanchado a ±2000
+(mismo rango que usan los demas offsets de unidades/portraits). Tambien: el punto guardado
+podia quedar en `point=CENTER/relPoint=BOTTOMLEFT` (restos de un export viejo) — offsetX/Y=0
+con ESE anclaje pone el widget en la esquina inferior izquierda, fuera de pantalla; se
+agrego un boton "Reset position" (`ns.ResetUnit(ns.TOPWIDGET_KEY)`) para arreglarlo de un
+click en vez de tener que editar el punto a mano.
+
+**Sistema de SKINS globales (core.lua + Options.lua) — el cambio mas grande de la sesion:**
+pedido del usuario: un dropdown que reskinee TODO el addon de una, con fallback automatico
+a Default si un archivo no existe en la carpeta de la skin. Piezas:
+- **`ns.SkinResolve(filename)`** (core.lua): prueba `Assets\<skin>\<filename>` con
+  `Texture:SetTexture(path)` — este cliente **SI devuelve un booleano de exito real**
+  (confirmado contra `Blizzard_APIDocumentationGenerated/SimpleTextureBaseAPIDocumentation.lua`:
+  `Returns = {{Name="success", Type="bool"}}` — no es un truco, es la API documentada). Si
+  falla, usa `Assets\<filename>` (Default). Sin esto no habria forma de saber si un archivo
+  existe: Lua en WoW no puede leer el disco.
+- **`SKIN_SLOTS`** (core.lua): lista `(domain, dbKey, category)` de los 16 "slots" de textura
+  que ya expone el picker manual (`MakeTexturePicker` en Options.lua) — bar/cage/highlight/
+  cast (units), bgTexture/cageTexture/raidTargetTexture (portraits), borderTexture (auras),
+  bgTexture (infobar), glowTexture (glow), 6 campos de minimap.
+- **`ns.ApplySkin(skin)`** (core.lua): recorre `SKIN_SLOTS`, y por cada campo cuyo valor
+  ACTUAL (comparando solo el BASENAME, sin importar que carpeta/skin tenga puesta) coincide
+  con un archivo CONOCIDO de `ns.TEX_LIB[categoria]`, lo reescribe con `SkinResolve` — una
+  ruta totalmente custom escrita a mano se deja intacta. Tambien reasigna las constantes
+  "vacio=default" que se leen EN VIVO (`ns.TEXTURE_DEFAULT/POWER_TEXTURE/HIGHLIGHT_TEX/
+  PORTRAIT_BG/PORTRAIT_ORB/AURA_BORDER/RAIDTARGET_TEX/INFOBAR_BG_TEX`) y llama a los
+  Refresh* de cada subsistema. Persiste por **`db.activeSkinLabel`** (no folder — las skins
+  basePath, ver mas abajo, todas tienen folder="" igual que Default, folder solo distingue
+  subcarpetas internas de `Assets\`). Se restaura UNA vez en `PLAYER_ENTERING_WORLD` (no en
+  el `ADDON_LOADED` de este addon) para dar tiempo a que un addon-skin separado ya se haya
+  registrado.
+- **Minimap NO seguia el sistema al principio** (2 bugs encontrados y arreglados aparte):
+  (1) los 6 campos de textura de minimap arrancan **VACIOS** en `db.minimap` (a diferencia
+  de units/portraits, que hornean la ruta concreta) y se resuelven en vivo contra
+  constantes LOCALES de `Minimap.lua` (`BORDER_TEX`/`MASK_OPAQUE`/`EYE_TEX`/`BUTTON_TEX`/
+  `RING_BACKDROP_TEX`/`DISMOUNT_TEX`) que `core.lua` no podia tocar — se agrego
+  `ns.ApplyMinimapSkin()` en Minimap.lua (reasigna esos upvalues via `ns.SkinResolve`,
+  llamado desde `ApplySkin` antes de `ns.RefreshMinimap()`). (2) `minimap-mask-transparent.tga`
+  (la MASCARA que define la forma redonda del minimapa, `Minimap:SetMaskTexture`) ni
+  siquiera estaba en `ns.TEX_LIB` — no tiene picker propio (es una mascara de recorte, no
+  un backdrop visible) asi que se paso por alto en la primera pasada; agregada categoria
+  `minimapmask` + reasignacion+reaplicacion de `MASK_TRANSPARENT` en `ApplyMinimapSkin`.
+- **Skins como ADDONS SEPARADOS** (pedido del usuario: "para no tener tantas carpetas de
+  assets en mi addon principal"): `_G.MCF_RegisterSkin(label, basePath)` (funcion GLOBAL,
+  no `ns.` — un addon separado NO puede ver el `ns` de MyCustomFrames, cada `...` de cada
+  addon es privado) agrega una entrada a `ns.TEX_SKINS` con `basePath` = ruta COMPLETA a la
+  carpeta de ESE addon (en vez de `folder` = subcarpeta interna). `SkinResolve` prueba
+  `ActiveSkinBasePath` primero, `ActiveSkinFolder` despues. Un addon-skin necesita:
+  `.toc` con `## RequiredDeps: MyCustomFrames` (garantiza orden de carga) y el NOMBRE DEL
+  ARCHIVO .toc EXACTO al nombre de la carpeta (bug real encontrado: el usuario copio la
+  carpeta de Murloc a `MyCustomFrames_Midnight\` pero dejo el .toc con el nombre viejo
+  `MyCustomFrames_Murloc.toc` — WoW no lo detectaba como addon en absoluto hasta renombrarlo),
+  y un `Load.lua` de una sola llamada (`_G.MCF_RegisterSkin("Nombre", BASE)`). Cada skin-addon
+  puede ademas registrar su PROPIO skin de Masque (`MSQ:AddSkin` con su propio `SKIN_NAME`,
+  mismo patron/estructura que `MasqueSkin.lua` del addon principal pero apuntando a
+  `<CarpetaSkin>\Assets\MasqueSkin\`) — util para que el reskin tambien cubra las barras de
+  accion via Masque, no solo las texturas del addon. **`MyCustomFrames_Murloc\` y
+  `MyCustomFrames_Midnight\`** son carpetas HERMANAS de `MyCustomFrames\` (fuera del repo git
+  de este addon, sin riesgo de subirse sin querer) creadas asi durante esta sesion — Murloc
+  con un set chico (10 archivos), Midnight con un set MUY completo (~90 archivos, cubre
+  practicamente todo `ns.TEX_LIB` + assets de Setup/ClassPower/Nameplates). **Ninguna de las
+  2 esta en `ns.TEX_SKINS` de `core.lua`** (se auto-registran solas via `_G.MCF_RegisterSkin`
+  cuando cargan) — el usuario pidio EXPLICITAMENTE no commitear nada relacionado a Murloc al
+  repo de MyCustomFrames hasta nueva orden (regla vigente, respetada en cada commit de esta
+  sesion sacando/restaurando esa linea a mano cuando hizo falta tocar `core.lua`).
+- **Footer de Options.lua:** boton "Set Default" reemplazado por **"Skins"** (el "Set
+  Default" real sigue en la pestaña Profile, solo se saco el atajo duplicado del footer).
+  Abre un popup (`MyCF_SkinsPopup`) con titulo+divisor+checkmark en la skin activa
+  (resaltado por LABEL, no folder) — sin tooltip en el boton (pedido explicito).
+- **Hallazgo pendiente sin resolver (2026-07-23, ultimo intercambio de la sesion):** las
+  auras de Player/Target (`Auras.lua`) y Nameplates (`Nameplates.lua`) usan `ns.AURA_BORDER`
+  (dinamico, SI sigue el sistema de Skins), pero las auras hover de Party/Arena
+  (`AuraHoverPreview.lua`, ver mas abajo) usan una constante LOCAL hardcodeada
+  (`actionbutton-border square.tga`) que NO participa del sistema de Skins — si se activa
+  una skin, Player/Target/Nameplates cambian de borde y Party/Arena se quedan con el
+  original siempre. Detectado, NO arreglado todavia (el usuario iba a decidir si vale la
+  pena antes de cambiar de tema de chat).
+
+**AuraHoverPreview.lua (fusion de PartyAuraPreview.lua + ArenaAuraPreview.lua, archivos
+ELIMINADOS):** los 2 archivos eran ~95% codigo identico (mismo render de iconos, animacion
+de slide, logica de tooltip, coleccion de auras) — la separacion siempre fue "temporal, se
+fusiona si el test convence" (comentario original de PartyAuraPreview.lua), y la duplicacion
+YA causo una regresion real: el fix de la "dead zone" del hoverZone (2026-07-19,
+`EnableMouse` togglea segun el gate en vez de quedar SIEMPRE prendido) se hizo solo en
+ArenaAuraPreview.lua y nunca se porto a PartyAuraPreview.lua. Nuevo archivo: una factory
+data-driven **`MakeAuraHoverGroup(cfg)`** instanciada 2 veces (`party`: dungeon-only,
+auto-show en combate; `arena`: arena-only, SOLO hover, sin auto-show por combate — mismo
+split funcional que antes, preservado a pedido explicito del usuario). Fixes aplicados a
+AMBOS grupos por igual esta vez: (1) cero dead zones (hoverZone arranca
+`EnableMouse(false)`, el ticker de 0.3s lo prende/apaga segun el gate propio del grupo);
+(2) el combate que dispara auto-show/atenuado es **SIEMPRE el del PROPIO JUGADOR**
+(`UnitAffectingCombat("player")`, funcion `PlayerInCombat()`) — antes cada archivo
+chequeaba el combate de `u.unit` (el companero/rival), que no es lo que "aparece cuando yo
+peleo" deberia significar. API publica preservada EXACTA (Options.lua/core.lua no se
+tocaron): `ns.PARTY_AURA_DIRECTIONS/ARENA_AURA_DIRECTIONS`, `ns.PartyAuraPreviewTest/
+ArenaAuraPreviewTest`, `ns.RefreshPartyAuraDirection/Size`, `ns.RefreshArenaAuraDirection/
+Size`, `ns.TogglePartyAuraTest/ToggleArenaAuraTest`, `ns.IsPartyAura/IsArenaAura`,
+`/mcfpartytest`, `/mcfarenaauratest`, `/mcfarenadiag`. 982 lineas eliminadas, 526 agregadas.
+
+**Limpieza de Assets (esta sesion, ~66MB liberados en 2 pasadas):** `calendar.tga`/`bag.tga`
+(restos de los botones de calendario/mochila del info bar, ELIMINADOS hace tiempo pero los
+archivos nunca se borraron) + `Background_complete.tga` (superado por `Background_complete1.tga`,
+0 referencias) borrados por confirmarse muertos via grep exhaustivo (-51MB). `Background_complete1.tga`
+y `actionbutton-border square2.tga` comprimidos con **TGA RLE sin perdida** (formato nativo
+de TGA, verificado pixel-perfecto con `magick compare -metric AE` = 0 diferencias antes de
+reemplazar) — de 16.9MB/16.8MB a 1.66MB/14.2MB (el 2do tiene mucho ruido/detalle, RLE
+comprime menos ahi). ImageMagick instalado via winget para esto (`C:\Program Files\
+ImageMagick-7.1.2-Q16-HDRI\magick.exe`).
+
+**Bakes puntuales de `Defaults.lua` esta sesion (ademas del re-horneado completo por export
+nuevo, x2 veces):**
+- `castWidth` != `width` en pet/targettarget/focus/party1-5/los 6 arena_* (127 vs el ancho
+  real, ej. 139 o 169) — corregido a `castWidth = width` para que coincida (mismo patron que
+  ya tenian player/target). Boss2-5 (182 vs 181, 1px) dejado sin tocar a pedido explicito.
+- `focus.castTexture` estaba VACIO (cast bar transparente) mientras pet/tot/arena
+  correctamente usan `hp_pet_bar.tga` — igualado.
+- `arena_player` (unitframe, NO portrait) `scale` 0.8 → **0.90**.
+- `topwidget.scale` horneado a **0.70** (posicion sin cambios, ver arriba).
+- Perfil de Bartender4 (`Profiles\Bartender4\Bartender4.lua`) re-exportado desde el
+  SavedVariables real del usuario, 2 veces esta sesion (cambios de layout en el juego).
+
+**Pendiente/abierto al cerrar esta sesion:** (1) `Assets/minimap-mask-transparent.tga` (el
+de DEFAULT, raiz de `Assets\`, no el de ninguna skin) tiene un diff de 26 bytes sin
+confirmar el origen (mismas dimensiones 256x256, probablemente un simple re-guardado sin
+cambio visual real) — el usuario dijo "creo que esta bien" pero nunca se comiteo, sigue
+como cambio local sin decidir. (2) La inconsistencia de `AURA_BORDER` no skin-aware en
+`AuraHoverPreview.lua` (ver arriba, seccion Skins). (3) El root cause real de por que el 3D
+de mirrorTarget nunca renderiza NPCs (no solo "dentro de instancias" — nunca se probo
+fuera de instancia con un NPC real) sigue sin confirmar.
+
 **MINIMAP (2026-07-17, nuevo, VALIDADO EN JUEGO 2026-07-21):** primer componente grande del plan
 "completar la UI copiando Map/Nameplates/Raid/Arena de AzeriteUI". `Minimap.lua` (nuevo, standalone,
 NO depende de AzeriteUI/oUF/AceAddon) reproduce el look de AzeriteUI: mascara redonda

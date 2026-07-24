@@ -85,9 +85,17 @@ ns.AURA_PREVIEW_ICON = AURA_PREVIEW_ICON
 -- ---- de archivo; para agregar una skin: crea la carpeta, copia las texturas y agregala.
 ns.ASSETS = A
 ns.TEX_SKINS = {
-    { folder = "",          label = "Default" },
+    -- msqSkin (opcional): nombre EXACTO del skin de Masque que corresponde a
+    -- esta skin visual (2026-07-23, pedido del usuario: "que se cambie la
+    -- skin de Masque tambien"). Masque no permite reskinear en vivo grupos
+    -- YA CREADOS por otros addons (Bartender4, etc. -- no hay forma de
+    -- enumerarlos, ver MasqueSkin.lua) asi que esto NO reskinea las barras
+    -- al instante: guarda la seleccion y avisa al usuario a elegirla en el
+    -- panel de Masque (o /reload si ya la eligio antes, Masque la recuerda
+    -- por perfil).
+    { folder = "",          label = "Default", msqSkin = "Azerite HEX" },
 
-    -- { folder = "Neon\\",  label = "Neon" },   -- ejemplo: Assets\Neon\<mismos archivos>
+    -- { folder = "Neon\\",  label = "Neon", msqSkin = "Nombre del skin de Masque" },
     -- Las skins como addons separados (ej. MyCustomFrames_Murloc) se agregan
     -- SOLAS via _G.MCF_RegisterSkin, no hace falta declararlas aca.
 }
@@ -156,12 +164,12 @@ ns.SkinResolve = SkinResolve
 -- basePath = ruta COMPLETA a la carpeta de assets de ESE addon (no un
 -- subfolder de nuestro propio Assets\).
 -- ==========================================================================
-_G.MCF_RegisterSkin = function(label, basePath)
+_G.MCF_RegisterSkin = function(label, basePath, msqSkin)
     if type(label) ~= "string" or label == "" or type(basePath) ~= "string" then return end
     for _, skin in ipairs(ns.TEX_SKINS) do
         if skin.label == label then return end   -- ya registrado (ej. /reload), no duplicar
     end
-    table.insert(ns.TEX_SKINS, { folder = "", label = label, basePath = basePath })
+    table.insert(ns.TEX_SKINS, { folder = "", label = label, basePath = basePath, msqSkin = msqSkin })
 end
 
 -- (domain, dbKey, category): la lista completa de "slots" de textura que ya
@@ -240,6 +248,14 @@ ns.ApplySkin = function(skin)
     if ns.RefreshInfoBar then ns.RefreshInfoBar() end
     if ns.RefreshMinimap then ns.RefreshMinimap() end
     if ns.RefreshGlow then ns.RefreshGlow(true) end
+    -- Party/Arena aura hover previews (AuraHoverPreview.lua) tenian un borde
+    -- fijo que no seguia el sistema de Skins (bug pendiente detectado 2026-07-23,
+    -- ver STRUCTURE.md) -- ahora sus iconos ya creados se reasignan aca tambien.
+    if ns.RefreshAuraHoverBorder then ns.RefreshAuraHoverBorder() end
+    if ns.ClassPowerForceRelayout then ns.ClassPowerForceRelayout() end
+    if ns.RefreshRaid then ns.RefreshRaid() end
+    if ns.RefreshMirrorTimers then ns.RefreshMirrorTimers() end
+    if ns.ApplyMasqueSkinAll then ns.ApplyMasqueSkinAll(skin) end
     print("|cff00ff00[MCF]|r Skin applied: " .. skin.label)
 end
 

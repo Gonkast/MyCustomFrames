@@ -52,6 +52,17 @@ local TEX = {
     dkblock  = A .. "point_dk_block.tga",
 }
 
+-- Sistema de Skins (2026-07-23, pedido del usuario "el class power tambien se
+-- reskinee"): los paths de TEX se hornean UNA vez al cargar el archivo, asi
+-- que LAYOUTS.tex/btex quedan fijos en el Default -- resolver el BASENAME
+-- contra la skin activa recien al DIBUJAR cada punto (LayoutPoints) en vez de
+-- guardar el path resuelto, mismo patron que SkinResolve usa en todos lados.
+local function ResolveTex(path)
+    if not ns.SkinResolve then return path end
+    local base = path:match("([^\\]+)$") or path
+    return ns.SkinResolve(base)
+end
+
 -- Colores por recurso (los que ya existen en ns.POWER_COLORS se reusan; los
 -- que faltan -- combo points, arcane charges, runas -- se agregan aca).
 local POINT_COLOR = setmetatable({
@@ -377,10 +388,10 @@ local function LayoutPoints(layoutName, colorKey)
             b.bg:ClearAllPoints()
             b.bg:SetPoint("CENTER", b, "CENTER", 0, 0)
             b.bg:SetSize(d.bw, d.bh)
-            b.bg:SetTexture(d.btex)
+            b.bg:SetTexture(ResolveTex(d.btex))
             b.bg:SetVertexColor(case.r, case.g, case.b)
             b.icon:SetAllPoints()
-            b.icon:SetTexture(d.tex)
+            b.icon:SetTexture(ResolveTex(d.tex))
             b.icon:SetVertexColor(lit.r, lit.g, lit.b)
             if d.rot then
                 pcall(b.icon.SetRotation, b.icon, d.rot)
