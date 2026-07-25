@@ -572,19 +572,30 @@ local function MainMenuDiag()
         tostring(bg and bg:GetTexture()),
         bg and bg:GetWidth() or 0, bg and bg:GetHeight() or 0,
         tostring(GameMenuFrame.__gonkArtW), GameMenuFrame:GetWidth() or 0))
-    local n = 0
+    -- Cuenta TODO lo que ve el bucle de SkinFrame, no solo lo ya skineado --
+    -- la hipotesis es justamente que en el primer pase no encuentra botones.
+    local total, shown, skinned = 0, 0, 0
     for _, child in ipairs({ GameMenuFrame:GetChildren() }) do
+        total = total + 1
+        local isShown = child.IsShown and child:IsShown()
+        if isShown then shown = shown + 1 end
         if child.__gonkTex then
-            n = n + 1
-            if n <= 4 then   -- una muestra alcanza
-                print(("    [%s] -> %s"):format(
+            skinned = skinned + 1
+            if skinned <= 4 then   -- una muestra alcanza
+                print(("    [%s] shown=%s -> %s"):format(
                     tostring(child.GetText and child:GetText()),
+                    tostring(isShown),
                     tostring(child.__gonkTex:GetTexture())))
             end
         end
     end
-    print(("  botones skineados: %d"):format(n))
+    print(("  hijos de GameMenuFrame: %d | shown: %d | skineados: %d"):format(total, shown, skinned))
+    print("  hook GameMenuFrame_UpdateVisibleButtons: "
+        .. (type(_G.GameMenuFrame_UpdateVisibleButtons) == "function" and "existe" or "|cffff5555NO existe|r"))
 end
+-- Alias directo (sin subcomando) -- ver tambien /mcfdiag mainmenu.
+SLASH_MCFMENUDIAG1 = "/mcfmenudiag"
+SlashCmdList["MCFMENUDIAG"] = MainMenuDiag
 if ns.RegisterDiag then
     ns.RegisterDiag("mainmenu", "Rutas/texturas del skin del Game Menu (ESC)", MainMenuDiag)
 else
