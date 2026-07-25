@@ -82,8 +82,23 @@ local function SetupBossHider()
         local h = CreateFrame("Frame", nil, otf, "SecureHandlerStateTemplate")
         skipTraverse[h] = true   -- TraverseFrame NO debe entrar en el handler seguro
         h:SetAttribute("_onstate-vis", [[ if newstate == "hide" then self:Hide() else self:Show() end ]])
-        h:SetScript("OnHide", function() if _G.ObjectiveTrackerFrame then _G.ObjectiveTrackerFrame:SetAlpha(0) end end)
-        h:SetScript("OnShow", function() if _G.ObjectiveTrackerFrame then _G.ObjectiveTrackerFrame:SetAlpha(1) end end)
+        -- _mcfCombatHidden: mismo flag que usa Portraits.lua para que el Explorer (fade
+        -- por mouseover) NUNCA le pelee el alpha a este hide seguro por combate/boss/
+        -- arena/BG -- el boss-hider solo toca alpha (Show/Hide reales tainean), asi que
+        -- ObjectiveTrackerFrame:IsShown() se queda SIEMPRE true; sin este flag Explorer lo
+        -- veria "visible" y lo desvanecería/revelaría por su cuenta, peleando este hide.
+        h:SetScript("OnHide", function()
+            if _G.ObjectiveTrackerFrame then
+                _G.ObjectiveTrackerFrame:SetAlpha(0)
+                _G.ObjectiveTrackerFrame._mcfCombatHidden = true
+            end
+        end)
+        h:SetScript("OnShow", function()
+            if _G.ObjectiveTrackerFrame then
+                _G.ObjectiveTrackerFrame._mcfCombatHidden = false
+                _G.ObjectiveTrackerFrame:SetAlpha(1)
+            end
+        end)
         bossHider = h
     end
 

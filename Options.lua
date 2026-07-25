@@ -3885,6 +3885,7 @@ local function BuildPanel()
             { "Arena Enemy 1", { "arena_enemy1", "portrait_arena_enemy1" } },
             { "Arena Enemy 2", { "arena_enemy2", "portrait_arena_enemy2" } },
             { "Arena Enemy 3", { "arena_enemy3", "portrait_arena_enemy3" } },
+            { "Quest tracker", { "tracker" } },
         }
         -- Ambos grupos arrancan debajo de las pestañas (tabs terminan ~-52).
         local TOP = -62

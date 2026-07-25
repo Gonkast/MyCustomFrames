@@ -10,6 +10,7 @@ local ADDON, ns = ...
 local function GetElementFrame(key)
     if key == "micromenu" then return ns.micromenu end
     if key == "infobar" then return ns.infobar and ns.infobar.root end
+    if key == "tracker" then return _G.ObjectiveTrackerFrame end
     if ns.frames[key] then return ns.frames[key].button end
     if ns.portraits[key] then return ns.portraits[key].root end
     if ns.auras[key] then return ns.auras[key].root end
