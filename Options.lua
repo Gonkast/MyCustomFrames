@@ -3989,7 +3989,9 @@ local function BuildPanel()
         -- fija de sobra). Si se agregan mas elementos/condiciones a futuro,
         -- ajustar estos numeros si el scroll queda corto.
         local elementsScroll, elementsGroup = MakeScrollGroup(500)
-        local conditionsScroll, conditionsGroup = MakeScrollGroup(260)
+        -- 300 (era 260): la nota del final se movio mas abajo al arreglar el
+        -- solapamiento con los toggles de zona (ver el FIX de condNote).
+        local conditionsScroll, conditionsGroup = MakeScrollGroup(300)
         local function ShowExplorerTab(which)
             elementsScroll:SetShown(which == "elements")
             conditionsScroll:SetShown(which == "conditions")
@@ -4063,8 +4065,16 @@ local function BuildPanel()
                     if not v and ns.ExplorerResetAll then ns.ExplorerResetAll() end
                 end)
         end
+        -- FIX (2026-07-25, reportado por el usuario: "el texto en explorer conditions
+        -- esta sobre algunos toggles"): la nota estaba clavada en TOP - 136, pero la
+        -- columna de zonas (R) llega mas abajo -- con 6 entradas la ultima arranca en
+        -- TOP - 22 - 5*24 = TOP - 142 y termina 24px despues (alto de MakeToggle), asi
+        -- que la nota (ancho 430, cruza las 2 columnas) se montaba sobre Battlegrounds
+        -- y Scenarios. Ahora se calcula desde #ZONES: si se agregan/quitan zonas, la
+        -- nota se reacomoda sola en vez de volver a superponerse.
+        local zonesBottom = TOP - 22 - (#ZONES - 1) * 24 - 24
         local condNote = conditionsGroup:CreateFontString(nil, "ARTWORK"); setFont(condNote, 10)
-        condNote:SetPoint("TOPLEFT", L, TOP - 136); condNote:SetWidth(430); condNote:SetJustifyH("LEFT")
+        condNote:SetPoint("TOPLEFT", L, zonesBottom - 10); condNote:SetWidth(430); condNote:SetJustifyH("LEFT")
         condNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         condNote:SetText("Combat/target/casting force enabled elements fully visible. 'Active in' limits the whole Explorer to the chosen content types.")
 
