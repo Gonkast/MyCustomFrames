@@ -24,6 +24,11 @@ local function GetElementFrame(key)
     if key == "topwidget" then return ns.topWidgetHolder end
     if key == "classpower" then return _G.MyCF_ClassPower end
     if key == "raid" then return _G.MyCF_RaidHeader end
+    -- Barras de Bartender4 (2026-07-24, pedido del usuario) -- mismos nombres
+    -- reales ya usados/confirmados en BartenderScale.lua (BT4Bar1-10 +
+    -- BT4BarPetBar/StanceBar/BagBar/ExtraActionBar). SetAlpha nada mas, mismo
+    -- criterio que classpower/raid arriba.
+    if key:sub(1, 6) == "BT4Bar" then return _G[key] end
     if ns.frames[key] then return ns.frames[key].button end
     if ns.portraits[key] then return ns.portraits[key].root end
     if ns.auras[key] then return ns.auras[key].root end
@@ -74,6 +79,24 @@ ns.EXPLORER_ELEMENTS = {
     { label = "Top widget", keys = { "topwidget" } },
     { label = "Class power", keys = { "classpower" } },
     { label = "Raid frames", keys = { "raid" } },
+    -- Barras de accion de Bartender4 (2026-07-24, pedido del usuario). Los
+    -- keys son los nombres REALES de frame (BT4Bar1-10 + los 4 con nombre
+    -- propio, confirmados via /mcfbt4diag) -- GetElementFrame los resuelve
+    -- directo por ese mismo nombre, sin mapeo aparte.
+    { label = "Action Bar 1", keys = { "BT4Bar1" } },
+    { label = "Action Bar 2", keys = { "BT4Bar2" } },
+    { label = "Action Bar 3", keys = { "BT4Bar3" } },
+    { label = "Action Bar 4", keys = { "BT4Bar4" } },
+    { label = "Action Bar 5", keys = { "BT4Bar5" } },
+    { label = "Action Bar 6", keys = { "BT4Bar6" } },
+    { label = "Action Bar 7", keys = { "BT4Bar7" } },
+    { label = "Action Bar 8", keys = { "BT4Bar8" } },
+    { label = "Action Bar 9", keys = { "BT4Bar9" } },
+    { label = "Action Bar 10", keys = { "BT4Bar10" } },
+    { label = "Pet Bar", keys = { "BT4BarPetBar" } },
+    { label = "Stance Bar", keys = { "BT4BarStanceBar" } },
+    { label = "Bag Bar", keys = { "BT4BarBagBar" } },
+    { label = "Extra Action Bar", keys = { "BT4BarExtraActionBar" } },
 }
 
 -- Fade por MOUSEOVER (`IsMouseOver` funciona sin EnableMouse = geometrico). El fade corre
