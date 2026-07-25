@@ -99,6 +99,26 @@ ns.EXPLORER_ELEMENTS = {
     { label = "Extra Action Bar", keys = { "BT4BarExtraActionBar" } },
 }
 
+-- FIX (2026-07-24, "las de bartender tambien deberian mostrarse en mouse
+-- over"): Bartender4 NO redimensiona el frame de la barra para que envuelva
+-- SUS botones (el frame de la barra puede quedar mas chico/desalineado que
+-- la grilla real de botones que dibuja encima) -- f:IsMouseOver() sobre la
+-- barra en si no detectaba el mouse sobre sus propios botones. Para keys
+-- "BT4Bar*" se chequea TAMBIEN cada hijo directo (los botones de accion),
+-- no solo el frame contenedor. Acotado a Bartender4 (no a los ~45 elementos
+-- restantes) para no pagar un GetChildren()+loop extra cada frame en todo
+-- lo demas, que ya funciona bien solo con el frame propio.
+local function IsMouseOverElement(f, key)
+    if f:IsMouseOver() then return true end
+    if key:sub(1, 6) ~= "BT4Bar" then return false end
+    local ok, children = pcall(function() return { f:GetChildren() } end)
+    if not ok then return false end
+    for _, c in ipairs(children) do
+        if c.IsMouseOver and c:IsMouseOver() then return true end
+    end
+    return false
+end
+
 -- Fade por MOUSEOVER (`IsMouseOver` funciona sin EnableMouse = geometrico). El fade corre
 -- por FRAME (OnUpdate de explorerDriver) con suavizado EXPONENCIAL independiente del
 -- framerate: el lerp fijo del ticker de 0.1s se veia a saltos (10 pasos/seg = "lag").
@@ -127,7 +147,7 @@ explorerDriver:SetScript("OnUpdate", function(self, dt)
             -- su alpha lo gestiona PortraitSetShown, no el Explorer.
             if f and f:IsShown() and not f._mcfCombatHidden then
                 local myLo = (eAlpha and eAlpha[key]) or lo
-                local target = (self.combat or self.showTgt or self.casting or f:IsMouseOver()) and 1 or myLo
+                local target = (self.combat or self.showTgt or self.casting or IsMouseOverElement(f, key)) and 1 or myLo
                 local cur = f._exAlpha; if cur == nil then cur = f:GetAlpha() end
                 cur = cur + (target - cur) * (target > cur and kIn or kOut)
                 if math.abs(target - cur) < 0.003 then cur = target end
