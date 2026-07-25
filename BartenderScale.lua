@@ -32,6 +32,11 @@ local ADDON, ns = ...
 
 local BT4_BARS = {}
 for i = 1, 10 do BT4_BARS[i] = "BT4Bar" .. i end
+-- Modulos con nombre propio (no numerados como BT4Bar1-10): pet/stance/bag bar,
+-- barra de reputacion/experiencia, micro menu propio de Bartender4.
+for _, name in ipairs({ "BT4PetBar", "BT4StanceBar", "BT4BagBar", "BT4RepBar", "BT4XPBar", "BT4MicroMenu" }) do
+    BT4_BARS[#BT4_BARS + 1] = name
+end
 
 local baseScale = {}      -- [barName] = escala BASE de Bartender4 (sin nuestro rs)
 local applying = {}       -- [barName] = true mientras nosotros mismos llamamos SetScale
