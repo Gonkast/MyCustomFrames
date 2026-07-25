@@ -19,7 +19,6 @@ None to load — no other addon is a hard dependency. That said, this preset is 
 - **[Masque](https://www.curseforge.com/wow/addons/masque)** — action button skinning (skin bundled, `MasqueSkin.lua`)
 - **[Chattynator](https://www.curseforge.com/wow/addons/chattynator)** — chat
 - **[BetterBags](https://www.curseforge.com/wow/addons/better-bags)** + **[BetterBagsSkinGonkast](https://github.com/Gonkast/BetterBagsSkinGonkast)** — bags
-- **[Mainmenu-Gonkast](https://github.com/Gonkast/Mainmenu-Gonkast)** — Esc menu reskin
 
 ## Other addons that pair well (not auto-configured)
 
@@ -42,6 +41,7 @@ None to load — no other addon is a hard dependency. That said, this preset is 
 - **Nameplate reskin** (`Nameplates.lua` + `NameplateDesigner.lua`) — custom bars, aura filtering, per-zone profiles, in-game designer
 - **Quest tracker** — recoloring, text alignment, context-aware auto-hide
 - **Info bar** — clock, calendar, zone, FPS/MS
+- **Game Menu (Esc) reskin** (`MainMenu.lua`) — custom frame/buttons, follows the active skin
 - Micro menu, chat bubble text, mouselook, native frame hiding, Explorer Mode (auto-fade), assisted glow, mirror timer, tooltip, extra button — all reskinned
 - **Lock/Edit mode** (`/mcf`) — drag/scale/reposition everything, "Hide in Lock" panel, syncs with Blizzard's Edit Mode
 - **Setup Wizard** (`/mcfsetup`) — first-run walkthrough, auto-applies bundled profiles
