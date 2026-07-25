@@ -578,3 +578,21 @@ C_Timer.NewTicker(1.0, function()
     ApplyPreviewHide()
     RecolorTracker()
 end)
+
+-- ==========================================================================
+-- Auto-scale por resolucion (pedido del usuario 2026-07-24: "quiero que el
+-- quest tracker tenga lo mismo de la escala entre resoluciones de los demas
+-- elementos, cuando cambio de resolucion es lo unico que se mueve"). A
+-- diferencia del resto del addon, el ObjectiveTrackerFrame NUNCA fue
+-- posicionado por MCF (su anchor sigue siendo 100% nativo de Blizzard/Edit
+-- Mode) -- pero el mismo principio de ns.ResScale() aplica igual: un
+-- SetScale multiplicador escala PROPORCIONALMENTE tanto el tamaño como la
+-- distancia a su anchor nativo (sea cual sea), sin necesitar reimplementar
+-- ese anchor a mano. rs=1 (aspect fuera de 16:9) deja el scale nativo intacto.
+local function ApplyTrackerScale()
+    local otf = _G.ObjectiveTrackerFrame
+    if not otf or not ns.ResScale then return end
+    otf:SetScale(ns.ResScale())
+end
+ns.RefreshTrackerScale = ApplyTrackerScale
+ApplyTrackerScale()

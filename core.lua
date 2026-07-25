@@ -1054,6 +1054,9 @@ local function RefreshAll()
     -- DISPLAY_SIZE_CHANGED/poll de resize.
     if ns.RefreshTopWidget then ns.RefreshTopWidget() end
     if ns.RefreshMinimapButtons then ns.RefreshMinimapButtons() end
+    -- Quest tracker (pedido del usuario: "que tenga lo mismo de la escala
+    -- entre resoluciones que los demas" -- era el unico que no compensaba).
+    if ns.RefreshTrackerScale then ns.RefreshTrackerScale() end
     RefreshOutlineNames()
 end
 ns.RefreshAll = RefreshAll

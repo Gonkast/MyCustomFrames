@@ -4833,7 +4833,7 @@ ns.BUILTIN = {
         ["r"]=1,
       },
       ["height"]=24,
-      ["hideWhenMounted"]=true,
+      ["hideWhenMounted"]=false,
       ["highlightAlpha"]=1,
       ["highlightColor"]={
         ["b"]=1,
@@ -4972,7 +4972,7 @@ ns.BUILTIN = {
         ["r"]=1,
       },
       ["height"]=82,
-      ["hideWhenMounted"]=true,
+      ["hideWhenMounted"]=false,
       ["highlightAlpha"]=1,
       ["highlightColor"]={
         ["b"]=1,

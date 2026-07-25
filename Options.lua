@@ -2159,8 +2159,7 @@ local function BuildPanel()
         MakeSlider(f, "Offset Y", -2000, 2000, 1, "offsetY", R, -90)
 
         MakeHeader(f, "Behavior", R, -132, 210)
-        MakeCheckbox(f, "Hide when mounted", "hideWhenMounted", R, -156)
-        HIDEGRP.powerHidden[#HIDEGRP.powerHidden + 1] = MakeCheckbox(f, "Show tooltip", "showTooltip", R, -182)
+        HIDEGRP.powerHidden[#HIDEGRP.powerHidden + 1] = MakeCheckbox(f, "Show tooltip", "showTooltip", R, -156)
     end
     -- Barra: reorganizada en grupos con header (2026-07-17) — antes era una
     -- columna larga de sliders sin agrupar, dificil de escanear. Ahora:
@@ -3861,6 +3860,8 @@ local function BuildPanel()
             { "Micro menu", { "micromenu" } },
             { "Info bar", { "infobar" } },
             { "Pet", { "pet", "portrait_pet" } },
+            { "Target", { "target", "targetpower", "portrait_target" } },
+            { "Target auras", { "aura_target" } },
             { "Target of Target", { "targettarget", "portrait_tot" } },
             { "Focus unit frame", { "focus" } },
             { "Player auras", { "aura_player" } },
@@ -3869,6 +3870,21 @@ local function BuildPanel()
             { "Party 3", { "party3", "portrait_party3" } },
             { "Party 4", { "party4", "portrait_party4" } },
             { "Party 5", { "party5", "portrait_party5" } },
+            -- Agregados (pedido del usuario 2026-07-24: "quitar hide when mounted de todos
+            -- los elementos... quiero controlar eso por el explorer" -- estos units antes
+            -- solo tenian el toggle hideWhenMounted, ahora removido; el Explorer es el
+            -- reemplazo generico de "mostrar solo cuando haga falta / al pasar el mouse").
+            { "Boss 1", { "boss1" } },
+            { "Boss 2", { "boss2" } },
+            { "Boss 3", { "boss3" } },
+            { "Boss 4", { "boss4" } },
+            { "Boss 5", { "boss5" } },
+            { "Arena Player", { "arena_player", "portrait_arena_player" } },
+            { "Arena Ally 1", { "arena_party1", "portrait_arena_party1" } },
+            { "Arena Ally 2", { "arena_party2", "portrait_arena_party2" } },
+            { "Arena Enemy 1", { "arena_enemy1", "portrait_arena_enemy1" } },
+            { "Arena Enemy 2", { "arena_enemy2", "portrait_arena_enemy2" } },
+            { "Arena Enemy 3", { "arena_enemy3", "portrait_arena_enemy3" } },
         }
         -- Ambos grupos arrancan debajo de las pestañas (tabs terminan ~-52).
         local TOP = -62

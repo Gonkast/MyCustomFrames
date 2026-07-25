@@ -30,18 +30,6 @@ local function AuraCondActive(p)
     return a
 end
 
--- Opacidad del grupo (solo dualPos = player): base p.groupAlpha; 100% si hay condicion
--- (combate/objetivo/instancia) o si la aura tiene el mouse encima (b._hover).
-local function UpdateAuraAlpha(g)
-    if not g.dualPos then return end
-    local p = AP(g)
-    local base = p.groupAlpha or 1
-    local full = ns.IsUnlocked() or (base >= 1) or AuraCondActive(p)
-    for _, b in ipairs(g.buttons) do
-        if b:IsShown() then b:SetAlpha((full or b._hover) and 1 or base) end
-    end
-end
-
 -- Clave de tiempo para ordenar: permanentes (dur 0) al final; secretos al final.
 local function AuraTimeKey(d)
     local dur = SafeNum(d.duration, 0)
@@ -232,10 +220,8 @@ local function CreateAuraButton(g)
     count:SetTextColor(1, 1, 1, 1)
     b.count = count
 
-    -- Hover: sube la opacidad de ESA aura (grupos dualPos) + tooltip (secret-safe).
+    -- Hover: tooltip (secret-safe).
     b:SetScript("OnEnter", function(self)
-        self._hover = true
-        if self._group and self._group.dualPos then UpdateAuraAlpha(self._group) end
         if not (self._showTip and self._auraID and self._unit) then return end
         if GameTooltip:IsForbidden() or not self:IsVisible() then return end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
@@ -253,8 +239,6 @@ local function CreateAuraButton(g)
         if ok then GameTooltip:Show() else GameTooltip:Hide() end
     end)
     b:SetScript("OnLeave", function(self)
-        self._hover = false
-        if self._group and self._group.dualPos then UpdateAuraAlpha(self._group) end
         if not GameTooltip:IsForbidden() then GameTooltip:Hide() end
     end)
 
@@ -297,7 +281,7 @@ local function StyleAuraButton(b, g, p, data, iconSize)
     -- cancelar buff es un overlay seguro aparte (no afectado por este EnableMouse).
     b._showTip = p.showTooltip and true or false
     local inExplorer = ns.GetDB().explorerEnabled ~= false and ns.GetDB().explorer and ns.GetDB().explorer[g.key] and true or false
-    local wantHover = (p.showTooltip or (g.dualPos and (p.groupAlpha or 1) < 1)) and not inExplorer
+    local wantHover = p.showTooltip and not inExplorer
     b:EnableMouse((not ns.IsUnlocked()) and wantHover and true or false)
     b._unit, b._filter = g.unit, data.__filter
 
@@ -492,7 +476,6 @@ local function UpdateAuraGroup(g)
         local bc = g.buttons[i].cancel
         if bc and not InCombatLockdown() then bc:Hide() end
     end
-    UpdateAuraAlpha(g)
 end
 
 local function RefreshAura(key)
@@ -559,7 +542,6 @@ ns.AP = AP
 ns.EnsureCancelOverlay = EnsureCancelOverlay
 ns.UpdateAuraGroup = UpdateAuraGroup
 ns.AuraGroupPlace = AuraGroupPlace
-ns.UpdateAuraAlpha = UpdateAuraAlpha
 ns.UpdateAuraButtonTime = UpdateAuraButtonTime
 ns.PositionCancelOverlay = PositionCancelOverlay
 
@@ -568,7 +550,7 @@ ns.PositionCancelOverlay = PositionCancelOverlay
 ns.TickAuras = function()
     local outOfCombat = not InCombatLockdown()
     for _, g in pairs(ns.auras) do
-        if g.dualPos then AuraGroupPlace(g); UpdateAuraAlpha(g) end
+        if g.dualPos then AuraGroupPlace(g) end
         for _, b in ipairs(g.buttons) do
             if b:IsShown() then
                 UpdateAuraButtonTime(b)

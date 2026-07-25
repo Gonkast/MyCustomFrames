@@ -404,8 +404,6 @@ end
 
 local function UnitUpdateMount(u)
     if ns.IsUnlocked() then u.button:SetAlpha(1) return end
-    local p = P(u)
-    if p.hideWhenMounted and IsMounted() then u.button:SetAlpha(0) return end
     -- Si el Explorer gestiona este elemento, el alpha es suyo (fade por frame):
     -- resetearlo a 1 aqui cada tick produce un parpadeo visible.
     if ns.GetDB().explorerEnabled ~= false and ns.GetDB().explorer and ns.GetDB().explorer[u.key] then return end
@@ -462,12 +460,6 @@ end
 
 local function PowerShouldShow(u)
     if u.key == "playerpower" then
-        -- Montado (con el toggle activo): ocultar SIEMPRE, ANTES de cualquier otra
-        -- condicion. Antes esto solo se aplicaba despues via UnitUpdateMount (alpha=0),
-        -- pero SetShown(true) ya se habia disparado este mismo tick si habia target
-        -- valido -> el Show() dispara el fade-in y se ve parpadear un instante antes
-        -- de que el alpha=0 lo tape. Cortando aca no llega a hacer Show() nunca.
-        if P(u).hideWhenMounted and IsMounted() then return false end
         -- Muerto: ocultar SIEMPRE la power bar del player (no solo el cage).
         if ns.safeBool(UnitIsDeadOrGhost, "player") then return false end
         if ns.tickState.inCombat then return true end

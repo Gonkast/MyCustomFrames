@@ -516,13 +516,7 @@ local function BuildPage3(content)
     return p
 end
 
--- ---------------- Pagina 4: toggles por unidad (hide when mounted) + quest tracker ----------------
-local UNIT_MOUNT_ROWS = {
-    { "Player",       "player",      true },
-    { "Target",       "target" },
-    { "Player power", "playerpower", true },
-    { "Target power", "targetpower" },
-}
+-- ---------------- Pagina 4: quest tracker auto-hide ----------------
 local TRACKER_AUTOHIDE_ROWS = {
     { "Hide in boss fights",      "hideInBoss",           true },
     { "Hide in combat",           "hideInCombat",         true },
@@ -533,43 +527,23 @@ local TRACKER_AUTOHIDE_ROWS = {
 local function BuildPage4(content)
     local p = CreateFrame("Frame", nil, content)
     p:SetAllPoints()
-    Header(p, "Unit & quest tracker options", 0, -2)
+    Header(p, "Quest tracker options", 0, -2)
     Paragraph(p, 4, -26, 11,
-        "Hide these unit frames while mounted, and auto-hide the quest tracker in the situations below.")
+        "Auto-hide the quest tracker in the situations below.")
 
     -- Fuerza el estado recomendado al construir (ver comentario igual en BuildPage3).
     do
         local d = ns.GetDB()
-        if d and d.units then
-            for _, row in ipairs(UNIT_MOUNT_ROWS) do
-                local key = row[2]
-                if d.units[key] then d.units[key].hideWhenMounted = row[3] or false end
-            end
-        end
         if d and d.tracker then
             for _, row in ipairs(TRACKER_AUTOHIDE_ROWS) do d.tracker[row[2]] = row[3] or false end
         end
     end
 
-    Header(p, "Hide when mounted", 4, -56, 340)
+    Header(p, "Quest tracker auto-hide", 4, -56, 336)
     local y = -80
-    for _, row in ipairs(UNIT_MOUNT_ROWS) do
-        local key = row[2]
-        Toggle(p, row[1] .. (row[3] and REC or ""), 4, y,
-            function() local d = ns.GetDB(); return d and d.units and d.units[key] and d.units[key].hideWhenMounted end,
-            function(v)
-                local d = ns.GetDB(); if not (d and d.units and d.units[key]) then return end
-                d.units[key].hideWhenMounted = v
-                if ns.RefreshUnit then ns.RefreshUnit(key) end
-            end)
-        y = y - 26
-    end
-
-    Header(p, "Quest tracker auto-hide", 380, -56, 336)
-    y = -80
     for _, row in ipairs(TRACKER_AUTOHIDE_ROWS) do
         local key = row[2]
-        Toggle(p, row[1] .. (row[3] and REC or ""), 380, y,
+        Toggle(p, row[1] .. (row[3] and REC or ""), 4, y,
             function() local d = ns.GetDB(); return d and d.tracker and d.tracker[key] end,
             function(v)
                 local d = ns.GetDB(); if not (d and d.tracker) then return end
@@ -578,8 +552,7 @@ local function BuildPage4(content)
         y = y - 26
     end
 
-    -- Cierre visual (2026-07-16, misma prolijidad que las paginas 1/3/6): las 2 columnas terminan
-    -- a distinta altura, dejaba un vacio irregular abajo.
+    -- Cierre visual (2026-07-16, misma prolijidad que las paginas 1/3/6).
     local div = p:CreateTexture(nil, "ARTWORK")
     div:SetTexture(ART.DIVIDER)
     div:SetSize(CONTENT_W, 16)
@@ -587,7 +560,7 @@ local function BuildPage4(content)
     div:SetVertexColor(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3])
     Paragraph(p, 0, -242, 11,
         "\"(recommended)\" items are pre-checked; the rest are up to you. All of this stays " ..
-        "editable per-unit later from the main options panel.")
+        "editable later from the main options panel.")
     return p
 end
 
