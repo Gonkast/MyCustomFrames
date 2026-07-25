@@ -80,10 +80,10 @@ local function ApplyAllBarScales()
 end
 ns.RefreshBartenderScale = ApplyAllBarScales
 
-local f = CreateFrame("Frame")
-f:RegisterEvent("PLAYER_ENTERING_WORLD")
-f:RegisterEvent("PLAYER_REGEN_ENABLED")
-f:SetScript("OnEvent", function(_, event)
+local evFrame = CreateFrame("Frame")
+evFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+evFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+evFrame:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_REGEN_ENABLED" then
         if pendingApply then ApplyAllBarScales() end
         return
@@ -91,19 +91,53 @@ f:SetScript("OnEvent", function(_, event)
     ApplyAllBarScales()
 end)
 
--- DIAGNOSTICO: /mcfbt4diag -- lista TODOS los frames globales cuyo nombre
--- empieza con "BT4" (nombres reales en este cliente, en vez de adivinar --
--- reportado 2026-07-24: "la pet bar no lo esta haciendo" / "y tampoco la de
--- bag" -- BT4PetBar/BT4BagBar/etc no existen con esos nombres exactos).
+-- DIAGNOSTICO: /mcfbt4diag -- lista los frames CONTENEDOR (barras, no botones
+-- individuales) cuyo nombre empieza con "BT4", en una caja copiable (el chat
+-- corta el scrollback y se perdian las primeras lineas -- reportado
+-- 2026-07-24 al pegar el resultado de la version con print()). Excluye
+-- cualquier nombre que contenga "Button" (botones individuales y sus
+-- sub-regiones Icon/Name/Cooldown/etc, que son ruido para este diagnostico).
+local function ShowCopyBox(text)
+    local f = _G.MCFBT4DiagFrame
+    if not f then
+        f = CreateFrame("Frame", "MCFBT4DiagFrame", UIParent, "BackdropTemplate")
+        f:SetSize(420, 380); f:SetPoint("CENTER"); f:SetFrameStrata("FULLSCREEN_DIALOG")
+        f:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+            tile = true, tileSize = 32, edgeSize = 24,
+            insets = { left = 6, right = 6, top = 6, bottom = 6 },
+        })
+        f:EnableMouse(true); f:SetMovable(true); f:RegisterForDrag("LeftButton")
+        f:SetScript("OnDragStart", f.StartMoving); f:SetScript("OnDragStop", f.StopMovingOrSizing)
+        local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+        close:SetPoint("TOPRIGHT", -2, -2)
+        local lbl = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        lbl:SetPoint("TOP", 0, -12); lbl:SetText("Ctrl+A y Ctrl+C para copiar")
+        local sf = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
+        sf:SetPoint("TOPLEFT", 14, -34); sf:SetPoint("BOTTOMRIGHT", -32, 14)
+        local eb = CreateFrame("EditBox", nil, sf)
+        eb:SetMultiLine(true); eb:SetFontObject(ChatFontNormal)
+        eb:SetWidth(360); eb:SetAutoFocus(false)
+        eb:SetScript("OnEscapePressed", function() f:Hide() end)
+        sf:SetScrollChild(eb)
+        f.eb = eb
+    end
+    f.eb:SetText(text)
+    f.eb:HighlightText()
+    f:Show()
+    f.eb:SetFocus()
+end
+
 SLASH_MCFBT4DIAG1 = "/mcfbt4diag"
 SlashCmdList["MCFBT4DIAG"] = function()
     local names = {}
     for k, v in pairs(_G) do
-        if type(k) == "string" and k:sub(1, 3) == "BT4" and type(v) == "table" and v.GetObjectType then
+        if type(k) == "string" and k:sub(1, 3) == "BT4" and not k:find("Button")
+           and type(v) == "table" and v.GetObjectType then
             names[#names + 1] = k
         end
     end
     table.sort(names)
-    print("|cffffe19b[MCF]|r BT4 frames found (" .. #names .. "):")
-    for _, n in ipairs(names) do print("  " .. n) end
+    ShowCopyBox(table.concat(names, "\n"))
 end
