@@ -123,6 +123,15 @@ ns.TEX_LIB = {
     ringbackdrop    = { "minimap-onebar-backdrop.tga" },
     ringbutton      = { "point_plate.tga" },
     dismount        = { "icon_exit_flight.tga" },
+    -- Sin picker propio en el menu (igual que minimapmask): se reskinean SOLO
+    -- via el sistema de Skins globales, resueltos en vivo por su modulo
+    -- (Tooltip.lua BorderTex(), ClassPower.lua ResolveTex()).
+    tooltipborder   = { "border-tooltip.tga" },
+    classpowerpoint = { "point_crystal.tga", "point_diamond.tga", "point_hearth.tga",
+                        "point_rune1.tga", "point_rune2.tga", "point_rune3.tga",
+                        "point_rune4.tga", "point_dk_block.tga" },
+    -- Game Menu (MainMenu.lua) -- resueltos en vivo por TEX_BG()/TEX_WHITE()/TEX_RED().
+    gamemenu        = { "Background border.tga", "button wood large.tga", "button red2 large.tga" },
 }
 
 -- ==========================================================================
@@ -257,6 +266,7 @@ ns.ApplySkin = function(skin)
     if ns.RefreshMirrorTimers then ns.RefreshMirrorTimers() end
     if ns.RefreshMinimapButtons then ns.RefreshMinimapButtons() end
     if ns.RefreshMainMenuSkin then ns.RefreshMainMenuSkin() end
+    if ns.RefreshTooltipSkin then ns.RefreshTooltipSkin() end
     if ns.ApplyMasqueSkinAll then ns.ApplyMasqueSkinAll(skin) end
     print("|cff00ff00[MCF]|r Skin applied: " .. skin.label)
 end

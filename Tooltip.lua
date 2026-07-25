@@ -17,7 +17,14 @@
 local ADDON, ns = ...
 
 local A = ns.ASSETS
-local BORDER_TEX = A .. "border-tooltip.tga"
+-- Funcion, no local fijo (2026-07-24, pedido del usuario: "border-tooltip
+-- tambien reskineable"): se resuelve contra la skin ACTIVA en cada llamada,
+-- mismo patron que ClassPower.lua/Raid.lua/MirrorTimers.lua -- un local
+-- horneado una sola vez al cargar el archivo nunca se enteraba de un cambio
+-- de skin.
+local function BorderTex()
+    return (ns.SkinResolve and ns.SkinResolve("border-tooltip.tga")) or (A .. "border-tooltip.tga")
+end
 local BG_TEX = "Interface\\Tooltips\\UI-Tooltip-Background"   -- textura propia de Blizzard, reusada (igual que AzeriteUI)
 
 local function TooltipDefaults()
@@ -35,9 +42,12 @@ local function P()
     return db and db.tooltip
 end
 
+-- Tabla REUSADA (no una nueva por llamada) pero con edgeFile refrescado en
+-- cada ApplySkin -- ver BorderTex() arriba: la skin activa puede cambiar en
+-- vivo, y SetBackdrop lee esta tabla en el momento de la llamada.
 local BACKDROP = {
     bgFile = BG_TEX,
-    edgeFile = BORDER_TEX,
+    edgeFile = nil,   -- se completa en ApplySkin con BorderTex()
     edgeSize = 32,
     tile = true,
     insets = { left = 8, right = 8, top = 16, bottom = 16 },
@@ -92,6 +102,7 @@ local function ApplySkin(tooltip)
     end
 
     local bg = Backdrops[tooltip]
+    BACKDROP.edgeFile = BorderTex()   -- skin activa (puede haber cambiado desde la ultima vez)
     local ok = pcall(function()
         bg:SetBackdrop(nil)
         bg:SetBackdrop(BACKDROP)
