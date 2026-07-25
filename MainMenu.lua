@@ -282,6 +282,10 @@ local function SkinButton(button)
 	local visW = visH * (CFG.buttonAspect or (934 / 177)) * (CFG.buttonWidthScale or 1.0)
 	local texExtraWidth = visW - button:GetWidth()   -- for the hit-rect expansion below
 
+	-- Ancho REAL del arte visible -- lo usa SizeBackground (ver ahi): el fondo no
+	-- puede depender de GameMenuFrame:GetWidth(), que es el ancho del BOTON
+	-- nativo (angosto) y ademas cambia segun cuando corra el Layout().
+	GameMenuFrame.__gonkArtW = math.max(GameMenuFrame.__gonkArtW or 0, visW)
 	button.__gonkTex:SetSize(visW, visH)
 	if button.__gonkHL then
 		button.__gonkHL:SetSize(visW, visH)
@@ -494,13 +498,23 @@ end
 -- (por bgScale) y el ALTO se DERIVA de la proporcion real del .tga (944x1725),
 -- nunca estirado. bgScale agranda/achica todo junto sin romper el ratio
 -- (2026-07-23, "aumentar el tamaño sin cambiar el ratio").
--- LLAMAR SIEMPRE DESPUES de GameMenuFrame:Layout() -- ver el FIX en SkinFrame:
--- antes del Layout, GetWidth() puede devolver un ancho sin asentar (tras un
--- /reload) y el fondo sale chico.
+-- FIX 2 (2026-07-25, "se volvio a dañar el fondo del game menu"): el intento
+-- anterior (mover esto DESPUES del Layout()) no alcanzo -- el problema de fondo
+-- es que `GameMenuFrame:GetWidth()` NO sirve como referencia: es el ancho del
+-- boton NATIVO de Blizzard (angosto), y nuestro arte se dibuja MAS ANCHO que el
+-- boton (visW se deriva de la proporcion real del .tga, y el area de click se
+-- ensancha con SetHitRectInsets, sin tocar el ancho del frame). Encima ese valor
+-- cambia segun cuando corra el Layout(). Resultado: un fondo angosto y altisimo
+-- (h = w * 1.827), justo lo que se veia.
+-- Ahora la referencia es el ANCHO DEL ARTE de los botones (__gonkArtW, que
+-- calculamos nosotros en SkinButton) -- deterministico y sin depender del
+-- layout. GetWidth() queda solo como respaldo si todavia no se skineo ninguno.
 local function SizeBackground()
 	local bg = GameMenuFrame.__gonkBG
 	if not bg then return end
-	local w = ((GameMenuFrame:GetWidth() or 200) + CFG.bgPadLeft + CFG.bgPadRight) * (CFG.bgScale or 1.0)
+	local ref = GameMenuFrame.__gonkArtW
+	if not ref or ref <= 0 then ref = GameMenuFrame:GetWidth() or 200 end
+	local w = (ref + CFG.bgPadLeft + CFG.bgPadRight) * (CFG.bgScale or 1.0)
 	bg:SetSize(w, w * CFG.bgAspect)
 end
 
@@ -540,6 +554,50 @@ local function SkinFrame()
 	SizeBackground()
 end
 ns.RefreshMainMenuSkin = SkinFrame   -- expuesto para reaccionar a un cambio de Skin en vivo
+
+-- DIAGNOSTICO (2026-07-25, reportado: "elegi la skin y los botones no se
+-- cambiaron"): vuelca QUE rutas esta resolviendo este modulo y que textura tiene
+-- puesta cada boton AHORA MISMO -- en vez de seguir teorizando sobre por que no
+-- cambio. Registrado en el router: `/mcfdiag mainmenu`.
+local function MainMenuDiag()
+    print("|cffffe19b[MCF]|r Game Menu -- rutas que resuelve este modulo:")
+    print("  skin activa (db.activeSkinLabel): " .. tostring(ns.GetDB and ns.GetDB().activeSkinLabel))
+    print("  ActiveSkinBasePath: " .. tostring(ns.ActiveSkinBasePath))
+    print("  TEX_BG():    " .. tostring(TEX_BG()))
+    print("  TEX_WHITE(): " .. tostring(TEX_WHITE()))
+    print("  TEX_RED():   " .. tostring(TEX_RED()))
+    if not GameMenuFrame then print("  (GameMenuFrame no existe todavia)") return end
+    local bg = GameMenuFrame.__gonkBG
+    print(("  bg: textura PUESTA=%s size=%.0fx%.0f | artW=%s frameW=%.0f"):format(
+        tostring(bg and bg:GetTexture()),
+        bg and bg:GetWidth() or 0, bg and bg:GetHeight() or 0,
+        tostring(GameMenuFrame.__gonkArtW), GameMenuFrame:GetWidth() or 0))
+    local n = 0
+    for _, child in ipairs({ GameMenuFrame:GetChildren() }) do
+        if child.__gonkTex then
+            n = n + 1
+            if n <= 4 then   -- una muestra alcanza
+                print(("    [%s] -> %s"):format(
+                    tostring(child.GetText and child:GetText()),
+                    tostring(child.__gonkTex:GetTexture())))
+            end
+        end
+    end
+    print(("  botones skineados: %d"):format(n))
+end
+if ns.RegisterDiag then
+    ns.RegisterDiag("mainmenu", "Rutas/texturas del skin del Game Menu (ESC)", MainMenuDiag)
+else
+    -- Maintenance.lua carga DESPUES que este archivo; se registra cuando exista.
+    local f = CreateFrame("Frame")
+    f:RegisterEvent("PLAYER_LOGIN")
+    f:SetScript("OnEvent", function(self)
+        self:UnregisterEvent("PLAYER_LOGIN")
+        if ns.RegisterDiag then
+            ns.RegisterDiag("mainmenu", "Rutas/texturas del skin del Game Menu (ESC)", MainMenuDiag)
+        end
+    end)
+end
 
 -- ---------------------------------------------------------------------------
 -- Full-screen dim behind the menu
