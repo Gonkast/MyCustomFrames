@@ -565,12 +565,18 @@ local function BuildPage4(content)
 end
 
 -- ---------------- Pagina 5: Explorer Mode (mismas opciones que el menu) ----------------
-local EXPLORER_LIST = {
-    { "Player unit frame", "player", true }, { "Player portrait", "portrait_player" },
-    { "Micro menu", "micromenu", true }, { "Info bar", "infobar" }, { "Pet unit frame", "pet", true },
-    { "Target unit frame", "target" }, { "Target portrait", "portrait_target" },
-    { "Player auras", "aura_player" }, { "Pet portrait", "portrait_pet", true }, { "Focus unit frame", "focus", true },
-}
+-- Filtra el registro UNIFICADO de Explorer.lua (2026-07-24, "unificar" -- antes esta
+-- pagina mantenia su PROPIA copia hardcodeada, ya desincronizada del menu principal:
+-- "Target portrait"/"Pet portrait" existian sueltas aca cuando el menu ya las habia
+-- fusionado con su unitframe hace tiempo). wizard=true marca que entra aca;
+-- wizardRecommended=true la deja pre-tildada.
+local function BuildWizardExplorerList()
+    local list = {}
+    for _, e in ipairs(ns.EXPLORER_ELEMENTS) do
+        if e.wizard then list[#list + 1] = e end
+    end
+    return list
+end
 local EXPLORER_ZONES = {
     { "Open world", "world", true }, { "Dungeons", "dungeon" }, { "Raids", "raid" },
     { "Arenas", "arena" }, { "Battlegrounds", "battleground" }, { "Scenarios / Delves", "scenario" },
@@ -582,14 +588,18 @@ local function BuildPage5(content)
     Paragraph(p, 4, -26, 11,
         "Enabled elements fade out and reappear on mouseover (even while hidden). Combat/target/casting can force them visible.")
 
+    local list = BuildWizardExplorerList()
+
     -- Fuerza el estado recomendado al construir (ver comentario igual en BuildPage3): master
-    -- OFF, solo los 5 elementos marcados ON, los 3 "always show" ON, solo "Open world" ON.
+    -- OFF, solo los elementos marcados ON, los 3 "always show" ON, solo "Open world" ON.
     do
         local d = ns.GetDB()
         if d then
             d.explorerEnabled = false
             d.explorer = d.explorer or {}
-            for _, e in ipairs(EXPLORER_LIST) do d.explorer[e[2]] = e[3] or nil end
+            for _, e in ipairs(list) do
+                for _, k in ipairs(e.keys) do d.explorer[k] = e.wizardRecommended or nil end
+            end
             d.explorerCombat = true
             d.explorerTarget = true
             d.explorerCasting = true
@@ -607,34 +617,38 @@ local function BuildPage5(content)
         end)
 
     local L, R = 4, 380
-    for i, e in ipairs(EXPLORER_LIST) do
-        local col = (i <= 5) and L or R
-        local yy = -86 - ((i - 1) % 5) * 26
-        local key = e[2]
-        Toggle(p, e[1] .. (e[3] and REC or ""), col, yy,
-            function() local d = ns.GetDB(); return d and d.explorer and d.explorer[key] end,
+    local ROWS = math.ceil(#list / 2)
+    for i, e in ipairs(list) do
+        local col = (i <= ROWS) and L or R
+        local yy = -86 - ((i <= ROWS) and (i - 1) or (i - ROWS - 1)) * 26
+        local keys = e.keys
+        Toggle(p, e.label .. (e.wizardRecommended and REC or ""), col, yy,
+            function() local d = ns.GetDB(); return d and d.explorer and d.explorer[keys[1]] end,
             function(v)
                 local d = ns.GetDB(); if not (d and d.explorer) then return end
-                d.explorer[key] = v or nil
-                if not v and ns.ExplorerReset then ns.ExplorerReset(key) end
+                for _, k in ipairs(keys) do
+                    d.explorer[k] = v or nil
+                    if not v and ns.ExplorerReset then ns.ExplorerReset(k) end
+                end
             end)
     end
 
-    Header(p, "Always show", L, -226, 340)
-    Toggle(p, "Always show in combat" .. REC, L, -250,
+    local bottomY = -86 - ROWS * 26 - 14
+    Header(p, "Always show", L, bottomY, 340)
+    Toggle(p, "Always show in combat" .. REC, L, bottomY - 24,
         function() local d = ns.GetDB(); return d and d.explorerCombat end,
         function(v) local d = ns.GetDB(); if d then d.explorerCombat = v end end)
-    Toggle(p, "Always show on target" .. REC, L, -276,
+    Toggle(p, "Always show on target" .. REC, L, bottomY - 50,
         function() local d = ns.GetDB(); return d and d.explorerTarget end,
         function(v) local d = ns.GetDB(); if d then d.explorerTarget = v end end)
-    Toggle(p, "Always show while casting" .. REC, L, -302,
+    Toggle(p, "Always show while casting" .. REC, L, bottomY - 76,
         function() local d = ns.GetDB(); return d and d.explorerCasting end,
         function(v) local d = ns.GetDB(); if d then d.explorerCasting = v end end)
 
-    Header(p, "Active in", R, -226, 336)
+    Header(p, "Active in", R, bottomY, 336)
     for i, z in ipairs(EXPLORER_ZONES) do
         local zk = z[2]
-        Toggle(p, z[1] .. (z[3] and REC or ""), R, -250 - (i - 1) * 26,
+        Toggle(p, z[1] .. (z[3] and REC or ""), R, bottomY - 24 - (i - 1) * 26,
             function() local d = ns.GetDB(); return d and d.explorerZones and d.explorerZones[zk] ~= false end,
             function(v)
                 local d = ns.GetDB(); if not (d and d.explorerZones) then return end

@@ -62,6 +62,29 @@ ns.OnProfilePasted = RefreshControls
 ns.OnDragStopped = function(k) if k == ns.currentEdit then RefreshControls() end end
 ns.OnScaleWheel = RefreshControls   -- la rueda en modo Lock cambio una escala: refresca sliders
 
+-- Proxy de metatable (2026-07-24, mejora #3 del Explorer: opacidad custom
+-- POR UNIDAD) -- MakeSlider necesita un dbKey FIJO sobre una tabla que
+-- get() devuelve, pero lo que en realidad quiero leer/escribir es
+-- db.explorerElementAlpha[ns.currentEdit] (la unidad ACTUALMENTE en
+-- edicion, que cambia en vivo). __index/__newindex redirige cualquier
+-- clave hacia esa entrada especifica, sin importar que dbKey le pase a
+-- MakeSlider. __index hace fallback al "Hidden opacity" GLOBAL
+-- (explorerFadeAlpha) mientras no haya override guardado, para que el
+-- slider siempre arranque mostrando un numero coherente (nunca nil).
+local explorerAlphaProxy = setmetatable({}, {
+    __index = function(_, _key)
+        local db = ns.GetDB()
+        local v = db.explorerElementAlpha and db.explorerElementAlpha[ns.currentEdit]
+        if v == nil then v = db.explorerFadeAlpha or 0 end
+        return v
+    end,
+    __newindex = function(_, _key, v)
+        local db = ns.GetDB()
+        db.explorerElementAlpha = db.explorerElementAlpha or {}
+        db.explorerElementAlpha[ns.currentEdit] = v
+    end,
+})
+
 -- Paleta LITERAL de Plumber (2026-07-16, extraida directo de su Def table en
 -- Modules/ControlCenter/SettingsPanelNew.lua:15-38 — reemplaza los valores mas
 -- oscuros/apagados que tenia el panel antes, que eran una aproximacion a mano).
@@ -2160,6 +2183,23 @@ local function BuildPanel()
 
         MakeHeader(f, "Behavior", R, -132, 210)
         HIDEGRP.powerHidden[#HIDEGRP.powerHidden + 1] = MakeCheckbox(f, "Show tooltip", "showTooltip", R, -156)
+        -- Opacidad oculta CUSTOM del Explorer para ESTA unidad (2026-07-24,
+        -- mejora #3 pedida por el usuario: "per-element opacity override").
+        -- db.explorerElementAlpha[key] pisa el "Hidden opacity" global SOLO
+        -- para esta unidad -- sin tocar nada, arranca igual al default
+        -- global (el proxy de metatable de abajo hace fallback a
+        -- explorerFadeAlpha si todavia no hay override guardado). Solo
+        -- importa mientras la unidad este ademas prendida en Explorer
+        -- (Elements tab) -- si no, este valor no se usa para nada.
+        MakeSlider(f, "Explorer opacity (this unit)", 0, 1, 0.05, "v", R, -198,
+            function() return explorerAlphaProxy end, function() end)
+        local resetAlphaBtn = MakeButton(f, "Use default", 100, 18)
+        resetAlphaBtn:SetPoint("TOPLEFT", R, -222)
+        resetAlphaBtn:SetScript("OnClick", function()
+            local db = ns.GetDB()
+            if db.explorerElementAlpha then db.explorerElementAlpha[ns.currentEdit] = nil end
+            RefreshControls()
+        end)
     end
     -- Barra: reorganizada en grupos con header (2026-07-17) — antes era una
     -- columna larga de sliders sin agrupar, dificil de escanear. Ahora:
@@ -3849,44 +3889,12 @@ local function BuildPanel()
         tabElements:SetScript("OnClick", function() ShowExplorerTab("elements") end)
         tabConditions:SetScript("OnClick", function() ShowExplorerTab("conditions") end)
 
-        -- Pedido del usuario 2026-07-23: fusionar frame+portrait en UNA sola
-        -- opcion para party1-5, player (frame+power bar), pet, y ToT -- no
-        -- tiene sentido tenerlos separados. El player portrait queda aparte
-        -- a proposito (es el unico con mirrorTarget). keys[] en vez de una
-        -- key unica: el toggle lee/escribe TODAS las keys juntas.
-        local EXPLORER_LIST = {
-            { "Player", { "player", "playerpower" } },
-            { "Player portrait", { "portrait_player" } },
-            { "Micro menu", { "micromenu" } },
-            { "Info bar", { "infobar" } },
-            { "Pet", { "pet", "portrait_pet" } },
-            { "Target", { "target", "targetpower", "portrait_target" } },
-            { "Target auras", { "aura_target" } },
-            { "Target of Target", { "targettarget", "portrait_tot" } },
-            { "Focus unit frame", { "focus" } },
-            { "Player auras", { "aura_player" } },
-            { "Party 1", { "party1", "portrait_party1" } },
-            { "Party 2", { "party2", "portrait_party2" } },
-            { "Party 3", { "party3", "portrait_party3" } },
-            { "Party 4", { "party4", "portrait_party4" } },
-            { "Party 5", { "party5", "portrait_party5" } },
-            -- Agregados (pedido del usuario 2026-07-24: "quitar hide when mounted de todos
-            -- los elementos... quiero controlar eso por el explorer" -- estos units antes
-            -- solo tenian el toggle hideWhenMounted, ahora removido; el Explorer es el
-            -- reemplazo generico de "mostrar solo cuando haga falta / al pasar el mouse").
-            { "Boss 1", { "boss1" } },
-            { "Boss 2", { "boss2" } },
-            { "Boss 3", { "boss3" } },
-            { "Boss 4", { "boss4" } },
-            { "Boss 5", { "boss5" } },
-            { "Arena Player", { "arena_player", "portrait_arena_player" } },
-            { "Arena Ally 1", { "arena_party1", "portrait_arena_party1" } },
-            { "Arena Ally 2", { "arena_party2", "portrait_arena_party2" } },
-            { "Arena Enemy 1", { "arena_enemy1", "portrait_arena_enemy1" } },
-            { "Arena Enemy 2", { "arena_enemy2", "portrait_arena_enemy2" } },
-            { "Arena Enemy 3", { "arena_enemy3", "portrait_arena_enemy3" } },
-            { "Quest tracker", { "tracker" } },
-        }
+        -- Registro UNIFICADO (2026-07-24, "unificar" -- antes esta lista y la del
+        -- Setup Wizard (Setup.lua) eran 2 copias hardcodeadas por separado, y ya se
+        -- desincronizaron una vez: playerpower no se agregaba solo a un usuario que
+        -- ya tenia "Player" prendido de antes). Ahora ambas leen de
+        -- ns.EXPLORER_ELEMENTS (definido en Explorer.lua) -- una sola fuente.
+        local EXPLORER_ELEMENTS = ns.EXPLORER_ELEMENTS
         -- Ambos grupos arrancan debajo de las pestañas (tabs terminan ~-52).
         local TOP = -62
         -- Toggle MAESTRO: apaga el Explorer entero (los toggles por elemento se conservan).
@@ -3897,13 +3905,13 @@ local function BuildPanel()
                 if not v and ns.ExplorerResetAll then ns.ExplorerResetAll() end
             end)
         -- Grid a 2 columnas (llenado por columna, no por fila).
-        local ROWS = math.ceil(#EXPLORER_LIST / 2)
-        for i, e in ipairs(EXPLORER_LIST) do
+        local ROWS = math.ceil(#EXPLORER_ELEMENTS / 2)
+        for i, e in ipairs(EXPLORER_ELEMENTS) do
             local col = (i <= ROWS) and L or R
             local row = (i <= ROWS) and (i - 1) or (i - ROWS - 1)
             local yy = TOP - 34 - row * 21
-            local keys = e[2]
-            MakeToggle(elementsGroup, e[1], col, yy,
+            local keys = e.keys
+            MakeToggle(elementsGroup, e.label, col, yy,
                 function() return ns.GetDB().explorer[keys[1]] end,
                 function(v)
                     for _, k in ipairs(keys) do

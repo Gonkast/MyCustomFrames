@@ -1574,7 +1574,7 @@ local GLOBAL_FLAT_KEYS = {
     "partyAuraDirection", "partyAuraIconSize", "arenaAuraDirection", "arenaAuraIconSize",
     "hideChatEditBoxTexture", "raidGhostShowAll",
 }
-local GLOBAL_TABLE_KEYS = { "lockHide", "explorer", "explorerZones", "nameplateUserDefault", "nameplateProfiles" }
+local GLOBAL_TABLE_KEYS = { "lockHide", "explorer", "explorerZones", "explorerElementAlpha", "nameplateUserDefault", "nameplateProfiles" }
 
 local function CollectGlobals()
     local g = {}
@@ -1804,6 +1804,7 @@ local function InitDB()
     -- B4: en modo Lock, ocultar SAMPLE de estos elementos (solo preview; no afecta el juego real).
     db.lockHide = db.lockHide or {}   -- {health/names/badges/raid/death = true → ocultos en preview}
     db.explorer = db.explorer or {}                      -- {elementKey=true} auto-ocultan por mouseover
+    db.explorerElementAlpha = db.explorerElementAlpha or {} -- {elementKey=0..1} opacidad oculta custom, pisa el default global
     -- Migracion (2026-07-24): playerpower/targetpower/portrait_target se agregaron a los
     -- grupos "Player"/"Target" del Explorer -- un usuario que YA tenia "Player"/"Target"
     -- prendido de antes nunca vuelve a tocar ese checkbox, asi que su db.explorer se queda

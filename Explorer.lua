@@ -7,16 +7,74 @@ local ADDON, ns = ...
 -- portraits/auras/tickState).
 
 -- Mapa elementKey -> frame raiz del elemento.
+-- Ampliado (2026-07-24, pedido del usuario: "que tal probable es agregar
+-- minimap/topwidget/classpower/raid al explorer"): minimap/topwidget usan
+-- root propio (mismo patron que infobar); classpower/raid son SecureFrame
+-- (raidHeader = SecureGroupHeaderTemplate) -- SOLO se les toca SetAlpha
+-- (nunca Show/Hide/SetPoint/RegisterEvent), la MISMA tecnica que ya usa
+-- este archivo para portraits/units protegidos en combate (ver
+-- _mcfCombatHidden y el comentario de HB_HideAlpha en core.lua: SetAlpha
+-- esta probado seguro en frames protegidos, nunca causo taint) -- no hay
+-- riesgo nuevo de ADDON_ACTION_FORBIDDEN por esto.
 local function GetElementFrame(key)
     if key == "micromenu" then return ns.micromenu end
     if key == "infobar" then return ns.infobar and ns.infobar.root end
     if key == "tracker" then return _G.ObjectiveTrackerFrame end
+    if key == "minimap" then return ns.minimap and ns.minimap.root end
+    if key == "topwidget" then return ns.topWidgetHolder end
+    if key == "classpower" then return _G.MyCF_ClassPower end
+    if key == "raid" then return _G.MyCF_RaidHeader end
     if ns.frames[key] then return ns.frames[key].button end
     if ns.portraits[key] then return ns.portraits[key].root end
     if ns.auras[key] then return ns.auras[key].root end
     return nil
 end
 ns.GetElementFrame = GetElementFrame
+
+-- ==========================================================================
+-- Registro MAESTRO de elementos controlables por Explorer (2026-07-24,
+-- "unificar" -- antes Options.lua y Setup.lua mantenian 2 listas
+-- HARDCODEADAS por separado; se desincronizaron una vez ya (playerpower no
+-- se agregaba solo a un usuario que ya tenia "Player" prendido de antes).
+-- Una sola fuente: Options.lua (menu principal) y Setup.lua (wizard) leen
+-- de ns.EXPLORER_ELEMENTS en vez de mantener su propia copia.
+-- wizard=true -> aparece en la pagina 5 del Setup Wizard.
+-- wizardRecommended=true -> ahi mismo, pre-marcado como recomendado.
+-- ==========================================================================
+ns.EXPLORER_ELEMENTS = {
+    { label = "Player", keys = { "player", "playerpower" }, wizard = true, wizardRecommended = true },
+    { label = "Player portrait", keys = { "portrait_player" }, wizard = true },
+    { label = "Micro menu", keys = { "micromenu" }, wizard = true, wizardRecommended = true },
+    { label = "Info bar", keys = { "infobar" }, wizard = true },
+    { label = "Pet", keys = { "pet", "portrait_pet" }, wizard = true, wizardRecommended = true },
+    { label = "Target", keys = { "target", "targetpower", "portrait_target" }, wizard = true },
+    { label = "Target auras", keys = { "aura_target" } },
+    { label = "Target of Target", keys = { "targettarget", "portrait_tot" } },
+    { label = "Focus unit frame", keys = { "focus" }, wizard = true, wizardRecommended = true },
+    { label = "Player auras", keys = { "aura_player" }, wizard = true },
+    { label = "Party 1", keys = { "party1", "portrait_party1" } },
+    { label = "Party 2", keys = { "party2", "portrait_party2" } },
+    { label = "Party 3", keys = { "party3", "portrait_party3" } },
+    { label = "Party 4", keys = { "party4", "portrait_party4" } },
+    { label = "Party 5", keys = { "party5", "portrait_party5" } },
+    { label = "Boss 1", keys = { "boss1" } },
+    { label = "Boss 2", keys = { "boss2" } },
+    { label = "Boss 3", keys = { "boss3" } },
+    { label = "Boss 4", keys = { "boss4" } },
+    { label = "Boss 5", keys = { "boss5" } },
+    { label = "Arena Player", keys = { "arena_player", "portrait_arena_player" } },
+    { label = "Arena Ally 1", keys = { "arena_party1", "portrait_arena_party1" } },
+    { label = "Arena Ally 2", keys = { "arena_party2", "portrait_arena_party2" } },
+    { label = "Arena Enemy 1", keys = { "arena_enemy1", "portrait_arena_enemy1" } },
+    { label = "Arena Enemy 2", keys = { "arena_enemy2", "portrait_arena_enemy2" } },
+    { label = "Arena Enemy 3", keys = { "arena_enemy3", "portrait_arena_enemy3" } },
+    { label = "Quest tracker", keys = { "tracker" } },
+    -- Nuevos (2026-07-24): minimap/topwidget/classpower/raid.
+    { label = "Minimap", keys = { "minimap" } },
+    { label = "Top widget", keys = { "topwidget" } },
+    { label = "Class power", keys = { "classpower" } },
+    { label = "Raid frames", keys = { "raid" } },
+}
 
 -- Fade por MOUSEOVER (`IsMouseOver` funciona sin EnableMouse = geometrico). El fade corre
 -- por FRAME (OnUpdate de explorerDriver) con suavizado EXPONENCIAL independiente del
@@ -32,13 +90,21 @@ explorerDriver:SetScript("OnUpdate", function(self, dt)
     -- Factor por half-life: el alpha recorre la mitad de la distancia cada X segundos.
     local kIn  = 1 - 0.5 ^ (dt / 0.06)   -- revelar (half-life ~60ms)
     local kOut = 1 - 0.5 ^ (dt / 0.20)   -- ocultar (mas pausado)
+    -- Opacidad oculta CUSTOM por elemento (2026-07-24, pedido del usuario):
+    -- db.explorerElementAlpha[key] pisa el "Hidden opacity" global SOLO para
+    -- ESE key puntual -- nil/ausente = usa el default global (lo) como
+    -- siempre. Guardado por key RAW (no por grupo/label): cada companion key
+    -- de un grupo (ej. "player" y "playerpower") puede tener su propio
+    -- override independiente si hace falta, sin logica extra.
+    local eAlpha = db.explorerElementAlpha
     for key, on in pairs(db.explorer) do
         if on then
             local f = GetElementFrame(key)
             -- _mcfCombatHidden: portrait "oculto" via alpha en combate (frame protegido);
             -- su alpha lo gestiona PortraitSetShown, no el Explorer.
             if f and f:IsShown() and not f._mcfCombatHidden then
-                local target = (self.combat or self.showTgt or self.casting or f:IsMouseOver()) and 1 or lo
+                local myLo = (eAlpha and eAlpha[key]) or lo
+                local target = (self.combat or self.showTgt or self.casting or f:IsMouseOver()) and 1 or myLo
                 local cur = f._exAlpha; if cur == nil then cur = f:GetAlpha() end
                 cur = cur + (target - cur) * (target > cur and kIn or kOut)
                 if math.abs(target - cur) < 0.003 then cur = target end
