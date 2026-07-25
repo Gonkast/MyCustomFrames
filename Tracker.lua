@@ -604,10 +604,42 @@ end)
 -- SetScale multiplicador escala PROPORCIONALMENTE tanto el tamaño como la
 -- distancia a su anchor nativo (sea cual sea), sin necesitar reimplementar
 -- ese anchor a mano. rs=1 (aspect fuera de 16:9) deja el scale nativo intacto.
+--
+-- FIX (2026-07-24, "aun el quest tracker se mueve cuando cambio de
+-- resoluciones"): un SetScale de una sola vez no bastaba -- el propio Edit
+-- Mode de Blizzard reaplica SU escala guardada (segun el tamaño elegido en
+-- Edit Mode) en varios momentos propios (entrar al mundo, reajustar
+-- layout, etc.), pisando la nuestra sin avisar. Se seguia moviendo cada vez
+-- que Blizzard volvia a tocar el scale DESPUES de nuestro RefreshAll.
+-- Solucion: hooksecurefunc sobre SetScale -- cada vez que ALGO (Blizzard
+-- incluido) le cambia la escala, se interpreta ese valor como la escala
+-- BASE de Blizzard (trackerBaseScale) y se reaplica trackerBaseScale*rs
+-- inmediatamente encima, igual que ns.ResScale() encima del scale nativo de
+-- cualquier otro widget. Guard de reentrancia (mismo patron que
+-- blizzAlphaReentrant en core.lua) para no loopear con nuestro propio SetScale.
+local trackerBaseScale = 1
+local applyingTrackerScale = false
+local function HookTrackerScale(otf)
+    if otf._mcfScaleHooked then return end
+    otf._mcfScaleHooked = true
+    hooksecurefunc(otf, "SetScale", function(self, s)
+        if applyingTrackerScale or not s then return end
+        local rs = ns.ResScale and ns.ResScale() or 1
+        if rs <= 0 then return end
+        local newBase = s / rs
+        if math.abs(newBase - trackerBaseScale) > 0.001 then
+            trackerBaseScale = newBase
+            if ns.RefreshTrackerScale then ns.RefreshTrackerScale() end
+        end
+    end)
+end
 local function ApplyTrackerScale()
     local otf = _G.ObjectiveTrackerFrame
     if not otf or not ns.ResScale then return end
-    otf:SetScale(ns.ResScale())
+    HookTrackerScale(otf)   -- idempotente, se re-intenta cada refresh por si el frame tardo en existir
+    applyingTrackerScale = true
+    otf:SetScale(trackerBaseScale * ns.ResScale())
+    applyingTrackerScale = false
 end
 ns.RefreshTrackerScale = ApplyTrackerScale
 ApplyTrackerScale()
