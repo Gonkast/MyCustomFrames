@@ -71,12 +71,21 @@ ApplyBarScale = function(name)
 end
 
 local pendingApply = false
+local UpdatePetBarVisibility   -- fwd-declarada (definida mas abajo)
 local function ApplyAllBarScales()
     if InCombatLockdown() then pendingApply = true; return end
     pendingApply = false
     for _, name in ipairs(BT4_BARS) do
         if _G[name] then ApplyBarScale(name) end
     end
+    -- FIX (2026-07-25, reportado: "el pet bar queda despues de entrar al lock
+    -- mode, estando en explorer mode, sin tener pet"): al entrar/salir de Lock,
+    -- SetUnlocked (Editing.lua) llama ns.ExplorerResetAll(), que hace
+    -- SetAlpha(1) a TODOS los elementos del Explorer -- incluida la pet bar,
+    -- deshaciendo el ocultado por "sin mascota". Justo despues corre
+    -- ns.RefreshAll() -> esta funcion, asi que reaplicarlo aca lo corrige en el
+    -- mismo tick (y de paso cubre cualquier otro camino que pase por RefreshAll).
+    if UpdatePetBarVisibility then UpdatePetBarVisibility() end
 end
 ns.RefreshBartenderScale = ApplyAllBarScales
 
@@ -89,7 +98,9 @@ ns.RefreshBartenderScale = ApplyAllBarScales
 -- Explorer, este chequeo GANE -- sin pet, se queda oculta pase lo que pase
 -- con mouseover/combate.
 local petBarHiddenNoPet = false
-local function UpdatePetBarVisibility()
+-- Sin `local`: asigna a la fwd-declarada arriba, que ApplyAllBarScales ya
+-- referencia (si se re-declarara con `local`, esa referencia quedaria en nil).
+function UpdatePetBarVisibility()
     local bar = _G.BT4BarPetBar
     if not bar then return end
     local hasPet = UnitExists("pet")
