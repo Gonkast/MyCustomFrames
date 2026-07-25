@@ -500,7 +500,10 @@ local function DefaultsFor(key)
         castSparkWidth = 14, castSparkHeight = 28, castSparkScale = 1.0,   -- spark independiente
         castTexture = tex,
         -- Otros
-        hideWhenMounted = false, showTooltip = true,
+        -- (hideWhenMounted quitado 2026-07-25: la feature se elimino el 2026-07-24
+        -- y este era el ultimo resto -- ningun codigo lo leia, solo se propagaba a
+        -- instalaciones nuevas. El reemplazo generico es el Explorer.)
+        showTooltip = true,
         -- Colores barra
         useBarColor = (key == "targetpower"),
         barColor = { r = 0.60, g = 0.20, b = 0.80 },
