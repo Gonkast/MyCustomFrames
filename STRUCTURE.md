@@ -11,6 +11,186 @@
 > Raid/etc, todos archivos propios que exponen `ns.Loquesea` y leen `ns.GetDB()`/`ns.IsUnlocked()`
 > en vez de los locals `db`/`unlocked` de core.
 
+## SESION 2026-07-24/25 (grande — auto-scale por resolucion, Explorer ampliado + registro
+## unificado, merge de Mainmenu-Gonkast, limpieza de features, repo re-creado desde cero)
+
+### Repo git RE-CREADO (2026-07-25, pedido del usuario)
+El repo `github.com/Gonkast/MyCustomFrames` fue **borrado y creado de nuevo** (`gh repo delete`
++ `gh repo create`), con **UN solo commit inicial** conteniendo todo el estado del addon —
+historial viejo perdido a proposito ("limpio solo con un commit"). Identidad de commits:
+`Gonkast <gonkast@users.noreply.github.com>`. **El usuario NO quiere el trailer
+`Co-Authored-By: Claude` en los commits** (se pidio quitarlo explicitamente y se re-creo el
+repo por eso). `gh` necesito `gh auth refresh -h github.com -s delete_repo` para poder borrar.
+
+### `/mcfscaledump` — diagnostico de posicion/escala (core.lua, final del archivo)
+Vuelca en una caja copiable (mismo patron de `/mcftrackerdump`) la posicion de cada widget raiz
+como **FRACCION de pantalla** (`x_frac`/`y_frac`, 0..1) + `scale`/`w`/`h`/`shown`. Uso: correrlo
+antes y despues de cambiar resolucion y comparar — fracciones iguales = quedo proporcional.
+Cubre todos los `ns.UNITS` (unit/portrait/aura por key), infobar, micromenu, minimap, topwidget,
+minimapbuttons, classpower, raid, tracker, y `BT4Bar1-10` + los 4 con nombre propio.
+**QUIRK CLAVE aprendido aca:** `Frame:GetCenter()` devuelve coordenadas en el espacio de escala
+del **propio frame** — hay que multiplicar por `frame:GetEffectiveScale()/UIParent:GetEffectiveScale()`
+antes de dividir por el ancho de UIParent, si no cualquier widget con `scale ~= 1` sale mal
+(esto causo un falso positivo de "bug" que costo una vuelta entera de diagnostico).
+
+### Auto-scale por resolucion — `ns.ResScale()` (core.lua, ~linea 1000)
+`rs = UIParent:GetHeight() / 1080` (los defaults estan horneados a 1920x1080). Devuelve **1**
+si el aspect ratio de UIParent cae fuera de 1.70–1.86 (rango 16:9) — en 21:9/ultrawide no hay
+correccion generica confiable, se deja sin tocar. Recalculado en `DISPLAY_SIZE_CHANGED` **y**
+por un poll cada ~1s en el ticker central (`tickState.n % 10`), porque el evento **no dispara
+de forma confiable al arrastrar el borde de la ventana** en modo Windowed.
+
+**REGLA DE ORO (dos intentos fallidos antes de acertar):**
+1. Usar **`UIParent:GetWidth()/GetHeight()` (virtual)**, NUNCA `GetPhysicalScreenSize()`. En
+   modo Windowed, WoW puede mantener el UIParent virtual FIJO (ej. 1365.3x768) mientras la
+   resolucion fisica cambia — dos resoluciones distintas dieron el mismo virtual, y usar la
+   fisica daba factores distintos para lo que visualmente es la misma escala.
+2. **Aplicar `rs` SOLO al `SetScale`, NUNCA tambien al `offsetX/offsetY`.** `SetPoint` interpreta
+   el offset en el espacio de coordenadas PRE-escala del propio frame, asi que `SetScale` ya
+   escala proporcionalmente tanto el tamaño COMO la distancia al anchor. Multiplicar los dos
+   compone `rs²` (esto es lo mismo en que se apoya `ns.CompensateScale`).
+   **EXCEPCION:** `ClassPower.lua` — su `root` (el que recibe `SetPoint`) nunca se escala; solo
+   su hijo `content` recibe `SetScale`. Ahi SI hay que multiplicar el offset del root a mano.
+
+Modulos con `ns.ResScale()` aplicado: Units, Portraits, Auras, InfoBar, MicroMenu, Minimap,
+TopWidget, MinimapButtons, ClassPower, Raid, MirrorTimers, **+ Bartender4 (BartenderScale.lua)**.
+`ns.RefreshTopWidget`/`ns.RefreshMinimapButtons`/`ns.RefreshBartenderScale` se agregaron a
+`RefreshAll()` — faltaban, y por eso esos 3 no reaccionaban al cambio de resolucion.
+
+**Quest tracker: REVERTIDO, se deja 100% nativo.** Se intento 2 veces (SetScale simple, despues
+`hooksecurefunc` para mantenerlo pegado). `/mcfscaledump` demostro que el offset de anclaje
+CRUDO del tracker **cambia entre resoluciones** — Edit Mode de Blizzard lo reposiciona con su
+propia logica, no es un offset fijo compensable. Multiplicar su escala solo pelea contra ese
+sistema. Documentado en `Tracker.lua` (comentario largo donde estaba el codigo).
+
+### BartenderScale.lua (NUEVO) — auto-scale + pet bar
+Aplica `baseScale * ns.ResScale()` a las barras de Bartender4, multiplicando **encima** de la
+escala que el usuario ya configuro en Bartender4 (nunca la pisa): `hooksecurefunc` sobre
+`SetScale` + guard de reentrancia — si el usuario mueve el slider de Bartender4 en vivo, ese
+valor se reinterpreta como la nueva base. `pcall` + diferido a `PLAYER_REGEN_ENABLED` (SetScale
+sobre una barra con botones de accion puede dar ADDON_ACTION_BLOCKED en combate).
+**Nombres REALES de frame (confirmados con `/mcfbt4diag`, los adivinados NO existen):**
+`BT4Bar1`..`BT4Bar10`, `BT4BarPetBar`, `BT4BarStanceBar`, `BT4BarBagBar`, `BT4BarExtraActionBar`
+— el prefijo es `BT4Bar<Modulo>`, **no** `BT4<Modulo>Bar`.
+**`/mcfbt4diag`**: caja copiable con todos los globals `BT4*` que son frames, excluyendo los que
+contienen "Button" (los botones individuales son ruido).
+**Pet bar**: se oculta por completo (`SetAlpha(0)` + `EnableMouse(false)`) si `UnitExists("pet")`
+es false, restaurada al aparecer una mascota. Setea `_mcfCombatHidden` para que el driver de
+Explorer la saltee (sin pet gana este chequeo, pase lo que pase con mouseover/combate).
+
+### Explorer Mode — ampliado y unificado
+**`ns.EXPLORER_ELEMENTS` (Explorer.lua) = registro MAESTRO unico.** Antes `Options.lua` (menu) y
+`Setup.lua` (wizard) mantenian **dos listas hardcodeadas separadas** que ya se habian
+desincronizado — bug real: al agregar `playerpower` al grupo "Player", un usuario que ya tenia
+"Player" prendido nunca recibia la key nueva (el toggle solo escribe al hacer click). Ahora
+ambos leen del registro; flags `wizard`/`wizardRecommended` marcan que entra al wizard.
+**Migracion one-time en `InitDB`** (core.lua): si `db.explorer.player` esta prendido, se prende
+`playerpower`; idem `target` → `targetpower`+`portrait_target`. **Este es el patron a repetir si
+se agregan mas keys companion a un grupo existente.**
+
+`GetElementFrame` ahora resuelve, ademas de units/portraits/auras/micromenu/infobar:
+`tracker` (ObjectiveTrackerFrame), `minimap`, `topwidget`, `classpower`, `raid`, y **cualquier
+key con prefijo `BT4Bar`** (resuelta directo por `_G[key]`). Todos por `SetAlpha` unicamente —
+tecnica ya probada segura en frames protegidos, sin `RegisterEvent`/`Show`/`Hide`/`SetPoint`.
+
+Elementos nuevos en el registro: Target (+targetpower+portrait_target), Target auras, Boss 1-5,
+las 6 de Arena, Quest tracker, Minimap, Top widget, Class power, Raid frames, **Action Bar 1-10 +
+Pet/Stance/Bag/Extra Action Bar**.
+
+**Opacidad custom POR ELEMENTO:** `db.explorerElementAlpha[key]` (0..1) pisa el "Hidden opacity"
+global solo para ese key. Slider en la pestaña **Behavior** de cada unidad (donde estaba "Hide
+when mounted") + boton "Use default". Implementado con un **proxy de metatable**
+(`explorerAlphaProxy` en Options.lua): `MakeSlider` exige un `dbKey` fijo, asi que
+`__index`/`__newindex` redirigen a `db.explorerElementAlpha[ns.currentEdit]` (la unidad en
+edicion, que cambia en vivo), con fallback a `explorerFadeAlpha` si no hay override.
+
+**BT4Bar1 forzado visible** si el player esta montado o en vehiculo/override/possess:
+`ns.safeBool(IsMounted)` **or** `HasOverrideActionBar` **or** `HasVehicleActionBar` **or**
+`UnitHasVehicleUI("player")`. **`IsMounted()` es imprescindible** — las otras 3 solo detectan
+vehiculos REALES, una montura normal no las dispara (fue el bug). Solo Bar1, no todas.
+
+**Mouseover de barras de Bartender4:** `IsMouseOverElement(f, key)` — Bartender4 **no
+redimensiona el frame de la barra para envolver sus propios botones**, asi que `f:IsMouseOver()`
+no detecta el hover sobre los botones. Para keys `BT4Bar*` se recorren tambien los hijos
+directos. Acotado a Bartender4 para no pagar `GetChildren()` por frame en los ~45 elementos restantes.
+
+**Scrollbar en las pestañas Elements/Conditions** (con 31+ elementos la grilla pasaba el footer
+fijo del panel). Usa `MakeStyledScroll()` — helper nuevo en Options.lua que replica el scrollbar
+Plumber de la sidebar (textura `WIDGET`, flechas, thumb arrastrable, scroll suave por half-life)
+generalizado para cualquier panel. **Sus variables internas llevan prefijo `mss`** porque vive en
+el mismo scope gigante que el scrollbar de la sidebar y luacheck detectaba shadowing.
+
+**Condicion "recibi daño": INTENTADA Y REVERTIDA.** `RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")`
+daba **ADDON_ACTION_FORBIDDEN persistente** en la cuenta del usuario (no solo en combate), y el
+reintento con `C_Timer`+`pcall` solo logro que el error se repitiera en loop — **`pcall` NO
+suprime ADDON_ACTION_FORBIDDEN**, se reporta igual. No repetir sin otra via de deteccion.
+
+### MainMenu.lua (NUEVO) — merge de Mainmenu-Gonkast
+El addon separado `Mainmenu-Gonkast` (reskin del Game Menu / panel de Escape) se **fusiono aca**
+como `MainMenu.lua`, logica 1:1. Unico cambio: las texturas se resuelven con **`ns.SkinResolve`**
+en vez de rutas fijas, asi que el sistema de Skins global tambien reskinea el Game Menu.
+Assets copiados a `Assets\`: `Background border.tga`, `button wood large.tga`,
+`button red2 large.tga`. `ns.RefreshMainMenuSkin` enganchado a `ns.ApplySkin`.
+`GameMenuFrame` agregado a los globals de `.luacheckrc` (el archivo le cuelga campos `__gonk*`).
+**PENDIENTE DEL USUARIO: desactivar el addon `Mainmenu-Gonkast` en la lista de AddOns** — si
+corren los dos a la vez se pelean por los mismos frames (ambos usan flags `__gonk*`). La carpeta
+del addon viejo NO se toco.
+
+### Features QUITADAS en esta sesion (no volver a agregar sin pedido explicito)
+- **`hideWhenMounted`** (todas las unidades): codigo (`UnitUpdateMount`, `PowerShouldShow`),
+  checkbox de Options, pagina del wizard y defaults. El reemplazo generico es el Explorer.
+- **Hover-fade de auras (`UpdateAuraAlpha` + `groupAlpha` como reveal)**: `aura_player` ya no
+  necesita mouseover para verse a opacidad completa. El tooltip por hover NO se toco.
+  **OJO:** al hacer esto, el viejo `EnableMouse(false)` para grupos gestionados por Explorer
+  rompio los tooltips de aura — Explorer revela por `IsMouseOver` (geometrico, no necesita
+  EnableMouse), asi que esa restriccion se saco. Ahora el tooltip depende solo de `p.showTooltip`.
+- **`db.barReposition`** (mover la possess bar de Bartender4 al estar montado): `BarReposition.lua`
+  **borrado**, mas su toggle en Options/Setup y su default.
+- **Pagina del wizard de auto-hide del Quest tracker**: eliminada. El wizard bajo de 8 a 7
+  paginas (`PAGE_COUNT`), y la pagina de Explorer se simplifico a **solo el toggle on/off +
+  descripcion** (antes duplicaba toda la UI de Elements/Conditions del menu principal).
+
+### Otros fixes de esta sesion
+- **`playerpower`/`targetpower`**: sin condiciones propias (combate/reaccion del target),
+  solo `UnitExists`. **Unica excepcion conservada:** ambos se ocultan si su unidad esta
+  muerta/fantasma.
+- **Frames nativos de Blizzard ocultados por alpha**: `HB_HideAlpha` (core.lua) ahora tambien
+  llama **`EnableMouse(false)`**. `SetAlpha(0)` esconde visualmente pero el frame invisible
+  seguia interceptando hover/clicks por delante del unitframe propio (confirmado con `/fstack`
+  en arena) y disparando el highlight nativo de Blizzard. `EnableMouse` es seguro incluso en
+  frames protegidos, a diferencia de `Show`/`Hide`/`SetPoint`.
+- **`HideArenaFramesNow`**: `HB_HideAlphaDeep(..., 4)` (era depth 2) — el SelectionHighlight de
+  arena estaba anidado mas profundo.
+- **Botones de addons del minimapa (`MinimapButtons.lua`)**: los botones capturados quedaban con
+  la strata de su addon original (HIGH/MEDIUM/LOW distintas entre si) — WoW resuelve el click
+  por **strata primero, frame level despues**, asi que uno con strata alta se robaba los clicks
+  de todos. Se normalizan a la strata del container al capturarlos. Ademas
+  **`container:EnableMouse(false)`**: el container no tiene handlers propios y su mouse habilitado
+  tapaba a sus propios hijos. `/mcfminimapbtnslist` ahora vuelca
+  type/mouseEnabled/isEnabled/strata/level/hitrect de cada boton.
+- **Raid frames**: el `xOffset` real del `SecureGroupHeaderTemplate` necesita el **mismo flip de
+  signo** (LEFT=+1/RIGHT=-1) que ya tenia el preview de ghosts — sin eso `growPoint="RIGHT"`
+  funcionaba solo en el preview de Lock, no en los members reales. Y `ns.UpdateRaidGhosts()` se
+  llama tambien en `GROUP_ROSTER_UPDATE`/`ZONE_CHANGED_NEW_AREA` (antes solo al togglear Lock, asi
+  que unirse a un raid estando en Lock dejaba los ghosts encima de los frames reales).
+- **`border-tooltip.tga`** (Tooltip.lua): era la ultima textura de la lista del usuario con ruta
+  fija — ahora `BorderTex()` resuelto por skin en cada `ApplySkin`, y `BACKDROP.edgeFile` se
+  refresca por llamada. `ns.RefreshTooltipSkin` enganchado a `ns.ApplySkin`.
+  (`point_diamond` y el resto de `point_*` de ClassPower **ya eran** skin-aware via su `ResolveTex`
+  al dibujar.) Categorias `tooltipborder`/`classpowerpoint`/`gamemenu` registradas en `ns.TEX_LIB`
+  para documentacion — sin picker en el menu, igual que `minimapmask`.
+- **README**: nota de que el preset esta pensado para **16:9 con UI Scale al 100%**, y que NO es
+  realmente standalone (esta tuneado junto al perfil de Bartender4 + DynamicCam del autor).
+
+### Skin de Explorer (`MyCustomFrames_Explorer`)
+Carpeta de skin-addon nueva creada por el usuario: `.toc` renombrado, `Load.lua` con
+`_G.MCF_RegisterSkin("Explorer", BASE, "Explorer")` y `SKIN_NAME = "Explorer"`.
+**Fallback confirmado:** `ns.SkinResolve` prueba el archivo con `Texture:SetTexture()` (devuelve
+booleano real) — si la skin no lo trae, cae al `Assets\` principal. **Nada queda invisible por
+un archivo ausente**; en la carpeta de la skin solo hacen falta los que se quieran cambiar.
+**Masque es la excepcion**: cada skin-addon registra su propia skin completa via `MSQ:AddSkin`
+apuntando a su `Assets\MasqueSkin\` — ahi **no hay fallback** al principal.
+
 ## SESION 2026-07-23 (grande — tooling nuevo, mirrorTarget, Explorer/Extras subtabs,
 ## TopWidget, sistema de Skins + skin-addons separados, fusion Party/Arena Aura Preview,
 ## limpieza de Assets, varios bakes de Defaults.lua). Documentado ahora porque el ultimo
@@ -367,7 +547,9 @@ pausar a testear cada uno).
 
 **ACTUALIZADO 2026-07-17.** Sesion grande de rediseño del menu de opciones + features nuevas:
 
-- **`BarReposition.lua` (nuevo archivo, carga despues de `MasqueSkin.lua`)**: reposiciona la barra
+- **`BarReposition.lua`** — **BORRADO 2026-07-24** (feature quitada a pedido del usuario, ver la
+  seccion de la sesion 2026-07-24/25 arriba). Lo que sigue es historico, para contexto:
+  reposicionaba la barra
   possess/vehicle de Bartender4 (`BT4Bar5` — NO `BT4Bar3`, ese frame no existe en el perfil de
   Bartender del usuario) a una posicion fija SOLO mientras el jugador esta MONTADO (`IsMounted()`).
   Captura el anclaje ORIGINAL real de Bartender via `GetPoint()` antes de sobreescribirlo (nunca
@@ -518,8 +700,16 @@ en extenso, solo el estado FINAL. Ver secciones actualizadas abajo.
 4. `Grouping.lua` — `ns.MoveFollowers`: al mover un elemento "padre" en preview (OnDragStop), mueve
    junto sus "seguidores" (portrait_player→player+playerpower, portrait_target→target+targetpower,
    pet→portrait_pet, targettarget→portrait_tot, party unit con `groupMoveParty`→party portraits).
+4b. **`BartenderScale.lua`** (NUEVO 2026-07-24, carga donde estaba `BarReposition.lua`) — aplica
+   `ns.ResScale()` a las barras de Bartender4 (multiplicado sobre la escala del usuario) +
+   oculta la pet bar si no hay mascota + `/mcfbt4diag`. Ver la seccion de la sesion 2026-07-24/25.
+4c. **`MainMenu.lua`** (NUEVO 2026-07-24, carga despues de `ArenaTrinket.lua`) — reskin del Game
+   Menu (Escape), fusionado desde el addon separado `Mainmenu-Gonkast`. Texturas via
+   `ns.SkinResolve`. **Requiere que el addon viejo `Mainmenu-Gonkast` este DESACTIVADO.**
 5. `Tracker.lua` — colorea titulos/objetivos del ObjectiveTracker + lo oculta en boss fights.
    **REESCRITO 3 veces (saga de taint, ver seccion Quest Tracker mas abajo para el estado final).**
+   **NO posiciona ni escala el frame** — se intento auto-scale por resolucion y se REVIRTIO
+   (Edit Mode de Blizzard lo reposiciona por su cuenta, ver sesion 2026-07-24/25).
 6. `Profiles_Pre.lua` → **`Profiles\<Addon>\<Addon>.lua`** (Bartender4/DynamicCam/Masque/Chattynator/
    AzeriteUI5_JuNNeZ_Edition, copias de SavedVariables del usuario) → `Profiles_Post.lua` →
    `Profiles\_Exports.lua` (strings `MCF1:`/Blizzard exportados) → `ProfilesApply.lua`. Sistema de
@@ -1088,6 +1278,11 @@ portrait, asi texto+highlight aparecen sobre el retrato.
 - Options: **focus quitado del grupo MAIN** del sidebar (su config se edita como portrait, en PORTRAITS).
 
 ## Explorer (#11): auto-ocultar + revelar por mouseover
+> **AMPLIADO 2026-07-24** — registro unificado `ns.EXPLORER_ELEMENTS`, +18 elementos nuevos
+> (Target, Boss, Arena, tracker, minimap, topwidget, classpower, raid, barras de Bartender4),
+> opacidad custom por elemento, scrollbar en el menu. **Ver la seccion de la sesion 2026-07-24/25
+> al principio de este archivo** — lo de abajo es la base original, sigue vigente pero incompleta.
+
 Elementos que se atenuan (alpha→`db.explorerFadeAlpha`, default 0) y reaparecen (alpha 1) con MOUSEOVER
 o en combate. Config GLOBAL: `db.explorerEnabled` (toggle MAESTRO, default true), `db.explorer =
 {elementKey=true}` (que elementos), `db.explorerCombat` (forzar visibles en combate), `db.explorerFadeAlpha`.
@@ -1724,6 +1919,27 @@ Fuente **FRIZQT** (distinta de la Lato del panel de opciones principal). Carga A
 Copiados de AzeriteUI (texturas de barras/cages) y Plumber (menu). Rutas en core via
 `local A = "Interface\\AddOns\\MyCustomFrames\\Assets\\"`. `PATH_REMAP` + `RemapPaths`
 migran configs guardadas con rutas antiguas de AzeriteUI a las copias locales.
+**+3 desde 2026-07-24** (merge de Mainmenu-Gonkast): `Background border.tga`,
+`button wood large.tga`, `button red2 large.tga`.
+
+**LISTA DE TEXTURAS RESKINEABLES (confirmada con el usuario 2026-07-25).** Son las 23 que le
+interesan; el resto de `Assets/` NO se reskinea a proposito. Cualquier archivo que la carpeta de
+la skin no traiga cae solo al `Assets/` principal (`ns.SkinResolve` prueba con
+`Texture:SetTexture()`, que devuelve un booleano real) — **nada queda invisible por un archivo
+ausente**, asi que en la skin solo hacen falta los que se quieran cambiar:
+
+`actionbutton-border square` · `actionbutton-border` · `Background border` · `border-tooltip` ·
+`button red2 large` · `button wood large` · `cast_back` · `group-finder-eye-orange` ·
+`hp_low_case` · `hp_low_case_mirror_s` · `hp_low_case_mirror` · `hp_low_case_mirror_b` ·
+`hp_party_cage` · `hp_pet_cage` · `icon_exit_flight` · `info_bg` · `minimap-border` ·
+`minimap-onebar-backdrop` · `orb_case_low` · `point_diamond` · `point_plate` ·
+`portrait_frame_low` · `power_low_case`
+
+Dos mecanismos, mismo resultado: (a) via `ns.TEX_LIB` + `ApplySkinToTable` — reescribe el campo
+guardado en cada unidad/portrait/aura al aplicar la skin; (b) via `ns.SkinResolve` llamado en
+vivo por el modulo al dibujar (`cast_back`, `border-tooltip`, los `point_*` de ClassPower, las 3
+del Game Menu). **Masque es aparte**: cada skin-addon registra su propia skin completa con
+`MSQ:AddSkin` apuntando a su `Assets\MasqueSkin\`, **sin fallback** al principal.
 
 ## Sesión 2026-07-19 (grande) — Tooltip, ExtraButton, MirrorTimer, nameplates de dungeon, preset/export centralizado
 
@@ -1871,7 +2087,11 @@ Setup/Editing/Explorer/Profile, sin sub-tabs). `Section("extras")`: columna izqu
 (enable + scale), columna derecha = Mirror Timers (enable + bar W/H + cage W/H + offset X/Y) +
 Mirror Timer Text (offset X/Y + tamaño + color, columna izquierda debajo de Tooltip).
 
-### `BarReposition.lua` — fix de combate
+### `BarReposition.lua` — fix de combate (HISTORICO, archivo borrado 2026-07-24)
+> Este archivo ya no existe (feature quitada). La leccion SI sigue vigente y aplica a
+> `BartenderScale.lua`, que toca los mismos frames: **`SetScale`/`SetPoint` sobre una barra de
+> Bartender4 con botones de accion activos SI puede estar protegido en combate.**
+
 `BT4Bar5:ClearAllPoints()` asumía "nunca está protegido" — falso en este cliente cuando la barra de
 vehículo/possess tiene botones de acción activos (montado + habilidad de montura usable), tira
 `ADDON_ACTION_BLOCKED` en combate. Fix: `InCombatLockdown()` guard + reintento en
