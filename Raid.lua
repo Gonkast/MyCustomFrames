@@ -319,7 +319,23 @@ end
 ns.ApplySizeToMember = ApplySizeToMember
 
 local function BuildMemberVisual(self)
-    self:SetSize(103, 56)   -- tamaño provisorio; initialConfigFunction del header lo pisa
+    -- FIX (2026-07-25, error real reportado: "tried to call the protected function
+    -- 'MyCF_RaidHeaderUnitButton7:SetSize()'"): los members REALES los crea
+    -- SecureGroupHeader_Update (entorno restringido de Blizzard) y son frames
+    -- PROTEGIDOS -- si ese update ocurre EN COMBATE (roster que cambia a mitad de
+    -- pelea: alguien entra/se va/resucita), redimensionarlos desde aca esta
+    -- bloqueado. No hace falta insistir: este SetSize es solo provisorio, el
+    -- initialConfigFunction del header (initial-width/initial-height, ver
+    -- RefreshRaid) le pone el tamaño de verdad igual.
+    -- Los GHOSTS del preview de Lock si lo necesitan (frames propios, creados por
+    -- este addon, nunca protegidos) -- por eso el guard mira IsProtected() y no
+    -- solo InCombatLockdown().
+    -- NOTA: pcall NO servia aca -- no suprime ADDON_ACTION_BLOCKED (ver la leccion
+    -- del intento de COMBAT_LOG_EVENT_UNFILTERED en Explorer.lua).
+    local protectedInCombat = InCombatLockdown() and self.IsProtected and self:IsProtected()
+    if not protectedInCombat then
+        self:SetSize(103, 56)
+    end
     if self.RegisterForClicks then self:RegisterForClicks("AnyUp") end   -- solo members reales (Button)
     -- Mouseover (tooltip) + click-to-target/menu (pedido del usuario 2026-07-20:
     -- "cada uno es un boton, deberia poder seleccionarlos y que funcione el
@@ -498,8 +514,33 @@ function ns.BuildRaidMember(self)
     -- Midnight 12.0.7 tiene varios quirks propios en el sistema de secure
     -- headers de raid, asi que se fija tambien directo aca por si esa
     -- propagacion automatica no anda como en un retail normal).
-    self:SetAttribute("type1", "target")
-    self:SetAttribute("type2", "togglemenu")
+    -- MISMO FIX que el SetSize de BuildMemberVisual (2026-07-25): SetAttribute
+    -- sobre un frame PROTEGIDO esta bloqueado EN COMBATE, y estos members los
+    -- crea SecureGroupHeader_Update, que puede correr en plena pelea. Se
+    -- difiere a PLAYER_REGEN_ENABLED (patron ya usado en todo el addon) --
+    -- mientras tanto el click funciona igual por la propagacion de
+    -- "*type1"/"*type2" del header.
+    ns.ApplyMemberClickAttributes(self)
+end
+
+-- Cola de members cuyos atributos de click quedaron pendientes por combate
+-- (ver el comentario de arriba). Tabla WEAK: si Blizzard descarta un member,
+-- no lo retenemos.
+local pendingClickAttrs = setmetatable({}, { __mode = "k" })
+function ns.ApplyMemberClickAttributes(button)
+    if InCombatLockdown() and button.IsProtected and button:IsProtected() then
+        pendingClickAttrs[button] = true
+        return
+    end
+    pendingClickAttrs[button] = nil
+    button:SetAttribute("type1", "target")
+    button:SetAttribute("type2", "togglemenu")
+end
+function ns.FlushPendingMemberClickAttributes()
+    if InCombatLockdown() then return end
+    for button in pairs(pendingClickAttrs) do
+        ns.ApplyMemberClickAttributes(button)
+    end
 end
 
 -- Puente global: el OnLoad del template XML no ve el upvalue `ns` (esta fuera
@@ -1065,6 +1106,9 @@ raidEvents:SetScript("OnEvent", function(self, event, arg1)
     if event == "PLAYER_REGEN_ENABLED" then
         if raidNeedsDriver then ns.UpdateRaidDrivers() end
         if raidNeedsRefresh then ns.RefreshRaid() end
+        -- Members creados EN COMBATE: sus atributos de click quedaron pendientes
+        -- (ver ns.ApplyMemberClickAttributes) -- recien ahora se pueden setear.
+        ns.FlushPendingMemberClickAttributes()
         return
     end
     ns.UpdateRaidDrivers()
