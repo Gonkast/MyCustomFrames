@@ -188,6 +188,18 @@ local function AddButton(btn, name)
     -- Guardado por si alguna vez se quiere "devolver" el boton (desactivar
     -- el sistema) -- no usado todavia, pero barato de tener.
     btn._mcfMMOrigParent = btn._mcfMMOrigParent or btn:GetParent()
+    -- FIX (2026-07-24, "no puedo seleccionar ninguno aparte del de mi
+    -- addon" -- solo un boton dentro de la grilla respondia al click): cada
+    -- addon deja su boton con la STRATA que traia de origen (HIGH/MEDIUM/
+    -- LOW/DIALOG/etc, cada uno la suya). WoW decide que frame recibe un
+    -- click por STRATA primero, frame LEVEL recien despues -- LayoutGroup ya
+    -- ordena por level (container+1) pero eso no sirve de nada si 2 botones
+    -- de la grilla tienen strata DISTINTA entre si: el de strata mas alta
+    -- puede terminar "ganando" el click de cualquier region que se solape
+    -- con el de mas baja (padding del borde, etc.), sin importar la
+    -- posicion visual. Se normaliza TODO a la misma strata del contenedor
+    -- para que compitan solo por level (que si controlamos).
+    btn:SetFrameStrata(container and container:GetFrameStrata() or "MEDIUM")
     if container then
         btn:SetParent(container)
     end
