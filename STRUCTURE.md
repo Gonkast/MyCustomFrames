@@ -1922,11 +1922,23 @@ migran configs guardadas con rutas antiguas de AzeriteUI a las copias locales.
 **+3 desde 2026-07-24** (merge de Mainmenu-Gonkast): `Background border.tga`,
 `button wood large.tga`, `button red2 large.tga`.
 
-**LISTA DE TEXTURAS RESKINEABLES (confirmada con el usuario 2026-07-25).** Son las 23 que le
-interesan; el resto de `Assets/` NO se reskinea a proposito. Cualquier archivo que la carpeta de
-la skin no traiga cae solo al `Assets/` principal (`ns.SkinResolve` prueba con
-`Texture:SetTexture()`, que devuelve un booleano real) — **nada queda invisible por un archivo
-ausente**, asi que en la skin solo hacen falta los que se quieran cambiar:
+**LISTA DE TEXTURAS RESKINEABLES = LISTA BLANCA `SKINNABLE` (core.lua, arriba de
+`SkinResolve`).** Son las 23 que le interesan al usuario; **el resto de `Assets/` NUNCA se busca
+en la carpeta de la skin**, va siempre al `Assets/` principal.
+
+> **FIX CRITICO 2026-07-25 — no volver a intentar "probar si el archivo existe".** La version
+> anterior resolvia CUALQUIER nombre contra la skin y usaba
+> `skinProbeTex:SetTexture(path)` como prueba de existencia. **`SetTexture` devuelve `true`
+> tambien para archivos inexistentes** (la ruta es sintacticamente valida, WoW dibuja nada), asi
+> que todo lo que la skin no traia quedaba INVISIBLE. Lo reporto el usuario al crear la skin
+> Charcoal: minimapa vacio, interior de portraits vacio, barras de pet/ToT y cap bars ausentes —
+> exactamente los archivos que NO estaban en la carpeta de la skin. Lua en WoW **no puede leer el
+> disco**, no hay forma de detectar existencia: por eso la lista blanca explicita.
+
+**CONTRATO de una skin (confirmado con el usuario): DEBE traer las 23 texturas de la lista
+COMPLETAS + su carpeta `Assets\MasqueSkin\` completa.** No hay skins parciales — un archivo
+faltante de la lista se renderiza invisible. Para hacer un archivo nuevo reskineable hay que
+agregarlo a `SKINNABLE` en core.lua Y a esta lista.
 
 `actionbutton-border square` · `actionbutton-border` · `Background border` · `border-tooltip` ·
 `button red2 large` · `button wood large` · `cast_back` · `group-finder-eye-orange` ·

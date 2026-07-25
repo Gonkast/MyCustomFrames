@@ -137,27 +137,69 @@ ns.TEX_LIB = {
 -- ==========================================================================
 -- SKINS GLOBALES (pedido del usuario 2026-07-23: "un dropdown que aplique la
 -- skin a TODO el addon automaticamente, si un archivo no existe en la carpeta
--- de la skin sigue usando el de Assets"). Se prueba cada archivo con
--- Texture:SetTexture(), que devuelve un booleano de exito real (confirmado
--- contra Blizzard_APIDocumentationGenerated/SimpleTextureBaseAPIDocumentation.lua
--- -- no es un truco, es la API documentada). Sin eso no habria forma de saber
--- si un archivo existe: Lua en WoW no puede leer el disco.
+-- de la skin sigue usando el de Assets").
+--
+-- FIX CRITICO (2026-07-25, reportado por el usuario al crear la skin Charcoal:
+-- "el minimapa sale vacio, el bar de pet y tot cambia de textura, el interior
+-- de los portrait tambien esta vacio, algunas barras cap no salen"): la version
+-- anterior "probaba" si el archivo existia con `skinProbeTex:SetTexture(path)`
+-- confiando en su valor de retorno. **ESO NO FUNCIONA**: SetTexture devuelve
+-- `true` tambien para archivos INEXISTENTES (la ruta es sintacticamente valida,
+-- WoW simplemente dibuja nada) -- asi que la funcion devolvia la ruta de la
+-- skin para CUALQUIER archivo y todo lo que la skin no traia se renderizaba
+-- INVISIBLE. Sintoma exacto: solo se rompian los archivos que NO estaban en la
+-- carpeta de la skin (minimap-mask-*, hp_pet_bar, Circle_Smooth_Border,
+-- hp_cap_bar...). **NO volver a confiar en el retorno de SetTexture como
+-- prueba de existencia** -- Lua en WoW no puede leer el disco, no hay forma.
+--
+-- Solucion (pedido explicito del usuario: "la skin solo debe buscar los
+-- elementos listados y cambiar esos nada mas, todo lo demas seguira siendo los
+-- assets de la carpeta del addon principal"): **LISTA BLANCA explicita**
+-- (`SKINNABLE`). Solo estos nombres se buscan en la carpeta de la skin;
+-- cualquier otro va DIRECTO a `Assets\` del addon principal, sin probar nada.
+-- Es determinista y no depende de adivinar si un archivo existe.
+--
+-- Para que un archivo nuevo sea reskineable hay que agregarlo ACA (y a la
+-- seccion "Assets locales" de STRUCTURE.md). Contrapartida asumida: si una skin
+-- trae un archivo que NO esta en esta lista, se ignora en silencio.
 -- ==========================================================================
-local skinProbeTex = CreateFrame("Frame"):CreateTexture(nil, "BACKGROUND")
+local SKINNABLE = {}
+for _, f in ipairs({
+    -- Unitframes: cages / capsulas (las BARRAS de relleno no se reskinean a
+    -- proposito -- pedido del usuario, ver la lista de 23 en STRUCTURE.md).
+    "hp_low_case.tga", "hp_low_case_miror_s.tga", "hp_low_case_mirror.tga",
+    "hp_low_case_mirror_b.tga", "hp_party_cage.tga", "hp_pet_cage.tga",
+    "power_low_case_s.tga", "cast_back.tga",
+    -- Portraits
+    "orb_case_low.tga", "portrait_frame_lo.tga",
+    -- Auras / action buttons
+    "actionbutton-border square.tga", "actionbutton-border.tga",
+    -- Info bar
+    "info_bg.tga",
+    -- Minimapa (borde + backdrop del anillo + ojo LFG + boton de dismount).
+    -- Las MASCARAS (minimap-mask-*) quedan AFUERA: definen la FORMA del
+    -- minimapa, si una skin las trae mal el minimapa se rompe entero.
+    "minimap-border.tga", "minimap-onebar-backdrop.tga",
+    "group-finder-eye-orange.tga", "icon_exit_flight.tga",
+    -- Class power / raid target
+    "point_diamond.tga", "point_plate.tga",
+    -- Tooltip
+    "border-tooltip.tga",
+    -- Game Menu (MainMenu.lua)
+    "Background border.tga", "button wood large.tga", "button red2 large.tga",
+}) do SKINNABLE[f] = true end
+ns.SKINNABLE = SKINNABLE
+
 local function SkinResolve(filename)
-    -- ActiveSkinBasePath (addon-skin SEPARADO, ej. MyCustomFrames_Murloc) tiene
+    -- No esta en la lista blanca -> SIEMPRE el asset del addon principal.
+    if not SKINNABLE[filename] then return A .. filename end
+    -- ActiveSkinBasePath (addon-skin SEPARADO, ej. MyCustomFrames_Charcoal) tiene
     -- prioridad sobre ActiveSkinFolder (subcarpeta interna de Assets\, ej. el
     -- ejemplo "Neon"): son dos formas de declarar una skin, mutuamente excluyentes.
     local base = ns.ActiveSkinBasePath
-    if base then
-        local path = base .. filename
-        if skinProbeTex:SetTexture(path) then return path end
-    end
+    if base then return base .. filename end
     local folder = ns.ActiveSkinFolder or ""
-    if folder ~= "" then
-        local path = A .. folder .. filename
-        if skinProbeTex:SetTexture(path) then return path end
-    end
+    if folder ~= "" then return A .. folder .. filename end
     return A .. filename
 end
 ns.SkinResolve = SkinResolve
@@ -172,6 +214,12 @@ ns.SkinResolve = SkinResolve
 -- tiene el suyo propio, privado (eso es lo que devuelve `...` en cada .lua).
 -- basePath = ruta COMPLETA a la carpeta de assets de ESE addon (no un
 -- subfolder de nuestro propio Assets\).
+--
+-- **CONTRATO (confirmado por el usuario 2026-07-25): una skin DEBE traer TODOS
+-- los archivos de la lista `SKINNABLE` (ver SkinResolve) + su carpeta
+-- `Assets\MasqueSkin\` completa.** No hay skins parciales: ya no se puede
+-- detectar si un archivo existe (SetTexture miente, ver el FIX CRITICO en
+-- SkinResolve), asi que un archivo faltante de esa lista se renderiza INVISIBLE.
 -- ==========================================================================
 _G.MCF_RegisterSkin = function(label, basePath, msqSkin)
     if type(label) ~= "string" or label == "" or type(basePath) ~= "string" then return end
