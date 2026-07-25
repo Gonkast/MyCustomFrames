@@ -275,14 +275,17 @@ local function StyleAuraButton(b, g, p, data, iconSize)
 
     b.swipe:SetShown(p.showSwipe and true or false)
 
-    -- Mouse fuera de preview si: tooltip activo, o hover-alpha (grupo dualPos con base <1).
-    -- D: si este grupo PARTICIPA en el Explorer (y esta activo), se DESACTIVA su mouseover
-    -- (tooltip/hover) para que revelar por mouseover no dispare tooltip. El clic-derecho de
-    -- cancelar buff es un overlay seguro aparte (no afectado por este EnableMouse).
+    -- Mouse fuera de preview si el tooltip esta activo. El clic-derecho de cancelar
+    -- buff es un overlay seguro aparte (no afectado por este EnableMouse).
+    -- FIX (2026-07-24, "el tooltip de las auras de player y target dejo de
+    -- funcionar"): antes se apagaba EnableMouse por completo si el grupo estaba
+    -- gestionado por el Explorer ("para que revelar por mouseover no dispare
+    -- tooltip") -- pero el Explorer revela por IsMouseOver (geometrico, no
+    -- necesita EnableMouse), asi que esa restriccion solo servia para matar el
+    -- tooltip sin ningun beneficio real una vez que aura_player/aura_target
+    -- pasaron a ser manejables por Explorer.
     b._showTip = p.showTooltip and true or false
-    local inExplorer = ns.GetDB().explorerEnabled ~= false and ns.GetDB().explorer and ns.GetDB().explorer[g.key] and true or false
-    local wantHover = p.showTooltip and not inExplorer
-    b:EnableMouse((not ns.IsUnlocked()) and wantHover and true or false)
+    b:EnableMouse((not ns.IsUnlocked()) and p.showTooltip and true or false)
     b._unit, b._filter = g.unit, data.__filter
 
     -- Clic derecho para cancelar: SOLO buffs propios del player. No se tocan
