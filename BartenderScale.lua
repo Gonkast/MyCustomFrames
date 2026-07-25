@@ -80,15 +80,45 @@ local function ApplyAllBarScales()
 end
 ns.RefreshBartenderScale = ApplyAllBarScales
 
+-- Pedido del usuario (2026-07-24): "la barra de pet, que desaparezca si no
+-- existe pet" -- alpha+EnableMouse(false) (mismo criterio ya usado en
+-- core.lua para frames nativos: SetAlpha nunca esta protegido, ni siquiera
+-- en frames con botones de accion reales, a diferencia de Show/Hide).
+-- _mcfCombatHidden se reusa (mismo flag que ya respeta el driver de
+-- Explorer.lua) para que, si el usuario ADEMAS tiene "Pet Bar" prendido en
+-- Explorer, este chequeo GANE -- sin pet, se queda oculta pase lo que pase
+-- con mouseover/combate.
+local petBarHiddenNoPet = false
+local function UpdatePetBarVisibility()
+    local bar = _G.BT4BarPetBar
+    if not bar then return end
+    local hasPet = UnitExists("pet")
+    if not hasPet then
+        petBarHiddenNoPet = true
+        bar._mcfCombatHidden = true
+        bar:SetAlpha(0)
+        pcall(bar.EnableMouse, bar, false)
+    elseif petBarHiddenNoPet then
+        petBarHiddenNoPet = false
+        bar._mcfCombatHidden = false
+        bar:SetAlpha(1)
+        pcall(bar.EnableMouse, bar, true)
+    end
+end
+ns.RefreshPetBarVisibility = UpdatePetBarVisibility
+
 local evFrame = CreateFrame("Frame")
 evFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 evFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-evFrame:SetScript("OnEvent", function(_, event)
+evFrame:RegisterEvent("UNIT_PET")
+evFrame:SetScript("OnEvent", function(_, event, unit)
     if event == "PLAYER_REGEN_ENABLED" then
         if pendingApply then ApplyAllBarScales() end
         return
     end
+    if event == "UNIT_PET" and unit ~= "player" then return end
     ApplyAllBarScales()
+    UpdatePetBarVisibility()
 end)
 
 -- DIAGNOSTICO: /mcfbt4diag -- lista los frames CONTENEDOR (barras, no botones
