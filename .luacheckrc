@@ -22,6 +22,7 @@ globals = {
     "StaticPopupDialogs",
     "DynamicCam",
     "MyCF_BuildRaidMember",
+    "GameMenuFrame",   -- MainMenu.lua le cuelga campos propios __gonk* encima del frame nativo
     "SLASH_MYCUSTOMFRAMES1", "SLASH_MCFCHAR1", "SLASH_MCFSETUP1", "SLASH_MCFHUD1",
     "SLASH_MCFTRACKERDUMP1", "SLASH_MCFTOOLTIP1", "SLASH_MCFEXTRABTN1",
     "SLASH_MCFCLASSPOWERDIAG1", "SLASH_MCFPANELDIAG1", "SLASH_MCFMENU1",

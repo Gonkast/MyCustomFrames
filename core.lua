@@ -256,6 +256,7 @@ ns.ApplySkin = function(skin)
     if ns.RefreshRaid then ns.RefreshRaid() end
     if ns.RefreshMirrorTimers then ns.RefreshMirrorTimers() end
     if ns.RefreshMinimapButtons then ns.RefreshMinimapButtons() end
+    if ns.RefreshMainMenuSkin then ns.RefreshMainMenuSkin() end
     if ns.ApplyMasqueSkinAll then ns.ApplyMasqueSkinAll(skin) end
     print("|cff00ff00[MCF]|r Skin applied: " .. skin.label)
 end
