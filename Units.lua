@@ -451,28 +451,14 @@ local function UnitUpdateHighlight(u)
     end
 end
 
-local function TargetReactionLE4()
-    local ok, reaction = pcall(UnitReaction, "target", "player")
-    return (ok and type(reaction) == "number"
-        and not (issecretvalue and issecretvalue(reaction))
-        and reaction <= 4) or false
-end
-
+-- Pedido del usuario (2026-07-24, "que siempre aparezcan si existen y en el
+-- explorer que esten -- que desaparezcan junto a su unitframe"): playerpower/
+-- targetpower ya NO tienen condicion propia (combate/reaccion del target/
+-- vivo-o-muerto) -- ahora siguen la MISMA regla generica que cualquier otra
+-- power bar (mostrar si la unidad existe). Quien quiera ocultarlas segun
+-- contexto ahora usa el Explorer (agrupadas junto a "Player"/"Target" en
+-- EXPLORER_LIST, Options.lua -- se ocultan/reaparecen JUNTO a su unitframe).
 local function PowerShouldShow(u)
-    if u.key == "playerpower" then
-        -- Muerto: ocultar SIEMPRE la power bar del player (no solo el cage).
-        if ns.safeBool(UnitIsDeadOrGhost, "player") then return false end
-        if ns.tickState.inCombat then return true end
-        if not UnitExists("target") then return false end
-        return TargetReactionLE4()
-    elseif u.key == "targetpower" then
-        if not UnitExists("target") then return false end
-        -- Si me tengo a mi mismo de target y estoy muerto: ocultar (bar + cage).
-        if ns.safeBool(UnitIsUnit, "target", "player") then
-            if ns.safeBool(UnitIsDeadOrGhost, "player") then return false end
-        end
-        return ns.safeBool(UnitIsPlayer, "target")
-    end
     return UnitExists(u.unit)
 end
 
