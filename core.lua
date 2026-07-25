@@ -2502,8 +2502,16 @@ local function MCF_DumpFrameLine(lines, label, frame)
     if not frame then lines[#lines + 1] = label .. " | (no existe)"; return end
     local ok, cx, cy = pcall(frame.GetCenter, frame)
     if not ok or not cx or not cy then lines[#lines + 1] = label .. " | (sin GetCenter, oculto/sin posicion)"; return end
+    -- FIX: GetCenter() devuelve coordenadas en el espacio propio del frame
+    -- (divididas por SU PROPIO GetEffectiveScale()), no en el espacio de
+    -- UIParent -- hay que reconvertir a pixeles "reales" (screenX = cx *
+    -- frame:GetEffectiveScale()) antes de compararlos contra UIParent:GetWidth()
+    -- (que esta en su PROPIO espacio, effectiveScale=1 salvo casos raros).
+    -- Sin esto, cualquier widget con scale != 1 salia con x_frac/y_frac mal.
+    local feScale = frame.GetEffectiveScale and frame:GetEffectiveScale() or 1
+    local upScale = UIParent.GetEffectiveScale and UIParent:GetEffectiveScale() or 1
     local sw, sh = UIParent:GetWidth(), UIParent:GetHeight()
-    local fx, fy = cx / sw, cy / sh
+    local fx, fy = (cx * feScale) / (sw * upScale), (cy * feScale) / (sh * upScale)
     local scale = frame.GetScale and frame:GetScale() or 1
     local w, h = frame.GetSize and frame:GetSize() or 0, 0
     lines[#lines + 1] = string.format("%-22s | x=%.4f y=%.4f | scale=%.3f | w=%.1f h=%.1f | shown=%s",
