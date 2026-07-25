@@ -133,7 +133,6 @@ ns.BUILTIN = {
       ["useDeadPos"]=true,
     },
   },
-  ["barReposition"]=true,
   ["chatbubble"]={
     ["color"]={
       ["b"]=0.607843161,

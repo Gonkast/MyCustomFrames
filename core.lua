@@ -1567,7 +1567,7 @@ end
 -- bartenderAutoProfile/bartenderAutoApplied/defaultPreset (bookkeeping
 -- interno/por-personaje, no "apariencia" para compartir).
 local GLOBAL_FLAT_KEYS = {
-    "hideEditOutline", "groupMoveParty", "groupMoveBoss", "mouselook", "hideBlizzard", "barReposition",
+    "hideEditOutline", "groupMoveParty", "groupMoveBoss", "mouselook", "hideBlizzard",
     "dcFix", "gridShow", "gridSnap", "snapElements", "syncBlizzEditMode",
     "previewSecureButton", "fadeIn", "fadeDuration",
     "explorerEnabled", "explorerCombat", "explorerTarget", "explorerCasting", "explorerFadeAlpha",
@@ -1780,7 +1780,6 @@ local function InitDB()
     if db.mouselook == nil then db.mouselook = false end
     if db.panelScale == nil then db.panelScale = 1.0 end   -- escala de la VENTANA del menu (no de las unidades)
     if db.hideBlizzard == nil then db.hideBlizzard = false end
-    if db.barReposition == nil then db.barReposition = false end
     if db.dcFix == nil then db.dcFix = true end   -- fix DialogueUI+DynamicCam (on por defecto)
     if db.gridShow == nil then db.gridShow = false end   -- grid de alineacion en modo Lock
     if db.gridSnap == nil then db.gridSnap = false end   -- al soltar, ajusta a la grilla

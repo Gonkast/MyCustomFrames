@@ -146,8 +146,14 @@ explorerDriver:SetScript("OnUpdate", function(self, dt)
             -- _mcfCombatHidden: portrait "oculto" via alpha en combate (frame protegido);
             -- su alpha lo gestiona PortraitSetShown, no el Explorer.
             if f and f:IsShown() and not f._mcfCombatHidden then
+                -- Pedido del usuario 2026-07-24: "si la barra uno de bartender se vuelve la
+                -- de reemplazo o posses bar, se muestre aunque este el explorer on" -- cuando
+                -- Bartender4 reasigna BT4Bar1 (Player) para reflejar la override/vehicle/
+                -- possess bar de Blizzard, se fuerza visible SIEMPRE, sin importar mouseover/
+                -- combate/etc (ver self.overrideBar, calculado en TickExplorer).
+                local forceOverride = (key == "BT4Bar1") and self.overrideBar
                 local myLo = (eAlpha and eAlpha[key]) or lo
-                local target = (self.combat or self.showTgt or self.casting or IsMouseOverElement(f, key)) and 1 or myLo
+                local target = (self.combat or self.showTgt or self.casting or forceOverride or IsMouseOverElement(f, key)) and 1 or myLo
                 local cur = f._exAlpha; if cur == nil then cur = f:GetAlpha() end
                 cur = cur + (target - cur) * (target > cur and kIn or kOut)
                 if math.abs(target - cur) < 0.003 then cur = target end
@@ -221,6 +227,13 @@ ns.TickExplorer = function()
         -- Casteo/canalizacion del PLAYER: revela al instante (ReadCastMode es secret-safe;
         -- el fade de revelado tiene half-life ~60ms → se percibe inmediato).
         explorerDriver.casting = (db.explorerCasting and ns.ReadCastMode("player") ~= nil) or false
+        -- BT4Bar1 forzado visible si se convirtio en la override/vehicle/possess bar
+        -- (ver el "forceOverride" del OnUpdate de arriba). Secret-safe via ns.safeBool
+        -- (mismo criterio que el resto del addon para cualquier UnitXxx/HasXxx que
+        -- pueda devolver un valor secreto en Midnight 12.0.7).
+        explorerDriver.overrideBar = ns.safeBool(HasOverrideActionBar)
+            or ns.safeBool(HasVehicleActionBar)
+            or ns.safeBool(UnitHasVehicleUI, "player")
     elseif explorerDriver._wasOn then
         -- Se apago (zona no permitida o master off): restaurar alpha 1 UNA vez.
         if ns.ExplorerResetAll then ns.ExplorerResetAll() end

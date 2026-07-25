@@ -24,9 +24,8 @@
 -- reaplica base*rs encima, sin pisar la eleccion del usuario.
 --
 -- SEGURIDAD: SetScale sobre una barra con botones de accion activos puede
--- estar protegido/dar ADDON_ACTION_BLOCKED en combate igual que SetPoint (ver
--- BarReposition.lua, mismo caso real con BT4Bar5) -- todo pcall + diferido a
--- PLAYER_REGEN_ENABLED si esta en combate.
+-- estar protegido/dar ADDON_ACTION_BLOCKED en combate igual que SetPoint --
+-- todo pcall + diferido a PLAYER_REGEN_ENABLED si esta en combate.
 -- ==========================================================================
 local ADDON, ns = ...
 

@@ -665,8 +665,6 @@ local function BuildPage6(content)
         local d = ns.GetDB()
         if d then
             if d.bartenderAutoProfile == nil then d.bartenderAutoProfile = selectedBTProfile end
-            d.barReposition = true
-            if ns.RefreshBarReposition then ns.RefreshBarReposition() end
         end
     end
 
@@ -716,20 +714,8 @@ local function BuildPage6(content)
             d.bartenderAutoProfile = v and selectedBTProfile or nil
         end)
 
-    -- 2026-07-16: mueve la barra possess/vehicle de Bartender4 (BT4Bar5) a una posicion
-    -- fija mientras el jugador esta MONTADO (ver BarReposition.lua). Guardado en
-    -- db.barReposition, mismo toggle que en Options.lua (Editing tab) — solo se agrega
-    -- aca tambien para que quede visible durante el setup inicial.
-    local barRepoCB = Toggle(p, "Move Bartender possess bar while mounted", 4, -146,
-        function() local d = ns.GetDB(); return d and d.barReposition end,
-        function(v)
-            local d = ns.GetDB(); if not d then return end
-            d.barReposition = v
-            if ns.RefreshBarReposition then ns.RefreshBarReposition() end
-        end)
-
     local applyBtn = TexButton(p, CUSTOM.APPLY, 240, 40, "Apply to this character", 13)
-    applyBtn:SetPoint("TOPLEFT", 2, -184)
+    applyBtn:SetPoint("TOPLEFT", 2, -156)
     AttentionGlow(applyBtn)
 
     local resultFs = p:CreateFontString(nil, "ARTWORK")

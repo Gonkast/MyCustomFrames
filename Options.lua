@@ -2449,22 +2449,10 @@ local function BuildPanel()
                     print("|cffffcc00[MCF]|r Reload (/reload) to restore the Blizzard frames.")
                 end
             end)
-        local barRepoCB = MakeToggle(f, "Bartender bar (mounted)", R, -150,
-            function() return ns.GetDB().barReposition end,
-            function(v) ns.GetDB().barReposition = v; if ns.RefreshBarReposition then ns.RefreshBarReposition() end end)
-        barRepoCB:HookScript("OnEnter", function(self)
-            if GameTooltip:IsForbidden() then return end
-            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetText("Bartender: move possess bar while mounted", COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
-            GameTooltip:AddLine("Moves Bartender4's possess/vehicle bar (BT4Bar5) to (-246, -175) while the " ..
-                "player is mounted. Restores its original Bartender position automatically when dismounting.", 1, 1, 1, true)
-            GameTooltip:Show()
-        end)
-        barRepoCB:HookScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
-        MakeToggle(f, "Smooth fade-in (frames appearing)", R, -174,
+        MakeToggle(f, "Smooth fade-in (frames appearing)", R, -150,
             function() return ns.GetDB().fadeIn end,
             function(v) ns.GetDB().fadeIn = v end)
-        local dcFixCB = MakeToggle(f, "DynamicCam camera fix", R, -198,
+        local dcFixCB = MakeToggle(f, "DynamicCam camera fix", R, -174,
             function() return ns.GetDB().dcFix end,
             function(v) ns.GetDB().dcFix = v; if ns.ApplyDcFix then ns.ApplyDcFix() end end)
         dcFixCB:HookScript("OnEnter", function(self)
@@ -2480,7 +2468,7 @@ local function BuildPanel()
         end)
         dcFixCB:HookScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
         local tnote = f:CreateFontString(nil, "ARTWORK"); setFont(tnote, 10)
-        tnote:SetPoint("TOPLEFT", R, -230); tnote:SetWidth(210); tnote:SetJustifyH("LEFT")
+        tnote:SetPoint("TOPLEFT", R, -206); tnote:SetWidth(210); tnote:SetJustifyH("LEFT")
         tnote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         tnote:SetText("Grid, Snap and Preview moved to the EDITING tab (top). Quest tracker options are in the TRACKER tab.")
 

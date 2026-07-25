@@ -102,10 +102,6 @@ MasqueSkin.lua
 # texturas portadas 1:1 de AzeriteUI5. Standalone, mismo patron que Glow.lua.
 ClassPower.lua
 
-# Reposiciona la barra possess/vehicle de Bartender4 (BT4Bar5) a una posicion fija
-# SOLO mientras el jugador esta MONTADO (db.barReposition, toggle en Options.lua/Setup.lua).
-BarReposition.lua
-
 # Auto-scale por resolucion (ns.ResScale, ver core.lua) aplicado a las barras de
 # accion BT4Bar1-10 de Bartender4, multiplicado sobre la escala que ya tiene
 # configurada el usuario en Bartender4.
