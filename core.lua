@@ -2311,6 +2311,14 @@ end
 local function HB_HideAlpha(frame)
     if not frame then return end
     if frame.SetAlpha then frame:SetAlpha(0) end
+    -- FIX (2026-07-24, reportado por el usuario via /fstack: el frame nativo de arena
+    -- seguia apareciendo BAJO el cursor pese al alpha=0): SetAlpha(0) esconde
+    -- VISUALMENTE pero NO desactiva el mouse -- el frame nativo (invisible) seguia
+    -- interceptando hover/clicks por delante del unitframe propio del addon.
+    -- EnableMouse(false) es una llamada segura (no protegida como Show/Hide/SetPoint)
+    -- incluso en frames protegidos -- se agrega aca, mismo lugar central que ya
+    -- reaplica esto en cada refresh.
+    if frame.EnableMouse then pcall(frame.EnableMouse, frame, false) end
     HB_HookShowAlpha(frame)
 end
 
