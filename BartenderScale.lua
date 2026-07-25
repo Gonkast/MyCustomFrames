@@ -90,3 +90,20 @@ f:SetScript("OnEvent", function(_, event)
     end
     ApplyAllBarScales()
 end)
+
+-- DIAGNOSTICO: /mcfbt4diag -- lista TODOS los frames globales cuyo nombre
+-- empieza con "BT4" (nombres reales en este cliente, en vez de adivinar --
+-- reportado 2026-07-24: "la pet bar no lo esta haciendo" / "y tampoco la de
+-- bag" -- BT4PetBar/BT4BagBar/etc no existen con esos nombres exactos).
+SLASH_MCFBT4DIAG1 = "/mcfbt4diag"
+SlashCmdList["MCFBT4DIAG"] = function()
+    local names = {}
+    for k, v in pairs(_G) do
+        if type(k) == "string" and k:sub(1, 3) == "BT4" and type(v) == "table" and v.GetObjectType then
+            names[#names + 1] = k
+        end
+    end
+    table.sort(names)
+    print("|cffffe19b[MCF]|r BT4 frames found (" .. #names .. "):")
+    for _, n in ipairs(names) do print("  " .. n) end
+end
