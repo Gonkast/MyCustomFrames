@@ -2560,7 +2560,7 @@ local function MCF_ScaleDump()
         local bar = _G["BT4Bar" .. i]
         if bar then MCF_DumpFrameLine(lines, "BT4Bar" .. i, bar) end
     end
-    for _, name in ipairs({ "BT4PetBar", "BT4StanceBar", "BT4BagBar", "BT4RepBar", "BT4XPBar", "BT4MicroMenu" }) do
+    for _, name in ipairs({ "BT4BarPetBar", "BT4BarStanceBar", "BT4BarBagBar", "BT4BarExtraActionBar" }) do
         if _G[name] then MCF_DumpFrameLine(lines, name, _G[name]) end
     end
     MCF_ScaleDumpBox(table.concat(lines, "\n"))

@@ -32,9 +32,10 @@ local ADDON, ns = ...
 
 local BT4_BARS = {}
 for i = 1, 10 do BT4_BARS[i] = "BT4Bar" .. i end
--- Modulos con nombre propio (no numerados como BT4Bar1-10): pet/stance/bag bar,
--- barra de reputacion/experiencia, micro menu propio de Bartender4.
-for _, name in ipairs({ "BT4PetBar", "BT4StanceBar", "BT4BagBar", "BT4RepBar", "BT4XPBar", "BT4MicroMenu" }) do
+-- Modulos con nombre propio (no numerados como BT4Bar1-10) -- nombres REALES
+-- confirmados via /mcfbt4diag (2026-07-24, los adivinados "BT4PetBar" etc. no
+-- existian; el prefijo real es "BT4Bar<Modulo>", no "BT4<Modulo>Bar").
+for _, name in ipairs({ "BT4BarPetBar", "BT4BarStanceBar", "BT4BarBagBar", "BT4BarExtraActionBar" }) do
     BT4_BARS[#BT4_BARS + 1] = name
 end
 
