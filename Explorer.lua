@@ -38,7 +38,7 @@ explorerDriver:SetScript("OnUpdate", function(self, dt)
             -- _mcfCombatHidden: portrait "oculto" via alpha en combate (frame protegido);
             -- su alpha lo gestiona PortraitSetShown, no el Explorer.
             if f and f:IsShown() and not f._mcfCombatHidden then
-                local target = (self.combat or self.showTgt or self.casting or f:IsMouseOver()) and 1 or lo
+                local target = (self.combat or self.showTgt or self.casting or self.damage or f:IsMouseOver()) and 1 or lo
                 local cur = f._exAlpha; if cur == nil then cur = f:GetAlpha() end
                 cur = cur + (target - cur) * (target > cur and kIn or kOut)
                 if math.abs(target - cur) < 0.003 then cur = target end
@@ -88,8 +88,35 @@ local function ExplorerZoneAllowed()
 end
 ns.ExplorerZoneAllowed = ExplorerZoneAllowed
 
+-- ==========================================================================
+-- Condicion "recibi daño" (pedido del usuario 2026-07-24: "agrega si recibo
+-- daño, tambien show... si se activa la auto regeneracion, volver a
+-- explorer"). Se detecta por COMBAT_LOG_EVENT_UNFILTERED (tipos de evento de
+-- daño, NUNCA leyendo el numero de daño en si) filtrando destGUID == GUID del
+-- player -- secret-safe, no compara ningun valor de salud/daño, solo el TIPO
+-- de evento (string) y el GUID (string), ninguno de los 2 es secreto en este
+-- cliente. "Volver a explorer" = dejar de forzar visible despues de
+-- DAMAGE_REVEAL_WINDOW segundos SIN recibir daño nuevo -- aproxima el momento
+-- en que la regeneracion fuera de combate arranca (Blizzard la activa a los
+-- ~5s sin recibir daño), sin necesitar leer el estado de regen directamente
+-- (no existe una API publica limpia para eso).
+local DAMAGE_REVEAL_WINDOW = 4
+local lastDamageTime = 0
+local DAMAGE_SUBEVENTS = {
+    SWING_DAMAGE = true, RANGE_DAMAGE = true, SPELL_DAMAGE = true,
+    SPELL_PERIODIC_DAMAGE = true, ENVIRONMENTAL_DAMAGE = true,
+}
+local damageWatcher = CreateFrame("Frame")
+damageWatcher:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+damageWatcher:SetScript("OnEvent", function()
+    local _, subevent, _, _, _, _, _, destGUID = CombatLogGetCurrentEventInfo()
+    if DAMAGE_SUBEVENTS[subevent] and destGUID == UnitGUID("player") then
+        lastDamageTime = GetTime()
+    end
+end)
+
 -- Llamado desde el ticker central de core.lua (10Hz) -- solo refresca el estado de
--- combate/target/casteo (del snapshot ns.tickState) y enciende/apaga el driver de
+-- combate/target/casteo/daño (del snapshot ns.tickState) y enciende/apaga el driver de
 -- animacion; la animacion en si corre en el OnUpdate de arriba, no aqui.
 ns.TickExplorer = function()
     local db = ns.GetDB()
@@ -102,6 +129,7 @@ ns.TickExplorer = function()
         -- Casteo/canalizacion del PLAYER: revela al instante (ReadCastMode es secret-safe;
         -- el fade de revelado tiene half-life ~60ms → se percibe inmediato).
         explorerDriver.casting = (db.explorerCasting and ns.ReadCastMode("player") ~= nil) or false
+        explorerDriver.damage = (db.explorerDamage and (GetTime() - lastDamageTime) < DAMAGE_REVEAL_WINDOW) or false
     elseif explorerDriver._wasOn then
         -- Se apago (zona no permitida o master off): restaurar alpha 1 UNA vez.
         if ns.ExplorerResetAll then ns.ExplorerResetAll() end
