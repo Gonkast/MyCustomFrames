@@ -653,7 +653,24 @@ SlashCmdList["MCFMINIMAPBTNSLIST"] = function()
     print("|cff00ff00[MCF]|r Minimap buttons detected:")
     for btn in pairs(collected) do
         local name = buttonNames[btn] or "(sin nombre / scan generico)"
-        print("  - " .. name .. (btn:IsShown() and "" or "  |cff888888(oculto por su addon)|r"))
+        -- DIAGNOSTICO (2026-07-24, "no reaccionan, ni tooltip ni click"):
+        -- vuelca mouse-enabled/type/strata/level/hitrect de cada boton
+        -- capturado -- sin esto solo podemos adivinar por que dejaron de
+        -- responder despues de reparentarlos.
+        local okType, otype = pcall(btn.GetObjectType, btn)
+        local okMouse, mouseEnabled = pcall(btn.IsMouseEnabled, btn)
+        local okEnabled, isEnabled = pcall(btn.IsEnabled, btn)
+        local okStrata, strata = pcall(btn.GetFrameStrata, btn)
+        local okLevel, level = pcall(btn.GetFrameLevel, btn)
+        local okHit, l, r, t, b = pcall(btn.GetHitRectInsets, btn)
+        print(("  - %s%s"):format(name, btn:IsShown() and "" or "  |cff888888(oculto por su addon)|r"))
+        print(("      type=%s mouseEnabled=%s isEnabled=%s strata=%s level=%s hitInsets=%s"):format(
+            okType and tostring(otype) or "?",
+            okMouse and tostring(mouseEnabled) or "?",
+            okEnabled and tostring(isEnabled) or "?",
+            okStrata and tostring(strata) or "?",
+            okLevel and tostring(level) or "?",
+            okHit and string.format("%.0f,%.0f,%.0f,%.0f", l, r, t, b) or "?"))
     end
 end
 
