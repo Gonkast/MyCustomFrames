@@ -203,40 +203,32 @@ local function HideButtonArt(button)
 	end
 end
 
--- FIX (2026-07-25, confirmado con /mcfmenudiag: "hijos de GameMenuFrame: 6 |
--- shown: 1 | skineados: 0"): los botones YA NO son hijos DIRECTOS de
--- GameMenuFrame en este cliente (Midnight 12.0.7) -- Blizzard reescribio el menu
--- y los metio en un contenedor intermedio. El chequeo viejo exigia
--- `GetParent() == GameMenuFrame`, asi que NINGUN boton pasaba el filtro y nunca
--- se skineaba ninguno: lo que se veia era el arte nativo de Blizzard.
--- (Sintoma ligado: el fondo quedaba diminuto, porque su ancho se deriva del
--- arte de los botones -- sin botones skineados no habia de donde sacarlo.)
--- Ahora se acepta cualquier DESCENDIENTE de GameMenuFrame; el filtro real es
--- "es un Button y tiene texto", que es lo que distingue una entrada del menu de
--- la X de cerrar, barras de scroll, etc.
+-- IDENTICA al addon original (Mainmenu-Gonkast/Core.lua), a proposito.
+-- 2026-07-25: se habia "arreglado" esto (sacar el chequeo de padre + exigir
+-- texto NO vacio + recorrido recursivo) por un diagnostico MAL LEIDO -- el
+-- "0 botones skineados" que se vio era simplemente porque el menu nunca se
+-- habia abierto en esa sesion (Blizzard crea los botones recien al mostrarlo),
+-- no porque el filtro fallara. El cambio ademas RECHAZABA botones que esta
+-- version aceptaba (texto ""). Revertido: si algo hay que tocar aca, primero
+-- confirmar con el menu ABIERTO.
 local function IsGameMenuButton(button)
-	if not button then return false end
+	if not button or button:GetParent() ~= GameMenuFrame then
+		return false
+	end
 	if button.GetObjectType and button:GetObjectType() ~= "Button" then
 		return false
 	end
-	local txt = button.GetText and button:GetText()
-	return (type(txt) == "string" and txt ~= "") and true or false
+	return (button.GetText and button:GetText() ~= nil) and true or false
 end
 
--- Recorre los descendientes de GameMenuFrame (profundidad acotada: el
--- contenedor de Blizzard esta 1-2 niveles adentro, 4 da margen de sobra sin
--- volverse un barrido caro en cada OnShow) y llama `fn` en cada boton de menu.
-local function ForEachMenuButton(fn, frame, depth)
-	frame = frame or GameMenuFrame
-	depth = depth or 4
-	if not frame or depth < 0 then return end
-	local ok, children = pcall(function() return { frame:GetChildren() } end)
-	if not ok then return end
-	for _, child in ipairs(children) do
-		if IsGameMenuButton(child) then
+-- Recorre los botones del menu igual que el original (hijos DIRECTOS y
+-- visibles). Se deja como funcion sola para que el diagnostico use exactamente
+-- el mismo criterio que el skineo, sin duplicar la condicion.
+local function ForEachMenuButton(fn)
+	if not GameMenuFrame then return end
+	for _, child in ipairs({ GameMenuFrame:GetChildren() }) do
+		if child.IsShown and child:IsShown() then
 			fn(child)
-		else
-			ForEachMenuButton(fn, child, depth - 1)
 		end
 	end
 end
@@ -310,10 +302,6 @@ local function SkinButton(button)
 	local visW = visH * (CFG.buttonAspect or (934 / 177)) * (CFG.buttonWidthScale or 1.0)
 	local texExtraWidth = visW - button:GetWidth()   -- for the hit-rect expansion below
 
-	-- Ancho REAL del arte visible -- lo usa SizeBackground (ver ahi): el fondo no
-	-- puede depender de GameMenuFrame:GetWidth(), que es el ancho del BOTON
-	-- nativo (angosto) y ademas cambia segun cuando corra el Layout().
-	GameMenuFrame.__gonkArtW = math.max(GameMenuFrame.__gonkArtW or 0, visW)
 	button.__gonkTex:SetSize(visW, visH)
 	if button.__gonkHL then
 		button.__gonkHL:SetSize(visW, visH)
@@ -526,23 +514,20 @@ end
 -- (por bgScale) y el ALTO se DERIVA de la proporcion real del .tga (944x1725),
 -- nunca estirado. bgScale agranda/achica todo junto sin romper el ratio
 -- (2026-07-23, "aumentar el tamaño sin cambiar el ratio").
--- FIX 2 (2026-07-25, "se volvio a dañar el fondo del game menu"): el intento
--- anterior (mover esto DESPUES del Layout()) no alcanzo -- el problema de fondo
--- es que `GameMenuFrame:GetWidth()` NO sirve como referencia: es el ancho del
--- boton NATIVO de Blizzard (angosto), y nuestro arte se dibuja MAS ANCHO que el
--- boton (visW se deriva de la proporcion real del .tga, y el area de click se
--- ensancha con SetHitRectInsets, sin tocar el ancho del frame). Encima ese valor
--- cambia segun cuando corra el Layout(). Resultado: un fondo angosto y altisimo
--- (h = w * 1.827), justo lo que se veia.
--- Ahora la referencia es el ANCHO DEL ARTE de los botones (__gonkArtW, que
--- calculamos nosotros en SkinButton) -- deterministico y sin depender del
--- layout. GetWidth() queda solo como respaldo si todavia no se skineo ninguno.
+-- Dimensiona el fondo/borde igual que el addon original: el ANCHO sale del
+-- ancho del frame + padding (por bgScale) y el ALTO se DERIVA de la proporcion
+-- real del .tga (944x1725), nunca estirado.
+-- NOTA (2026-07-25): el usuario reporta que tras un /reload el fondo sale chico
+-- la PRIMERA vez que abre el menu y despues se acomoda solo. Se intentaron 2
+-- "arreglos" (mover esta llamada despues del Layout(), y derivar el ancho del
+-- arte de los botones) y NINGUNO lo resolvio -- ambos revertidos. El
+-- comportamiento es el mismo que tenia el addon original, asi que NO lo
+-- introdujo el merge. Pendiente de diagnosticar con datos reales del menu
+-- ABIERTO (/mcfmenudiag) antes de volver a tocarlo.
 local function SizeBackground()
 	local bg = GameMenuFrame.__gonkBG
 	if not bg then return end
-	local ref = GameMenuFrame.__gonkArtW
-	if not ref or ref <= 0 then ref = GameMenuFrame:GetWidth() or 200 end
-	local w = (ref + CFG.bgPadLeft + CFG.bgPadRight) * (CFG.bgScale or 1.0)
+	local w = ((GameMenuFrame:GetWidth() or 200) + CFG.bgPadLeft + CFG.bgPadRight) * (CFG.bgScale or 1.0)
 	bg:SetSize(w, w * CFG.bgAspect)
 end
 
@@ -557,11 +542,10 @@ local function SkinFrame()
 	UpdatePortrait()
 	GameMenuFrame:SetScale(CFG.menuScale or 1.0)
 
-	-- Skin every menu button, wherever it lives in the hierarchy (ver
-	-- ForEachMenuButton: ya no son hijos directos de GameMenuFrame).
-	-- Ya NO se filtra por IsShown(): los botones ocultos de este pase se
-	-- mostraran en otro contexto (Edit Mode/Shop/etc. varian) y deben estar
-	-- skineados de antemano -- ademas el pool los reutiliza.
+	-- Fondo ANTES del bucle de botones, igual que el addon original.
+	SizeBackground()
+
+	-- Skin every currently visible button.
 	ForEachMenuButton(SkinButton)
 
 	-- We changed button heights after Blizzard's own layout ran, so re-run the
@@ -569,17 +553,6 @@ local function SkinFrame()
 	if GameMenuFrame.Layout then
 		GameMenuFrame:Layout()
 	end
-
-	-- FIX (2026-07-25, reportado por el usuario: "al hacer reload el fondo del
-	-- menu esc se vuelve pequeño, se reacomodo despues solo"): esto estaba
-	-- ARRIBA, antes del bucle de botones y del Layout() -- su comentario decia
-	-- "the (now-laid-out) frame width" pero era falso, el Layout() corria
-	-- DESPUES. Justo tras un /reload el frame todavia no tiene su ancho
-	-- definitivo, asi que GetWidth() devolvia un valor chico y el fondo salia
-	-- chico; recien al re-dispararse SkinFrame (hook de
-	-- GameMenuFrame_UpdateVisibleButtons / reabrir el menu) se corregia solo.
-	-- Ahora se dimensiona DESPUES del Layout(), con el ancho ya asentado.
-	SizeBackground()
 end
 ns.RefreshMainMenuSkin = SkinFrame   -- expuesto para reaccionar a un cambio de Skin en vivo
 
@@ -596,10 +569,12 @@ local function MainMenuDiag()
     print("  TEX_RED():   " .. tostring(TEX_RED()))
     if not GameMenuFrame then print("  (GameMenuFrame no existe todavia)") return end
     local bg = GameMenuFrame.__gonkBG
-    print(("  bg: textura PUESTA=%s size=%.0fx%.0f | artW=%s frameW=%.0f"):format(
+    print(("  bg: textura PUESTA=%s size=%.0fx%.0f | frameW=%.0f (de aca sale el ancho del fondo)"):format(
         tostring(bg and bg:GetTexture()),
         bg and bg:GetWidth() or 0, bg and bg:GetHeight() or 0,
-        tostring(GameMenuFrame.__gonkArtW), GameMenuFrame:GetWidth() or 0))
+        GameMenuFrame:GetWidth() or 0))
+    print("  menu abierto AHORA: " .. tostring(GameMenuFrame:IsShown())
+        .. "  |cff888888(si esta cerrado, los botones pueden no existir todavia)|r")
     -- Usa el MISMO recorrido que SkinFrame (ForEachMenuButton), asi lo que
     -- reporta es exactamente lo que el skin ve/toca.
     local found, skinned = 0, 0
