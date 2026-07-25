@@ -1,0 +1,25 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <!--
+        MyCustomFrames - Raid.xml
+        Unico archivo XML del addon. Necesario porque SecureGroupHeaderTemplate
+        (grid de 40 raid members, ver Raid.lua) crea sus frames hijos de forma
+        DINAMICA segun el roster: el unico gancho no restringido para construir
+        cada boton (barras, texto, cage) es el OnLoad de un template XML propio
+        (el resto del addon es 100% Lua porque nunca necesita crear frames
+        dinamicamente via un atributo "template" de un secure group header).
+        OnLoad corre como Lua normal (no restringido) aunque el CreateFrame que lo
+        dispara haya sido invocado desde el snippet seguro del header, por eso
+        NO hace falta envolver esto en SecureHandlerWrapScript.
+
+        NOTA (bug ya encontrado): un comentario XML no puede contener la
+        secuencia de doble guion en ningun lado salvo al cerrar, el parser
+        de WoW la corta ahi silenciosamente (sin error visible) y el resto del
+        archivo (el Button de mas abajo) nunca se registra. De ahi salia el
+        error en juego "Couldn't find inherited node MyCF_RaidMemberTemplate".
+    -->
+    <Button name="MyCF_RaidMemberTemplate" inherits="SecureUnitButtonTemplate" virtual="true">
+        <Scripts>
+            <OnLoad>MyCF_BuildRaidMember(self)</OnLoad>
+        </Scripts>
+    </Button>
+</Ui>
