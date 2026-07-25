@@ -203,14 +203,42 @@ local function HideButtonArt(button)
 	end
 end
 
+-- FIX (2026-07-25, confirmado con /mcfmenudiag: "hijos de GameMenuFrame: 6 |
+-- shown: 1 | skineados: 0"): los botones YA NO son hijos DIRECTOS de
+-- GameMenuFrame en este cliente (Midnight 12.0.7) -- Blizzard reescribio el menu
+-- y los metio en un contenedor intermedio. El chequeo viejo exigia
+-- `GetParent() == GameMenuFrame`, asi que NINGUN boton pasaba el filtro y nunca
+-- se skineaba ninguno: lo que se veia era el arte nativo de Blizzard.
+-- (Sintoma ligado: el fondo quedaba diminuto, porque su ancho se deriva del
+-- arte de los botones -- sin botones skineados no habia de donde sacarlo.)
+-- Ahora se acepta cualquier DESCENDIENTE de GameMenuFrame; el filtro real es
+-- "es un Button y tiene texto", que es lo que distingue una entrada del menu de
+-- la X de cerrar, barras de scroll, etc.
 local function IsGameMenuButton(button)
-	if not button or button:GetParent() ~= GameMenuFrame then
-		return false
-	end
+	if not button then return false end
 	if button.GetObjectType and button:GetObjectType() ~= "Button" then
 		return false
 	end
-	return (button.GetText and button:GetText() ~= nil) and true or false
+	local txt = button.GetText and button:GetText()
+	return (type(txt) == "string" and txt ~= "") and true or false
+end
+
+-- Recorre los descendientes de GameMenuFrame (profundidad acotada: el
+-- contenedor de Blizzard esta 1-2 niveles adentro, 4 da margen de sobra sin
+-- volverse un barrido caro en cada OnShow) y llama `fn` en cada boton de menu.
+local function ForEachMenuButton(fn, frame, depth)
+	frame = frame or GameMenuFrame
+	depth = depth or 4
+	if not frame or depth < 0 then return end
+	local ok, children = pcall(function() return { frame:GetChildren() } end)
+	if not ok then return end
+	for _, child in ipairs(children) do
+		if IsGameMenuButton(child) then
+			fn(child)
+		else
+			ForEachMenuButton(fn, child, depth - 1)
+		end
+	end
 end
 
 -- Recolor / outline the label. Uses the stored base font size so repeated
@@ -529,12 +557,12 @@ local function SkinFrame()
 	UpdatePortrait()
 	GameMenuFrame:SetScale(CFG.menuScale or 1.0)
 
-	-- Skin every currently visible button.
-	for _, child in ipairs({ GameMenuFrame:GetChildren() }) do
-		if child.IsShown and child:IsShown() then
-			SkinButton(child)
-		end
-	end
+	-- Skin every menu button, wherever it lives in the hierarchy (ver
+	-- ForEachMenuButton: ya no son hijos directos de GameMenuFrame).
+	-- Ya NO se filtra por IsShown(): los botones ocultos de este pase se
+	-- mostraran en otro contexto (Edit Mode/Shop/etc. varian) y deben estar
+	-- skineados de antemano -- ademas el pool los reutiliza.
+	ForEachMenuButton(SkinButton)
 
 	-- We changed button heights after Blizzard's own layout ran, so re-run the
 	-- layout to re-space everything without overlap.
@@ -572,24 +600,20 @@ local function MainMenuDiag()
         tostring(bg and bg:GetTexture()),
         bg and bg:GetWidth() or 0, bg and bg:GetHeight() or 0,
         tostring(GameMenuFrame.__gonkArtW), GameMenuFrame:GetWidth() or 0))
-    -- Cuenta TODO lo que ve el bucle de SkinFrame, no solo lo ya skineado --
-    -- la hipotesis es justamente que en el primer pase no encuentra botones.
-    local total, shown, skinned = 0, 0, 0
-    for _, child in ipairs({ GameMenuFrame:GetChildren() }) do
-        total = total + 1
-        local isShown = child.IsShown and child:IsShown()
-        if isShown then shown = shown + 1 end
-        if child.__gonkTex then
-            skinned = skinned + 1
-            if skinned <= 4 then   -- una muestra alcanza
-                print(("    [%s] shown=%s -> %s"):format(
-                    tostring(child.GetText and child:GetText()),
-                    tostring(isShown),
-                    tostring(child.__gonkTex:GetTexture())))
-            end
+    -- Usa el MISMO recorrido que SkinFrame (ForEachMenuButton), asi lo que
+    -- reporta es exactamente lo que el skin ve/toca.
+    local found, skinned = 0, 0
+    ForEachMenuButton(function(b)
+        found = found + 1
+        if b.__gonkTex then skinned = skinned + 1 end
+        if found <= 5 then   -- una muestra alcanza
+            print(("    [%s] shown=%s -> %s"):format(
+                tostring(b:GetText()),
+                tostring(b:IsShown()),
+                b.__gonkTex and tostring(b.__gonkTex:GetTexture()) or "|cffff5555SIN SKIN|r"))
         end
-    end
-    print(("  hijos de GameMenuFrame: %d | shown: %d | skineados: %d"):format(total, shown, skinned))
+    end)
+    print(("  botones de menu encontrados: %d | skineados: %d"):format(found, skinned))
     print("  hook GameMenuFrame_UpdateVisibleButtons: "
         .. (type(_G.GameMenuFrame_UpdateVisibleButtons) == "function" and "existe" or "|cffff5555NO existe|r"))
 end
