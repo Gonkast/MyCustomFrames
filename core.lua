@@ -1806,6 +1806,16 @@ local function InitDB()
     -- B4: en modo Lock, ocultar SAMPLE de estos elementos (solo preview; no afecta el juego real).
     db.lockHide = db.lockHide or {}   -- {health/names/badges/raid/death = true → ocultos en preview}
     db.explorer = db.explorer or {}                      -- {elementKey=true} auto-ocultan por mouseover
+    -- Migracion (2026-07-24): playerpower/targetpower/portrait_target se agregaron a los
+    -- grupos "Player"/"Target" del Explorer -- un usuario que YA tenia "Player"/"Target"
+    -- prendido de antes nunca vuelve a tocar ese checkbox, asi que su db.explorer se queda
+    -- sin las keys nuevas para siempre (el toggle solo escribe al click). Backfill una vez:
+    -- si la key "ancla" del grupo esta prendida, las companeras se prenden igual.
+    if db.explorer.player then db.explorer.playerpower = true end
+    if db.explorer.target then
+        db.explorer.targetpower = true
+        db.explorer.portrait_target = true
+    end
     if db.explorerEnabled == nil then db.explorerEnabled = true end -- toggle maestro del Explorer
     if db.explorerCombat == nil then db.explorerCombat = true end   -- forzar visibles en combate
     if db.explorerTarget == nil then db.explorerTarget = false end  -- forzar visibles con target
