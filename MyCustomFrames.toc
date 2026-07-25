@@ -106,6 +106,11 @@ ClassPower.lua
 # SOLO mientras el jugador esta MONTADO (db.barReposition, toggle en Options.lua/Setup.lua).
 BarReposition.lua
 
+# Auto-scale por resolucion (ns.ResScale, ver core.lua) aplicado a las barras de
+# accion BT4Bar1-10 de Bartender4, multiplicado sobre la escala que ya tiene
+# configurada el usuario en Bartender4.
+BartenderScale.lua
+
 # Auras hover de Party1-5 (dungeon-only) y las 6 unitframes de arena
 # (arena-only): fusionados en un solo modulo data-driven (2026-07-23,
 # eran ~95% el mismo codigo duplicado entre 2 archivos -- ver comentario

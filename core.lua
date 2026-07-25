@@ -1054,6 +1054,7 @@ local function RefreshAll()
     -- DISPLAY_SIZE_CHANGED/poll de resize.
     if ns.RefreshTopWidget then ns.RefreshTopWidget() end
     if ns.RefreshMinimapButtons then ns.RefreshMinimapButtons() end
+    if ns.RefreshBartenderScale then ns.RefreshBartenderScale() end
     RefreshOutlineNames()
 end
 ns.RefreshAll = RefreshAll
@@ -2555,6 +2556,10 @@ local function MCF_ScaleDump()
     MCF_DumpFrameLine(lines, "classpower", _G.MyCF_ClassPower)
     MCF_DumpFrameLine(lines, "raid", _G.MyCF_RaidHeader)
     MCF_DumpFrameLine(lines, "tracker", _G.ObjectiveTrackerFrame)
+    for i = 1, 10 do
+        local bar = _G["BT4Bar" .. i]
+        if bar then MCF_DumpFrameLine(lines, "BT4Bar" .. i, bar) end
+    end
     MCF_ScaleDumpBox(table.concat(lines, "\n"))
 end
 
