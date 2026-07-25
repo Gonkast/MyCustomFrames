@@ -3878,11 +3878,38 @@ local function BuildPanel()
         local tabConditions = MakeTabButton(f, "Conditions", 90, 22)
         tabElements:SetPoint("TOPLEFT", L, -30)
         tabConditions:SetPoint("TOPLEFT", tabElements, "TOPRIGHT", 4, 0)
-        local elementsGroup = MakeGroup(f)
-        local conditionsGroup = MakeGroup(f)
+        -- FIX (2026-07-24, "algunos toggles esta muy pegados a los botones
+        -- inferiores"): con 31 elementos la grilla de "Elements" (2 columnas,
+        -- ~16 filas) pasa largo del footer fijo del panel (Move/Lock, Reset
+        -- ALL, Setup Wizard -- "que no tiene scroll" por diseño en el resto
+        -- del addon, ver comentario en la seccion Minimap) -- esta seccion
+        -- especificamente SI necesita scroll real dado el tamaño del
+        -- registro. UIPanelScrollFrameTemplate = scrollbar NATIVA con thumb
+        -- arrastrable (el "slider" pedido), mismo patron ya usado para las
+        -- cajas de diagnostico copiables (Tracker.lua/BartenderScale.lua).
+        local function MakeScrollGroup(height)
+            local expScroll = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
+            expScroll:SetPoint("TOPLEFT", 0, -56)
+            expScroll:SetPoint("BOTTOMRIGHT", -24, 60)   -- 60px: deja el footer fijo del panel libre
+            local child = CreateFrame("Frame", nil, expScroll)
+            child:SetSize(456, height)
+            expScroll:SetScrollChild(child)
+            expScroll:EnableMouseWheel(true)
+            expScroll:SetScript("OnMouseWheel", function(self, delta)
+                local maxScroll = math.max((child:GetHeight() or 0) - (self:GetHeight() or 0), 0)
+                self:SetVerticalScroll(math.min(math.max(self:GetVerticalScroll() - delta * 30, 0), maxScroll))
+            end)
+            return expScroll, child
+        end
+        -- Alturas calculadas a mano segun el contenido real de cada tab (ver
+        -- ROWS mas abajo para Elements; Conditions es mucho mas corto, altura
+        -- fija de sobra). Si se agregan mas elementos/condiciones a futuro,
+        -- ajustar estos numeros si el scroll queda corto.
+        local elementsScroll, elementsGroup = MakeScrollGroup(500)
+        local conditionsScroll, conditionsGroup = MakeScrollGroup(260)
         local function ShowExplorerTab(which)
-            elementsGroup:SetShown(which == "elements")
-            conditionsGroup:SetShown(which == "conditions")
+            elementsScroll:SetShown(which == "elements")
+            conditionsScroll:SetShown(which == "conditions")
             tabElements:SetActive(which == "elements")
             tabConditions:SetActive(which == "conditions")
         end
