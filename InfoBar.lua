@@ -49,8 +49,9 @@ local function InfoBarPlace()
     ns.CompensateScale(p, "simple")   -- B3: reancla offset si la escala cambio
     local parent = _G[p.anchor]
     if type(parent) ~= "table" or type(parent.GetObjectType) ~= "function" then parent = UIParent end
+    local rs = ns.ResScale()
     infobar.root:ClearAllPoints()
-    infobar.root:SetPoint(p.point, parent, p.relPoint, p.offsetX, p.offsetY)
+    infobar.root:SetPoint(p.point, parent, p.relPoint, p.offsetX * rs, p.offsetY * rs)
     infobar.root:SetFrameStrata(p.strata)
 end
 
@@ -58,7 +59,7 @@ local function RefreshInfoBar()
     if not (infobar and ns.GetDB() and ns.GetDB().infobar) then return end
     local p, ib = ns.GetDB().infobar, infobar
     ib.root:SetSize(math.max(p.bgWidth, 60), math.max((p.fontSize or 14) + 24, 30))
-    ib.root:SetScale(p.scale or 1)   -- escala general del info bar
+    ib.root:SetScale((p.scale or 1) * ns.ResScale())   -- escala general del info bar
     InfoBarPlace()
 
     -- Fondo decorativo (atlas del juego).

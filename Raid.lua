@@ -667,20 +667,23 @@ ns.ComputeGridSize = ComputeGridSize
 local lastPos = {}
 local function RepositionRaidHeaderIfChanged(cfg)
     if ns.CompensateScale then ns.CompensateScale(cfg) end
+    local rs = ns.ResScale()
     if lastPos.relativePoint == cfg.relativePoint
        and lastPos.offsetX == cfg.offsetX and lastPos.offsetY == cfg.offsetY
-       and lastPos.anchorFrame == cfg.anchorFrame and lastPos.scale == cfg.scale then
+       and lastPos.anchorFrame == cfg.anchorFrame and lastPos.scale == cfg.scale
+       and lastPos.resScale == rs then
         return
     end
     lastPos.relativePoint = cfg.relativePoint
     lastPos.offsetX, lastPos.offsetY = cfg.offsetX, cfg.offsetY
     lastPos.anchorFrame, lastPos.scale = cfg.anchorFrame, cfg.scale
+    lastPos.resScale = rs
 
     local parent = _G[cfg.anchorFrame]
     if type(parent) ~= "table" or type(parent.GetObjectType) ~= "function" then parent = UIParent end
     raidHeader:ClearAllPoints()
-    raidHeader:SetPoint("CENTER", parent, cfg.relativePoint, cfg.offsetX, cfg.offsetY)
-    raidHeader:SetScale(cfg.scale or 1)
+    raidHeader:SetPoint("CENTER", parent, cfg.relativePoint, cfg.offsetX * rs, cfg.offsetY * rs)
+    raidHeader:SetScale((cfg.scale or 1) * rs)
 end
 
 -- ==========================================================================

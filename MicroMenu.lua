@@ -187,9 +187,10 @@ local function MM_Place()
     if ns.CompensateScale then ns.CompensateScale(p, "simple") end   -- B3: reancla offset si la escala cambio
     local parent = _G[p.anchor]
     if type(parent) ~= "table" or type(parent.GetObjectType) ~= "function" then parent = UIParent end
+    local rs = ns.ResScale()
     micromenu:ClearAllPoints()
-    micromenu:SetPoint(p.point, parent, p.relPoint, p.offsetX, p.offsetY)
-    micromenu:SetScale(p.scale or 1)
+    micromenu:SetPoint(p.point, parent, p.relPoint, p.offsetX * rs, p.offsetY * rs)
+    micromenu:SetScale((p.scale or 1) * rs)
     micromenu:SetFrameStrata(p.strata)
     -- "Hide in preview (Lock only)" (lockHide.micromenu): oculta SOLO en preview.
     if ns.IsUnlocked() and ns.GetDB().lockHide and ns.GetDB().lockHide.micromenu then

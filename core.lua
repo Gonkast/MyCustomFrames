@@ -997,6 +997,39 @@ local function RefreshOutlineNames()
 end
 ns.RefreshOutlineNames = RefreshOutlineNames
 
+-- ==========================================================================
+-- Auto-scale por resolucion/tamaño de ventana (16:9)
+-- ==========================================================================
+-- Los defaults nativos (Defaults.lua) fueron horneados a 1920x1080. Diagnostico
+-- confirmado por el usuario con /mcfscaledump (2026-07-24): en su config de
+-- WoW, UIParent VIRTUAL = FISICO siempre (modo "pixel perfect", sin
+-- auto-compensacion de Blizzard) -- asi que un offset fijo en pixeles SI se
+-- desproporciona cuando cambia el alto/ancho real de renderizado (confirmado
+-- comparando fullscreen 1920x1080 vs windowed 1920x1009: mismos x_frac, pero
+-- y_frac cambiado en TODOS los widgets). El factor de escala fisica
+-- (GetPhysicalScreenHeight()/1080) corrige eso. Solo se activa cuando el
+-- aspect ratio detectado esta cerca de 16:9 (1.70-1.86); en otras
+-- proporciones (ultrawide 21:9, etc.) el factor vuelve 1 -- ahi no hay forma
+-- generica y segura de adivinar el reescalado correcto.
+local MCF_REFERENCE_HEIGHT = 1080
+local function ComputeResScale()
+    local w, h = GetPhysicalScreenSize()
+    if not w or not h or h == 0 then return 1 end
+    local aspect = w / h
+    if aspect < 1.70 or aspect > 1.86 then return 1 end
+    return h / MCF_REFERENCE_HEIGHT
+end
+local resScaleCache = ComputeResScale()
+local resScaleLastW, resScaleLastH = GetPhysicalScreenSize()
+function ns.ResScale()
+    return resScaleCache
+end
+local function RecomputeResScale()
+    resScaleCache = ComputeResScale()
+    local w, h = GetPhysicalScreenSize()
+    resScaleLastW, resScaleLastH = w, h
+end
+
 local function RefreshAll()
     if ns.RefreshAllUnits then ns.RefreshAllUnits() end
     if ns.RefreshAllPortraits then ns.RefreshAllPortraits() end
@@ -1848,11 +1881,15 @@ events:RegisterEvent("UNIT_AURA")
 -- actualiza los oponentes de arena (arena1/2/3) -- mas responsivo que esperar
 -- solo a GROUP_ROSTER_UPDATE/ZONE_CHANGED_NEW_AREA para el lado enemigo.
 events:RegisterEvent("ARENA_OPPONENT_UPDATE")
+events:RegisterEvent("DISPLAY_SIZE_CHANGED")
 
 events:SetScript("OnEvent", function(self, event, arg1)
     if event == "ADDON_LOADED" and arg1 == ADDON then
         InitDB()
         RefreshAll()
+    elseif event == "DISPLAY_SIZE_CHANGED" then
+        RecomputeResScale()
+        if db then RefreshAll() end
     elseif event == "PLAYER_ENTERING_WORLD" then
         if ns.ApplyDcFix then ns.ApplyDcFix() end
         -- Restaura la skin activa UNA sola vez (label, no folder -- persiste
@@ -2009,6 +2046,18 @@ C_Timer.NewTicker(0.1, function()
     -- Throttle a 0.5s: los hooks (Set*Texture/UpdateMicroButtons) ya reaccionan al
     -- instante; el ticker es solo la red de seguridad.
     if tickState.n % 5 == 0 and ns.MM_ReassertArt then ns.MM_ReassertArt() end
+    -- Poll de resolucion/tamaño de ventana (~1s, tickState.n % 10): el evento
+    -- DISPLAY_SIZE_CHANGED NO dispara de forma confiable cuando el usuario
+    -- arrastra el borde de la ventana en modo Windowed (solo lo hace al
+    -- aplicar una resolucion desde Sistema > Video) -- el poll es la red de
+    -- seguridad que SI detecta ese caso.
+    if tickState.n % 10 == 0 then
+        local w, h = GetPhysicalScreenSize()
+        if w ~= resScaleLastW or h ~= resScaleLastH then
+            RecomputeResScale()
+            RefreshAll()
+        end
+    end
     -- RED DE SEGURIDAD (2026-07-19, reportado por el usuario: "hice /reload
     -- en combate y el PlayerFrame/cast nativos no se esconden ni saliendo
     -- de combate"): el camino normal (HideBlizzardFramesNow diferido por

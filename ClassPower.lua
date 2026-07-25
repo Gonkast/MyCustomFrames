@@ -351,21 +351,23 @@ local function ApplyPosition()
     local offsetX, offsetY = p.offsetX or 220, p.offsetY or -160
     local strata, scale = p.strata or "MEDIUM", p.scale or 1
     local anchorName = p.anchorFrame or ""
+    local rs = ns.ResScale()
     if root._mcfLastPoint == point and root._mcfLastRelPoint == relativePoint
         and root._mcfLastOffX == offsetX and root._mcfLastOffY == offsetY
         and root._mcfLastStrata == strata and root._mcfLastScale == scale
-        and root._mcfLastAnchorName == anchorName then
+        and root._mcfLastAnchorName == anchorName and root._mcfLastResScale == rs then
         return
     end
     root._mcfLastPoint, root._mcfLastRelPoint = point, relativePoint
     root._mcfLastOffX, root._mcfLastOffY = offsetX, offsetY
     root._mcfLastStrata, root._mcfLastScale, root._mcfLastAnchorName = strata, scale, anchorName
+    root._mcfLastResScale = rs
 
     root:ClearAllPoints()
     local anchor = (anchorName ~= "" and _G[anchorName]) or UIParent
-    root:SetPoint(point, anchor, relativePoint, offsetX, offsetY)
+    root:SetPoint(point, anchor, relativePoint, offsetX * rs, offsetY * rs)
     root:SetFrameStrata(strata)
-    content:SetScale(scale)
+    content:SetScale(scale * rs)
 end
 
 local function LayoutPoints(layoutName, colorKey)

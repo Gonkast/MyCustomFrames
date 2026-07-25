@@ -53,6 +53,8 @@ local function PortraitUpdatePosition(u)
     else
         anchorName, point, relPoint, x, y = p.centerAnchor, p.centerPoint, p.centerRelPoint, p.centerX, p.centerY
     end
+    local rs = ns.ResScale()
+    x, y = x * rs, y * rs
     local parent = _G[anchorName]
     if type(parent) ~= "table" or type(parent.GetObjectType) ~= "function" then parent = UIParent end
     -- Dedupe: re-anclar cada tick con los mismos valores es trabajo inutil. Se compara
@@ -468,7 +470,7 @@ local function PortraitApplyAppearance(u)
     local p = PP(u)
     local s = p.size
     u.root:SetSize(s, s)
-    u.root:SetScale(p.scale or 1)   -- escala general (multiplica sobre size, sin alterarlo)
+    u.root:SetScale((p.scale or 1) * ns.ResScale())   -- escala general (multiplica sobre size, sin alterarlo)
     u.root:SetFrameStrata(p.strata)
 
     -- Fondo circular (coloreable).

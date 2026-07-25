@@ -422,7 +422,9 @@ local function AuraGroupPlace(g)
     end
     local parent = _G[anchor]
     if type(parent) ~= "table" or type(parent.GetObjectType) ~= "function" then parent = UIParent end
-    local scale = p.scale or 1
+    local rs = ns.ResScale()
+    x, y = x * rs, y * rs
+    local scale = (p.scale or 1) * rs
     -- Dedupe: los grupos dualPos se re-colocaban cada tick con los mismos valores
     -- (ClearAllPoints+SetPoint+strata+escala). Firma = ultimo aplicado (datos propios).
     -- El OnDragStop invalida (_posParent=nil) porque StartMoving cambia el ancla real.

@@ -74,12 +74,13 @@ local function Layout()
     -- scale corre visualmente el anchor. Mismo utilitario que ya usa InfoBar
     -- (InfoBarPlace: "reancla offset si la escala cambio").
     ns.CompensateScale(p, "simple")
-    holder:SetScale(p.scale or 1)
+    local rs = ns.ResScale()
+    holder:SetScale((p.scale or 1) * rs)
 
     local parent = _G[p.anchor]
     if type(parent) ~= "table" or type(parent.GetObjectType) ~= "function" then parent = UIParent end
     holder:ClearAllPoints()
-    holder:SetPoint(p.point or "TOP", parent, p.relPoint or "TOP", p.offsetX or 0, p.offsetY or -12)
+    holder:SetPoint(p.point or "TOP", parent, p.relPoint or "TOP", (p.offsetX or 0) * rs, (p.offsetY or -12) * rs)
 
     local ok = pcall(function()
         w:SetParent(holder)
