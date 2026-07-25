@@ -168,6 +168,31 @@ daba **ADDON_ACTION_FORBIDDEN persistente** en la cuenta del usuario (no solo en
 reintento con `C_Timer`+`pcall` solo logro que el error se repitiera en loop — **`pcall` NO
 suprime ADDON_ACTION_FORBIDDEN**, se reporta igual. No repetir sin otra via de deteccion.
 
+### LECCION (2026-07-25): verificar que el addon VIEJO este desactivado tras un merge
+Al fusionar `Mainmenu-Gonkast` dentro de este addon se dejo dicho "hay que desactivar el
+standalone" pero **nunca se verifico**. Siguio activado (`AddOns.txt` de cada personaje decia
+`Mainmenu-Gonkast: enabled`) y los dos skineaban `GameMenuFrame` a la vez: el viejo, con sus rutas
+FIJAS a `Mainmenu-Gonkast\Assets\`, corria despues y **pisaba las texturas de los botones**,
+anulando el sistema de skins. Tambien re-dimensionaba el fondo con el ancho pre-Layout.
+
+Costo VARIAS rondas de depuracion sobre codigo que estaba bien, en las que ademas se rompio el
+skineo de botones (se "arreglo" `IsGameMenuButton` sobre un diagnostico mal leido) y se introdujo un
+crash en el propio diagnostico. **Todo eso se revirtio.**
+
+**Pistas que deberian haber apuntado antes al conflicto:**
+- El FONDO seguia la skin pero los BOTONES no. Asimetria delatora: el fondo se crea UNA vez
+  (guard `__gonkFrameSkinned`, ahi ganaba el nuestro), los botones se re-texturean en CADA
+  apertura (ahi ganaba el que corriera ultimo).
+- El usuario dijo "en un punto estaba bien" -> era cuando corria SOLO el standalone.
+- Las rutas resolvian PERFECTO en el diagnostico (`TEX_WHITE()` daba la de Charcoal) y aun asi la
+  textura final no era esa: si la ruta esta bien pero el resultado no, **alguien mas la esta
+  pisando despues**.
+
+**Regla:** al fusionar un addon dentro de otro, comprobar `C_AddOns.IsAddOnLoaded("<viejo>")` (o
+leer `WTF/Account/<id>/<realm>/<char>/AddOns.txt`) ANTES de depurar nada. Los flags `__gonk*` no
+sirven para detectarlo: ambos addons usan los mismos. `MainMenu.lua` ahora avisa por chat al
+login si el standalone sigue activo.
+
 ### MainMenu.lua (NUEVO) — merge de Mainmenu-Gonkast
 El addon separado `Mainmenu-Gonkast` (reskin del Game Menu / panel de Escape) se **fusiono aca**
 como `MainMenu.lua`, logica 1:1. Unico cambio: las texturas se resuelven con **`ns.SkinResolve`**
