@@ -606,6 +606,26 @@ local function MainMenuDiag()
         end
     end)
     print(("  hijos visibles recorridos: %d"):format(children))
+
+    -- GetTexture() devuelve un fileID (numero), no la ruta -- asi que el numero
+    -- solo no dice DE QUE ARCHIVO viene. Se cargan las 2 rutas candidatas en una
+    -- textura de prueba y se comparan sus fileIDs con el que tiene el boton:
+    -- eso identifica el archivo sin ambiguedad.
+    local probe = GameMenuFrame:CreateTexture(nil, "BACKGROUND")
+    probe:Hide()
+    local function fileIdOf(path)
+        probe:SetTexture(nil)
+        probe:SetTexture(path)
+        return probe:GetTexture()
+    end
+    local skinPath = (ns.ActiveSkinBasePath or "") .. "button wood large.tga"
+    local mainPath = ASSETS .. "button wood large.tga"
+    local idSkin = ns.ActiveSkinBasePath and fileIdOf(skinPath) or nil
+    local idMain = fileIdOf(mainPath)
+    print("  |cffffe19bque archivo esta usando el boton?|r")
+    print(("    fileID de la skin  (%s) = %s"):format(skinPath, tostring(idSkin)))
+    print(("    fileID del principal      = %s"):format(tostring(idMain)))
+    probe:SetTexture(nil)
     print(("  botones de menu encontrados: %d | skineados: %d"):format(found, skinned))
     print("  hook GameMenuFrame_UpdateVisibleButtons: "
         .. (type(_G.GameMenuFrame_UpdateVisibleButtons) == "function" and "existe" or "|cffff5555NO existe|r"))
