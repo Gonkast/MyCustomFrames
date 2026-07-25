@@ -147,14 +147,12 @@ explorerDriver:SetScript("OnUpdate", function(self, dt)
             -- su alpha lo gestiona PortraitSetShown, no el Explorer.
             if f and f:IsShown() and not f._mcfCombatHidden then
                 -- Pedido del usuario 2026-07-24: "si la barra uno de bartender se vuelve la
-                -- de reemplazo o posses bar, se muestre aunque este el explorer on" -- FIX
-                -- (reportado despues: "se sigue ocultando estando en una override/vehicle/
-                -- possess bar"): HasOverrideActionBar/HasVehicleActionBar solo detectan
-                -- VEHICULOS reales, no el caso comun de estar simplemente MONTADO (una montura
-                -- normal no dispara esas API) -- se agrega IsMounted() tambien. Aplicado a
-                -- CUALQUIER barra "BT4Bar*" (no solo Bar1): Bartender4 puede reflejar el
-                -- possess/vehicle/mount bar en distintos numeros segun el layout del usuario.
-                local forceOverride = (key:sub(1, 6) == "BT4Bar") and self.overrideBar
+                -- de reemplazo o posses bar, se muestre aunque este el explorer on" -- SOLO
+                -- BT4Bar1 (el usuario aclaro despues "solo me interesa en la 1", no todas).
+                -- FIX previo: HasOverrideActionBar/HasVehicleActionBar solo detectan
+                -- VEHICULOS reales, no el caso comun de estar simplemente MONTADO (una
+                -- montura normal no dispara esas API) -- se agrego IsMounted() tambien.
+                local forceOverride = (key == "BT4Bar1") and self.overrideBar
                 local myLo = (eAlpha and eAlpha[key]) or lo
                 local target = (self.combat or self.showTgt or self.casting or forceOverride or IsMouseOverElement(f, key)) and 1 or myLo
                 local cur = f._exAlpha; if cur == nil then cur = f:GetAlpha() end
