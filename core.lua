@@ -2557,6 +2557,7 @@ local function MCF_ScaleDump()
     MCF_DumpFrameLine(lines, "minimapbuttons", ns.minimapButtonsTrigger)
     MCF_DumpFrameLine(lines, "classpower", _G.MyCF_ClassPower)
     MCF_DumpFrameLine(lines, "raid", _G.MyCF_RaidHeader)
+    MCF_DumpFrameLine(lines, "tracker", _G.ObjectiveTrackerFrame)
     MCF_ScaleDumpBox(table.concat(lines, "\n"))
 end
 
