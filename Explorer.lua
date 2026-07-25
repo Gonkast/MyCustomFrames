@@ -147,11 +147,14 @@ explorerDriver:SetScript("OnUpdate", function(self, dt)
             -- su alpha lo gestiona PortraitSetShown, no el Explorer.
             if f and f:IsShown() and not f._mcfCombatHidden then
                 -- Pedido del usuario 2026-07-24: "si la barra uno de bartender se vuelve la
-                -- de reemplazo o posses bar, se muestre aunque este el explorer on" -- cuando
-                -- Bartender4 reasigna BT4Bar1 (Player) para reflejar la override/vehicle/
-                -- possess bar de Blizzard, se fuerza visible SIEMPRE, sin importar mouseover/
-                -- combate/etc (ver self.overrideBar, calculado en TickExplorer).
-                local forceOverride = (key == "BT4Bar1") and self.overrideBar
+                -- de reemplazo o posses bar, se muestre aunque este el explorer on" -- FIX
+                -- (reportado despues: "se sigue ocultando estando en una override/vehicle/
+                -- possess bar"): HasOverrideActionBar/HasVehicleActionBar solo detectan
+                -- VEHICULOS reales, no el caso comun de estar simplemente MONTADO (una montura
+                -- normal no dispara esas API) -- se agrega IsMounted() tambien. Aplicado a
+                -- CUALQUIER barra "BT4Bar*" (no solo Bar1): Bartender4 puede reflejar el
+                -- possess/vehicle/mount bar en distintos numeros segun el layout del usuario.
+                local forceOverride = (key:sub(1, 6) == "BT4Bar") and self.overrideBar
                 local myLo = (eAlpha and eAlpha[key]) or lo
                 local target = (self.combat or self.showTgt or self.casting or forceOverride or IsMouseOverElement(f, key)) and 1 or myLo
                 local cur = f._exAlpha; if cur == nil then cur = f:GetAlpha() end
@@ -227,11 +230,13 @@ ns.TickExplorer = function()
         -- Casteo/canalizacion del PLAYER: revela al instante (ReadCastMode es secret-safe;
         -- el fade de revelado tiene half-life ~60ms → se percibe inmediato).
         explorerDriver.casting = (db.explorerCasting and ns.ReadCastMode("player") ~= nil) or false
-        -- BT4Bar1 forzado visible si se convirtio en la override/vehicle/possess bar
-        -- (ver el "forceOverride" del OnUpdate de arriba). Secret-safe via ns.safeBool
-        -- (mismo criterio que el resto del addon para cualquier UnitXxx/HasXxx que
-        -- pueda devolver un valor secreto en Midnight 12.0.7).
-        explorerDriver.overrideBar = ns.safeBool(HasOverrideActionBar)
+        -- Barras de Bartender4 forzadas visibles si el player esta montado o en un
+        -- vehiculo/override/possess real (ver el "forceOverride" del OnUpdate de
+        -- arriba). Secret-safe via ns.safeBool (mismo criterio que el resto del
+        -- addon para cualquier UnitXxx/HasXxx/IsMounted que pueda devolver un valor
+        -- secreto en Midnight 12.0.7).
+        explorerDriver.overrideBar = ns.safeBool(IsMounted)
+            or ns.safeBool(HasOverrideActionBar)
             or ns.safeBool(HasVehicleActionBar)
             or ns.safeBool(UnitHasVehicleUI, "player")
     elseif explorerDriver._wasOn then
