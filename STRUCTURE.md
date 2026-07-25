@@ -21,10 +21,12 @@ Archivo nuevo al final del toc, con 3 herramientas que antes no existian:
 `MasqueSkin\` contra la carpeta de la skin ACTIVA y lista los que faltan. **Necesario por el
 propio diseño del sistema de skins**: al sacar el fallback por archivo (ver el FIX CRITICO de
 `SkinResolve`), un archivo faltante se renderiza INVISIBLE y no hay ninguna otra pista de cual es
--- fue exactamente lo que costo una vuelta entera de diagnostico con la skin Charcoal. OJO: Lua en
-WoW no puede leer el disco, asi que el chequeo usa `GetTextureFileID()` tras un `SetTexture()` y
-puede devolver "desconocido" para .tga sueltos de addon -- el reporte lo dice explicitamente en vez
-de afirmar de mas.
+-- fue exactamente lo que costo una vuelta entera de diagnostico con la skin Charcoal. Lua en WoW no
+puede leer el disco, asi que el chequeo usa `GetTextureFileID()` tras un `SetTexture()`.
+**CONFIRMADO EN VIVO (2026-07-25, skin Charcoal): verifico los 30 archivos (25 SKINNABLE + 5 de
+MasqueSkin) sin ningun "desconocido"** -- los .tga de addon SI resuelven a un fileID, asi que el
+chequeo es fiable, no aproximado. La rama "no se pudo verificar" queda igual como red de seguridad
+por si alguna ruta rara no resuelve, pero en la practica no se activa.
 
 **`/mcfdiag [sub]`** — router unico. Sin argumento LISTA los diagnosticos disponibles (antes eran
 ~20 slashes globales sueltos, sin indice: nadie podia saber que existian). Los subsistemas se
