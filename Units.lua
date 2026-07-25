@@ -505,7 +505,7 @@ local function UnitApplyLayout(u)
     if type(parent) ~= "table" or type(parent.GetObjectType) ~= "function" then parent = UIParent end
     button:ClearAllPoints()
     local rs = ns.ResScale()
-    button:SetPoint(p.point, parent, p.relativePoint, p.offsetX * rs, p.offsetY * rs)
+    button:SetPoint(p.point, parent, p.relativePoint, p.offsetX, p.offsetY)
     button:SetFrameStrata(p.strata)
     button:SetScale((p.scale or 1) * rs)   -- escala general (multiplica sobre width/height, NO los altera)
     -- Area de CLICK independiente de la barra via SetHitRectInsets: no cambia la

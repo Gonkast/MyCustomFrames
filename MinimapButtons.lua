@@ -535,14 +535,13 @@ Layout = function()
     trigger:SetFrameStrata(p.strata or "MEDIUM")
     if trigger.bg then trigger.bg:SetTexture(ResolveTex(TRIGGER_BG_FILE)) end
     ns.CompensateScale(p, "simple")
-    local rs = ns.ResScale()
-    trigger:SetScale((p.scale or 1) * rs)
+    trigger:SetScale((p.scale or 1) * ns.ResScale())
     trigger:SetSize(p.triggerSize or 22, p.triggerSize or 22)
 
     local parent = _G[p.anchor]
     if type(parent) ~= "table" or type(parent.GetObjectType) ~= "function" then parent = UIParent end
     trigger:ClearAllPoints()
-    trigger:SetPoint(p.point or "TOPRIGHT", parent, p.relPoint or "TOPRIGHT", (p.offsetX or -6) * rs, (p.offsetY or -6) * rs)
+    trigger:SetPoint(p.point or "TOPRIGHT", parent, p.relPoint or "TOPRIGHT", p.offsetX or -6, p.offsetY or -6)
 
     -- Ancla el contenedor de la grilla segun la direccion de crecimiento.
     container:ClearAllPoints()

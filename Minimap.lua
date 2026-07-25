@@ -1344,12 +1344,11 @@ local function RefreshMinimap()
     -- sin esto, cambiar la escala con la rueda "movia" el minimapa porque los
     -- offsets de SetPoint quedaban calculados para la escala VIEJA.
     if ns.CompensateScale then ns.CompensateScale(p) end
-    local rs = ns.ResScale()
-    root:SetScale((p.scale or 1) * rs)
+    root:SetScale((p.scale or 1) * ns.ResScale())
     local parent = _G[p.anchorFrame]
     if type(parent) ~= "table" or type(parent.GetObjectType) ~= "function" then parent = UIParent end
     root:ClearAllPoints()
-    root:SetPoint(p.point, parent, p.relativePoint, p.offsetX * rs, p.offsetY * rs)
+    root:SetPoint(p.point, parent, p.relativePoint, p.offsetX, p.offsetY)
     root:SetShown(p.enabled ~= false)
     do
         local locked_edit = ns.IsUnlocked()

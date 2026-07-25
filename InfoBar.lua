@@ -49,9 +49,8 @@ local function InfoBarPlace()
     ns.CompensateScale(p, "simple")   -- B3: reancla offset si la escala cambio
     local parent = _G[p.anchor]
     if type(parent) ~= "table" or type(parent.GetObjectType) ~= "function" then parent = UIParent end
-    local rs = ns.ResScale()
     infobar.root:ClearAllPoints()
-    infobar.root:SetPoint(p.point, parent, p.relPoint, p.offsetX * rs, p.offsetY * rs)
+    infobar.root:SetPoint(p.point, parent, p.relPoint, p.offsetX, p.offsetY)
     infobar.root:SetFrameStrata(p.strata)
 end
 

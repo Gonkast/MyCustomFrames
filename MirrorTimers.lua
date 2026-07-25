@@ -271,10 +271,9 @@ local function PositionContainer(container, p)
     -- contenedor REAL nunca se escalaba -- offsets iguales en escalas
     -- distintas caen en pixeles distintos de pantalla. Aplicar la MISMA
     -- escala aca cierra la diferencia.
-    local rs = ns.ResScale()
-    if setScale then setScale(container, (p.scale or 1) * rs) end
+    if setScale then setScale(container, (p.scale or 1) * ns.ResScale()) end
     if clearAll then clearAll(container) end
-    if setPoint then setPoint(container, "TOP", UIParent, "TOP", (p.offsetX or 0) * rs, (p.offsetY or -80) * rs) end
+    if setPoint then setPoint(container, "TOP", UIParent, "TOP", p.offsetX or 0, p.offsetY or -80) end
 end
 
 local function SkinContainer()
@@ -379,7 +378,7 @@ local function RefreshPreview()
     local lh = ns.GetDB() and ns.GetDB().lockHide
     if unlocked and p and p.enabled and not (lh and lh.mirrortimer) then
         wrapper:ClearAllPoints()
-        wrapper:SetPoint("TOP", UIParent, "TOP", (p.offsetX or 0) * ns.ResScale(), (p.offsetY or -80) * ns.ResScale())
+        wrapper:SetPoint("TOP", UIParent, "TOP", p.offsetX or 0, p.offsetY or -80)
         SkinOne(wrapper, true)
         wrapper:EnableMouse(true)
         wrapper:EnableMouseWheel(true)

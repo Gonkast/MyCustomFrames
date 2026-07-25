@@ -682,7 +682,7 @@ local function RepositionRaidHeaderIfChanged(cfg)
     local parent = _G[cfg.anchorFrame]
     if type(parent) ~= "table" or type(parent.GetObjectType) ~= "function" then parent = UIParent end
     raidHeader:ClearAllPoints()
-    raidHeader:SetPoint("CENTER", parent, cfg.relativePoint, cfg.offsetX * rs, cfg.offsetY * rs)
+    raidHeader:SetPoint("CENTER", parent, cfg.relativePoint, cfg.offsetX, cfg.offsetY)
     raidHeader:SetScale((cfg.scale or 1) * rs)
 end
 
