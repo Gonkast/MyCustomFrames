@@ -626,6 +626,39 @@ local function MainMenuDiag()
     print(("    fileID de la skin  (%s) = %s"):format(skinPath, tostring(idSkin)))
     print(("    fileID del principal      = %s"):format(tostring(idMain)))
     probe:SetTexture(nil)
+
+    -- HIPOTESIS a verificar: nuestra textura SI es la de la skin, pero queda
+    -- TAPADA por el arte nativo de Blizzard (si los nombres de region cambiaron,
+    -- HideButtonArt ya no lo oculta). Se vuelcan TODAS las regiones del primer
+    -- boton con su capa/sublevel/alpha: si hay alguna con alpha > 0 por encima
+    -- de ARTWORK:7 (donde vive la nuestra), eso es lo que se esta viendo.
+    local first
+    ForEachMenuButton(function(b)
+        if not first and IsGameMenuButton(b) then first = b end
+    end)
+    if first then
+        print(("  |cffffe19bregiones de [%s]|r (la nuestra vive en ARTWORK sublevel 7):"):format(tostring(first:GetText())))
+        local ok, regions = pcall(function() return { first:GetRegions() } end)
+        if ok then
+            for _, r in ipairs(regions) do
+                if r.GetObjectType and r:GetObjectType() == "Texture" then
+                    local layer, sub = r:GetDrawLayer()
+                    print(("    %-9s sub=%-2s alpha=%.2f shown=%-5s %s%s"):format(
+                        tostring(layer), tostring(sub), r:GetAlpha() or 0,
+                        tostring(r:IsShown()), tostring(r:GetTexture()),
+                        (r == first.__gonkTex) and "  <-- NUESTRA" or ""))
+                end
+            end
+        end
+        for _, getter in ipairs(STATE_GETTERS) do
+            local t = first[getter] and first[getter](first)
+            if t then
+                local layer, sub = t:GetDrawLayer()
+                print(("    %-16s %-9s sub=%-2s alpha=%.2f %s"):format(
+                    getter, tostring(layer), tostring(sub), t:GetAlpha() or 0, tostring(t:GetTexture())))
+            end
+        end
+    end
     print(("  botones de menu encontrados: %d | skineados: %d"):format(found, skinned))
     print("  hook GameMenuFrame_UpdateVisibleButtons: "
         .. (type(_G.GameMenuFrame_UpdateVisibleButtons) == "function" and "existe" or "|cffff5555NO existe|r"))
