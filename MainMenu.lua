@@ -755,6 +755,27 @@ local function TryHook()
 	return true
 end
 
+-- CONFLICTO SILENCIOSO (2026-07-25, causa real de "los botones no cambian con
+-- la skin" + "el fondo sale chico"): el addon standalone Mainmenu-Gonkast, del
+-- que se fusiono este archivo, seguia ACTIVADO. Los dos skineaban GameMenuFrame
+-- a la vez y el viejo -- con sus rutas FIJAS a Mainmenu-Gonkast\Assets\ -- corre
+-- despues y pisa las texturas de los botones, anulando el sistema de skins.
+-- (El FONDO no: se crea una sola vez, protegido por __gonkFrameSkinned, y ahi
+-- ganaba el nuestro -- por eso el fondo SI era de la skin y los botones no.)
+-- No se puede detectar por los flags __gonk* (ambos usan los mismos), asi que se
+-- avisa por nombre de addon.
+local function WarnIfLegacyAddonEnabled()
+    local isLoaded = C_AddOns and C_AddOns.IsAddOnLoaded or _G.IsAddOnLoaded
+    if not isLoaded then return end
+    local ok, loaded = pcall(isLoaded, "Mainmenu-Gonkast")
+    if ok and loaded then
+        print("|cffff5555[MCF]|r El addon |cffffe19bMainmenu-Gonkast|r sigue ACTIVADO y pisa el "
+            .. "reskin del Game Menu (los botones no seguiran la skin elegida).")
+        print("|cffff5555[MCF]|r Desactivalo en la lista de AddOns y haz /reload "
+            .. "-- su codigo ya vive dentro de MyCustomFrames.")
+    end
+end
+
 local loader = CreateFrame("Frame")
 loader:RegisterEvent("PLAYER_LOGIN")
 loader:RegisterEvent("ADDON_LOADED")
@@ -768,4 +789,5 @@ loader:SetScript("OnEvent", function(_, event, name)
 
 	-- PLAYER_LOGIN
 	TryHook()
+	WarnIfLegacyAddonEnabled()
 end)
