@@ -3864,6 +3864,109 @@ local function BuildPanel()
         end
     end
 
+    -- Scrollbar estilizada REUTILIZABLE (2026-07-24, pedido del usuario: "el scroll
+    -- bar nuevo... que tenga el mismo diseño de los otros scrollbar que tenemos") --
+    -- extraida del scrollbar de la sidebar (arriba: texturas WIDGET/Plumber +
+    -- flechas + thumb arrastrable + scroll suave), generalizada para poder
+    -- anclarse en cualquier panel en vez de quedar pegada a la sidebar.
+    local function MakeStyledScroll(parent, childW, childH)
+        local mssScroll = CreateFrame("ScrollFrame", nil, parent)
+        local mssChild = CreateFrame("Frame", nil, mssScroll)
+        mssChild:SetSize(childW or 10, childH or 10)
+        mssScroll:SetScrollChild(mssChild)
+
+        local mssBarW, mssArrow = 10, 12
+        local mssValue, mssRange, mssDisplay = 0, 0, 0
+
+        local function MssTexBtn(y1, y2)
+            local btn = CreateFrame("Button", nil, parent)
+            btn:SetSize(mssArrow, mssArrow)
+            local tex = btn:CreateTexture(nil, "ARTWORK")
+            tex:SetAllPoints(); tex:SetTexture(WIDGET); tex:SetTexCoord(0 / 512, 32 / 512, y1 / 512, y2 / 512)
+            tex:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+            btn.tex = tex
+            btn:SetScript("OnEnter", function() tex:SetVertexColor(1, 0.9, 0.45) end)
+            btn:SetScript("OnLeave", function() tex:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]) end)
+            return btn
+        end
+        local mssUpBtn = MssTexBtn(396, 428)
+        local mssDownBtn = MssTexBtn(428, 460)
+        mssUpBtn:SetPoint("TOPRIGHT", mssScroll, "TOPRIGHT", 13, 2)
+        mssDownBtn:SetPoint("BOTTOMRIGHT", mssScroll, "BOTTOMRIGHT", 13, -2)
+
+        local mssTrack = CreateFrame("Frame", nil, parent)
+        mssTrack:SetWidth(mssBarW)
+        mssTrack:SetPoint("TOPRIGHT", mssUpBtn, "BOTTOMRIGHT", 0, -2)
+        mssTrack:SetPoint("BOTTOMRIGHT", mssDownBtn, "TOPRIGHT", 0, 2)
+        local mssRail = mssTrack:CreateTexture(nil, "BACKGROUND")
+        mssRail:SetAllPoints(); mssRail:SetTexture(WIDGET)
+        mssRail:SetTexCoord(0 / 512, 32 / 512, 0 / 512, 128 / 512)
+        mssRail:SetVertexColor(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.4)
+
+        local mssThumb = CreateFrame("Button", nil, mssTrack)
+        mssThumb:SetPoint("TOP"); mssThumb:SetSize(mssBarW, 40)
+        local mssThumbTex = mssThumb:CreateTexture(nil, "ARTWORK")
+        mssThumbTex:SetAllPoints(); mssThumbTex:SetTexture(WIDGET); mssThumbTex:SetTexCoord(0 / 512, 32 / 512, 132 / 512, 260 / 512)
+        mssThumbTex:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+
+        local function MssPositionThumb()
+            local usable = math.max((mssTrack:GetHeight() or 1) - (mssThumb:GetHeight() or 1), 0)
+            local frac = (mssRange > 0) and (mssDisplay / mssRange) or 0
+            mssThumb:ClearAllPoints(); mssThumb:SetPoint("TOP", mssTrack, "TOP", 0, -frac * usable)
+        end
+        local function MssApplyScroll(v, instant)
+            mssValue = math.min(math.max(v or 0, 0), mssRange)
+            if instant then
+                mssDisplay = mssValue
+                mssScroll:SetVerticalScroll(mssDisplay)
+                MssPositionThumb()
+            end
+        end
+        mssScroll:SetScript("OnUpdate", function(self, elapsed)
+            if mssDisplay == mssValue then return end
+            local diff = mssValue - mssDisplay
+            if math.abs(diff) < 0.5 then
+                mssDisplay = mssValue
+            else
+                mssDisplay = mssDisplay + diff * math.min(elapsed * 14, 1)
+            end
+            mssScroll:SetVerticalScroll(mssDisplay)
+            MssPositionThumb()
+        end)
+        mssUpBtn:SetScript("OnClick", function() MssApplyScroll(mssValue - 30) end)
+        mssDownBtn:SetScript("OnClick", function() MssApplyScroll(mssValue + 30) end)
+        mssThumb:SetScript("OnMouseDown", function(self)
+            self.dragging = true; self.startY = select(2, GetCursorPosition()); self.startV = mssValue
+            mssThumbTex:SetVertexColor(1, 0.9, 0.5)
+        end)
+        mssThumb:SetScript("OnMouseUp", function(self)
+            self.dragging = false; mssThumbTex:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+        end)
+        mssThumb:SetScript("OnUpdate", function(self)
+            if not self.dragging then return end
+            if not IsMouseButtonDown("LeftButton") then
+                self.dragging = false; mssThumbTex:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]); return
+            end
+            local _, y = GetCursorPosition()
+            local usable = math.max((mssTrack:GetHeight() or 1) - (mssThumb:GetHeight() or 1), 1)
+            local dy = (self.startY - y) / (mssTrack:GetEffectiveScale() or 1)
+            MssApplyScroll(self.startV + (dy / usable) * mssRange, true)
+        end)
+        mssScroll:EnableMouseWheel(true)
+        mssScroll:SetScript("OnMouseWheel", function(self, delta) MssApplyScroll(mssValue - delta * 30) end)
+        local function MssUpdateScroll()
+            local contentH, visibleH = mssChild:GetHeight() or 1, mssScroll:GetHeight() or 1
+            mssRange = math.max(contentH - visibleH, 0)
+            local scrollable = mssRange > 1
+            mssTrack:SetShown(scrollable); mssUpBtn:SetShown(scrollable); mssDownBtn:SetShown(scrollable)
+            local trackH = mssTrack:GetHeight() or 1
+            mssThumb:SetSize(mssBarW, math.max(24, trackH * math.min(visibleH / math.max(contentH, 1), 1)))
+            MssApplyScroll(mssValue, true)
+        end
+        mssScroll:SetScript("OnSizeChanged", MssUpdateScroll)
+        return mssScroll, mssChild
+    end
+
     -- =========================== SECCION EXPLORER (#11) ===========================
     do
         local f = Section("explorer")
@@ -3888,17 +3991,9 @@ local function BuildPanel()
         -- arrastrable (el "slider" pedido), mismo patron ya usado para las
         -- cajas de diagnostico copiables (Tracker.lua/BartenderScale.lua).
         local function MakeScrollGroup(height)
-            local expScroll = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
+            local expScroll, child = MakeStyledScroll(f, 456, height)
             expScroll:SetPoint("TOPLEFT", 0, -56)
             expScroll:SetPoint("BOTTOMRIGHT", -24, 60)   -- 60px: deja el footer fijo del panel libre
-            local child = CreateFrame("Frame", nil, expScroll)
-            child:SetSize(456, height)
-            expScroll:SetScrollChild(child)
-            expScroll:EnableMouseWheel(true)
-            expScroll:SetScript("OnMouseWheel", function(self, delta)
-                local maxScroll = math.max((child:GetHeight() or 0) - (self:GetHeight() or 0), 0)
-                self:SetVerticalScroll(math.min(math.max(self:GetVerticalScroll() - delta * 30, 0), maxScroll))
-            end)
             return expScroll, child
         end
         -- Alturas calculadas a mano segun el contenido real de cada tab (ver

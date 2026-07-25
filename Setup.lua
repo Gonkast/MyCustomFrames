@@ -1,8 +1,8 @@
 -- ==========================================================================
--- Setup.lua — asistente de PRIMERA INSTALACION (6 paginas: que hace el addon, que addons
--- con perfil incluido tenes instalados, opciones globales reducidas, hide-when-mounted +
--- auto-hide del tracker, Explorer Mode, y aplicar el preset Gonkast (perfiles de Bartender4/
--- DynamicCam/Masque/Chattynator) + el HUD de Blizzard Edit Mode). Se muestra UNA sola vez
+-- Setup.lua — asistente de PRIMERA INSTALACION (7 paginas: que hace el addon, que addons
+-- con perfil incluido tenes instalados, opciones globales reducidas, Explorer Mode
+-- (on/off simple), y aplicar el preset Gonkast (perfiles de Bartender4/DynamicCam/
+-- Masque/Chattynator) + el HUD de Blizzard Edit Mode). Se muestra UNA sola vez
 -- (db.setupSeen); reabrible a mano con /mcfsetup.
 -- Reusa el toolkit visual de Options.lua (ns.UI) y la deteccion/aplicacion de
 -- perfiles de ProfilesApply.lua (ns.ProfilesStatus/ns.ProfilesInfo/ns.ApplyProfilesFiltered).
@@ -143,7 +143,7 @@ end
 -- el resto del texto en vez de mezclarse con el.
 local REC = "  |cffd6b896(recommended)|r"
 
-local PAGE_COUNT = 8
+local PAGE_COUNT = 7
 local frame, contentPages, selected = nil, {}, {}
 local curPage = 1
 local pageDots, backBtn, nextBtn, skipBtn, stepLabel
@@ -516,99 +516,30 @@ local function BuildPage3(content)
     return p
 end
 
--- ---------------- Pagina 4: quest tracker auto-hide ----------------
-local TRACKER_AUTOHIDE_ROWS = {
-    { "Hide in boss fights",      "hideInBoss",           true },
-    { "Hide in combat",           "hideInCombat",         true },
-    { "Hide on hostile target",   "hideOnHostileTarget" },
-    { "Hide in arena",            "hideInArena" },
-    { "Hide in battlegrounds",    "hideInBG" },
-}
+-- ---------------- Pagina 4: Explorer Mode (simple: on/off + descripcion) ----------------
+-- Simplificada (pedido del usuario 2026-07-24: "solo pon si quieres activar o no el
+-- explorer mode, y una breve descripcion" -- antes esta pagina duplicaba TODA la UI de
+-- Elements/Conditions del menu principal, redundante y larga para un wizard de
+-- onboarding). Elegir QUE elementos gestiona y sus condiciones queda 100% para
+-- despues, desde el menu principal (seccion Explorer).
 local function BuildPage4(content)
     local p = CreateFrame("Frame", nil, content)
     p:SetAllPoints()
-    Header(p, "Quest tracker options", 0, -2)
-    Paragraph(p, 4, -26, 11,
-        "Auto-hide the quest tracker in the situations below.")
-
-    -- Fuerza el estado recomendado al construir (ver comentario igual en BuildPage3).
-    do
-        local d = ns.GetDB()
-        if d and d.tracker then
-            for _, row in ipairs(TRACKER_AUTOHIDE_ROWS) do d.tracker[row[2]] = row[3] or false end
-        end
-    end
-
-    Header(p, "Quest tracker auto-hide", 4, -56, 336)
-    local y = -80
-    for _, row in ipairs(TRACKER_AUTOHIDE_ROWS) do
-        local key = row[2]
-        Toggle(p, row[1] .. (row[3] and REC or ""), 4, y,
-            function() local d = ns.GetDB(); return d and d.tracker and d.tracker[key] end,
-            function(v)
-                local d = ns.GetDB(); if not (d and d.tracker) then return end
-                d.tracker[key] = v
-            end)
-        y = y - 26
-    end
-
-    -- Cierre visual (2026-07-16, misma prolijidad que las paginas 1/3/6).
-    local div = p:CreateTexture(nil, "ARTWORK")
-    div:SetTexture(ART.DIVIDER)
-    div:SetSize(CONTENT_W, 16)
-    div:SetPoint("TOPLEFT", 0, -226)
-    div:SetVertexColor(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3])
-    Paragraph(p, 0, -242, 11,
-        "\"(recommended)\" items are pre-checked; the rest are up to you. All of this stays " ..
-        "editable later from the main options panel.")
-    return p
-end
-
--- ---------------- Pagina 5: Explorer Mode (mismas opciones que el menu) ----------------
--- Filtra el registro UNIFICADO de Explorer.lua (2026-07-24, "unificar" -- antes esta
--- pagina mantenia su PROPIA copia hardcodeada, ya desincronizada del menu principal:
--- "Target portrait"/"Pet portrait" existian sueltas aca cuando el menu ya las habia
--- fusionado con su unitframe hace tiempo). wizard=true marca que entra aca;
--- wizardRecommended=true la deja pre-tildada.
-local function BuildWizardExplorerList()
-    local list = {}
-    for _, e in ipairs(ns.EXPLORER_ELEMENTS) do
-        if e.wizard then list[#list + 1] = e end
-    end
-    return list
-end
-local EXPLORER_ZONES = {
-    { "Open world", "world", true }, { "Dungeons", "dungeon" }, { "Raids", "raid" },
-    { "Arenas", "arena" }, { "Battlegrounds", "battleground" }, { "Scenarios / Delves", "scenario" },
-}
-local function BuildPage5(content)
-    local p = CreateFrame("Frame", nil, content)
-    p:SetAllPoints()
     Header(p, "Explorer Mode", 0, -2)
-    Paragraph(p, 4, -26, 11,
-        "Enabled elements fade out and reappear on mouseover (even while hidden). Combat/target/casting can force them visible.")
+    Paragraph(p, 4, -30, 12,
+        "Explorer Mode fades out the elements you choose (unit frames, portraits, auras, and more) " ..
+        "until you hover where they are -- combat, having a target, or casting can also force them " ..
+        "fully visible. It's OFF by default. Turn it on here if you want that minimalist look; you'll " ..
+        "pick exactly which elements it manages, and fine-tune the conditions, later from the main " ..
+        "options panel (Explorer section).")
 
-    local list = BuildWizardExplorerList()
-
-    -- Fuerza el estado recomendado al construir (ver comentario igual en BuildPage3): master
-    -- OFF, solo los elementos marcados ON, los 3 "always show" ON, solo "Open world" ON.
+    -- Fuerza el estado recomendado al construir (ver comentario igual en BuildPage3): OFF.
     do
         local d = ns.GetDB()
-        if d then
-            d.explorerEnabled = false
-            d.explorer = d.explorer or {}
-            for _, e in ipairs(list) do
-                for _, k in ipairs(e.keys) do d.explorer[k] = e.wizardRecommended or nil end
-            end
-            d.explorerCombat = true
-            d.explorerTarget = true
-            d.explorerCasting = true
-            d.explorerZones = d.explorerZones or {}
-            for _, z in ipairs(EXPLORER_ZONES) do d.explorerZones[z[2]] = z[3] and true or false end
-        end
+        if d then d.explorerEnabled = false end
     end
 
-    Toggle(p, "Enable Explorer (master switch)", 4, -56,
+    Toggle(p, "Enable Explorer Mode", 4, -110,
         function() local d = ns.GetDB(); return d and d.explorerEnabled ~= false end,
         function(v)
             local d = ns.GetDB(); if not d then return end
@@ -616,46 +547,14 @@ local function BuildPage5(content)
             if not v and ns.ExplorerResetAll then ns.ExplorerResetAll() end
         end)
 
-    local L, R = 4, 380
-    local ROWS = math.ceil(#list / 2)
-    for i, e in ipairs(list) do
-        local col = (i <= ROWS) and L or R
-        local yy = -86 - ((i <= ROWS) and (i - 1) or (i - ROWS - 1)) * 26
-        local keys = e.keys
-        Toggle(p, e.label .. (e.wizardRecommended and REC or ""), col, yy,
-            function() local d = ns.GetDB(); return d and d.explorer and d.explorer[keys[1]] end,
-            function(v)
-                local d = ns.GetDB(); if not (d and d.explorer) then return end
-                for _, k in ipairs(keys) do
-                    d.explorer[k] = v or nil
-                    if not v and ns.ExplorerReset then ns.ExplorerReset(k) end
-                end
-            end)
-    end
-
-    local bottomY = -86 - ROWS * 26 - 14
-    Header(p, "Always show", L, bottomY, 340)
-    Toggle(p, "Always show in combat" .. REC, L, bottomY - 24,
-        function() local d = ns.GetDB(); return d and d.explorerCombat end,
-        function(v) local d = ns.GetDB(); if d then d.explorerCombat = v end end)
-    Toggle(p, "Always show on target" .. REC, L, bottomY - 50,
-        function() local d = ns.GetDB(); return d and d.explorerTarget end,
-        function(v) local d = ns.GetDB(); if d then d.explorerTarget = v end end)
-    Toggle(p, "Always show while casting" .. REC, L, bottomY - 76,
-        function() local d = ns.GetDB(); return d and d.explorerCasting end,
-        function(v) local d = ns.GetDB(); if d then d.explorerCasting = v end end)
-
-    Header(p, "Active in", R, bottomY, 336)
-    for i, z in ipairs(EXPLORER_ZONES) do
-        local zk = z[2]
-        Toggle(p, z[1] .. (z[3] and REC or ""), R, bottomY - 24 - (i - 1) * 26,
-            function() local d = ns.GetDB(); return d and d.explorerZones and d.explorerZones[zk] ~= false end,
-            function(v)
-                local d = ns.GetDB(); if not (d and d.explorerZones) then return end
-                d.explorerZones[zk] = v and true or false
-                if not v and ns.ExplorerResetAll then ns.ExplorerResetAll() end
-            end)
-    end
+    local div = p:CreateTexture(nil, "ARTWORK")
+    div:SetTexture(ART.DIVIDER)
+    div:SetSize(CONTENT_W, 16)
+    div:SetPoint("TOPLEFT", 0, -226)
+    div:SetVertexColor(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3])
+    Paragraph(p, 0, -242, 11,
+        "Nothing is chosen to fade yet -- enabling this alone won't change anything until you pick " ..
+        "elements later. All of this stays editable from the main options panel.")
     return p
 end
 
@@ -665,7 +564,7 @@ end
 -- "Apply now" solo reemplaza el SavedVariables de los addons tildados; el HUD se muestra como
 -- codigo copiable (boton propio) para que el usuario lo importe A MANO desde el Edit Mode nativo
 -- de Blizzard, sin pasar por codigo tainted por MyCustomFrames.
-local function BuildPage6(content)
+local function BuildPage5(content)
     local p = CreateFrame("Frame", nil, content)
     p:SetAllPoints()
     Header(p, "Apply the Gonkast preset", 0, -2)
@@ -749,7 +648,7 @@ local function GetBartenderProfiles()
     return list
 end
 
-local function BuildPage7(content)
+local function BuildPage6(content)
     local p = CreateFrame("Frame", nil, content)
     p:SetAllPoints()
     Header(p, "Bartender4 profile", 0, -2)
@@ -866,7 +765,7 @@ end
 -- No duplica los controles finos (esos viven en el Nameplate Designer, /mcfnpdesigner) -- esta
 -- pagina es solo el punto de entrada: encender el reskin, y un boton grande para abrir el
 -- Designer directo desde el wizard, asi el usuario no tiene que buscarlo despues en el menu.
-local function BuildPage8(content)
+local function BuildPage7(content)
     local p = CreateFrame("Frame", nil, content)
     p:SetAllPoints()
     Header(p, "Nameplates", 0, -2)
@@ -969,7 +868,6 @@ function ns.ShowSetupWizard()
         contentPages[5] = BuildPage5(content)
         contentPages[6] = BuildPage6(content)
         contentPages[7] = BuildPage7(content)
-        contentPages[8] = BuildPage8(content)
     end
     if UIFrameFadeIn then
         frame:Show(); frame:SetAlpha(0)
