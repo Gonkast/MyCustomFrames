@@ -106,14 +106,34 @@ local DAMAGE_SUBEVENTS = {
     SWING_DAMAGE = true, RANGE_DAMAGE = true, SPELL_DAMAGE = true,
     SPELL_PERIODIC_DAMAGE = true, ENVIRONMENTAL_DAMAGE = true,
 }
+-- FIX (2026-07-24, error real en juego: "ADDON_ACTION_FORBIDDEN ... tried to
+-- call the protected function 'Frame:RegisterEvent()'" en esta linea): un
+-- RegisterEvent de una sola vez, en la carga del archivo, puede caer justo
+-- cuando el UI se recarga EN COMBATE (el candado de combate persiste a
+-- traves de un /reload) -- RegisterEvent en si queda bloqueado ahi. Se
+-- reintenta via C_Timer (NO otro RegisterEvent, ese tambien caeria) hasta
+-- que InCombatLockdown() de false.
 local damageWatcher = CreateFrame("Frame")
-damageWatcher:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+local function TryRegisterDamageWatcher()
+    if damageWatcher._registered then return end
+    if InCombatLockdown() then
+        C_Timer.After(1, TryRegisterDamageWatcher)
+        return
+    end
+    local ok = pcall(damageWatcher.RegisterEvent, damageWatcher, "COMBAT_LOG_EVENT_UNFILTERED")
+    if ok then
+        damageWatcher._registered = true
+    else
+        C_Timer.After(1, TryRegisterDamageWatcher)
+    end
+end
 damageWatcher:SetScript("OnEvent", function()
     local _, subevent, _, _, _, _, _, destGUID = CombatLogGetCurrentEventInfo()
     if DAMAGE_SUBEVENTS[subevent] and destGUID == UnitGUID("player") then
         lastDamageTime = GetTime()
     end
 end)
+TryRegisterDamageWatcher()
 
 -- Llamado desde el ticker central de core.lua (10Hz) -- solo refresca el estado de
 -- combate/target/casteo/daño (del snapshot ns.tickState) y enciende/apaga el driver de
