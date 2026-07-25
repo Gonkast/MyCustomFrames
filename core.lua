@@ -1001,33 +1001,33 @@ ns.RefreshOutlineNames = RefreshOutlineNames
 -- Auto-scale por resolucion/tamaño de ventana (16:9)
 -- ==========================================================================
 -- Los defaults nativos (Defaults.lua) fueron horneados a 1920x1080. Diagnostico
--- confirmado por el usuario con /mcfscaledump (2026-07-24): en su config de
--- WoW, UIParent VIRTUAL = FISICO siempre (modo "pixel perfect", sin
--- auto-compensacion de Blizzard) -- asi que un offset fijo en pixeles SI se
--- desproporciona cuando cambia el alto/ancho real de renderizado (confirmado
--- comparando fullscreen 1920x1080 vs windowed 1920x1009: mismos x_frac, pero
--- y_frac cambiado en TODOS los widgets). El factor de escala fisica
--- (GetPhysicalScreenHeight()/1080) corrige eso. Solo se activa cuando el
--- aspect ratio detectado esta cerca de 16:9 (1.70-1.86); en otras
--- proporciones (ultrawide 21:9, etc.) el factor vuelve 1 -- ahi no hay forma
--- generica y segura de adivinar el reescalado correcto.
+-- confirmado por el usuario con /mcfscaledump (2026-07-24): SetPoint reancla
+-- offsets en el espacio VIRTUAL de UIParent (GetWidth/GetHeight -- "puntos UI",
+-- no pixeles fisicos), no en la resolucion fisica cruda. Con GetPhysicalScreenSize()
+-- el factor salia MAL en modo Windowed: 1280x720 y 1600x900 (elegidos del
+-- dropdown de Video, no arrastrando el borde) dieron rs DISTINTOS (0.667 vs
+-- 0.833) a pesar de que UIParent virtual quedaba IDENTICO en ambos casos
+-- (1365.3x768 fijo) -- confirmado con 2 dumps de /mcfscaledump del usuario.
+-- Fix: usar UIParent:GetHeight() (virtual) en vez de GetPhysicalScreenSize()
+-- (fisico). Solo se activa cuando el aspect ratio virtual esta cerca de 16:9
+-- (1.70-1.86); en otras proporciones (ultrawide 21:9, etc.) el factor vuelve
+-- 1 -- ahi no hay forma generica y segura de adivinar el reescalado correcto.
 local MCF_REFERENCE_HEIGHT = 1080
 local function ComputeResScale()
-    local w, h = GetPhysicalScreenSize()
+    local w, h = UIParent:GetWidth(), UIParent:GetHeight()
     if not w or not h or h == 0 then return 1 end
     local aspect = w / h
     if aspect < 1.70 or aspect > 1.86 then return 1 end
     return h / MCF_REFERENCE_HEIGHT
 end
 local resScaleCache = ComputeResScale()
-local resScaleLastW, resScaleLastH = GetPhysicalScreenSize()
+local resScaleLastW, resScaleLastH = UIParent:GetWidth(), UIParent:GetHeight()
 function ns.ResScale()
     return resScaleCache
 end
 local function RecomputeResScale()
     resScaleCache = ComputeResScale()
-    local w, h = GetPhysicalScreenSize()
-    resScaleLastW, resScaleLastH = w, h
+    resScaleLastW, resScaleLastH = UIParent:GetWidth(), UIParent:GetHeight()
 end
 
 local function RefreshAll()
@@ -2052,7 +2052,7 @@ C_Timer.NewTicker(0.1, function()
     -- aplicar una resolucion desde Sistema > Video) -- el poll es la red de
     -- seguridad que SI detecta ese caso.
     if tickState.n % 10 == 0 then
-        local w, h = GetPhysicalScreenSize()
+        local w, h = UIParent:GetWidth(), UIParent:GetHeight()
         if w ~= resScaleLastW or h ~= resScaleLastH then
             RecomputeResScale()
             RefreshAll()
