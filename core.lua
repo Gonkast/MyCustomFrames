@@ -2406,3 +2406,82 @@ local function HideBlizzardFrames()
 end
 ns.HideBlizzardFrames = HideBlizzardFrames
 ns.BlizzardNeedsApply = function() return blizzNeedsApply end
+
+-- ==========================================================================
+-- DIAGNOSTICO: /mcfscaledump — vuelca la posicion de cada widget raiz como
+-- FRACCION de la pantalla (x/screenWidth, y/screenHeight, ambos 0..1, origen
+-- BOTTOMLEFT como GetCenter) en vez de pixeles crudos. Pedido del usuario
+-- (2026-07-24, "hay una forma de que veas la posicion de los elementos cuando
+-- cambio el tamaño de la ventana"): corriendo esto ANTES y DESPUES de
+-- cambiar resolucion/tamaño de ventana y comparando los 2 dumps (fracciones
+-- iguales = quedo bien proporcionalmente, distintas = ese widget se corrio),
+-- sin necesitar screenshots ni adivinar a ojo cual elemento se desplazo.
+-- ==========================================================================
+local function MCF_ScaleDumpBox(text)
+    local f = _G.MCFScaleDumpFrame
+    if not f then
+        f = CreateFrame("Frame", "MCFScaleDumpFrame", UIParent, "BackdropTemplate")
+        f:SetSize(560, 420); f:SetPoint("CENTER"); f:SetFrameStrata("FULLSCREEN_DIALOG")
+        f:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+            tile = true, tileSize = 32, edgeSize = 24,
+            insets = { left = 6, right = 6, top = 6, bottom = 6 },
+        })
+        f:EnableMouse(true); f:SetMovable(true); f:RegisterForDrag("LeftButton")
+        f:SetScript("OnDragStart", f.StartMoving); f:SetScript("OnDragStop", f.StopMovingOrSizing)
+        local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+        close:SetPoint("TOPRIGHT", -2, -2)
+        local lbl = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        lbl:SetPoint("TOP", 0, -12); lbl:SetText("Ctrl+A  y luego  Ctrl+C  para copiar y pasarselo a Claude")
+        local sf = CreateFrame("ScrollFrame", "MCFScaleDumpScroll", f, "UIPanelScrollFrameTemplate")
+        sf:SetPoint("TOPLEFT", 14, -34); sf:SetPoint("BOTTOMRIGHT", -32, 14)
+        local eb = CreateFrame("EditBox", nil, sf)
+        eb:SetMultiLine(true); eb:SetFontObject(ChatFontNormal)
+        eb:SetWidth(500); eb:SetAutoFocus(false)
+        eb:SetScript("OnEscapePressed", function() f:Hide() end)
+        sf:SetScrollChild(eb)
+        f.eb = eb
+    end
+    f.eb:SetText(text)
+    f.eb:HighlightText()
+    f:Show()
+    f.eb:SetFocus()
+end
+
+local function MCF_DumpFrameLine(lines, label, frame)
+    if not frame then lines[#lines + 1] = label .. " | (no existe)"; return end
+    local ok, cx, cy = pcall(frame.GetCenter, frame)
+    if not ok or not cx or not cy then lines[#lines + 1] = label .. " | (sin GetCenter, oculto/sin posicion)"; return end
+    local sw, sh = UIParent:GetWidth(), UIParent:GetHeight()
+    local fx, fy = cx / sw, cy / sh
+    local scale = frame.GetScale and frame:GetScale() or 1
+    local w, h = frame.GetSize and frame:GetSize() or 0, 0
+    lines[#lines + 1] = string.format("%-22s | x=%.4f y=%.4f | scale=%.3f | w=%.1f h=%.1f | shown=%s",
+        label, fx, fy, scale, w, h, tostring(frame:IsShown()))
+end
+
+local function MCF_ScaleDump()
+    local sw, sh = GetPhysicalScreenSize()
+    local uw, uh = UIParent:GetWidth(), UIParent:GetHeight()
+    local lines = {
+        string.format("Physical: %dx%d | UIParent (virtual): %.1fx%.1f | %s", sw, sh, uw, uh, date("%H:%M:%S")),
+        "widget | x_frac y_frac (0..1, centro relativo a pantalla) | scale | w h | shown",
+    }
+    for _, def in ipairs(UNITS or {}) do
+        MCF_DumpFrameLine(lines, "unit:" .. def.key, _G["MyCF_" .. def.key])
+        MCF_DumpFrameLine(lines, "portrait:" .. def.key, _G["MyCF_Portrait_" .. def.key])
+        MCF_DumpFrameLine(lines, "aura:" .. def.key, _G["MyCF_Aura_" .. def.key])
+    end
+    MCF_DumpFrameLine(lines, "infobar", ns.infobar and ns.infobar.root)
+    MCF_DumpFrameLine(lines, "micromenu", _G.MyCF_MicroMenu)
+    MCF_DumpFrameLine(lines, "minimap", ns.minimap and ns.minimap.root)
+    MCF_DumpFrameLine(lines, "topwidget", ns.topWidgetHolder)
+    MCF_DumpFrameLine(lines, "minimapbuttons", ns.minimapButtonsTrigger)
+    MCF_DumpFrameLine(lines, "classpower", _G.MyCF_ClassPower)
+    MCF_DumpFrameLine(lines, "raid", _G.MyCF_RaidHeader)
+    MCF_ScaleDumpBox(table.concat(lines, "\n"))
+end
+
+SLASH_MCFSCALEDUMP1 = "/mcfscaledump"
+SlashCmdList["MCFSCALEDUMP"] = MCF_ScaleDump

@@ -444,6 +444,7 @@ local function EnsureFrames()
     if trigger then return end
 
     trigger = CreateFrame("Button", nil, UIParent)
+    ns.minimapButtonsTrigger = trigger   -- expuesto para diagnostico (/mcfscaledump)
     trigger:SetSize(22, 22)
     trigger.editBG = ns.MakeEditHighlight(trigger, "Minimap Buttons")
     trigger:SetMovable(true)
