@@ -14,6 +14,47 @@
 ## SESION 2026-07-24/25 (grande — auto-scale por resolucion, Explorer ampliado + registro
 ## unificado, merge de Mainmenu-Gonkast, limpieza de features, repo re-creado desde cero)
 
+### Maintenance.lua (NUEVO 2026-07-25) — QoL: validador de skins, /mcfdiag, purga de DB
+Archivo nuevo al final del toc, con 3 herramientas que antes no existian:
+
+**`/mcfskincheck`** (tambien `/mcfdiag skincheck`) — recorre `ns.SKINNABLE` + los 5 archivos de
+`MasqueSkin\` contra la carpeta de la skin ACTIVA y lista los que faltan. **Necesario por el
+propio diseño del sistema de skins**: al sacar el fallback por archivo (ver el FIX CRITICO de
+`SkinResolve`), un archivo faltante se renderiza INVISIBLE y no hay ninguna otra pista de cual es
+-- fue exactamente lo que costo una vuelta entera de diagnostico con la skin Charcoal. OJO: Lua en
+WoW no puede leer el disco, asi que el chequeo usa `GetTextureFileID()` tras un `SetTexture()` y
+puede devolver "desconocido" para .tga sueltos de addon -- el reporte lo dice explicitamente en vez
+de afirmar de mas.
+
+**`/mcfdiag [sub]`** — router unico. Sin argumento LISTA los diagnosticos disponibles (antes eran
+~20 slashes globales sueltos, sin indice: nadie podia saber que existian). Los subsistemas se
+registran con `ns.RegisterDiag(nombre, desc, fn)`. Los slashes viejos siguen existiendo (no se
+rompio nada); lo nuevo es el indice + un lugar donde registrar los que vengan.
+
+**Purga de claves muertas** (`ns.PurgeDeadKeys`, corre 1 vez por sesion en PLAYER_ENTERING_WORLD,
+o a mano con `/mcfdiag purge`) — `FillDefaults` solo AGREGA lo que falta, nunca borra, asi que el
+campo de una feature eliminada vive en los SavedVariables del usuario PARA SIEMPRE (paso con
+`hideWhenMounted`: seguia apareciendo en los exports dias despues de quitar la feature). Listas
+`DEAD_UNIT_FIELDS` / `DEAD_GLOBALS` en ese archivo -- **agregar el campo ahi al quitar una
+feature**; tambien limpia los presets guardados.
+
+### Respaldo automatico antes de acciones destructivas (2026-07-25) — `/mcfundo`
+`ns.SaveAutoBackup()` guarda un preset con nombre reservado `ns.AUTOBACKUP_NAME`
+(`"~ Auto-backup (before reset)"`, el `~` lo ordena al final) ANTES de `ns.ResetAll` y de
+`ns.ApplyProfilesFiltered`. Se restaura con `/mcfundo` (`ns.RestoreAutoBackup`) o cargandolo como
+cualquier preset. UN solo nivel de undo a proposito: un historial completo haria crecer los
+SavedVariables sin techo. `ns.SavePreset(name, silent)` gano el 2do parametro para no spamear el
+chat al respaldar (las 3 llamadas viejas siguen valiendo, es opcional).
+**LIMITE HONESTO:** el respaldo cubre SOLO la config de MyCustomFrames. `ApplyProfilesFiltered`
+reemplaza los SavedVariables de OTROS addons (Bartender4/DynamicCam/Masque/Chattynator) -- eso no
+se puede respaldar desde aca (son globals ajenos, su archivo original se pierde en el proximo
+/reload). Por eso el wizard avisa antes de aplicar.
+
+### CHANGELOG.md (NUEVO 2026-07-25)
+Antes no habia ninguno pese a ir por la v8.1. Formato por version, con Added/Changed/Removed/Fixed.
+`STRUCTURE.md` sigue siendo el "por que" (incluye los intentos revertidos); el CHANGELOG es el
+"que cambio" resumido.
+
 ### Repo git RE-CREADO (2026-07-25, pedido del usuario)
 El repo `github.com/Gonkast/MyCustomFrames` fue **borrado y creado de nuevo** (`gh repo delete`
 + `gh repo create`), con **UN solo commit inicial** conteniendo todo el estado del addon —

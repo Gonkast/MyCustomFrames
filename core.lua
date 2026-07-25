@@ -1372,6 +1372,9 @@ local PRESET_TABLE_KEYS = {
 -- ESE preset (tu default pasa a ser el "por defecto" del addon); si no, valores de fabrica.
 ns.ResetAll = function()
     if not (db and db.units) then return end
+    -- Punto de restauracion antes de pisar TODO (2026-07-25) -- recuperable con
+    -- /mcfundo o cargando el preset "~ Auto-backup". Ver ns.SaveAutoBackup.
+    if ns.SaveAutoBackup then ns.SaveAutoBackup() end
     if db.defaultPreset and db.presets and db.presets[db.defaultPreset] then
         ns.LoadPreset(db.defaultPreset)
         if ns.OnProfilePasted then ns.OnProfilePasted() end
@@ -1662,7 +1665,7 @@ local function ApplyGlobals(g)
 end
 
 -- Un preset = perfil de TODO el addon (todas las unidades + globales + tracker).
-ns.SavePreset = function(name)
+ns.SavePreset = function(name, silent)
     if not name or name == "" then return end
     db.presets = db.presets or {}
     local pr = { globals = CollectGlobals() }
@@ -1670,8 +1673,36 @@ ns.SavePreset = function(name)
         if db[k] then pr[k] = DeepCopy(db[k]) end
     end
     db.presets[name] = pr
-    print("|cff00ff00[MCF]|r Profile saved: " .. name)
+    if not silent then print("|cff00ff00[MCF]|r Profile saved: " .. name) end
 end
+
+-- ==========================================================================
+-- RESPALDO AUTOMATICO antes de acciones DESTRUCTIVAS (2026-07-25, QoL).
+-- `Reset ALL` y `Apply addon profiles` no tenian vuelta atras: pisaban el
+-- layout (y en el caso de los perfiles, los SavedVariables de OTROS addons)
+-- sin ningun punto de restauracion. Ahora guardan un preset automatico con
+-- este nombre reservado ANTES de tocar nada -- recuperable desde la lista de
+-- presets como cualquier otro (Load), o con /mcfundo.
+-- Nombre con prefijo "~" para que ordene al final y se distinga de los del
+-- usuario. Se sobrescribe en cada accion destructiva (1 solo nivel de undo:
+-- guardar un historial completo haria crecer los SavedVariables sin techo).
+-- ==========================================================================
+ns.AUTOBACKUP_NAME = "~ Auto-backup (before reset)"
+ns.SaveAutoBackup = function()
+    if not (db and db.units) then return end
+    ns.SavePreset(ns.AUTOBACKUP_NAME, true)
+end
+ns.RestoreAutoBackup = function()
+    if not (db and db.presets and db.presets[ns.AUTOBACKUP_NAME]) then
+        print("|cffff5555[MCF]|r No hay respaldo automatico guardado todavia.")
+        return
+    end
+    ns.LoadPreset(ns.AUTOBACKUP_NAME)
+    if ns.OnProfilePasted then ns.OnProfilePasted() end
+    print("|cff00ff00[MCF]|r Restaurado el respaldo previo a la ultima accion destructiva.")
+end
+SLASH_MCFUNDO1 = "/mcfundo"
+SlashCmdList["MCFUNDO"] = function() ns.RestoreAutoBackup() end
 ns.LoadPreset = function(name)
     local pr = db.presets and db.presets[name]
     if not pr then return end

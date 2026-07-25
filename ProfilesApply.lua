@@ -122,6 +122,13 @@ end
 -- Blizzard NO se toca aca (ver comentario de cabecera): Setup.lua lo ofrece aparte, a mano, con
 -- ns.ShowBlizzardHUDCode().
 function ns.ApplyProfilesFiltered(selected)
+    -- Punto de restauracion (2026-07-25, QoL): esto REEMPLAZA los
+    -- SavedVariables de otros addons -- lo del propio MyCustomFrames al menos
+    -- queda recuperable con /mcfundo. (Los de Bartender4/DynamicCam/etc. NO se
+    -- pueden respaldar desde aca: son globals de OTRO addon, se sobrescriben y
+    -- su archivo original se pierde en el proximo /reload -- por eso el wizard
+    -- avisa antes de aplicar.)
+    if ns.SaveAutoBackup then ns.SaveAutoBackup() end
     local copy = ns.DeepCopy or function(t) return t end
     local applied = {}
     local _, seen = DetectAddons()
