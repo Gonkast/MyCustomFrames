@@ -490,6 +490,20 @@ local function RefreshSkinTextures()
 	if bg then bg:SetTexture(TEX_BG()) end
 end
 
+-- Dimensiona el fondo/borde: el ANCHO sale del ancho del frame + padding
+-- (por bgScale) y el ALTO se DERIVA de la proporcion real del .tga (944x1725),
+-- nunca estirado. bgScale agranda/achica todo junto sin romper el ratio
+-- (2026-07-23, "aumentar el tamaño sin cambiar el ratio").
+-- LLAMAR SIEMPRE DESPUES de GameMenuFrame:Layout() -- ver el FIX en SkinFrame:
+-- antes del Layout, GetWidth() puede devolver un ancho sin asentar (tras un
+-- /reload) y el fondo sale chico.
+local function SizeBackground()
+	local bg = GameMenuFrame.__gonkBG
+	if not bg then return end
+	local w = ((GameMenuFrame:GetWidth() or 200) + CFG.bgPadLeft + CFG.bgPadRight) * (CFG.bgScale or 1.0)
+	bg:SetSize(w, w * CFG.bgAspect)
+end
+
 local function SkinFrame()
 	if not GameMenuFrame or GameMenuFrame:IsForbidden() then
 		return
@@ -500,18 +514,6 @@ local function SkinFrame()
 	HideBlizzardChrome()
 	UpdatePortrait()
 	GameMenuFrame:SetScale(CFG.menuScale or 1.0)
-
-	-- Size the background relative to the (now-laid-out) frame width, height
-	-- derived from the texture's real aspect ratio (never stretched).
-	-- bgScale grows/shrinks the whole thing on top of that without touching
-	-- the ratio (2026-07-23, "aumentar el tamaño sin cambiar el ratio").
-	local bg = GameMenuFrame.__gonkBG
-	local bgH
-	if bg then
-		local w = ((GameMenuFrame:GetWidth() or 200) + CFG.bgPadLeft + CFG.bgPadRight) * (CFG.bgScale or 1.0)
-		bgH = w * CFG.bgAspect
-		bg:SetSize(w, bgH)
-	end
 
 	-- Skin every currently visible button.
 	for _, child in ipairs({ GameMenuFrame:GetChildren() }) do
@@ -525,6 +527,17 @@ local function SkinFrame()
 	if GameMenuFrame.Layout then
 		GameMenuFrame:Layout()
 	end
+
+	-- FIX (2026-07-25, reportado por el usuario: "al hacer reload el fondo del
+	-- menu esc se vuelve pequeño, se reacomodo despues solo"): esto estaba
+	-- ARRIBA, antes del bucle de botones y del Layout() -- su comentario decia
+	-- "the (now-laid-out) frame width" pero era falso, el Layout() corria
+	-- DESPUES. Justo tras un /reload el frame todavia no tiene su ancho
+	-- definitivo, asi que GetWidth() devolvia un valor chico y el fondo salia
+	-- chico; recien al re-dispararse SkinFrame (hook de
+	-- GameMenuFrame_UpdateVisibleButtons / reabrir el menu) se corregia solo.
+	-- Ahora se dimensiona DESPUES del Layout(), con el ancho ya asentado.
+	SizeBackground()
 end
 ns.RefreshMainMenuSkin = SkinFrame   -- expuesto para reaccionar a un cambio de Skin en vivo
 
