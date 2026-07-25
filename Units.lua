@@ -459,10 +459,12 @@ end
 -- contexto ahora usa el Explorer (agrupadas junto a "Player"/"Target" en
 -- EXPLORER_LIST, Options.lua -- se ocultan/reaparecen JUNTO a su unitframe).
 -- EXCEPCION (2026-07-24, "el power target solo no salga si el objetivo esta
--- muerto"): targetpower conserva SOLO este chequeo -- un target muerto no
--- tiene power real que mostrar.
+-- muerto" / "el power bar del player tambien desaparezca si estoy muerto"):
+-- playerpower/targetpower conservan SOLO este chequeo -- una unidad muerta
+-- no tiene power real que mostrar.
 local function PowerShouldShow(u)
     if u.key == "targetpower" and ns.safeBool(UnitIsDeadOrGhost, "target") then return false end
+    if u.key == "playerpower" and ns.safeBool(UnitIsDeadOrGhost, "player") then return false end
     return UnitExists(u.unit)
 end
 
