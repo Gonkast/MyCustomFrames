@@ -1570,7 +1570,7 @@ local GLOBAL_FLAT_KEYS = {
     "hideEditOutline", "groupMoveParty", "groupMoveBoss", "mouselook", "hideBlizzard", "barReposition",
     "dcFix", "gridShow", "gridSnap", "snapElements", "syncBlizzEditMode",
     "previewSecureButton", "fadeIn", "fadeDuration",
-    "explorerEnabled", "explorerCombat", "explorerTarget", "explorerCasting", "explorerDamage", "explorerFadeAlpha",
+    "explorerEnabled", "explorerCombat", "explorerTarget", "explorerCasting", "explorerFadeAlpha",
     "partyAuraDirection", "partyAuraIconSize", "arenaAuraDirection", "arenaAuraIconSize",
     "hideChatEditBoxTexture", "raidGhostShowAll",
 }
@@ -1818,7 +1818,6 @@ local function InitDB()
     if db.explorerCombat == nil then db.explorerCombat = true end   -- forzar visibles en combate
     if db.explorerTarget == nil then db.explorerTarget = false end  -- forzar visibles con target
     if db.explorerCasting == nil then db.explorerCasting = true end -- forzar visibles casteando (player)
-    if db.explorerDamage == nil then db.explorerDamage = true end -- forzar visibles al recibir daño (~4s)
     -- Tipos de contenido donde el Explorer esta ACTIVO (true = activo). Default: en todos,
     -- para no cambiar el comportamiento previo. false = el Explorer se apaga ahi (todo visible).
     db.explorerZones = db.explorerZones or {}

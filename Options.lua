@@ -3926,16 +3926,7 @@ local function BuildPanel()
         MakeToggle(conditionsGroup, "Always show while casting", L, TOP - 48,
             function() return ns.GetDB().explorerCasting end,
             function(v) ns.GetDB().explorerCasting = v end)
-        -- Pedido del usuario 2026-07-24: "si recibo daño, tambien show... si se
-        -- activa la auto regeneracion, volver a explorer" -- se fuerza visible
-        -- ~4s desde el ultimo golpe recibido (ver DAMAGE_REVEAL_WINDOW en
-        -- Explorer.lua), y despues de eso vuelve solo al comportamiento normal
-        -- del Explorer (fade/hover), aproximando el momento en que arranca la
-        -- regeneracion fuera de combate.
-        MakeToggle(conditionsGroup, "Always show on taking damage", L, TOP - 72,
-            function() return ns.GetDB().explorerDamage end,
-            function(v) ns.GetDB().explorerDamage = v end)
-        MakeSlider(conditionsGroup, "Hidden opacity", 0, 1, 0.05, "explorerFadeAlpha", L, TOP - 114,
+        MakeSlider(conditionsGroup, "Hidden opacity", 0, 1, 0.05, "explorerFadeAlpha", L, TOP - 90,
             function() return ns.GetDB() end, function() end)
         -- Filtro por TIPO DE CONTENIDO: donde el Explorer esta activo (B1b).
         local zhdr = conditionsGroup:CreateFontString(nil, "ARTWORK"); setFont(zhdr, 12)

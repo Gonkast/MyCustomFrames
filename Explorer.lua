@@ -38,7 +38,7 @@ explorerDriver:SetScript("OnUpdate", function(self, dt)
             -- _mcfCombatHidden: portrait "oculto" via alpha en combate (frame protegido);
             -- su alpha lo gestiona PortraitSetShown, no el Explorer.
             if f and f:IsShown() and not f._mcfCombatHidden then
-                local target = (self.combat or self.showTgt or self.casting or self.damage or f:IsMouseOver()) and 1 or lo
+                local target = (self.combat or self.showTgt or self.casting or f:IsMouseOver()) and 1 or lo
                 local cur = f._exAlpha; if cur == nil then cur = f:GetAlpha() end
                 cur = cur + (target - cur) * (target > cur and kIn or kOut)
                 if math.abs(target - cur) < 0.003 then cur = target end
@@ -89,54 +89,17 @@ end
 ns.ExplorerZoneAllowed = ExplorerZoneAllowed
 
 -- ==========================================================================
--- Condicion "recibi daño" (pedido del usuario 2026-07-24: "agrega si recibo
--- daño, tambien show... si se activa la auto regeneracion, volver a
--- explorer"). Se detecta por COMBAT_LOG_EVENT_UNFILTERED (tipos de evento de
--- daño, NUNCA leyendo el numero de daño en si) filtrando destGUID == GUID del
--- player -- secret-safe, no compara ningun valor de salud/daño, solo el TIPO
--- de evento (string) y el GUID (string), ninguno de los 2 es secreto en este
--- cliente. "Volver a explorer" = dejar de forzar visible despues de
--- DAMAGE_REVEAL_WINDOW segundos SIN recibir daño nuevo -- aproxima el momento
--- en que la regeneracion fuera de combate arranca (Blizzard la activa a los
--- ~5s sin recibir daño), sin necesitar leer el estado de regen directamente
--- (no existe una API publica limpia para eso).
-local DAMAGE_REVEAL_WINDOW = 4
-local lastDamageTime = 0
-local DAMAGE_SUBEVENTS = {
-    SWING_DAMAGE = true, RANGE_DAMAGE = true, SPELL_DAMAGE = true,
-    SPELL_PERIODIC_DAMAGE = true, ENVIRONMENTAL_DAMAGE = true,
-}
--- FIX (2026-07-24, error real en juego: "ADDON_ACTION_FORBIDDEN ... tried to
--- call the protected function 'Frame:RegisterEvent()'" en esta linea): un
--- RegisterEvent de una sola vez, en la carga del archivo, puede caer justo
--- cuando el UI se recarga EN COMBATE (el candado de combate persiste a
--- traves de un /reload) -- RegisterEvent en si queda bloqueado ahi. Se
--- reintenta via C_Timer (NO otro RegisterEvent, ese tambien caeria) hasta
--- que InCombatLockdown() de false.
-local damageWatcher = CreateFrame("Frame")
-local function TryRegisterDamageWatcher()
-    if damageWatcher._registered then return end
-    if InCombatLockdown() then
-        C_Timer.After(1, TryRegisterDamageWatcher)
-        return
-    end
-    local ok = pcall(damageWatcher.RegisterEvent, damageWatcher, "COMBAT_LOG_EVENT_UNFILTERED")
-    if ok then
-        damageWatcher._registered = true
-    else
-        C_Timer.After(1, TryRegisterDamageWatcher)
-    end
-end
-damageWatcher:SetScript("OnEvent", function()
-    local _, subevent, _, _, _, _, _, destGUID = CombatLogGetCurrentEventInfo()
-    if DAMAGE_SUBEVENTS[subevent] and destGUID == UnitGUID("player") then
-        lastDamageTime = GetTime()
-    end
-end)
-TryRegisterDamageWatcher()
+-- Condicion "recibi daño" -- REVERTIDA (2026-07-24). Intentada via
+-- COMBAT_LOG_EVENT_UNFILTERED, pero el RegisterEvent de ese evento resulto
+-- estar bloqueado (ADDON_ACTION_FORBIDDEN) en la cuenta/sesion del usuario
+-- de forma persistente, NO solo durante combate -- el intento de reintentar
+-- con C_Timer + pcall solo logro que el error se repitiera en loop (pcall
+-- NO protege contra ADDON_ACTION_FORBIDDEN, ese error se reporta igual). Sin
+-- una forma confiable de registrar ese evento en este cliente, se saca la
+-- funcion entera en vez de dejar un addon que spamea errores.
 
 -- Llamado desde el ticker central de core.lua (10Hz) -- solo refresca el estado de
--- combate/target/casteo/daño (del snapshot ns.tickState) y enciende/apaga el driver de
+-- combate/target/casteo (del snapshot ns.tickState) y enciende/apaga el driver de
 -- animacion; la animacion en si corre en el OnUpdate de arriba, no aqui.
 ns.TickExplorer = function()
     local db = ns.GetDB()
@@ -149,7 +112,6 @@ ns.TickExplorer = function()
         -- Casteo/canalizacion del PLAYER: revela al instante (ReadCastMode es secret-safe;
         -- el fade de revelado tiene half-life ~60ms → se percibe inmediato).
         explorerDriver.casting = (db.explorerCasting and ns.ReadCastMode("player") ~= nil) or false
-        explorerDriver.damage = (db.explorerDamage and (GetTime() - lastDamageTime) < DAMAGE_REVEAL_WINDOW) or false
     elseif explorerDriver._wasOn then
         -- Se apago (zona no permitida o master off): restaurar alpha 1 UNA vez.
         if ns.ExplorerResetAll then ns.ExplorerResetAll() end
