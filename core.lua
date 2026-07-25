@@ -176,10 +176,14 @@ for _, f in ipairs({
     "actionbutton-border square.tga", "actionbutton-border.tga",
     -- Info bar
     "info_bg.tga",
-    -- Minimapa (borde + backdrop del anillo + ojo LFG + boton de dismount).
-    -- Las MASCARAS (minimap-mask-*) quedan AFUERA: definen la FORMA del
-    -- minimapa, si una skin las trae mal el minimapa se rompe entero.
+    -- Minimapa: borde + backdrop del anillo + ojo LFG + boton de dismount, y
+    -- las 2 MASCARAS (agregadas 2026-07-25 a pedido del usuario -- se habian
+    -- dejado afuera en la primera pasada por prudencia, ya que definen la FORMA
+    -- recortada del minimapa: una mascara mal hecha lo rompe entero. Se
+    -- resuelven en Minimap.lua/ApplyMinimapSkin via ns.SkinResolve, solo les
+    -- faltaba estar en esta lista).
     "minimap-border.tga", "minimap-onebar-backdrop.tga",
+    "minimap-mask-transparent.tga", "minimap-mask-opaque.tga",
     "group-finder-eye-orange.tga", "icon_exit_flight.tga",
     -- Class power / raid target
     "point_diamond.tga", "point_plate.tga",

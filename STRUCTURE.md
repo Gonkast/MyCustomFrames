@@ -1923,7 +1923,7 @@ migran configs guardadas con rutas antiguas de AzeriteUI a las copias locales.
 `button wood large.tga`, `button red2 large.tga`.
 
 **LISTA DE TEXTURAS RESKINEABLES = LISTA BLANCA `SKINNABLE` (core.lua, arriba de
-`SkinResolve`).** Son las 23 que le interesan al usuario; **el resto de `Assets/` NUNCA se busca
+`SkinResolve`).** Son las 25 que le interesan al usuario; **el resto de `Assets/` NUNCA se busca
 en la carpeta de la skin**, va siempre al `Assets/` principal.
 
 > **FIX CRITICO 2026-07-25 — no volver a intentar "probar si el archivo existe".** La version
@@ -1935,17 +1935,30 @@ en la carpeta de la skin**, va siempre al `Assets/` principal.
 > exactamente los archivos que NO estaban en la carpeta de la skin. Lua en WoW **no puede leer el
 > disco**, no hay forma de detectar existencia: por eso la lista blanca explicita.
 
-**CONTRATO de una skin (confirmado con el usuario): DEBE traer las 23 texturas de la lista
+**CONTRATO de una skin (confirmado con el usuario): DEBE traer las 25 texturas de la lista
 COMPLETAS + su carpeta `Assets\MasqueSkin\` completa.** No hay skins parciales — un archivo
 faltante de la lista se renderiza invisible. Para hacer un archivo nuevo reskineable hay que
 agregarlo a `SKINNABLE` en core.lua Y a esta lista.
 
-`actionbutton-border square` · `actionbutton-border` · `Background border` · `border-tooltip` ·
-`button red2 large` · `button wood large` · `cast_back` · `group-finder-eye-orange` ·
-`hp_low_case` · `hp_low_case_mirror_s` · `hp_low_case_mirror` · `hp_low_case_mirror_b` ·
-`hp_party_cage` · `hp_pet_cage` · `icon_exit_flight` · `info_bg` · `minimap-border` ·
-`minimap-onebar-backdrop` · `orb_case_low` · `point_diamond` · `point_plate` ·
-`portrait_frame_low` · `power_low_case`
+Nombres EXACTOS (2 estan mal escritos en el original: `hp_low_case_miror_s` con una sola `r`, y
+`portrait_frame_lo` truncado — hay que copiarlos tal cual o la textura sale invisible):
+
+```
+actionbutton-border square.tga   hp_low_case_mirror.tga      minimap-mask-opaque.tga
+actionbutton-border.tga          hp_low_case_mirror_b.tga    minimap-mask-transparent.tga
+Background border.tga            hp_party_cage.tga           minimap-onebar-backdrop.tga
+border-tooltip.tga               hp_pet_cage.tga             orb_case_low.tga
+button red2 large.tga            icon_exit_flight.tga        point_diamond.tga
+button wood large.tga            info_bg.tga                 point_plate.tga
+cast_back.tga                    minimap-border.tga          portrait_frame_lo.tga
+group-finder-eye-orange.tga      hp_low_case.tga             power_low_case_s.tga
+hp_low_case_miror_s.tga
+```
+
+Las 2 mascaras del minimapa (`minimap-mask-*`) se agregaron 2026-07-25 a pedido del usuario
+("se me olvidaron"); definen la FORMA recortada del minimapa, asi que una mascara mal hecha lo
+rompe entero. `group-finder-eye-orange.tga` se usa TAMBIEN como icono de la skin en la lista de
+AddOns (`## IconTexture` de cada `MyCustomFrames_<Skin>.toc`).
 
 Dos mecanismos, mismo resultado: (a) via `ns.TEX_LIB` + `ApplySkinToTable` — reescribe el campo
 guardado en cada unidad/portrait/aura al aplicar la skin; (b) via `ns.SkinResolve` llamado en
