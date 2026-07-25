@@ -1047,6 +1047,13 @@ local function RefreshAll()
     -- (SetUnlocked -> RefreshAll), asi que ni el outline ni el mouse se
     -- activaban al togglear el Lock.
     if ns.RefreshClassPower then ns.RefreshClassPower() end
+    -- Faltaban (2026-07-24, encontrado via /mcfscaledump: topwidget y
+    -- minimapbuttons se quedaban con el mismo scale/posicion sin importar
+    -- cuanto cambiara la resolucion) -- ninguno de los 2 estaba en este
+    -- camino central, asi que ns.ResScale() nunca les llegaba en un
+    -- DISPLAY_SIZE_CHANGED/poll de resize.
+    if ns.RefreshTopWidget then ns.RefreshTopWidget() end
+    if ns.RefreshMinimapButtons then ns.RefreshMinimapButtons() end
     RefreshOutlineNames()
 end
 ns.RefreshAll = RefreshAll
