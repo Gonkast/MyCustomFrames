@@ -553,6 +553,18 @@ local function SkinFrame()
 	if GameMenuFrame.Layout then
 		GameMenuFrame:Layout()
 	end
+
+	-- FIX (2026-07-25) del "la primera vez que abro el menu tras un /reload el
+	-- fondo sale chico, despues se arregla solo" -- que venia YA del addon
+	-- original, no lo introdujo el merge.
+	-- EVIDENCIA (/mcfmenudiag con el menu abierto): el fondo media 170x311
+	-- mientras GameMenuFrame:GetWidth() daba 256. (56+40+40)*1.25 = 170 exacto,
+	-- y 170*1.827 = 311 -> se habia dimensionado cuando el frame todavia media
+	-- 56px y nunca se recalculo al pasar a 256. Con 256 el ancho correcto es 420.
+	-- El Layout() de arriba es el que asienta el ancho, asi que alcanza con
+	-- volver a dimensionar DESPUES. Se deja tambien la llamada de antes (barata,
+	-- idempotente) para no alterar el comportamiento en el resto de los casos.
+	SizeBackground()
 end
 ns.RefreshMainMenuSkin = SkinFrame   -- expuesto para reaccionar a un cambio de Skin en vivo
 
@@ -577,17 +589,23 @@ local function MainMenuDiag()
         .. "  |cff888888(si esta cerrado, los botones pueden no existir todavia)|r")
     -- Usa el MISMO recorrido que SkinFrame (ForEachMenuButton), asi lo que
     -- reporta es exactamente lo que el skin ve/toca.
-    local found, skinned = 0, 0
+    -- FIX (2026-07-25): ForEachMenuButton pasa TODOS los hijos visibles (el
+    -- filtro IsGameMenuButton vive dentro de SkinButton, igual que en el addon
+    -- original) -- llamar b:GetText() sin filtrar reventaba en el primer hijo
+    -- que no es un Button. Se filtra aca con el MISMO criterio.
+    local children, found, skinned = 0, 0, 0
     ForEachMenuButton(function(b)
+        children = children + 1
+        if not IsGameMenuButton(b) then return end
         found = found + 1
         if b.__gonkTex then skinned = skinned + 1 end
         if found <= 5 then   -- una muestra alcanza
-            print(("    [%s] shown=%s -> %s"):format(
+            print(("    [%s] -> %s"):format(
                 tostring(b:GetText()),
-                tostring(b:IsShown()),
                 b.__gonkTex and tostring(b.__gonkTex:GetTexture()) or "|cffff5555SIN SKIN|r"))
         end
     end)
+    print(("  hijos visibles recorridos: %d"):format(children))
     print(("  botones de menu encontrados: %d | skineados: %d"):format(found, skinned))
     print("  hook GameMenuFrame_UpdateVisibleButtons: "
         .. (type(_G.GameMenuFrame_UpdateVisibleButtons) == "function" and "existe" or "|cffff5555NO existe|r"))
