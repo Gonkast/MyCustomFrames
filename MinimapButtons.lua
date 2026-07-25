@@ -527,10 +527,19 @@ local function EnsureFrames()
     container:SetSize(1, 1)
     container:Hide()
     container:SetFrameStrata("MEDIUM")
-    -- EnableMouse solo para que los clicks/hover de los iconos hijos
-    -- funcionen con normalidad -- el show/hide del grupo entero NO usa
-    -- OnEnter/OnLeave de este frame (ver nota arriba).
-    container:EnableMouse(true)
+    -- FIX (2026-07-24, "no reaccionan, ni tooltip ni click"): confirmado con
+    -- /mcfminimapbtnslist -- TODOS los botones bloqueados compartian
+    -- exactamente strata=MEDIUM level=8 (el mismo nivel que este container
+    -- les asigna via SetFrameLevel en LayoutGroup), mientras el UNICO que
+    -- respondia (strata=HIGH) le ganaba por strata sin importar el nivel.
+    -- El EnableMouse(true) de ESTE frame (container mismo, sin ningun
+    -- OnClick/OnEnter propio) quedaba empatando/tapando a sus propios hijos
+    -- en el stack de hit-test de WoW cuando comparten strata+nivel cercano
+    -- -- un frame padre NO necesita el mouse habilitado para que sus hijos
+    -- reciban clicks (cada boton ya tiene su propio EnableMouse, confirmado
+    -- true en el diagnostico); esto solo servia para tapar todo por debajo
+    -- de HIGH.
+    container:EnableMouse(false)
 end
 
 Layout = function()
