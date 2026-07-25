@@ -595,51 +595,16 @@ C_Timer.NewTicker(1.0, function()
 end)
 
 -- ==========================================================================
--- Auto-scale por resolucion (pedido del usuario 2026-07-24: "quiero que el
--- quest tracker tenga lo mismo de la escala entre resoluciones de los demas
--- elementos, cuando cambio de resolucion es lo unico que se mueve"). A
--- diferencia del resto del addon, el ObjectiveTrackerFrame NUNCA fue
--- posicionado por MCF (su anchor sigue siendo 100% nativo de Blizzard/Edit
--- Mode) -- pero el mismo principio de ns.ResScale() aplica igual: un
--- SetScale multiplicador escala PROPORCIONALMENTE tanto el tamaño como la
--- distancia a su anchor nativo (sea cual sea), sin necesitar reimplementar
--- ese anchor a mano. rs=1 (aspect fuera de 16:9) deja el scale nativo intacto.
---
--- FIX (2026-07-24, "aun el quest tracker se mueve cuando cambio de
--- resoluciones"): un SetScale de una sola vez no bastaba -- el propio Edit
--- Mode de Blizzard reaplica SU escala guardada (segun el tamaño elegido en
--- Edit Mode) en varios momentos propios (entrar al mundo, reajustar
--- layout, etc.), pisando la nuestra sin avisar. Se seguia moviendo cada vez
--- que Blizzard volvia a tocar el scale DESPUES de nuestro RefreshAll.
--- Solucion: hooksecurefunc sobre SetScale -- cada vez que ALGO (Blizzard
--- incluido) le cambia la escala, se interpreta ese valor como la escala
--- BASE de Blizzard (trackerBaseScale) y se reaplica trackerBaseScale*rs
--- inmediatamente encima, igual que ns.ResScale() encima del scale nativo de
--- cualquier otro widget. Guard de reentrancia (mismo patron que
--- blizzAlphaReentrant en core.lua) para no loopear con nuestro propio SetScale.
-local trackerBaseScale = 1
-local applyingTrackerScale = false
-local function HookTrackerScale(otf)
-    if otf._mcfScaleHooked then return end
-    otf._mcfScaleHooked = true
-    hooksecurefunc(otf, "SetScale", function(self, s)
-        if applyingTrackerScale or not s then return end
-        local rs = ns.ResScale and ns.ResScale() or 1
-        if rs <= 0 then return end
-        local newBase = s / rs
-        if math.abs(newBase - trackerBaseScale) > 0.001 then
-            trackerBaseScale = newBase
-            if ns.RefreshTrackerScale then ns.RefreshTrackerScale() end
-        end
-    end)
-end
-local function ApplyTrackerScale()
-    local otf = _G.ObjectiveTrackerFrame
-    if not otf or not ns.ResScale then return end
-    HookTrackerScale(otf)   -- idempotente, se re-intenta cada refresh por si el frame tardo en existir
-    applyingTrackerScale = true
-    otf:SetScale(trackerBaseScale * ns.ResScale())
-    applyingTrackerScale = false
-end
-ns.RefreshTrackerScale = ApplyTrackerScale
-ApplyTrackerScale()
+-- Auto-scale por resolucion -- REVERTIDO (2026-07-24). Se intento 2 veces
+-- (SetScale simple, despues hooksecurefunc para mantenerlo pegado) pero
+-- /mcfscaledump mostro que igual sigue mal: comparando 1920x1080 vs
+-- 1280x720, el offset "crudo" de anclaje del tracker CAMBIA entre
+-- resoluciones (no es constante como en cualquier frame propio del addon)
+-- -- confirma que el ObjectiveTrackerFrame esta gestionado activamente por
+-- el Edit Mode de Blizzard, que reposiciona el frame con SU PROPIA logica
+-- (no "misma fraccion de pantalla") cada vez que cambia la resolucion.
+-- Multiplicar su SetScale no corrige eso -- solo pelea contra un sistema
+-- que ya se mueve por su cuenta con una regla distinta a la del resto del
+-- addon. Sin una solucion confiable sin tocar directamente el sistema de
+-- Edit Mode (mas riesgo del que vale la pena), se deja el tracker 100%
+-- nativo, sin ningun SetScale de este addon.
