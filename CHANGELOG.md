@@ -4,6 +4,21 @@ Notable changes per session. Older history lives in `STRUCTURE.md`, which docume
 *why* things are the way they are (including approaches that were tried and reverted —
 worth reading before redoing one of them).
 
+## Unreleased
+
+### Fixed
+- **`ADDON_ACTION_BLOCKED` from the pet bar.** Hiding the Bartender4 pet bar when you have no
+  pet called `EnableMouse` without checking for combat. It now defers to
+  `PLAYER_REGEN_ENABLED`, same as the bar-scaling code alongside it.
+- **Same bug in the native-frame hider.** `HB_HideAlpha` called `EnableMouse` on Blizzard's
+  protected arena/party frames, and `HideArenaFramesNow` deliberately runs *during* combat
+  (an arena match is in combat almost end to end), so the ticker was spamming the error every
+  third tick. The `SetAlpha` that does the actual hiding is genuinely combat-safe and stays
+  unguarded; only `EnableMouse` is deferred.
+
+  A comment in `core.lua` had asserted that `EnableMouse` was safe on protected frames. It
+  isn't — that belief is what put both bugs there. Corrected in place.
+
 ## 8.1 — 2026-07-25
 
 ### Added

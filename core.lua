@@ -2412,10 +2412,22 @@ local function HB_HideAlpha(frame)
     -- seguia apareciendo BAJO el cursor pese al alpha=0): SetAlpha(0) esconde
     -- VISUALMENTE pero NO desactiva el mouse -- el frame nativo (invisible) seguia
     -- interceptando hover/clicks por delante del unitframe propio del addon.
-    -- EnableMouse(false) es una llamada segura (no protegida como Show/Hide/SetPoint)
-    -- incluso en frames protegidos -- se agrega aca, mismo lugar central que ya
-    -- reaplica esto en cada refresh.
-    if frame.EnableMouse then pcall(frame.EnableMouse, frame, false) end
+    -- CORRECCION (2026-07-27, auditoria): la version anterior de este comentario
+    -- afirmaba que EnableMouse "es una llamada segura incluso en frames
+    -- protegidos, no protegida como Show/Hide/SetPoint". Eso es FALSO --
+    -- EnableMouse SI esta protegida. Lo demostro un ADDON_ACTION_BLOCKED real en
+    -- BartenderScale.lua (UpdatePetBarVisibility llamando EnableMouse sobre
+    -- BT4BarPetBar en combate), arreglado el mismo dia con este mismo guard.
+    -- El unico metodo de esta familia que de verdad es seguro en combate es
+    -- SetAlpha -- y es el que hace el ocultado real, asi que queda SIN guard
+    -- (HideArenaFramesNow corre a proposito durante el combate de arena).
+    -- pcall NO suprime ADDON_ACTION_BLOCKED (solo evita que el error corte el
+    -- script): sin este guard, la arena spameaba el log via el ticker.
+    -- Diferir no pierde nada: el estado de mouse puesto fuera de combate
+    -- persiste dentro, y el ticker reaplica al salir.
+    if frame.EnableMouse and not InCombatLockdown() then
+        pcall(frame.EnableMouse, frame, false)
+    end
     HB_HookShowAlpha(frame)
 end
 

@@ -98,9 +98,18 @@ ns.RefreshBartenderScale = ApplyAllBarScales
 -- Explorer, este chequeo GANE -- sin pet, se queda oculta pase lo que pase
 -- con mouseover/combate.
 local petBarHiddenNoPet = false
+local pendingPetVisibility = false
 -- Sin `local`: asigna a la fwd-declarada arriba, que ApplyAllBarScales ya
 -- referencia (si se re-declarara con `local`, esa referencia quedaria en nil).
+-- GUARD (2026-07-27, reportado: ADDON_ACTION_BLOCKED llamando funcion
+-- protegida al pasar por aca via UNIT_PET en combate): pcall NO suprime
+-- ADDON_ACTION_BLOCKED/FORBIDDEN, solo evita que el error interrumpa el
+-- script (ver nota en core.lua) -- BugGrabber lo captura igual. Mismo patron
+-- que ApplyBarScale/ApplyAllBarScales: si esta en combate, se difiere a
+-- PLAYER_REGEN_ENABLED en vez de intentar y loguear el bloqueo.
 function UpdatePetBarVisibility()
+    if InCombatLockdown() then pendingPetVisibility = true; return end
+    pendingPetVisibility = false
     local bar = _G.BT4BarPetBar
     if not bar then return end
     local hasPet = UnitExists("pet")
@@ -125,6 +134,7 @@ evFrame:RegisterEvent("UNIT_PET")
 evFrame:SetScript("OnEvent", function(_, event, unit)
     if event == "PLAYER_REGEN_ENABLED" then
         if pendingApply then ApplyAllBarScales() end
+        if pendingPetVisibility then UpdatePetBarVisibility() end
         return
     end
     if event == "UNIT_PET" and unit ~= "player" then return end
