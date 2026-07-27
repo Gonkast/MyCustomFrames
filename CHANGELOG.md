@@ -6,6 +6,14 @@ worth reading before redoing one of them).
 
 ## Unreleased
 
+### Documentation
+- **All 32 slash commands are listed in the README**, up from 6. Split into commands you'd
+  actually use, the handful of elements still driven from chat because they have no menu
+  section yet, and the diagnostics — with `/mcfdiag` called out as the entry point so the
+  list doesn't have to be memorized.
+- Corrected a comment in `Setup.lua` that referred to `ns.ApplyBartenderAutoProfile`. The
+  function is a file-local in `ProfilesApply.lua` and was never exposed on `ns`.
+
 ### Fixed
 - **`ADDON_ACTION_BLOCKED` from the pet bar.** Hiding the Bartender4 pet bar when you have no
   pet called `EnableMouse` without checking for combat. It now defers to

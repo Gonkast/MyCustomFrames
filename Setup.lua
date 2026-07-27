@@ -700,7 +700,8 @@ local function BuildPage6(content)
 
     -- 2026-07-16: "usar este perfil para cualquier personaje NUEVO de la cuenta" — distinto del
     -- boton de abajo (que solo fuerza ESTE personaje). Guardado en db.bartenderAutoProfile;
-    -- ns.ApplyBartenderAutoProfile (ProfilesApply.lua) lo aplica en cada login via la API viva de
+    -- ApplyBartenderAutoProfile (local de ProfilesApply.lua, no expuesta en ns) lo aplica en cada
+    -- login -- disparada ahi por su propio frame de PLAYER_LOGIN -- via la API viva de
     -- AceDB (Bartender4.db:SetProfile), sin depender del orden de carga entre addons.
     -- Posicion FIJA a -122 (2026-07-16, fix de prolijidad): la version original lo puso a -240,
     -- una posicion que en la practica caia ENCIMA/pegado del boton Apply y el texto de resultado

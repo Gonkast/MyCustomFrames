@@ -54,9 +54,45 @@ None to load — no other addon is a hard dependency. That said, this preset is 
 | `/mcf` | Toggle Move/Lock (edit mode) |
 | `/mcfmenu` | Open the options panel |
 | `/mcfsetup` | Reopen the setup wizard |
+| `/mcfnpdesigner` | Open the in-game nameplate designer |
+| `/mcfundo` | Restore the auto-backup taken before the last Reset ALL or profile apply (one level of undo) |
+| `/mcfskincheck` | Check the active skin ships every file it needs — a missing one renders **invisible**, with no other clue |
 | `/mcfhud` | Show the Blizzard Edit Mode HUD code (import manually via Esc > Edit Mode > Import Layout) |
-| `/mcftrackerdump` | Diagnostics: quest tracker text classification |
-| `/mcfchar` | Diagnostics: portrait "open character panel" button |
+
+A few elements have no menu section yet and are driven from chat instead:
+
+| Command | Effect |
+|---|---|
+| `/mcfmirror <toggle\|width\|height\|offsetx\|offsety>` | Mirror timer (breath / fatigue bar) |
+| `/mcftooltip <toggle\|scale>` | Tooltip reskin |
+| `/mcfextrabtn border` | Extra action button border |
+| `/mcfminimapbtnslist` | List the minimap buttons the collector picked up |
+| `/mcfminimapbtnsignore <name>` | Exclude one of them from the collector |
+| `/mcfminimapbtnsreset` | Reset the collector trigger's position and scale |
+
+## Diagnostics
+
+**`/mcfdiag`** lists the diagnostics registered with the router, and `/mcfdiag <name>` runs one —
+start there rather than memorizing the list below. The rest predate the router and are still
+their own commands.
+
+Each dumps what a subsystem is *actually* seeing right now, which usually beats guessing:
+
+| Command | Reports on |
+|---|---|
+| `/mcfscaledump` | Position and scale of every element at the current resolution — the tool for checking the 16:9 auto-scale |
+| `/mcfbt4diag` | Which Bartender4 bar frames exist and under what names |
+| `/mcfaurasdiag` | Aura data for the current target |
+| `/mcfnpdiag`, `/mcfcastwatch` | Nameplates; `castwatch` toggles live cast logging |
+| `/mcfmmdiag`, `/mcfringdiag`, `/mcfmapiconsdiag` | Minimap: general state, XP/reputation/honor/renown rings, icons |
+| `/mcfpartytest`, `/mcfarenaauratest` | Toggle the party / arena aura previews for placement without a real group |
+| `/mcfarenadiag` | Which arena-detection method is returning what |
+| `/mcfclasspowerdiag` | Class resource detection for your class and spec |
+| `/mcfmirrordiag`, `/mcfmirrortargetdiag` | Mirror timer, and the mirrored-target portrait |
+| `/mcfpaneldiag` | Mouse dead-zones over the options panel — run it while standing on the stuck spot |
+| `/mcfmenudiag` | Texture paths the Game Menu (Esc) skin resolves |
+| `/mcftrackerdump` | Quest tracker text classification |
+| `/mcfchar` | The portrait's "open character panel" button |
 
 ## Installation
 
