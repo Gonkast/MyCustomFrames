@@ -136,6 +136,10 @@ Tracker.lua
 Options.lua
 Setup.lua
 
+# Registro declarativo de modulos persistentes. Carga despues de todos los
+# modulos para poder verificar sus APIs sin afectar su orden de inicializacion.
+ModuleRegistry.lua
+
 # Herramientas de mantenimiento/QoL: /mcfskincheck (valida que la skin activa
 # traiga todos sus archivos), /mcfdiag (router unico de diagnosticos) y la purga
 # de claves muertas de la DB. Carga al final: usa ns.SKINNABLE/ns.TEX_SKINS/GetDB.

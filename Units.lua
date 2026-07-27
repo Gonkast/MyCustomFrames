@@ -58,6 +58,72 @@ local function GetHealthPercent(unit)
     return ns.GetHealthPercentReadable(unit)
 end
 
+-- Color secreto del porcentaje de vida. Midnight no permite evaluar
+-- `pct <= 40` cuando pct es secreto, pero UnitHealthPercent acepta una
+-- ColorCurve y hace la evaluacion dentro del cliente. La curva devuelve rojo
+-- por debajo del umbral y el color normal del texto por encima.
+--
+-- El resultado se usa unicamente para envolver el fragmento "100%" con
+-- C_ColorUtil. El " | 105K" conserva el SetTextColor normal del FontString.
+-- Si alguna API cambia o rechaza un secreto, devolvemos nil y el caller usa
+-- exactamente el formato anterior; nunca se bloquea el texto de vida.
+local function GetPercentLowHealthCurve(u, p, normalColor)
+    if not (p.percentLowHealthColor and C_CurveUtil and C_CurveUtil.CreateColorCurve
+        and C_ColorUtil and C_ColorUtil.WrapTextInColor and CreateColor
+        and Enum and Enum.LuaCurveType and Enum.LuaCurveType.Step) then
+        return nil
+    end
+
+    local threshold = ns.clamp(tonumber(p.percentLowHealthThreshold) or 40, 1, 99) / 100
+    if u._mcfPctCurve
+       and u._mcfPctCurveThreshold == threshold
+       and u._mcfPctCurveR == normalColor.r
+       and u._mcfPctCurveG == normalColor.g
+       and u._mcfPctCurveB == normalColor.b then
+        return u._mcfPctCurve
+    end
+
+    local ok, curve = pcall(C_CurveUtil.CreateColorCurve)
+    if not ok or not curve then return nil end
+    local red = CreateColor(1, 0.10, 0.10, 1)
+    local normal = CreateColor(normalColor.r, normalColor.g, normalColor.b, 1)
+    -- Step + un punto apenas despues del umbral: <= umbral rojo, por encima
+    -- vuelve directamente al color configurado, sin degradado amarillo.
+    ok = pcall(function()
+        curve:SetType(Enum.LuaCurveType.Step)
+        curve:AddPoint(0, red)
+        curve:AddPoint(threshold, red)
+        curve:AddPoint(threshold + 0.0001, normal)
+        curve:AddPoint(1, normal)
+    end)
+    if not ok then return nil end
+
+    u._mcfPctCurve = curve
+    u._mcfPctCurveThreshold = threshold
+    u._mcfPctCurveR, u._mcfPctCurveG, u._mcfPctCurveB = normalColor.r, normalColor.g, normalColor.b
+    return curve
+end
+
+local function SetHealthTextWithPercentColor(u, p, hpText, pct, abbreviated, normalColor)
+    local curve = GetPercentLowHealthCurve(u, p, normalColor)
+    if not curve then return false end
+
+    -- Se consulta de nuevo con la curva, no con ScaleTo100: las ColorCurve
+    -- reciben el porcentaje interno 0..1. Tanto el color como el texto pueden
+    -- ser secretos; las APIs C usadas abajo los aceptan sin inspeccionarlos.
+    local okColor, secretColor = pcall(UnitHealthPercent, u.unit, true, curve)
+    if not okColor then return false end
+    local okPct, percentText = pcall(string.format, "%.0f%%", pct)
+    if not okPct then return false end
+    local okWrap, coloredPercent = pcall(C_ColorUtil.WrapTextInColor, percentText, secretColor)
+    if not okWrap then return false end
+
+    if abbreviated then
+        return pcall(hpText.SetFormattedText, hpText, "%s | %s", coloredPercent, abbreviated)
+    end
+    return pcall(hpText.SetFormattedText, hpText, "%s", coloredPercent)
+end
+
 local function UnitUpdateText(u)
     local p, hpText = P(u), u.hpText
     if not p.showText then hpText:SetText("") return end
@@ -106,9 +172,12 @@ local function UnitUpdateText(u)
         if readable then
             if p.showValue and type(AbbreviateNumbers) == "function" then
                 local okA, abbr = pcall(AbbreviateNumbers, UnitHealth(u.unit))
-                if okA and abbr ~= nil
-                   and pcall(hpText.SetFormattedText, hpText, "%.0f%% | %s", readablePct, abbr) then return end
+                if okA and abbr ~= nil then
+                    if SetHealthTextWithPercentColor(u, p, hpText, readablePct, abbr, col) then return end
+                    if pcall(hpText.SetFormattedText, hpText, "%.0f%% | %s", readablePct, abbr) then return end
+                end
             end
+            if SetHealthTextWithPercentColor(u, p, hpText, readablePct, nil, col) then return end
             hpText:SetFormattedText("%.0f%%", readablePct)
             return
         end
@@ -117,9 +186,12 @@ local function UnitUpdateText(u)
         if okP and pct ~= nil then
             if p.showValue and type(AbbreviateNumbers) == "function" then
                 local okA, abbr = pcall(AbbreviateNumbers, UnitHealth(u.unit))
-                if okA and abbr ~= nil
-                   and pcall(hpText.SetFormattedText, hpText, "%.0f%% | %s", pct, abbr) then return end
+                if okA and abbr ~= nil then
+                    if SetHealthTextWithPercentColor(u, p, hpText, pct, abbr, col) then return end
+                    if pcall(hpText.SetFormattedText, hpText, "%.0f%% | %s", pct, abbr) then return end
+                end
             end
+            if SetHealthTextWithPercentColor(u, p, hpText, pct, nil, col) then return end
             if pcall(hpText.SetFormattedText, hpText, "%.0f%%", pct) then return end
         end
     end

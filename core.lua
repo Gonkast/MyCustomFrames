@@ -450,6 +450,12 @@ local function DefaultsFor(key)
     }
     local power = (key == "playerpower" or key == "targetpower")
     local boss  = (key:sub(1, 4) == "boss")
+    -- Percent color secreto (2026-07-27, "aplica lo mismo a pet, tot, target,
+    -- party, boss y arena"): default ON para toda unidad de VIDA -- power no
+    -- entra (el campo no se lee nunca en ese camino, ver UnitUpdateText) y
+    -- focus se deja afuera porque el usuario no lo pidio (sigue opt-in manual,
+    -- igual que antes de este cambio).
+    local percentColorDefault = (not power) and key ~= "focus"
     local tex
     if power then tex = POWER_TEXTURE
     elseif boss then tex = BOSS_TEXTURE
@@ -479,9 +485,10 @@ local function DefaultsFor(key)
         -- Texto vida
         showText = true, showValue = wantValue, textAlpha = 1.0,
         textOffsetX = 0, textOffsetY = 0, textAutoHide = not power, fontSize = 14,
-        -- Auto-hide: ademas de combate/hostil/mouseover, revelar si la vida baja del umbral.
-        textLowHealthShow = false, textLowHealthThreshold = 60,
         useHealthColor = false, healthColor = { r = GOLD.r, g = GOLD.g, b = GOLD.b },
+        -- Midnight secret-safe: ColorCurve colorea SOLO el porcentaje del texto,
+        -- sin comparar UnitHealthPercent desde Lua.
+        percentLowHealthColor = percentColorDefault, percentLowHealthThreshold = 40,
         -- Texto nombre
         showName = true, nameAutoHide = false, nameFontSize = 12, nameAlpha = 1.0,
         nameScale = 1.0, nameOffsetX = 0, nameOffsetY = 0,
@@ -1367,6 +1374,24 @@ local PRESET_TABLE_KEYS = {
     "minimap", "nameplates", "classpower", "tooltip", "extrabutton", "mirrortimer", "topwidget",
     "minimapbuttons",
 }
+-- API de solo lectura para Maintenance.lua y herramientas futuras. Mantener la
+-- lista real aqui: Reset/Save/Load/Export/Import dependen de ella.
+--
+-- Se expone como FUNCION que devuelve una copia nueva en cada llamada, no la
+-- tabla ni un proxy con metatabla. Se probo un proxy (__index + __newindex +
+-- __ipairs) contra un Lua 5.4 de escritorio y funcionaba, pero el Lua 5.1 que
+-- corre WoW es OTRO interprete -- en el 5.1 de referencia, `ipairs` usa acceso
+-- CRUDO (rawget) e ignora metatablas por completo, y Maintenance.lua recorre
+-- esto con `ipairs`. Sin poder probarlo en el cliente real, un proxy asi habria
+-- podido iterar CERO veces en silencio y marcar los 16 modulos como "no
+-- participa en presets" -- un falso positivo generalizado, peor que no tener
+-- el chequeo. Una copia simple es correcta en cualquier version de Lua y no
+-- depende de comportamiento sin verificar.
+function ns.GetPresetTableKeys()
+    local copy = {}
+    for i, k in ipairs(PRESET_TABLE_KEYS) do copy[i] = k end
+    return copy
+end
 
 -- Restablece TODO. Si hay un preset marcado como Default, "Reset ALL" carga
 -- ESE preset (tu default pasa a ser el "por defecto" del addon); si no, valores de fabrica.
@@ -1459,7 +1484,12 @@ local ARENA_PORTRAIT_POSITION_FIELDS = {
 local function FillProfile(prof, builtinTable, defaultsTable)
     if type(builtinTable) == "table" then
         for k, v in pairs(builtinTable) do
-            if prof[k] == nil then prof[k] = (type(v) == "table") and DeepCopy(v) or v end
+            -- Estas dos claves pertenecian al antiguo "reveal on low HP".
+            -- Se eliminan definitivamente: su logica no era secret-safe en
+            -- Midnight y Maintenance.lua las purga de perfiles existentes.
+            if k ~= "textLowHealthShow" and k ~= "textLowHealthThreshold" and prof[k] == nil then
+                prof[k] = (type(v) == "table") and DeepCopy(v) or v
+            end
         end
     end
     if type(defaultsTable) == "table" then
@@ -1523,6 +1553,33 @@ local function FillDefaults()
                 if totCast then prof.castTexture = totCast end
             end
         end
+    end
+    -- Backfill de una sola vez (2026-07-27): esta feature se lanzo con default
+    -- ON solo para Player. Ampliar el default en DefaultsFor (arriba) no
+    -- alcanza para perfiles YA GUARDADOS -- FillProfile solo agrega claves
+    -- AUSENTES, y esta ya existe puesta en `false` para pet/tot/target/party/
+    -- boss/arena desde antes.
+    --
+    -- GATEADO por `db._percentColorV2Backfilled` (a diferencia del backfill de
+    -- Explorer mas abajo en InitDB, que corre SIN gate en cada carga): sin esto,
+    -- cualquier `false` -- sea el default viejo o el usuario apagandolo a mano
+    -- despues -- se volveria a prender en el proximo /reload. Con el gate, esto
+    -- corre UNA sola vez por cuenta y a partir de ahi el toggle manual del
+    -- usuario queda respetado para siempre.
+    if not db._percentColorV2Backfilled then
+        for _, key in ipairs({
+            "pet", "targettarget", "target",
+            "party1", "party2", "party3", "party4", "party5",
+            "boss1", "boss2", "boss3", "boss4", "boss5",
+            "arena_player", "arena_party1", "arena_party2",
+            "arena_enemy1", "arena_enemy2", "arena_enemy3",
+        }) do
+            local prof = db.units[key]
+            if prof and prof.percentLowHealthColor == false then
+                prof.percentLowHealthColor = true
+            end
+        end
+        db._percentColorV2Backfilled = true
     end
     db.portraits = db.portraits or {}
     for _, def in ipairs(PORTRAITS) do

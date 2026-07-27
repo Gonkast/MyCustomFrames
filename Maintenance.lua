@@ -123,6 +123,8 @@ ns.SkinCheck = SkinCheck
 -- quitar una feature.
 local DEAD_UNIT_FIELDS = {
     "hideWhenMounted",   -- feature quitada 2026-07-24 (reemplazo: Explorer)
+    "textLowHealthShow",       -- antiguo reveal por HP: no era secret-safe en Midnight
+    "textLowHealthThreshold",  -- reemplazado por percentLowHealthThreshold + ColorCurve
 }
 local DEAD_GLOBALS = {
     "barReposition",     -- BarReposition.lua borrado 2026-07-24
@@ -182,6 +184,52 @@ ns.RegisterDiag("skincheck", "Valida que la skin activa traiga todos sus archivo
 ns.RegisterDiag("purge", "Purga claves de features ya eliminadas de la DB", function()
     ns.PurgeDeadKeys(true)
 end)
+
+-- Verificacion pasiva del contrato de modulos. No intenta refrescar nada: en
+-- Midnight llamar SetPoint/Show/SetScale sobre un frame de otro sistema puede
+-- estar protegido durante combate. Solo informa lo que falte para detectar
+-- errores de carga, claves que no entran en presets o APIs renombradas.
+local function VerifyInstallation()
+    local db = ns.GetDB and ns.GetDB()
+    local registry = ns.GetFeatureRegistry and ns.GetFeatureRegistry()
+    local presetKeys = ns.GetPresetTableKeys and ns.GetPresetTableKeys()
+    if type(db) ~= "table" then
+        print("|cffff5555[MCF]|r verify: la base de datos no esta disponible.")
+        return
+    end
+    if type(registry) ~= "table" or type(presetKeys) ~= "table" then
+        print("|cffff5555[MCF]|r verify: falta ModuleRegistry o la API de presets.")
+        return
+    end
+
+    local inPreset = {}
+    for _, key in ipairs(presetKeys) do inPreset[key] = true end
+
+    local problems, checked = {}, 0
+    for _, feature in ipairs(registry) do
+        checked = checked + 1
+        local issue = nil
+        if db[feature.key] == nil then
+            issue = "falta su tabla en DB"
+        elseif not inPreset[feature.key] then
+            issue = "no participa en presets/export/reset"
+        elseif feature.defaults and type(ns[feature.defaults]) ~= "function" then
+            issue = "falta API " .. feature.defaults
+        elseif feature.refresh and type(ns[feature.refresh]) ~= "function" then
+            issue = "falta API " .. feature.refresh
+        end
+        if issue then problems[#problems + 1] = (feature.label or feature.key) .. ": " .. issue end
+    end
+
+    if #problems == 0 then
+        print(("|cff00ff00[MCF]|r verify: %d modulos persistentes OK; DB y presets coherentes."):format(checked))
+    else
+        print(("|cffff5555[MCF]|r verify: %d problema(s) de %d modulo(s):"):format(#problems, checked))
+        for _, issue in ipairs(problems) do print("  - " .. issue) end
+    end
+end
+ns.VerifyInstallation = VerifyInstallation
+ns.RegisterDiag("verify", "Comprueba modulos, DB y cobertura de presets (sin tocar frames)", VerifyInstallation)
 
 SLASH_MCFDIAG1 = "/mcfdiag"
 SlashCmdList["MCFDIAG"] = function(msg)

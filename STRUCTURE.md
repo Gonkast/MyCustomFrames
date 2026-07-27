@@ -2197,3 +2197,30 @@ devolver un valor SECRETO — sin el guard `type()+issecretvalue()` tiraba
 `"attempt to compare... a secret string value"`. Ya corregido (mismo patrón que el resto del
 archivo).
 El usuario hace las WeakAuras; el addon solo dibuja las barras.
+
+### `ModuleRegistry.lua` (2026-07-27) -- contrato pasivo de modulos
+Registro declarativo de los subsistemas persistentes, cargado inmediatamente antes de
+`Maintenance.lua`. No crea frames, no modifica la DB ni invoca `Show`/`Hide`/`SetPoint`/
+`SetScale`: es seguro incluso cuando el jugador esta en combate. Expone
+`ns.GetFeatureRegistry()` y sirve a `/mcfdiag verify`, que comprueba DB, APIs esperadas y que
+cada modulo participe en preset/export/reset. Al agregar un subsistema persistente, agregarlo
+tambien a este registro; asi se detectan omisiones antes de que lleguen a un perfil del usuario.
+
+### Porcentaje de vida rojo secret-safe (2026-07-27)
+`Units.lua` usa `C_CurveUtil.CreateColorCurve()` con `UnitHealthPercent(unit, true, curve)` para
+calcular dentro del cliente si el porcentaje cae bajo el umbral. **No comparar `pct <= limite`**:
+en Midnight el porcentaje de Player puede ser secreto. `C_ColorUtil.WrapTextInColor()` envuelve
+solo el fragmento `100%`; el valor absoluto (`| 105K`) conserva el color normal. Tiene fallback al
+formato normal si el cliente rechaza alguna API. Default: habilitado en 40% para toda unidad de
+VIDA (player, pet, target, tot, party1-5, boss1-5, arena_player/party1-2/enemy1-3) -- excluye
+power (el campo no se lee en ese camino) y focus (no pedido, sigue opt-in manual). El menu Health
+permite activar/desactivar y ajustar el umbral por unidad.
+
+**Backfill de perfiles ya guardados (2026-07-27, ampliacion pedida por el usuario):** el default
+solo nacio ON para Player; ampliarlo en `DefaultsFor` no alcanza para DBs ya guardadas porque
+`FillProfile` solo agrega claves ausentes, y esta ya existia en `false`. `FillDefaults()` en
+core.lua fuerza `percentLowHealthColor=true` una vez para las unidades listadas si seguia en
+`false`, gateado por `db._percentColorV2Backfilled` -- a diferencia del backfill de Explorer (mas
+arriba en `InitDB`, sin gate, corre en cada carga), este SI es de una sola vez: sin el gate, apagar
+el toggle a mano y hacer `/reload` lo habria vuelto a prender. No toca `db.presets` (serian
+snapshots del usuario, fuera de alcance de este backfill).

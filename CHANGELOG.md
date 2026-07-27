@@ -6,6 +6,16 @@ worth reading before redoing one of them).
 
 ## Unreleased
 
+### Added
+- **Module registry + `/mcfdiag verify`.** A passive registry now describes the persistent
+  modules, their DB key and public APIs. `verify` checks that each one is initialized and
+  included in presets/export/reset, without calling protected frame APIs.
+- **Secret-safe low-health percent color.** Health text now renders only its percentage red at
+  or below 40%, using Midnight `ColorCurve`/`C_ColorUtil` instead of comparing secret health in
+  Lua. The absolute value keeps its configured color. On by default for every health unit
+  (player, pet, target, ToT, party, boss, arena) — existing saves are migrated once, so turning
+  it off by hand sticks across `/reload`.
+
 ### Documentation
 - **All 32 slash commands are listed in the README**, up from 6. Split into commands you'd
   actually use, the handful of elements still driven from chat because they have no menu
