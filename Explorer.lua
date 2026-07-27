@@ -53,10 +53,14 @@ ns.EXPLORER_ELEMENTS = {
     { label = "Info bar", keys = { "infobar" }, wizard = true },
     { label = "Pet", keys = { "pet", "portrait_pet" }, wizard = true, wizardRecommended = true },
     { label = "Target", keys = { "target", "targetpower", "portrait_target" }, wizard = true },
-    { label = "Target auras", keys = { "aura_target" } },
     { label = "Target of Target", keys = { "targettarget", "portrait_tot" } },
     { label = "Focus unit frame", keys = { "focus" }, wizard = true, wizardRecommended = true },
-    { label = "Player auras", keys = { "aura_player" }, wizard = true },
+    -- Player/Target/Focus/Party/Arena auras: NINGUNA gestionable desde Explorer
+    -- (2026-07-27). Las 5 viven en AuraHoverPreview.lua, con SU PROPIO sistema
+    -- de revelado (hover/combate/casteo/siempre-si-existe-target segun el
+    -- grupo) -- Explorer las manejaba cuando Player/Target eran un grid fijo
+    -- en Auras.lua, pero ese sistema ya no existe (ver el comentario largo en
+    -- core.lua, AURAS).
     { label = "Party 1", keys = { "party1", "portrait_party1" } },
     { label = "Party 2", keys = { "party2", "portrait_party2" } },
     { label = "Party 3", keys = { "party3", "portrait_party3" } },
@@ -167,6 +171,31 @@ explorerDriver:SetScript("OnUpdate", function(self, dt)
                 if pu and pu.model then
                     pu.model:SetAlpha(cur * (ns.PP(pu).modelAlpha or 1))
                 end
+                -- MISMO QUIRK, otra causa (2026-07-27, reportado con captura: "quedan
+                -- algunos iconos apareciendo" cuando se esconde el minimapa): el ojo
+                -- de cola de grupo (QueueStatusButton, LayoutEye en Minimap.lua) se
+                -- reparenta a `mm.eyeHolder`, un frame PROPIO -- nunca hijo de `root`
+                -- a proposito, para no tainear root (ver el comentario largo de
+                -- LayoutEye: reparentar el boton PROTEGIDO de Blizzard adentro de
+                -- root dejaba root sin poder llamar SetScale nunca mas). Al no ser
+                -- descendiente de root, nunca heredo su alpha -- se sincroniza a mano
+                -- aca, igual que el modelo 3D arriba.
+                if key == "minimap" and ns.minimap and ns.minimap.eyeHolder then
+                    ns.minimap.eyeHolder:SetAlpha(cur)
+                end
+                -- FIX (2026-07-27, la parte que realmente faltaba de ese mismo
+                -- reporte -- ver el comentario largo en Minimap.lua/
+                -- ns.SetMinimapPinsShown): los pines nativos (tracking, flecha del
+                -- jugador) ni siquiera son hijos alcanzables desde Lua, e ignoran
+                -- CUALQUIER alpha por SetIgnoreParentAlpha -- la unica salida es
+                -- reposicionar el Minimap entero fuera de pantalla. Se ata a
+                -- `target` (no a `cur`, el valor YA suavizado) para que la
+                -- decision sea binaria e inmediata: en cuanto deja de estar
+                -- revelado (target < 1), los pines desaparecen ya mismo, aunque
+                -- el resto (backdrop/anillo/ojo) siga su fade suave de costumbre.
+                if key == "minimap" and ns.SetMinimapPinsShown then
+                    ns.SetMinimapPinsShown(target == 1)
+                end
             end
         end
     end
@@ -178,6 +207,15 @@ ns.ExplorerReset = function(key)   -- llamar al APAGAR el explorer de un element
     local pu = ns.portraits[key]
     local db = ns.GetDB()
     if pu and pu.model and db then pu.model:SetAlpha(ns.PP(pu).modelAlpha or 1) end
+    -- Mismo motivo que arriba: el ojo de cola vive en un frame propio, aparte
+    -- de root -- sin esto, al apagar Explorer para "minimap" el ojo se podia
+    -- quedar congelado en el alpha bajo del ultimo fade.
+    if key == "minimap" and ns.minimap and ns.minimap.eyeHolder then
+        ns.minimap.eyeHolder:SetAlpha(1)
+    end
+    if key == "minimap" and ns.SetMinimapPinsShown then
+        ns.SetMinimapPinsShown(true)
+    end
 end
 ns.ExplorerResetAll = function()   -- llamar al APAGAR el toggle maestro
     local db = ns.GetDB()
@@ -203,9 +241,14 @@ end
 local QUICK_PROFILES = {
     exploration = {
         label = "Exploration",
-        desc = "Hides almost everything until you mouse over it. Minimap, your unit frame and portrait stay always visible.",
+        -- Ampliado (2026-07-27, pedido del usuario): "deberia mantener el
+        -- info bar y micromenu" -- se suman a las 3 excepciones de antes.
+        desc = "Hides almost everything until you mouse over it. Minimap, your unit frame, portrait, info bar and micro menu stay always visible.",
         mode = "all_except",
-        exceptLabels = { Minimap = true, Player = true, ["Player portrait"] = true },
+        exceptLabels = {
+            Minimap = true, Player = true, ["Player portrait"] = true,
+            ["Info bar"] = true, ["Micro menu"] = true,
+        },
     },
     combat = {
         label = "Combat",
@@ -216,9 +259,11 @@ local QUICK_PROFILES = {
     },
     minimal = {
         label = "Minimal",
-        desc = "Hides everything except the minimap.",
+        -- Cambiado (2026-07-27, pedido del usuario): "el minimal si apagar
+        -- todo" -- ya no exceptua el minimapa. Sin exceptLabels, "all_except"
+        -- no exceptua nada -> las 61 claves quedan gestionadas.
+        desc = "Hides everything, no exceptions.",
         mode = "all_except",
-        exceptLabels = { Minimap = true },
     },
 }
 ns.EXPLORER_QUICK_PROFILES = QUICK_PROFILES

@@ -36,7 +36,10 @@ None to load — no other addon is a hard dependency. That said, this preset is 
 - **Raid frames** (`Raid.lua`) — up to 40 players, auto-shows in raids/battlegrounds, configurable grid layout
 - **Class Power** (`ClassPower.lua`) — combo points, holy power, chi, soul shards, arcane charges, essence, runes, soul fragments, maelstrom weapon
 - **Portraits** — 3D model or class icon, cage/background/role/leader/raid-mark badges
-- **Auras** — buffs/debuffs, click-to-cancel, dual positioning (combat vs idle)
+- **Auras** — buffs/debuffs everywhere, all through one hover-triggered display (debuff
+  priority, colored border by dispel type): party (dungeon-only), arena (arena-only) and
+  focus reveal on mouseover or in combat; player and target are always visible, no
+  mouseover or target required
 - **Minimap reskin** (`Minimap.lua`) — custom ring/border, coordinates, mail/eye/dismount/tracking icons, mail notification banner
 - **Nameplate reskin** (`Nameplates.lua` + `NameplateDesigner.lua`) — custom bars, aura filtering, per-zone profiles, in-game designer
 - **Quest tracker** — recoloring, text alignment, context-aware auto-hide
@@ -45,11 +48,11 @@ None to load — no other addon is a hard dependency. That said, this preset is 
 - **Explorer Mode** — fades elements out until you hover where they are; combat/target/casting can
   force them fully visible. Three one-click **quick profiles** (Setup Wizard and the Explorer
   options section) pick which elements it manages:
-  - **Exploration** — hides almost everything, keeps the minimap, your unit frame and portrait
-    always visible.
+  - **Exploration** — hides almost everything, keeps the minimap, your unit frame, portrait, info
+    bar and micro menu always visible.
   - **Combat** — only the action bars fade out, revealing automatically when you enter combat;
     everything else stays visible.
-  - **Minimal** — hides everything except the minimap.
+  - **Minimal** — hides everything, no exceptions.
 
   Picking a profile only replaces *which elements* Explorer manages — it never touches opacity,
   target/casting rules, or zone filters, so those stay exactly as you set them.
@@ -96,7 +99,7 @@ Each dumps what a subsystem is *actually* seeing right now, which usually beats 
 | `/mcfaurasdiag` | Aura data for the current target |
 | `/mcfnpdiag`, `/mcfcastwatch` | Nameplates; `castwatch` toggles live cast logging |
 | `/mcfmmdiag`, `/mcfringdiag`, `/mcfmapiconsdiag` | Minimap: general state, XP/reputation/honor/renown rings, icons |
-| `/mcfpartytest`, `/mcfarenaauratest` | Toggle the party / arena aura previews for placement without a real group |
+| `/mcfpartytest`, `/mcfarenaauratest`, `/mcffocusauratest` | Toggle the party / arena / focus hover aura previews for placement without a real group, match or target |
 | `/mcfarenadiag` | Which arena-detection method is returning what |
 | `/mcfclasspowerdiag` | Class resource detection for your class and spec |
 | `/mcfmirrordiag`, `/mcfmirrortargetdiag` | Mirror timer, and the mirrored-target portrait |

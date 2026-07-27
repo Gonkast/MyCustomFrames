@@ -451,11 +451,10 @@ local function DefaultsFor(key)
     local power = (key == "playerpower" or key == "targetpower")
     local boss  = (key:sub(1, 4) == "boss")
     -- Percent color secreto (2026-07-27, "aplica lo mismo a pet, tot, target,
-    -- party, boss y arena"): default ON para toda unidad de VIDA -- power no
-    -- entra (el campo no se lee nunca en ese camino, ver UnitUpdateText) y
-    -- focus se deja afuera porque el usuario no lo pidio (sigue opt-in manual,
-    -- igual que antes de este cambio).
-    local percentColorDefault = (not power) and key ~= "focus"
+    -- party, boss y arena" -- ampliado despues a Focus tambien): default ON
+    -- para toda unidad de VIDA -- power no entra (el campo no se lee nunca en
+    -- ese camino, ver UnitUpdateText).
+    local percentColorDefault = not power
     local tex
     if power then tex = POWER_TEXTURE
     elseif boss then tex = BOSS_TEXTURE
@@ -667,14 +666,32 @@ end
 ns.PortraitDefaultsFor = PortraitDefaultsFor
 
 -- ==========================================================================
--- AURAS (buffs/debuffs de player y target; grid "centrado horizontal, hacia abajo")
+-- AURAS -- HISTORIAL, no un sistema activo (2026-07-27)
 -- ==========================================================================
--- Un grupo por unidad; cada grupo combina buffs + debuffs (HELPFUL + HARMFUL).
--- dualPos = 2 posiciones (principal/alterna) conmutadas por condiciones. Solo player.
-local AURAS = {
-    { key = "aura_player", unit = "player", label = "Player Auras", dualPos = true },
-    { key = "aura_target", unit = "target", label = "Target Auras" },
-}
+-- Este registro alimentaba un grid SIEMPRE VISIBLE de buffs/debuffs
+-- (Auras.lua: CreateAuraGroup/UpdateAuraGroup/etc), un grupo por unidad.
+-- Recorrido completo el mismo dia:
+--   1. Empezo con Player/Target (dualPos = 2 posiciones, alterna/muerte,
+--      logica exclusiva de Player).
+--   2. Se probo sumar Focus + Party1-5 + 6 de Arena -- revertido: varios keys
+--      usaban el MISMO unit token que otro grupo ya existente
+--      ("party5"/"arena_player" son ambos unit="player";
+--      "arena_party1"/"arena_party2" son los mismos "party1"/"party2" de
+--      siempre) -- duplicaban informacion en pantalla. Ademas,
+--      AuraHoverPreview.lua YA cubria party/arena con un sistema de hover,
+--      asi que Focus se movio ahi tambien en vez de sumarse aca.
+--   3. Pedido final del usuario: "quitar el sistema de auras de player y
+--      target y agregarle el de hover" -- Player/Target se mudan TAMBIEN a
+--      AuraHoverPreview.lua (con reveal propio: Target siempre visible si
+--      existe target, Player en hover/combate/casteo). Este registro queda
+--      VACIO -- el loop `for _, def in ipairs(AURAS) do CreateAuraGroup(def)
+--      end` en Auras.lua nunca crea nada, asi que ese archivo no dibuja mas
+--      nada en pantalla.
+--
+-- Auras.lua SIGUE cargando (no se borro el archivo): `ns.DebuffTypeColor`,
+-- la funcion de color por tipo de dispel que usa AuraHoverPreview.lua para
+-- los 5 grupos hover (Player/Target/Focus/Party/Arena), vive ahi.
+local AURAS = {}
 ns.AURAS = AURAS
 
 local AURA_SET, AURA_DEF = {}, {}
@@ -682,7 +699,11 @@ for _, def in ipairs(AURAS) do AURA_SET[def.key] = true; AURA_DEF[def.key] = def
 ns.IsAura = function(key) return AURA_SET[key] == true end
 ns.AuraIsDual = function(key) local d = AURA_DEF[key]; return d and d.dualPos and true or false end
 
-ns.AURA_SORTS_VALUES = { "index", "timeUp", "timeDown", "name" }
+-- "priority" (2026-07-27, pedido del usuario): debuffs primero, buffs despues
+-- -- empate por tiempo restante (logica real en Auras.lua, AURA_SORTS). Sirve
+-- sobre todo en los grupos compactos (limit=6): sin esto, varios buffs podrian
+-- llenar el grid entero y dejar afuera un debuff mas importante.
+ns.AURA_SORTS_VALUES = { "priority", "index", "timeUp", "timeDown", "name" }
 
 local function AuraDefaultsFor(key)
     local d = {
@@ -708,7 +729,19 @@ local function AuraDefaultsFor(key)
         groupAlpha = 0.5,
         -- Grid: "centrado horizontal, luego hacia abajo".
         iconSize = 30, perRow = 8, colSpace = 4, rowSpace = 10, limit = 32,
-        sort = "timeUp",
+        -- "priority" (2026-07-27, pedido del usuario): debuffs primero, buffs
+        -- despues. Antes era "timeUp" -- se cambia el default para los 14
+        -- grupos (no solo los compactos nuevos), pero sigue siendo un
+        -- dropdown: quien prefiera el orden viejo lo cambia desde el menu.
+        sort = "priority",
+        -- Borde coloreado por tipo de debuff (2026-07-27, pedido del usuario:
+        -- "que tengan colores diferentes"): Magic/Curse/Poison/Disease con los
+        -- colores ESTANDAR de Blizzard (los mismos que usan los unitframes
+        -- nativos), generico/no dispellable en rojo. Los buffs conservan
+        -- borderColor tal cual (sin esto, todo -- buff y debuff -- usaba el
+        -- mismo color de borde configurado, sin forma de distinguirlos de un
+        -- vistazo). Logica real en Auras.lua (DEBUFF_TYPE_COLORS).
+        colorDebuffByType = true,
         -- Texto de duracion (offset + color GLOBAL para todas las auras del grupo).
         showDuration = true, durationOffsetX = 0, durationOffsetY = 0, durationFontSize = 12,
         showSwipe = true,
@@ -1007,6 +1040,19 @@ ns.CurrentProfile = function()
     -- "aura_arena" (ArenaAuraPreview.lua) es SINGLETON como aura_party -- mismo
     -- motivo/bug ("attempt to index a nil value") si falta este branch.
     if ns.IsArenaAura and ns.IsArenaAura(ns.currentEdit) then return EMPTY_PROFILE end
+    -- "aura_focus"/"aura_player"/"aura_target" (AuraHoverPreview.lua, 2026-07-27):
+    -- MISMO bug, otra vez -- reportado en vivo (Options.lua:555, dbKey=
+    -- "anchorFrame", un widget OCULTO de una pestaña sin relacion con auras).
+    -- Player/Target dejaron de ser claves de AURA_SET cuando se movieron a
+    -- este sistema hover-only (settings GLOBALES: db.playerAuraDirection/
+    -- targetAuraDirection/etc, no una tabla db.auras[key] propia) -- sin
+    -- estos 3 branches, "aura_focus"/"aura_player"/"aura_target" caian en
+    -- `db.units[ns.currentEdit]` (nil, nunca fueron una unidad real) y
+    -- crasheaban CUALQUIER widget oculto de CUALQUIER otra pestaña, no solo
+    -- los de auras.
+    if ns.IsFocusAura and ns.IsFocusAura(ns.currentEdit) then return EMPTY_PROFILE end
+    if ns.IsPlayerAura and ns.IsPlayerAura(ns.currentEdit) then return EMPTY_PROFILE end
+    if ns.IsTargetAura and ns.IsTargetAura(ns.currentEdit) then return EMPTY_PROFILE end
     if ns.IsMinimap and ns.IsMinimap(ns.currentEdit) then return db.minimap end
     if ns.IsNameplates and ns.IsNameplates(ns.currentEdit) then return db.nameplates end
     -- "classpower" (ClassPower.lua) es SINGLETON como los de arriba -- mismo
@@ -1581,6 +1627,17 @@ local function FillDefaults()
         end
         db._percentColorV2Backfilled = true
     end
+    -- Backfill #2 (2026-07-27, mismo dia): Focus se sumo al default ON despues
+    -- del backfill de arriba -- ese ya corrio y quedo en `true` para esta
+    -- cuenta, asi que reusar su gate NUNCA tocaria Focus. Bandera PROPIA, mismo
+    -- criterio (una sola vez, respeta un apagado manual posterior).
+    if not db._percentColorFocusBackfilled then
+        local prof = db.units.focus
+        if prof and prof.percentLowHealthColor == false then
+            prof.percentLowHealthColor = true
+        end
+        db._percentColorFocusBackfilled = true
+    end
     db.portraits = db.portraits or {}
     for _, def in ipairs(PORTRAITS) do
         local isNewPortrait = db.portraits[def.key] == nil
@@ -1698,6 +1755,8 @@ local GLOBAL_FLAT_KEYS = {
     "previewSecureButton", "fadeIn", "fadeDuration",
     "explorerEnabled", "explorerCombat", "explorerTarget", "explorerCasting", "explorerFadeAlpha",
     "partyAuraDirection", "partyAuraIconSize", "arenaAuraDirection", "arenaAuraIconSize",
+    "focusAuraDirection", "focusAuraIconSize",
+    "playerAuraDirection", "playerAuraIconSize", "targetAuraDirection", "targetAuraIconSize",
     "hideChatEditBoxTexture", "raidGhostShowAll",
 }
 local GLOBAL_TABLE_KEYS = { "lockHide", "explorer", "explorerZones", "explorerElementAlpha", "nameplateUserDefault", "nameplateProfiles" }
@@ -1951,6 +2010,19 @@ local function InitDB()
     -- al de party, que es "left").
     if db.arenaAuraDirection == nil then db.arenaAuraDirection = "down" end
     if db.arenaAuraIconSize == nil then db.arenaAuraIconSize = 26 end
+    -- Direccion del hover de auras de Focus (AuraHoverPreview.lua, 2026-07-27,
+    -- pedido del usuario: "quita el de Auras.lua, agregale un sistema similar
+    -- al de AuraHover") -- mismo patron que party/arena arriba.
+    if db.focusAuraDirection == nil then db.focusAuraDirection = "down" end
+    if db.focusAuraIconSize == nil then db.focusAuraIconSize = 26 end
+    -- Player/Target (2026-07-27, pedido del usuario: "quitar el sistema de
+    -- auras de player y target y agregarle el de hover") -- mismo patron que
+    -- party/arena/focus arriba. "up" para Player (las propias, sin taparse
+    -- con nada abajo de la barra); "down" para Target, igual que Focus/Arena.
+    if db.playerAuraDirection == nil then db.playerAuraDirection = "up" end
+    if db.playerAuraIconSize == nil then db.playerAuraIconSize = 26 end
+    if db.targetAuraDirection == nil then db.targetAuraDirection = "down" end
+    if db.targetAuraIconSize == nil then db.targetAuraIconSize = 26 end
     db.bartenderAutoApplied = db.bartenderAutoApplied or {}
     -- (Inyeccion AzeriteUI ELIMINADA — causaba taint. db.azerite ya no se usa.)
     if db.previewSecureButton == nil then db.previewSecureButton = false end -- B4: dibuja el area de click

@@ -12,7 +12,12 @@ local ADDON, ns = ...
 local FEATURES = {
     { key = "units",          label = "Unit frames",       refresh = "RefreshAllUnits" },
     { key = "portraits",      label = "Portraits",         refresh = "RefreshAllPortraits" },
-    { key = "auras",          label = "Auras",             refresh = "RefreshAllAuras" },
+    -- "auras" (db.auras, ns.RefreshAllAuras) salio de aca (2026-07-27):
+    -- Auras.lua ya no dibuja nada -- Player/Target/Focus/Party/Arena viven en
+    -- AuraHoverPreview.lua, que no tiene un modulo equivalente en este
+    -- registro (igual que Party/Arena/Focus, nunca lo tuvieron). db.auras
+    -- sigue existiendo (categoria vacia en PRESET_TABLE_KEYS), solo no hay
+    -- nada que verificar sobre ella.
     { key = "infobar",        label = "Info bar",          refresh = "RefreshInfoBar" },
     { key = "micromenu",      label = "Micro menu",        defaults = "MicroMenuDefaults", refresh = "RefreshMicroMenu" },
     { key = "chatbubble",     label = "Chat bubbles",      defaults = "ChatBubbleDefaults", refresh = "RefreshChatBubble" },

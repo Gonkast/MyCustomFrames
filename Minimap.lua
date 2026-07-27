@@ -813,6 +813,66 @@ local function LayoutEye()
 end
 
 -- ==========================================================================
+-- OCULTADO POR POSICION de los pines nativos (2026-07-27, reportado con
+-- captura: "los indicadores de tracking y el icono del personaje siguen
+-- apareciendo" cuando Explorer esconde el minimapa).
+--
+-- Confirmado con datos reales (/mcfmapiconsdiag: Minimap SI esta bien
+-- emparentado a root, asi que no es un bug de parentesco) + lo que este mismo
+-- archivo ya habia descubierto para el anillo de XP mas arriba: Blizzard
+-- dibuja esos pines (tracking, flecha del jugador, blips) con
+-- SetIgnoreParentAlpha -- ni root:SetAlpha ni Minimap:SetAlpha los tapa,
+-- vengan de donde vengan. Y Minimap:Hide()/Show() estan PROTEGIDOS en este
+-- cliente (ADDON_ACTION_BLOCKED, ver el mismo comentario del anillo).
+--
+-- El unico grado de libertad que queda SIN bloquear del todo: la POSICION --
+-- mover el Minimap NATIVO entero lejos de pantalla cuando esta "oculto" evita
+-- el problema de los pines en vez de pelear contra el.
+--
+-- CORREGIDO (2026-07-27, reportado: ADDON_ACTION_BLOCKED en
+-- Minimap:ClearAllPoints, disparado desde el driver de Explorer -- que corre
+-- en CADA FRAME, incluido en combate): la afirmacion original de este
+-- comentario ("no es una API protegida aca") estaba MAL -- CreateShape la
+-- llama una sola vez al cargar el addon (nunca en combate, por eso nunca
+-- habia dado error), pero llamada en vivo desde un OnUpdate SI puede caer en
+-- combate, y ahi SI esta protegida. Mismo patron ya usado en el resto del
+-- addon para esta clase de llamada (BartenderScale.lua, HideArenaFramesNow):
+-- diferir a PLAYER_REGEN_ENABLED si InCombatLockdown().
+--
+-- LIMITACION conocida: a diferencia del backdrop/anillo/borde (que SI hacen
+-- fade suave via alpha), esto es binario -- los pines aparecen/desaparecen de
+-- golpe, no se atenuan gradualmente. `root` (el marco/backdrop propios) NUNCA
+-- se mueve, solo el widget nativo adentro -- el area de hover para revelar
+-- sigue siendo `root`, quieto en su lugar de siempre.
+local minimapPinsHidden = false
+local pendingPinsShown = nil   -- nil = nada diferido; true/false = ultimo pedido, esperando salir de combate
+local function ApplyMinimapPinsShown(shown)
+    if not mm.root then return end
+    if shown == not minimapPinsHidden then return end   -- ya esta en ese estado
+    if InCombatLockdown() then
+        pendingPinsShown = shown
+        return
+    end
+    pendingPinsShown = nil
+    minimapPinsHidden = not shown
+    Minimap:ClearAllPoints()
+    if shown then
+        Minimap:SetPoint("CENTER", mm.root, "CENTER", 0, 0)
+    else
+        -- Relativo a UIParent, bien afuera de cualquier resolucion razonable
+        -- (no un punto fijo que pudiera coincidir con otra UI).
+        Minimap:SetPoint("CENTER", UIParent, "BOTTOMLEFT", -2000, -2000)
+    end
+end
+ns.SetMinimapPinsShown = ApplyMinimapPinsShown
+
+local minimapPinsCombatFrame = CreateFrame("Frame")
+minimapPinsCombatFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+minimapPinsCombatFrame:SetScript("OnEvent", function()
+    if pendingPinsShown ~= nil then ApplyMinimapPinsShown(pendingPinsShown) end
+end)
+
+-- ==========================================================================
 -- WIDGET "below minimap" NATIVO de Blizzard (UIWidgetBelowMinimapContainerFrame
 -- -- catch-up buffs, barras de faccion, contadores de escenario, etc) -- pedido
 -- del usuario 2026-07-19 ("quiero poder moverlo, y que siga al minimap de mi

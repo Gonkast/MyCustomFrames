@@ -18,8 +18,14 @@
 --     ("aparece cuando yo estoy en combate, no ellos") -- antes cada archivo
 --     chequeaba SafeInCombat(u.unit) (el companero/rival), ahora siempre
 --     PlayerInCombat() sin importar de que unidad sea el grupo.
---  4. Transiciones limpias al sacar el mouse (LEAVE_DELAY + Recompute forzado
---     al perder el gate) -- preservado tal cual.
+--  4. Transiciones limpias al sacar el mouse -- REVERTIDO (2026-07-27, pedido
+--     del usuario: "no debe depender de mouse over, salgan inmediatamente,
+--     al igual que en combate"). Tenia un margen (LEAVE_DELAY, 0.35s) antes
+--     de empezar a esconder al salir del hover, para no cortar de golpe si
+--     el mouse pasaba de largo un instante -- se sentia mas lento que
+--     terminar combate (que esconde apenas cambia el estado). Ahora
+--     EvaluateHover reacciona YA, sin timer -- el fade en si sigue siendo
+--     suave (frac lerpando, no un corte abrupto), solo que arranca al toque.
 --  5. El boton/slash de test del menu se mantiene para cada grupo por
 --     separado (mismos nombres publicos: ns.TogglePartyAuraTest/
 --     ToggleArenaAuraTest, /mcfpartytest, /mcfarenaauratest).
@@ -36,8 +42,16 @@ local MAX_ICONS   = 4
 local DEFAULT_ICON_SIZE = 26
 local ICON_GAP    = 4
 local SLIDE_DIST  = 26
-local LEAVE_DELAY = 0.35
-local BASE_GAP    = 4
+-- Historia (2026-07-27): empezo compartida por los 5 grupos, subida de 4 a
+-- 14, 17, 20, 25 y 27 (pedido del usuario: "un poco mas de distancia...
+-- estan chocando con el texto de name si es up y con el power bar si es
+-- down"). Despues el usuario pidio que el aumento fuera SOLO para
+-- Player/Target ("el gap solo para player y target, el focus, arena o party
+-- igual que como estaban") -- Party/Arena/Focus vuelven al valor original
+-- (4), Player/Target quedan en 30. `cfg.gap` (por grupo, opcional) manda
+-- sobre este default cuando esta presente.
+local DEFAULT_GAP = 4
+local PLAYER_TARGET_GAP = 30
 local A = "Interface\\AddOns\\MyCustomFrames\\Assets\\"
 local AURA_BORDER = A .. "actionbutton-border square.tga"
 local BORDER_SCALE = 0.26
@@ -79,25 +93,69 @@ local function InArenaNow()
     return ok4 and inInst and instanceType == "arena"
 end
 
+-- Tiempo restante para ordenar (2026-07-27, pedido del usuario: "que salgan
+-- primero los que tengan menos duracion"): data.expirationTime/data.duration
+-- CRUDOS son secretos para auras de otras unidades en Midnight (mismo motivo
+-- por el que el swipe/numero de cuenta regresiva se alimenta via
+-- SetCooldownFromDurationObject en vez de leerlos -- ver el comentario largo
+-- en Nameplates.lua linea ~1284). type() SIEMPRE devuelve "number" aunque el
+-- valor sea secreto -- solo issecretvalue() lo distingue, y hay que chequear
+-- ANTES de usarlo en aritmetica o comparacion (un "if" sobre un booleano
+-- secreto crashea). Por eso esta funcion es la UNICA que toca esos 2 campos:
+-- si cualquiera resulta secreto/no-numero, devuelve nil ("sin dato") en vez
+-- de arriesgar una comparacion -- funciona de verdad para Player (datos
+-- propios, nunca secretos) y cae de vuelta al orden nativo de Blizzard para
+-- cualquier unidad donde el juego SI los oculte, sin romper nada.
+local function SafeRemaining(data)
+    local exp, dur = data.expirationTime, data.duration
+    if type(exp) ~= "number" or (issecretvalue and issecretvalue(exp)) then return nil end
+    if type(dur) ~= "number" or (issecretvalue and issecretvalue(dur)) then return nil end
+    if dur <= 0 then return nil end -- sin duracion (permanente) -- nunca "esta por vencer"
+    return exp
+end
+-- Ordena ascendente por tiempo de vencimiento (el que vence antes, primero).
+-- Auras sin dato legible (secreto o permanente) van al final -- no hay forma
+-- segura de decir que "ya casi vencen".
+local function ByRemaining(a, b)
+    local ra, rb = SafeRemaining(a), SafeRemaining(b)
+    if ra == nil then return false end
+    if rb == nil then return true end
+    return ra < rb
+end
+
 -- Debuffs tienen prioridad; si hay menos de MAX_ICONS debuffs, se rellena con
 -- buffs (onlyBuffs salta los debuffs del todo -- unidades "propias", como
 -- party5/arena_player, ya muestran sus debuffs en el frame nativo de Blizzard).
+-- Dentro de cada categoria (debuff/buff), ordenadas por ByRemaining -- por
+-- eso ya no se corta apenas se llega a MAX_ICONS mientras se escanea: hace
+-- falta juntar TODAS las de la categoria primero para poder ordenarlas antes
+-- de recortar a MAX_ICONS.
 local function CollectAuras(unit, onlyBuffs)
     local list = {}
     if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return list end
     if not onlyBuffs then
+        local debuffs = {}
         for i = 1, 40 do
             local ok, data = pcall(C_UnitAuras.GetAuraDataByIndex, unit, i, "HARMFUL")
             if not ok or data == nil then break end
             data.__filter = "HARMFUL"
+            debuffs[#debuffs + 1] = data
+        end
+        pcall(table.sort, debuffs, ByRemaining)
+        for _, data in ipairs(debuffs) do
             list[#list + 1] = data
             if #list >= MAX_ICONS then return list end
         end
     end
+    local buffs = {}
     for i = 1, 40 do
         local ok, data = pcall(C_UnitAuras.GetAuraDataByIndex, unit, i, "HELPFUL")
         if not ok or data == nil then break end
         data.__filter = "HELPFUL"
+        buffs[#buffs + 1] = data
+    end
+    pcall(table.sort, buffs, ByRemaining)
+    for _, data in ipairs(buffs) do
         list[#list + 1] = data
         if #list >= MAX_ICONS then break end
     end
@@ -136,7 +194,14 @@ local function CreateIcon(parent)
     local swipe = CreateFrame("Cooldown", nil, b, "CooldownFrameTemplate")
     swipe:SetAllPoints(b)
     swipe:SetDrawEdge(false)
-    if swipe.SetHideCountdownNumbers then swipe:SetHideCountdownNumbers(true) end
+    -- CAMBIADO (2026-07-27, pedido del usuario: "que se muestren, en
+    -- prioridad, debuff, buff y tiempo restante"): antes se ocultaba el
+    -- numero de cuenta regresiva a proposito -- ahora se deja visible.
+    -- `SetCooldownFromDurationObject` (mas abajo, en RefreshIcons) ya
+    -- alimenta este swipe via el objeto de duracion secret-safe de
+    -- C_UnitAuras.GetAuraDuration, asi que el numero que Blizzard dibuja
+    -- encima tambien lo es -- sin tocar ningun valor secreto a mano.
+    if swipe.SetHideCountdownNumbers then swipe:SetHideCountdownNumbers(false) end
     b.swipe = swipe
 
     local border = b:CreateTexture(nil, "OVERLAY")
@@ -210,18 +275,39 @@ local function MakeAuraHoverGroup(cfg)
         local driver = CreateFrame("Frame")
         local n = 0
         local inCombat = false
+        -- SOLO para Player (2026-07-27, pedido del usuario: "el de player se
+        -- muestre si estoy casteando algo, ademas del hover/combate"). Mismo
+        -- chequeo SECRET-SAFE ya usado por Explorer para su condicion
+        -- "Always show while casting" (ns.ReadCastMode, definido en Units.lua
+        -- -- solo compara con nil, nunca opera con el modo en si).
+        local isCasting = false
+        -- SOLO para Player (2026-07-27, corregido -- pedido del usuario:
+        -- "el player debe seguir usando mouse over aunque no tenga target,
+        -- solo que con target y combate o cast se muestre siempre; sin
+        -- target, solo salga en mouse over igual que party/arena/focus").
+        -- El hover NUNCA requiere target (gateFn se queda en "siempre
+        -- true"); combate/casteo como auto-reveal SI lo requieren --
+        -- acotado por cfg.combatCastNeedsTarget para no afectar a los otros
+        -- 4 grupos, que no tienen este concepto.
+        local hasTarget = false
         local onlyBuffs = cfg.onlyBuffs and cfg.onlyBuffs(key) or false
+        local gap = cfg.gap or DEFAULT_GAP
 
         local function ApplyFrac()
             local dir = DIR_INFO[GetDirection()]
-            local shift = BASE_GAP + frac * SLIDE_DIST
+            local shift = gap + frac * SLIDE_DIST
             carrier:ClearAllPoints()
             if dir.axis == "x" then
                 carrier:SetPoint(dir.carrierPoint, u.button, dir.carrierRel, dir.sign * shift, 0)
             else
                 carrier:SetPoint(dir.carrierPoint, u.button, dir.carrierRel, 0, dir.sign * shift)
             end
-            carrier:SetAlpha(frac * (inCombat and 0.5 or 1))
+            -- ERA frac*0.5 en combate (2026-07-27, pedido del usuario: "que
+            -- los buffs/debuffs tengan el 100% de alpha en combate, tanto
+            -- para party, arena y focus") -- antes, revelar por hover EN
+            -- COMBATE se veia a mitad de opacidad. Como los 3 grupos pasan
+            -- por esta misma funcion, un solo cambio los cubre a los 3.
+            carrier:SetAlpha(frac)
         end
 
         local function RefreshIcons()
@@ -271,8 +357,19 @@ local function MakeAuraHoverGroup(cfg)
                     b._auraID = data.auraInstanceID
                     b._fake = data.__fake
                     b._filter = data.__filter
+                    -- Color por tipo de dispel (2026-07-27, pedido del usuario):
+                    -- mismo lookup que Auras.lua (ns.DebuffTypeColor, expuesto
+                    -- ahi -- ese archivo carga ANTES que este en el .toc), en
+                    -- vez de duplicar la tabla Magic/Curse/Poison/Disease aca.
+                    -- Fallback al rojo generico de siempre si por lo que sea
+                    -- ns.DebuffTypeColor no esta disponible.
                     if data.__filter == "HARMFUL" then
-                        b.border:SetVertexColor(0.85, 0.15, 0.15)
+                        local c = ns.DebuffTypeColor and ns.DebuffTypeColor(data)
+                        if c then
+                            b.border:SetVertexColor(c.r, c.g, c.b)
+                        else
+                            b.border:SetVertexColor(0.85, 0.15, 0.15)
+                        end
                     else
                         b.border:SetVertexColor(1, 0.82, 0.2)
                     end
@@ -344,29 +441,52 @@ local function MakeAuraHoverGroup(cfg)
         local hoverActive = false
         local function Recompute()
             local gateOk = cfg.gateFn() or testMode
-            local showByCombat = cfg.autoShowOnCombat and inCombat
-            target = (gateOk and (hoverActive or showByCombat)) and 1 or 0
+            -- combatCastOk: para el 99% de los grupos (sin cfg.combatCastNeedsTarget)
+            -- esto es simplemente `true` -- no cambia nada. SOLO Player lo
+            -- necesita: combate/casteo cuentan como auto-reveal UNICAMENTE
+            -- si ademas hay target (`hasTarget`, cacheado por el ticker). El
+            -- hover (`hoverActive` mas abajo) NUNCA pasa por este chequeo --
+            -- sigue funcionando sin target, como Party/Arena/Focus.
+            local combatCastOk = (not cfg.combatCastNeedsTarget) or hasTarget
+            local showByCombat = cfg.autoShowOnCombat and inCombat and combatCastOk
+            local showByCast = cfg.autoShowOnCast and isCasting and combatCastOk
+            -- Target (2026-07-27, pedido del usuario: "el de target siempre
+            -- se muestre si existe target"): a diferencia de Party/Arena/
+            -- Focus (fade in/out por hover/combate), Target queda SIEMPRE
+            -- revelado mientras el gate (UnitExists("target")) sea verdadero
+            -- -- sin esto seguiria escondido hasta pasar el mouse, que no es
+            -- lo pedido.
+            local alwaysShow = cfg.alwaysShowOnGate and gateOk
+            -- CORREGIDO (2026-07-27, reportado: "el test no funciona con
+            -- player/target/focus" + "player sigue activo despues del
+            -- hover" -- misma causa para las dos cosas). `testMode` ya
+            -- entraba en `gateOk` (linea de arriba), pero NUNCA era motivo
+            -- de revelado en si mismo -- Show() (SetTestMode) pone target=1
+            -- DIRECTO al togglear, pero cualquier Recompute() posterior (el
+            -- ticker corre cada 0.3s) lo reseteaba a 0 porque testMode no
+            -- estaba en esta lista. Con Party/Arena rara vez se notaba (nada
+            -- mas dispara Recompute() en una sesion de prueba corta); Player
+            -- lo dispara seguro (chequeo de casteo en cada tick), asi que
+            -- ahi SIEMPRE se rompia -- y si quedaba testMode=true trabado de
+            -- una prueba anterior, eso explica el "sigue activo" tambien.
+            target = (gateOk and (testMode or alwaysShow or hoverActive or showByCombat or showByCast)) and 1 or 0
             StartDriver()
         end
 
-        local leaveTimer
+        -- CAMBIADO (2026-07-27, pedido del usuario: "se queda activo mas
+        -- tiempo de lo que me gustaria despues de salir del mouse over...
+        -- no debe depender de mouse over, salgan inmediatamente, al igual
+        -- que en combate"): antes, salir del hover esperaba LEAVE_DELAY
+        -- (0.35s, "Regla #4" original -- pensado para no cortar de golpe si
+        -- el mouse pasa de largo un instante) antes de recien ahi empezar a
+        -- esconder. Ahora hoverActive se actualiza YA, sin timer -- el fade
+        -- visual (frac lerpando hacia target, half-life 0.07s) sigue siendo
+        -- suave, pero arranca de inmediato en vez de 0.35s despues, igual
+        -- que ya pasaba al terminar el combate.
         local function EvaluateHover()
             local over = u.button:IsMouseOver() or hoverZone:IsMouseOver()
-            if over then
-                if leaveTimer then leaveTimer:Cancel(); leaveTimer = nil end
-                hoverActive = true
-                Recompute()
-            elseif not leaveTimer then
-                -- Regla #4 (transiciones limpias): margen antes de esconder
-                -- al salir del hover, no se corta de golpe.
-                leaveTimer = C_Timer.NewTimer(LEAVE_DELAY, function()
-                    leaveTimer = nil
-                    if not (u.button:IsMouseOver() or hoverZone:IsMouseOver()) then
-                        hoverActive = false
-                        Recompute()
-                    end
-                end)
-            end
+            hoverActive = over
+            Recompute()
         end
 
         u.button:HookScript("OnEnter", function() RefreshIcons(); EvaluateHover() end)
@@ -413,15 +533,21 @@ local function MakeAuraHoverGroup(cfg)
             local gateOk = cfg.gateFn()
             -- Regla #2: togglea EnableMouse segun el gate -- fuera del tipo de
             -- contenido correcto, el hoverZone no intercepta absolutamente nada.
+            --
+            -- CORREGIDO (2026-07-27, reportado: "la de target sigue aunque ya
+            -- no tenga target"): antes, perder el gate SOLO forzaba un
+            -- Recompute si `hoverActive` era true -- valido para Party/Arena/
+            -- Focus/Player (su UNICA forma de estar revelados es hover o
+            -- combate/casteo, asi que sin hover no habia nada que esconder).
+            -- Target rompe ese supuesto: con alwaysShowOnGate, puede estar
+            -- revelado SIN haber hover nunca -- si perdias el target sin
+            -- estar mirando el mouse justo ahi, nunca se recalculaba, y
+            -- quedaba visible para siempre. Recompute() ahora corre en
+            -- CUALQUIER transicion del gate, en cualquier direccion.
             if gateOk ~= lastGateOk then
                 lastGateOk = gateOk
                 hoverZone:EnableMouse(gateOk or testMode)
-            end
-            -- Si se sale del gate (ej. termina la dungeon/el partido) con el
-            -- mouse encima, forzar el recompute sin depender de que el mouse
-            -- se mueva o el combate cambie (mismo fix que ya tenia arena).
-            if not gateOk and not testMode and hoverActive then
-                hoverActive = false
+                if not gateOk then hoverActive = false end
                 Recompute()
             end
             -- Regla #3: SIEMPRE combate del propio jugador, nunca u.unit.
@@ -431,7 +557,38 @@ local function MakeAuraHoverGroup(cfg)
                 if inCombat then RefreshIcons() end
                 Recompute()
             end
-            if target == 1 and (testMode or inCombat or u.button:IsMouseOver() or hoverZone:IsMouseOver()) then
+            -- Player (2026-07-27): mismo patron que el combate de arriba,
+            -- pero para "estoy casteando". Acotado a cfg.autoShowOnCast (solo
+            -- Player lo pide) para no gastar ReadCastMode en los grupos que
+            -- no lo necesitan.
+            if cfg.autoShowOnCast then
+                local nowCasting = gateOk and ns.ReadCastMode and ns.ReadCastMode("player") ~= nil
+                if nowCasting ~= isCasting then
+                    isCasting = nowCasting
+                    if isCasting then RefreshIcons() end
+                    Recompute()
+                end
+            end
+            -- Player (2026-07-27, corregido): combate/casteo como auto-reveal
+            -- SOLO cuentan con target puesto -- sin esto, perder el target
+            -- mientras seguis en combate no apagaria el auto-reveal (inCombat
+            -- no cambia con el target, asi que nada mas re-evaluaba nada).
+            if cfg.combatCastNeedsTarget then
+                local nowHasTarget = UnitExists("target") and true or false
+                if nowHasTarget ~= hasTarget then
+                    hasTarget = nowHasTarget
+                    Recompute()
+                end
+            end
+            -- CORREGIDO (2026-07-27, reportado: "que no necesite mouse over
+            -- para que salgan a la primera"): Player/Target usan
+            -- alwaysShowOnGate, asi que target==1 la mayor parte del tiempo
+            -- SIN combate/casteo/hover -- con la condicion vieja, el carrier
+            -- se hacia visible (alpha 1) pero RefreshIcons() nunca corria,
+            -- asi que quedaban vacios hasta el primer mouseover. Si esta
+            -- visible (target==1), sus iconos deben reflejar auras reales,
+            -- sin importar el motivo de la revelacion.
+            if target == 1 then
                 RefreshIcons()
             end
         end)
@@ -441,6 +598,19 @@ local function MakeAuraHoverGroup(cfg)
             Show = function() target = 1; RefreshIcons(); StartDriver() end,
             Hide = function() target = 0; StartDriver() end,
             Reanchor = ReanchorZone,
+            -- Diagnostico (2026-07-27, reportado: "la de player sigue activa
+            -- despues de salir del hover" -- 2 revisiones del codigo sin
+            -- encontrar la causa). Vuelca el estado INTERNO real en vez de
+            -- seguir revisando en teoria.
+            Debug = function()
+                return {
+                    hoverActive = hoverActive, target = target, frac = frac,
+                    inCombat = inCombat, isCasting = isCasting, hasTarget = hasTarget,
+                    gateOk = cfg.gateFn(), buttonOver = u.button:IsMouseOver() and true or false,
+                    zoneOver = hoverZone:IsMouseOver() and true or false,
+                    carrierAlpha = carrier:GetAlpha(),
+                }
+            end,
         }
         ApplyFrac()
     end
@@ -496,20 +666,103 @@ local arena = MakeAuraHoverGroup({
     gateFn = InArenaNow, autoShowOnCombat = false,
     onlyBuffs = function(key) return key == "arena_player" end,
 })
+-- Focus (2026-07-27, pedido del usuario): "quita el de Auras.lua, agregale un
+-- sistema similar al de AuraHover" -- Focus paso de ser un grid SIEMPRE
+-- visible (como Player/Target) a este mismo sistema hover-only, igual que
+-- Party/Arena. A diferencia de esos 2 (gateados por tipo de contenido:
+-- dungeon/arena), Focus tiene sentido en CUALQUIER contenido -- el gate real
+-- es simplemente "tengo un focus puesto ahora mismo".
+local focus = MakeAuraHoverGroup({
+    id = "focus", keys = { "focus" },
+    dirDBKey = "focusAuraDirection", sizeDBKey = "focusAuraIconSize", defaultDir = "down",
+    gateFn = function() return UnitExists("focus") end,
+    -- autoShowOnCombat=true (como party, no como arena): un focus target se
+    -- usa tipicamente para vigilar a alguien puntual DURANTE una pelea (un
+    -- healer vigilando al tank, por ejemplo) -- quereer verlo fijo en combate,
+    -- sin depender de tener el mouse encima, es el caso de uso real.
+    autoShowOnCombat = true,
+})
+-- Player/Target (2026-07-27, pedido del usuario): "quitar el sistema de
+-- auras de player y target [el grid siempre-visible de Auras.lua] y
+-- agregarle el de hover" -- se mueven al mismo sistema que Party/Arena/Focus.
+-- Pasaron por varios diseños condicionales (hover/combate/casteo/target) el
+-- mismo dia -- SIMPLIFICADO al final (pedido del usuario: "deja las auras de
+-- player y target siempre activas, no esta funcionando como quiero"): ambos
+-- SIEMPRE visibles, sin depender de hover ni de nada mas. Target sigue
+-- necesitando que exista target (no hay auras que leer sin uno); Player no
+-- necesita ningun gate. `cfg.autoShowOnCombat`/`autoShowOnCast`/
+-- `combatCastNeedsTarget` (usados por la version anterior de Player, y
+-- todavia por Party/Focus) quedan intactos en MakeAuraHoverGroup por si se
+-- necesitan de nuevo -- simplemente ninguno de los 2 los pide ahora.
+--
+-- FIX (2026-07-27, pedido del usuario: "ojo con el explorer y las auras del
+-- player, si el unitframe del player esta oculto, que se oculten tambien"):
+-- gateFn ya no es un simple `true` fijo -- lee el alpha EN VIVO del propio
+-- unitframe del player (ns.GetElementFrame("player"), expuesto por
+-- Explorer.lua) y se apaga si esta practicamente invisible. Cubre Explorer
+-- (fade a "Hidden opacity"), pero tambien cualquier otra razon por la que
+-- ese frame este en alpha ~0 -- una sola señal, sin acoplarse a la logica
+-- interna de Explorer.
+--
+-- Umbral SUBIDO de 0.05 a 0.5 (2026-07-27, pedido del usuario: "que se
+-- oculte y aparezca mas rapido, no haya tanto delay"): el fade de Explorer
+-- es EXPONENCIAL (kOut, half-life ~0.20s) -- cruzar por debajo de un umbral
+-- muy bajo como 0.05 tarda ~5 half-lives (~1s) porque la cola de la curva se
+-- acerca a 0 cada vez mas despacio. Con 0.5 alcanza el corte en 1 sola
+-- half-life (~0.2s) -- se siente inmediato en vez de rezagado, y en la
+-- direccion contraria (aparecer, kIn mucho mas rapido) sigue siendo
+-- practicamente instantaneo.
+local function PlayerFrameVisible()
+    local f = ns.GetElementFrame and ns.GetElementFrame("player")
+    if not f then return true end
+    return f:GetAlpha() > 0.5
+end
+local playerHover = MakeAuraHoverGroup({
+    id = "player", keys = { "player" },
+    dirDBKey = "playerAuraDirection", sizeDBKey = "playerAuraIconSize", defaultDir = "down",
+    gateFn = PlayerFrameVisible,
+    alwaysShowOnGate = true,
+    gap = PLAYER_TARGET_GAP,
+})
+local targetHover = MakeAuraHoverGroup({
+    id = "target", keys = { "target" },
+    dirDBKey = "targetAuraDirection", sizeDBKey = "targetAuraIconSize", defaultDir = "down",
+    gateFn = function() return UnitExists("target") end,
+    alwaysShowOnGate = true,
+    gap = PLAYER_TARGET_GAP,
+})
 
 -- ==========================================================================
 -- API publica (nombres preservados EXACTOS -- Options.lua/core.lua los usan).
 -- ==========================================================================
 ns.PartyAuraPreviewTest = party.test
 ns.ArenaAuraPreviewTest = arena.test
+ns.FocusAuraPreviewTest = focus.test
+ns.PlayerAuraPreviewTest = playerHover.test
+ns.TargetAuraPreviewTest = targetHover.test
 ns.RefreshPartyAuraDirection = party.RefreshDirection
 ns.RefreshPartyAuraSize = party.RefreshDirection
 ns.RefreshArenaAuraDirection = arena.RefreshDirection
 ns.RefreshArenaAuraSize = arena.RefreshDirection
+ns.RefreshFocusAuraDirection = focus.RefreshDirection
+ns.RefreshFocusAuraSize = focus.RefreshDirection
+ns.RefreshPlayerAuraDirection = playerHover.RefreshDirection
+ns.RefreshPlayerAuraSize = playerHover.RefreshDirection
+ns.RefreshTargetAuraDirection = targetHover.RefreshDirection
+ns.RefreshTargetAuraSize = targetHover.RefreshDirection
 ns.TogglePartyAuraTest = party.ToggleTestMode
 ns.ToggleArenaAuraTest = arena.ToggleTestMode
+ns.ToggleFocusAuraTest = focus.ToggleTestMode
+ns.TogglePlayerAuraTest = playerHover.ToggleTestMode
+ns.ToggleTargetAuraTest = targetHover.ToggleTestMode
 ns.IsPartyAura = function(key) return key == "aura_party" end
 ns.IsArenaAura = function(key) return key == "aura_arena" end
+ns.IsFocusAura = function(key) return key == "aura_focus" end
+ns.IsPlayerAura = function(key) return key == "aura_player" end
+ns.IsTargetAura = function(key) return key == "aura_target" end
+ns.FOCUS_AURA_DIRECTIONS = DIRECTIONS
+ns.PLAYER_AURA_DIRECTIONS = DIRECTIONS
+ns.TARGET_AURA_DIRECTIONS = DIRECTIONS
 
 SLASH_MCFPARTYTEST1 = "/mcfpartytest"
 SlashCmdList["MCFPARTYTEST"] = function()
@@ -518,6 +771,39 @@ end
 SLASH_MCFARENAAURATEST1 = "/mcfarenaauratest"
 SlashCmdList["MCFARENAAURATEST"] = function()
     print("|cff00ff00[MCF arena aura test]|r " .. (ns.ToggleArenaAuraTest() and "ON" or "off"))
+end
+SLASH_MCFFOCUSAURATEST1 = "/mcffocusauratest"
+SlashCmdList["MCFFOCUSAURATEST"] = function()
+    print("|cff00ff00[MCF focus aura test]|r " .. (ns.ToggleFocusAuraTest() and "ON" or "off"))
+end
+SLASH_MCFPLAYERAURATEST1 = "/mcfplayerauratest"
+SlashCmdList["MCFPLAYERAURATEST"] = function()
+    print("|cff00ff00[MCF player aura test]|r " .. (ns.TogglePlayerAuraTest() and "ON" or "off"))
+end
+SLASH_MCFTARGETAURATEST1 = "/mcftargetauratest"
+SlashCmdList["MCFTARGETAURATEST"] = function()
+    print("|cff00ff00[MCF target aura test]|r " .. (ns.ToggleTargetAuraTest() and "ON" or "off"))
+end
+
+-- Diagnostico (2026-07-27, reportado: "la de player sigue activa despues de
+-- salir del hover"): vuelca el estado interno REAL del grupo (hoverActive/
+-- target/frac/inCombat/isCasting/gateOk/mouse-over) en vez de seguir
+-- revisando la logica en teoria sin poder verla correr en vivo.
+SLASH_MCFAURAHOVERDIAG1 = "/mcfaurahoverdiag"
+SlashCmdList["MCFAURAHOVERDIAG"] = function(msg)
+    local key = (msg or ""):match("^%s*(%S*)")
+    if key == "" then key = "player" end
+    local groups = { player = playerHover, target = targetHover, focus = focus, party = party, arena = arena }
+    local grp
+    for _, g in pairs(groups) do if g.test[key] then grp = g.test[key]; break end end
+    if not grp or not grp.Debug then
+        print("|cffff5555[MCF aurahover diag]|r sin grupo para la key '" .. key .. "' -- probar: player, target, focus, party1-5, arena_player, arena_party1-2, arena_enemy1-3")
+        return
+    end
+    local d = grp.Debug()
+    print(("|cff00ff00[MCF aurahover diag]|r key=%s hoverActive=%s target=%s frac=%.2f inCombat=%s isCasting=%s hasTarget=%s gateOk=%s buttonOver=%s zoneOver=%s carrierAlpha=%.2f"):format(
+        key, tostring(d.hoverActive), tostring(d.target), d.frac, tostring(d.inCombat), tostring(d.isCasting),
+        tostring(d.hasTarget), tostring(d.gateOk), tostring(d.buttonOver), tostring(d.zoneOver), d.carrierAlpha))
 end
 
 -- Diagnostico (ya existia en ArenaAuraPreview.lua): vuelca que metodo de

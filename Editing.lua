@@ -157,14 +157,15 @@ local LOCK_COLOR_TITLE  = { 215/255, 192/255, 163/255 }
 local LOCK_COLOR_OPTION = { 226/255, 216/255, 199/255 }
 
 -- unit* = claves de ns.frames a ocultar; portrait* = claves de ns.portraits;
--- aura* = claves de ns.auras. Player/Target incluyen su power bar (playerpower/
--- targetpower) Y su grupo de auras (pedido del usuario 2026-07-20: "debe
--- incluir el player por ejemplo las power bar y tambien el target, auras").
+-- aura* = claves de ns.auras (2026-07-27: ns.auras quedo vacio -- Player/
+-- Target/Focus/Party/Arena pasaron a AuraHoverPreview.lua, que no participa
+-- de este panel -- ver el comentario largo en core.lua, AURAS). Player/Target
+-- incluyen su power bar (playerpower/targetpower).
 local LOCK_GROUPS = {
     { label = "Player",  key = "player", units = { "player", "playerpower" },
-      portraits = { "portrait_player" }, auras = { "aura_player" } },
+      portraits = { "portrait_player" } },
     { label = "Target",  key = "target", units = { "target", "targetpower" },
-      portraits = { "portrait_target" }, auras = { "aura_target" } },
+      portraits = { "portrait_target" } },
     { label = "Pet",     key = "pet",    units = { "pet" },     portraits = { "portrait_pet" } },
     { label = "ToT",     key = "tot",    units = { "targettarget" }, portraits = { "portrait_tot" } },
     { label = "Focus",   key = "focus",  units = { "focus" },   portraits = { "portrait_focus" } },

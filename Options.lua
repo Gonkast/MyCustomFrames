@@ -1057,6 +1057,13 @@ local function IsTrackerSection(k) return k:sub(1, 2) == "t_" end
 local function IsGlowSection(k) return k:sub(1, 2) == "g_" end
 local function IsPartyAuraSection(k) return k:sub(1, 3) == "ap_" end
 local function IsArenaAuraSection(k) return k:sub(1, 3) == "aa_" end
+local function IsFocusAuraSection(k) return k:sub(1, 3) == "af_" end
+-- Player/Target Aura: SIN function propia a proposito (2026-07-27) -- sumar
+-- estas 2 empujo a BuildPanel de "justo bajo" a "justo sobre" el limite de
+-- Lua de 60 upvalues por funcion (LUA_WARNING real, reportado por el
+-- usuario). Se chequea el prefijo EN LINEA en sus pocos usos (abajo) en vez
+-- de agregar 2 upvalues mas -- los otros 12 Is*Section ya existian antes de
+-- hoy y no se tocan.
 local function IsMinimapSection(k) return k:sub(1, 3) == "mn_" end
 local function IsNameplatesSection(k) return k:sub(1, 3) == "np_" end
 local function IsClassPowerSection(k) return k:sub(1, 3) == "cp_" end
@@ -1089,11 +1096,15 @@ local function SelectUnit(key)
     local isPortrait = ns.IsPortrait and ns.IsPortrait(key)
     local isPartyAuraTitle = ns.IsPartyAura and ns.IsPartyAura(key)
     local isArenaAuraTitle = ns.IsArenaAura and ns.IsArenaAura(key)
+    local isFocusAuraTitle = ns.IsFocusAura and ns.IsFocusAura(key)
+    local isPlayerAuraTitle = ns.IsPlayerAura and ns.IsPlayerAura(key)
+    local isTargetAuraTitle = ns.IsTargetAura and ns.IsTargetAura(key)
     local u = (isAura and ns.auras[key]) or (isPortrait and ns.portraits[key]) or ns.frames[key]
     local title = isInfo and "Info Bar" or isMicro and "Micro Menu" or isChat and "Chat Bubble"
         or isTracker and "Quest Tracker" or isGlow and "Assisted Glow" or isMinimap and "Minimap"
         or isNameplates and "Nameplates" or isRaid and "Raid Frames" or isPartyAuraTitle and "Party Auras"
-        or isArenaAuraTitle and "Arena Auras"
+        or isArenaAuraTitle and "Arena Auras" or isFocusAuraTitle and "Focus Auras"
+        or isPlayerAuraTitle and "Player Auras" or isTargetAuraTitle and "Target Auras"
         or (u and u.label) or key
     if unitTitle then unitTitle:SetText("Editing:  |cffffffff" .. title .. "|r") end
     if UpdatePreview then UpdatePreview() end
@@ -1160,6 +1171,27 @@ local function SelectUnit(key)
         return
     end
 
+    local isFocusAura = ns.IsFocusAura and ns.IsFocusAura(key)
+    if isFocusAura then
+        for k, b in pairs(sectionTabs) do b:SetShown(IsFocusAuraSection(k)) end
+        if not IsFocusAuraSection(currentSection) then ShowSection("af_general") end
+        return
+    end
+
+    local isPlayerAura = ns.IsPlayerAura and ns.IsPlayerAura(key)
+    if isPlayerAura then
+        for k, b in pairs(sectionTabs) do b:SetShown(k:sub(1, 3) == "pa_") end
+        if currentSection:sub(1, 3) ~= "pa_" then ShowSection("pa_general") end
+        return
+    end
+
+    local isTargetAura = ns.IsTargetAura and ns.IsTargetAura(key)
+    if isTargetAura then
+        for k, b in pairs(sectionTabs) do b:SetShown(k:sub(1, 3) == "ta_") end
+        if currentSection:sub(1, 3) ~= "ta_" then ShowSection("ta_general") end
+        return
+    end
+
     local isClassPower = ns.IsClassPower and ns.IsClassPower(key)
     if isClassPower then
         for k, b in pairs(sectionTabs) do b:SetShown(IsClassPowerSection(k)) end
@@ -1207,7 +1239,7 @@ local function SelectUnit(key)
     for _, f in ipairs(HIDEGRP.powerHidden) do f:SetShown(not isPower) end
     for _, f in ipairs(HIDEGRP.colorHidden) do f:SetShown(not noColor) end
     for k, b in pairs(sectionTabs) do
-        if IsPortraitSection(k) or IsAuraSection(k) or IsInfoSection(k) or IsMicroSection(k) or IsChatSection(k) or IsTrackerSection(k) or IsGlowSection(k) or IsPartyAuraSection(k) or IsArenaAuraSection(k) or IsMinimapSection(k) or IsNameplatesSection(k) or IsClassPowerSection(k) or IsRaidSection(k) then b:SetShown(false)
+        if IsPortraitSection(k) or IsAuraSection(k) or IsInfoSection(k) or IsMicroSection(k) or IsChatSection(k) or IsTrackerSection(k) or IsGlowSection(k) or IsPartyAuraSection(k) or IsArenaAuraSection(k) or IsFocusAuraSection(k) or k:sub(1, 3) == "pa_" or k:sub(1, 3) == "ta_" or IsMinimapSection(k) or IsNameplatesSection(k) or IsClassPowerSection(k) or IsRaidSection(k) then b:SetShown(false)
         elseif HIDEGRP.nameSectionKeys[k] then b:SetShown(hasName and true or false)
         elseif k == "cast" or k == "highlight" then b:SetShown(not isPower)
         elseif k == "trinket" then b:SetShown(isArenaEnemy)
@@ -1217,6 +1249,7 @@ local function SelectUnit(key)
     if IsPortraitSection(currentSection) or IsAuraSection(currentSection) or IsInfoSection(currentSection)
        or IsMicroSection(currentSection) or IsChatSection(currentSection) or IsTrackerSection(currentSection)
        or IsGlowSection(currentSection) or IsPartyAuraSection(currentSection) or IsArenaAuraSection(currentSection)
+       or IsFocusAuraSection(currentSection) or currentSection:sub(1, 3) == "pa_" or currentSection:sub(1, 3) == "ta_"
        or IsMinimapSection(currentSection)
        or IsNameplatesSection(currentSection) or IsClassPowerSection(currentSection) or IsRaidSection(currentSection)
        or currentSection == "presets" or currentSection == "explorer" or currentSection == "editing"
@@ -1245,7 +1278,14 @@ local UNIT_GROUPS = {
         "portrait_party1", "portrait_party2", "portrait_party3", "portrait_party4", "portrait_party5" } },
     { title = "ARENA PORTRAITS", keys = { "portrait_arena_player", "portrait_arena_party1",
         "portrait_arena_party2", "portrait_arena_enemy1", "portrait_arena_enemy2", "portrait_arena_enemy3" } },
-    { title = "AURAS", keys = { "aura_player", "aura_target", "aura_party", "aura_arena" } },
+    -- "aura_party"/"aura_arena"/"aura_focus" (sin numero) NO son grupos reales
+    -- de Auras.lua -- son las paginas de config del sistema HOVER de
+    -- AuraHoverPreview.lua (ns.IsPartyAura/ns.IsArenaAura/ns.IsFocusAura).
+    -- "aura_focus" vivio brevemente como grupo real (2026-07-27, mismo dia)
+    -- pero se revirtio a Player/Target solamente y Focus paso al sistema
+    -- hover (igual que party/arena) -- ver el comentario largo en core.lua
+    -- (AURAS) y en AuraHoverPreview.lua.
+    { title = "AURAS", keys = { "aura_player", "aura_target", "aura_focus", "aura_party", "aura_arena" } },
     { title = "INFO",  keys = { "infobar" } },
     { title = "MICRO", keys = { "micromenu" } },
     { title = "CHAT",  keys = { "chatbubble" } },
@@ -1409,6 +1449,14 @@ local function BuildPanel()
     LABELS["nameplates"] = "Nameplates"
     LABELS["aura_party"] = "Party"
     LABELS["aura_arena"] = "Arena"
+    -- Player/Target/Focus (2026-07-27): ya no vienen de ns.AURAS (linea de
+    -- arriba, vacia desde que se mudaron a AuraHoverPreview.lua) -- sin esto,
+    -- la fila del sidebar y el buscador mostraban la key cruda
+    -- ("aura_player") en vez de un nombre legible, igual que le pasaba antes
+    -- a aura_party/aura_arena antes de que existieran estas 2 lineas.
+    LABELS["aura_player"] = "Player Auras"
+    LABELS["aura_target"] = "Target Auras"
+    LABELS["aura_focus"] = "Focus Auras"
 
     -- ===== SIDEBAR: lista de unidades agrupada (con scroll) =====
     local sidebar = CreateFrame("Frame", nil, panel)
@@ -1827,6 +1875,12 @@ local function BuildPanel()
             "Auras for Party1-5.", "Revealed on hover or in combat." } },
         { test = function(k) return IsArenaAuraSection(k) end, title = "Arena Auras", desc = {
             "Auras for the 6 arena frames.", "Revealed on hover or in combat, arena-only." } },
+        { test = function(k) return IsFocusAuraSection(k) end, title = "Focus Auras", desc = {
+            "Auras for your focus target.", "Revealed on hover or in combat, whenever you have a focus." } },
+        { test = function(k) return k:sub(1, 3) == "pa_" end, title = "Player Auras", desc = {
+            "Your own buffs and debuffs.", "Revealed on hover, in combat, or while casting." } },
+        { test = function(k) return k:sub(1, 3) == "ta_" end, title = "Target Auras", desc = {
+            "Auras on your target.", "Always visible while you have a target -- also reveals on hover." } },
         { test = function(k) return IsMinimapSection(k) end, title = "Minimap", desc = {
             "Round custom skin around the native map.", "Compass, coordinates, LFG eye, XP/Rep ring." } },
         { test = function(k) return IsNameplatesSection(k) end, title = "Nameplates", desc = {
@@ -2132,6 +2186,19 @@ local function BuildPanel()
     -- pedido del usuario 2026-07-19: "todas esta auras esten en una casilla juntas de arena").
     local arenaAuraSecList = { { key = "aa_general", label = "Gen" } }
     BuildTabRow(arenaAuraSecList, 40, true)
+
+    -- Pestanas de SECCION para Focus Auras (singleton, mismo patron que Party/Arena Auras --
+    -- 2026-07-27, pedido del usuario: Focus paso del grid siempre-visible al sistema hover).
+    local focusAuraSecList = { { key = "af_general", label = "Gen" } }
+    BuildTabRow(focusAuraSecList, 40, true)
+
+    -- Pestanas de SECCION para Player/Target Auras (singleton, mismo patron que
+    -- Party/Arena/Focus Auras -- 2026-07-27, pedido del usuario: "quitar el sistema
+    -- de auras de player y target y agregarle el de hover").
+    local playerAuraSecList = { { key = "pa_general", label = "Gen" } }
+    BuildTabRow(playerAuraSecList, 40, true)
+    local targetAuraSecList = { { key = "ta_general", label = "Gen" } }
+    BuildTabRow(targetAuraSecList, 40, true)
 
     -- Pestanas de SECCION para Class Power (singleton, 1 sola pestaña "Gen" -- igual patron
     -- que Party Auras/Nameplates arriba).
@@ -2884,147 +2951,19 @@ local function BuildPanel()
         MakeSlider(f, "Offset Y", -200, 200, 1, "leaderOffsetY", R, -194)
     end
 
-    -- =========================== SECCIONES AURAS ===========================
-    -- Aura / General
-    do
-        local f = Section("a_general")
-        MakeCheckbox(f, "Enabled", "enabled", L, -10)
-        MakeCycle(f, "Strata", ns.STRATA_VALUES, "strata", L, -44)
-        MakeCycle(f, "Sort", ns.AURA_SORTS_VALUES, "sort", L, -74)
-        MakeSlider(f, "Scale (wheel in Lock too)", 0.3, 3, 0.02, "scale", L, -116)
-        local resetBtn = MakeButton(f, "Reset group", 200, 22)
-        resetBtn:SetPoint("TOPLEFT", L, -152)
-        resetBtn:SetScript("OnClick", function() ns.ResetUnit(ns.currentEdit) end)
-        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
-        note:SetPoint("TOPLEFT", L, -186); note:SetWidth(210); note:SetJustifyH("LEFT")
-        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        note:SetText("Sort: index (API), timeUp, timeDown, name. Secret times go to the end.")
-
-        -- Solo Player Auras: editar posicion + condiciones + opacidad.
-        local dual = MakeGroup(f)
-        VIS.auraDualBoxes[#VIS.auraDualBoxes + 1] = dual
-        MakeHeader(dual, "Positions / Opacity", R, -6, 250)
-        MakeCycle(dual, "Edit (preview)", { "center", "alt", "dead", "deadTarget" }, "editPos", R, -30)
-        MakeCheckbox(dual, "Primary if: target", "centerOnTarget", R, -62)
-        MakeCheckbox(dual, "Primary if: combat", "centerInCombat", R, -88)
-        MakeCheckbox(dual, "Primary if: instance", "centerInInstance", R, -114)
-        MakeSlider(dual, "Base opacity (hover/cond=100%)", 0, 1, 0.05, "groupAlpha", R, -150)
-        local dnote = dual:CreateFontString(nil, "ARTWORK"); setFont(dnote, 10)
-        dnote:SetPoint("TOPLEFT", R, -192); dnote:SetWidth(210); dnote:SetJustifyH("LEFT")
-        dnote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        dnote:SetText("No condition = alternate. Player dead = Death pos (Death tab).")
-
-        MakeCheckbox(dual, "Cancel buff on right-click", "allowCancel", R, -232)
-        local cnote = dual:CreateFontString(nil, "ARTWORK"); setFont(cnote, 10)
-        cnote:SetPoint("TOPLEFT", R, -258); cnote:SetWidth(210); cnote:SetJustifyH("LEFT")
-        cnote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        cnote:SetText("Right-click a buff to cancel it (mounts, toys, self-buffs). Buffs only; not in combat for buffs gained while fighting.")
-    end
-    -- Aura / Grid (centrado horizontal, hacia abajo)
-    do
-        local f = Section("a_grid")
-        MakeSlider(f, "Icon size", 8, 100, 1, "iconSize", L, -20)
-        MakeSlider(f, "Row width (icons/row)", 1, 20, 1, "perRow", L, -62)
-        MakeSlider(f, "Column space", 0, 40, 1, "colSpace", L, -104)
-        MakeSlider(f, "Row space", 0, 60, 1, "rowSpace", L, -146)
-        MakeSlider(f, "Limit (max auras)", 1, 40, 1, "limit", R, -62)
-
-        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
-        note:SetPoint("TOPLEFT", R, -110); note:SetWidth(210); note:SetJustifyH("LEFT")
-        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        note:SetText("Grid direction: centered horizontally then downward. Each row is centered under the anchor.")
-    end
-    -- Aura / Posicion (una sola ubicacion)
-    do
-        local f = Section("a_pos")
-        MakeHeader(f, "Primary position", L, -6, 210)
-        MakeEditBox(f, "Anchor to (empty = screen)", "anchor", L, -30, 200)
-        MakeCycle(f, "Point", ns.POINT_VALUES, "point", L, -70)
-        MakeCycle(f, "Rel. point", ns.POINT_VALUES, "relPoint", L, -100)
-        MakeSlider(f, "Offset X", -2000, 2000, 1, "offsetX", L, -140)
-        MakeSlider(f, "Offset Y", -2000, 2000, 1, "offsetY", L, -182)
-
-        -- Posicion alterna (solo Player Auras).
-        local alt = MakeGroup(f)
-        VIS.auraDualBoxes[#VIS.auraDualBoxes + 1] = alt
-        MakeHeader(alt, "Alternate position", R, -6, 210)
-        MakeEditBox(alt, "Anchor to (empty = screen)", "altAnchor", R, -30, 200)
-        MakeCycle(alt, "Point", ns.POINT_VALUES, "altPoint", R, -70)
-        MakeCycle(alt, "Rel. point", ns.POINT_VALUES, "altRelPoint", R, -100)
-        MakeSlider(alt, "Offset X", -2000, 2000, 1, "altX", R, -140)
-        MakeSlider(alt, "Offset Y", -2000, 2000, 1, "altY", R, -182)
-
-        -- Offset extra si hay pet (solo Player Auras): se SUMA a la posicion viva. Cada posicion
-        -- (primaria / alterna) tiene su PROPIO offset independiente.
-        -- OJO de espaciado: un slider dibuja su ETIQUETA POR ENCIMA de si mismo (ver MakeSlider,
-        -- BOTTOMLEFT+3 → sube ~17px); un header ocupa hasta ~24px bajo su texto (divisor incluido).
-        -- Con solo 24px entre header y el primer slider (bug anterior) la etiqueta del slider caia
-        -- ENCIMA del divisor/texto del header (colision vista en captura). Minimo seguro: ~44px.
-        local petg = MakeGroup(f)
-        VIS.auraDualBoxes[#VIS.auraDualBoxes + 1] = petg
-        MakeHeader(petg, "Pet offset — primary", L, -220, 210)
-        MakeSlider(petg, "Offset X", -2000, 2000, 1, "petOffsetX", L, -264)
-        MakeSlider(petg, "Offset Y", -2000, 2000, 1, "petOffsetY", L, -306)
-        MakeHeader(petg, "Pet offset — alternate", R, -220, 210)
-        MakeSlider(petg, "Offset X", -2000, 2000, 1, "petOffsetXAlt", R, -264)
-        MakeSlider(petg, "Offset Y", -2000, 2000, 1, "petOffsetYAlt", R, -306)
-        local pnote = petg:CreateFontString(nil, "ARTWORK"); setFont(pnote, 10)
-        pnote:SetPoint("TOPLEFT", L, -350); pnote:SetWidth(430); pnote:SetJustifyH("LEFT")
-        pnote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        pnote:SetText("Added to the primary / alternate position while you have a pet (live only, not in preview). Each position has its own independent offset.")
-    end
-    -- Aura / Muerte (3a posicion cuando el player esta muerto; solo Player Auras)
-    do
-        local f = Section("a_dead")
-        MakeCheckbox(f, "Reposition on death", "useDeadPos", L, -10)
-
-        MakeHeader(f, "Dead WITHOUT target (dead)", L, -40, 210)
-        MakeEditBox(f, "Anchor to", "deadAnchor", L, -62, 150)
-        MakeSlider(f, "Offset X", -2000, 2000, 1, "deadX", L, -108)
-        MakeSlider(f, "Offset Y", -2000, 2000, 1, "deadY", L, -150)
-
-        MakeHeader(f, "Dead WITH target (deadTarget)", R, -40, 210)
-        MakeEditBox(f, "Anchor to", "deadTargetAnchor", R, -62, 150)
-        MakeSlider(f, "Offset X", -2000, 2000, 1, "deadTargetX", R, -108)
-        MakeSlider(f, "Offset Y", -2000, 2000, 1, "deadTargetY", R, -150)
-
-        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
-        note:SetPoint("TOPLEFT", L, -192); note:SetWidth(430); note:SetJustifyH("LEFT")
-        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        note:SetText("On death, auras go to one of these 2 depending on whether you have a target. In preview pick 'dead' or 'deadTarget' in 'Edit' (Gen tab) to place them.")
-    end
-    -- Aura / Estilo (borde, duracion, contador)
-    do
-        local f = Section("a_style")
-        MakeCheckbox(f, "Show border", "showBorder", L, -10)
-        MakeTexturePicker(f, "Border texture (empty = default)", "borderTexture", "auraborder", L, -44)
-        MakeColorButton(f, "Border color", "borderColor", L, -92)
-        MakeSlider(f, "Border opacity", 0, 1, 0.05, "borderAlpha", L, -134)
-        MakeSlider(f, "Border size", 0, 0.6, 0.02, "borderScale", L, -176)
-
-        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
-        note:SetPoint("TOPLEFT", R, -10); note:SetWidth(210); note:SetJustifyH("LEFT")
-        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        note:SetText("Default texture: actionbutton-border square. You can enter another texture path.")
-    end
-    -- Aura / Texto (duracion + contador + tooltip)
-    do
-        local f = Section("a_text")
-        MakeColorButton(f, "Text color (dur+count)", "textColor", L, -10)
-        MakeCheckbox(f, "Show duration", "showDuration", L, -42)
-        MakeSlider(f, "Duration size", 6, 30, 1, "durationFontSize", L, -84)
-        MakeSlider(f, "Duration offset X (all)", -100, 100, 1, "durationOffsetX", L, -126)
-        MakeSlider(f, "Duration offset Y (all)", -100, 100, 1, "durationOffsetY", L, -168)
-
-        MakeCheckbox(f, "Show count", "showCount", R, -10)
-        MakeSlider(f, "Count size", 6, 30, 1, "countFontSize", R, -52)
-        MakeCheckbox(f, "Show swipe (radial)", "showSwipe", R, -82)
-        MakeCheckbox(f, "Show tooltip (hover)", "showTooltip", R, -108)
-        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
-        note:SetPoint("TOPLEFT", R, -142); note:SetWidth(210); note:SetJustifyH("LEFT")
-        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        note:SetText("The duration offset is global: it moves the text of ALL auras equally.")
-    end
+    -- SECCIONES AURAS -- BORRADAS (2026-07-27). Este bloque armaba la UI del
+    -- grid siempre-visible de Auras.lua (Enabled/Sort/Grid/Posicion/Muerte/
+    -- Estilo/Texto para Player/Target) -- ya no existe nada que editar aca,
+    -- Player/Target se mudaron a AuraHoverPreview.lua (secciones "Player
+    -- Auras"/"Target Auras" mas abajo, junto a Party/Arena/Focus Auras).
+    --
+    -- Dejarlo "sin usar" en vez de borrarlo de verdad NO era seguro: los
+    -- widgets de aca (MakeEditBox/MakeSlider/etc) se registran en `refreshers`,
+    -- una lista GLOBAL que se recorre entera en CADA seleccion de unidad --
+    -- sin importar si la seccion esta visible. Con ns.auras vacio, su
+    -- getP()/AP(g) devolvia nil y goteaba "attempt to index a nil value"
+    -- (Options.lua:555, reportado por el usuario) cada vez que se abria el
+    -- panel, sin importar que unidad estuviera seleccionada.
 
     -- =========================== SECCIONES INFO BAR ===========================
     -- Info / General
@@ -3687,6 +3626,116 @@ local function BuildPanel()
         MakeSlider(f, "Icon size", 12, 48, 1, "arenaAuraIconSize", L, -120,
             function() return ns.GetDB() end,
             function() if ns.RefreshArenaAuraSize then ns.RefreshArenaAuraSize() end end)
+    end
+
+    -- =========================== SECCION FOCUS AURAS (2026-07-27) ===========================
+    -- Mismo patron que Party/Arena Auras (SINGLETON, settings GLOBALES db.focusAuraDirection/
+    -- focusAuraIconSize) -- pedido del usuario: "quita el de Auras.lua, agregale un sistema
+    -- similar al de AuraHover". A diferencia de Party (dungeon-only) y Arena (arena-only),
+    -- Focus no esta gateado por tipo de contenido -- aparece siempre que haya un focus puesto.
+    do
+        local f = Section("af_general")
+        MakeHeader(f, "Focus Auras  —  hover/combat reveal", L, -6, 430)
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
+        note:SetPoint("TOPLEFT", L, -32); note:SetWidth(430); note:SetJustifyH("LEFT")
+        note:SetTextColor(0.8, 0.8, 0.8)
+        note:SetText("Shows up to 4 auras on your focus target (debuffs take priority, colored by " ..
+            "dispel type; buffs fill empty slots) on mouseover, or fixed while you're in combat. " ..
+            "Needs a focus target set. Try /mcffocusauratest to preview without one.")
+
+        local dirBtn = MakeButton(f, "", 220, 24)
+        dirBtn:SetPoint("TOPLEFT", L, -76)
+        local function DirText()
+            local d = ns.GetDB() and ns.GetDB().focusAuraDirection or "down"
+            dirBtn.text:SetText("Direction: " .. d)
+        end
+        dirBtn:SetScript("OnClick", function()
+            local list = ns.FOCUS_AURA_DIRECTIONS or { "left", "right", "up", "down" }
+            local d = ns.GetDB(); if not d then return end
+            local cur, idx = d.focusAuraDirection or "down", 1
+            for i, v in ipairs(list) do if v == cur then idx = i break end end
+            d.focusAuraDirection = list[(idx % #list) + 1]
+            DirText()
+            if ns.RefreshFocusAuraDirection then ns.RefreshFocusAuraDirection() end
+        end)
+        refreshers[#refreshers + 1] = DirText
+
+        MakeSlider(f, "Icon size", 12, 48, 1, "focusAuraIconSize", L, -120,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshFocusAuraSize then ns.RefreshFocusAuraSize() end end)
+    end
+
+    -- =========================== SECCION PLAYER AURAS (2026-07-27) ===========================
+    -- Mismo patron singleton que Party/Arena/Focus Auras -- pedido del usuario: "quitar el
+    -- sistema de auras de player y target [el grid siempre-visible de Auras.lua] y agregarle
+    -- el de hover". Paso por varios diseños condicionales el mismo dia (hover/combate/casteo/
+    -- target) -- SIMPLIFICADO al final ("deja las auras de player y target siempre activas"):
+    -- SIEMPRE visible, sin depender de nada.
+    do
+        local f = Section("pa_general")
+        MakeHeader(f, "Player Auras  —  always visible", L, -6, 430)
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
+        note:SetPoint("TOPLEFT", L, -32); note:SetWidth(430); note:SetJustifyH("LEFT")
+        note:SetTextColor(0.8, 0.8, 0.8)
+        note:SetText("Shows up to 4 of your own auras (debuffs take priority, colored by dispel " ..
+            "type; buffs fill empty slots) -- always visible, same as Target Auras.")
+
+        local dirBtn = MakeButton(f, "", 220, 24)
+        dirBtn:SetPoint("TOPLEFT", L, -76)
+        local function DirText()
+            local d = ns.GetDB() and ns.GetDB().playerAuraDirection or "up"
+            dirBtn.text:SetText("Direction: " .. d)
+        end
+        dirBtn:SetScript("OnClick", function()
+            local list = ns.PLAYER_AURA_DIRECTIONS or { "left", "right", "up", "down" }
+            local d = ns.GetDB(); if not d then return end
+            local cur, idx = d.playerAuraDirection or "up", 1
+            for i, v in ipairs(list) do if v == cur then idx = i break end end
+            d.playerAuraDirection = list[(idx % #list) + 1]
+            DirText()
+            if ns.RefreshPlayerAuraDirection then ns.RefreshPlayerAuraDirection() end
+        end)
+        refreshers[#refreshers + 1] = DirText
+
+        MakeSlider(f, "Icon size", 12, 48, 1, "playerAuraIconSize", L, -120,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshPlayerAuraSize then ns.RefreshPlayerAuraSize() end end)
+    end
+
+    -- =========================== SECCION TARGET AURAS (2026-07-27) ===========================
+    -- Mismo patron, pero Target queda SIEMPRE visible mientras exista target (no solo por
+    -- hover/combate) -- pedido explicito del usuario: "el de target siempre se muestre si
+    -- existe target".
+    do
+        local f = Section("ta_general")
+        MakeHeader(f, "Target Auras  —  always visible while targeting", L, -6, 430)
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
+        note:SetPoint("TOPLEFT", L, -32); note:SetWidth(430); note:SetJustifyH("LEFT")
+        note:SetTextColor(0.8, 0.8, 0.8)
+        note:SetText("Shows up to 4 auras on your target (debuffs take priority, colored by dispel " ..
+            "type; buffs fill empty slots) -- always visible while you have a target, hover just " ..
+            "makes sure it's freshly refreshed. Try /mcftargetauratest to preview without one.")
+
+        local dirBtn = MakeButton(f, "", 220, 24)
+        dirBtn:SetPoint("TOPLEFT", L, -76)
+        local function DirText()
+            local d = ns.GetDB() and ns.GetDB().targetAuraDirection or "down"
+            dirBtn.text:SetText("Direction: " .. d)
+        end
+        dirBtn:SetScript("OnClick", function()
+            local list = ns.TARGET_AURA_DIRECTIONS or { "left", "right", "up", "down" }
+            local d = ns.GetDB(); if not d then return end
+            local cur, idx = d.targetAuraDirection or "down", 1
+            for i, v in ipairs(list) do if v == cur then idx = i break end end
+            d.targetAuraDirection = list[(idx % #list) + 1]
+            DirText()
+            if ns.RefreshTargetAuraDirection then ns.RefreshTargetAuraDirection() end
+        end)
+        refreshers[#refreshers + 1] = DirText
+
+        MakeSlider(f, "Icon size", 12, 48, 1, "targetAuraIconSize", L, -120,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshTargetAuraSize then ns.RefreshTargetAuraSize() end end)
     end
 
     -- =========================== SECCION CLASS POWER (2026-07-19) ===========================
