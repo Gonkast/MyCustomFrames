@@ -845,7 +845,16 @@ local panel = CreateFrame("Frame", "MyCF_ControlCenter", UIParent, "BackdropTemp
 panel.name = "AzeriteUI — Gonkast Preset"
 panel:SetSize(PANEL_W, PANEL_H)
 panel:SetPoint("CENTER")
-panel:SetFrameStrata("HIGH")
+-- DIALOG (era HIGH, 2026-07-27, reportado: "cuando esta el popup del mail se
+-- chocan de una forma rara"): MailBanner.lua tambien vive en HIGH, y entre 2
+-- frames del MISMO strata WoW desempata por frame level/orden de creacion --
+-- ninguno de los 2 sabe del otro, asi que cual queda arriba era arbitrario.
+-- Subir el panel principal a DIALOG lo pone SIEMPRE por encima del banner
+-- (strata mas alto = gana sin importar frame level) sin tocar MailBanner, y
+-- sigue por DEBAJO de los sub-dialogos propios del panel (picker de texturas,
+-- etc., en FULLSCREEN_DIALOG mas abajo en este archivo) -- esos se siguen
+-- viendo encima del panel como corresponde.
+panel:SetFrameStrata("DIALOG")
 -- Fondo solido simple (SIN edgeFile): el borde ornamentado real se dibuja aparte
 -- abajo, recortado del atlas PLB (mismas piezas 512-1024/832-1024 que usa el
 -- MainFrame.NineSlice de Plumber real, ver SettingsPanelNew.lua:2143-2166).
@@ -3967,8 +3976,14 @@ local function BuildPanel()
         -- superpuesto con las pestañas si iban a la misma altura.
         local tabElements = MakeTabButton(f, "Elements", 90, 22)
         local tabConditions = MakeTabButton(f, "Conditions", 90, 22)
+        -- Pestaña nueva (2026-07-27): 3 configuraciones de un click, en vez de
+        -- tocar los ~31 toggles de Elements a mano. Auto-ancho de MakeTabButton
+        -- (ver su comentario "2026-07-17") se encarga de que "Quick profiles"
+        -- entre igual aunque el texto sea mas largo que el resto.
+        local tabQuick = MakeTabButton(f, "Quick profiles", 90, 22)
         tabElements:SetPoint("TOPLEFT", L, -30)
         tabConditions:SetPoint("TOPLEFT", tabElements, "TOPRIGHT", 4, 0)
+        tabQuick:SetPoint("TOPLEFT", tabConditions, "TOPRIGHT", 4, 0)
         -- FIX (2026-07-24, "algunos toggles esta muy pegados a los botones
         -- inferiores"): con 31 elementos la grilla de "Elements" (2 columnas,
         -- ~16 filas) pasa largo del footer fijo del panel (Move/Lock, Reset
@@ -3992,14 +4007,18 @@ local function BuildPanel()
         -- 300 (era 260): la nota del final se movio mas abajo al arreglar el
         -- solapamiento con los toggles de zona (ver el FIX de condNote).
         local conditionsScroll, conditionsGroup = MakeScrollGroup(300)
+        local quickScroll, quickGroup = MakeScrollGroup(220)
         local function ShowExplorerTab(which)
             elementsScroll:SetShown(which == "elements")
             conditionsScroll:SetShown(which == "conditions")
+            quickScroll:SetShown(which == "quick")
             tabElements:SetActive(which == "elements")
             tabConditions:SetActive(which == "conditions")
+            tabQuick:SetActive(which == "quick")
         end
         tabElements:SetScript("OnClick", function() ShowExplorerTab("elements") end)
         tabConditions:SetScript("OnClick", function() ShowExplorerTab("conditions") end)
+        tabQuick:SetScript("OnClick", function() ShowExplorerTab("quick") end)
 
         -- Registro UNIFICADO (2026-07-24, "unificar" -- antes esta lista y la del
         -- Setup Wizard (Setup.lua) eran 2 copias hardcodeadas por separado, y ya se
@@ -4077,6 +4096,31 @@ local function BuildPanel()
         condNote:SetPoint("TOPLEFT", L, zonesBottom - 10); condNote:SetWidth(430); condNote:SetJustifyH("LEFT")
         condNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         condNote:SetText("Combat/target/casting force enabled elements fully visible. 'Active in' limits the whole Explorer to the chosen content types.")
+
+        -- Pestaña "Quick profiles": 3 botones, cada uno pisa el mapa ENTERO de
+        -- Elements (ns.ApplyExplorerQuickProfile, definido en Explorer.lua) --
+        -- ver ahi el detalle exacto de que prende/apaga cada uno.
+        local QP = ns.EXPLORER_QUICK_PROFILES
+        local qpOrder = { "exploration", "combat", "minimal" }
+        for i, name in ipairs(qpOrder) do
+            local prof = QP and QP[name]
+            if prof then
+                local yy = TOP - (i - 1) * 60
+                local btn = MakeButton(quickGroup, prof.label, 140, 22)
+                btn:SetPoint("TOPLEFT", L, yy)
+                btn:SetScript("OnClick", function()
+                    if ns.ApplyExplorerQuickProfile then ns.ApplyExplorerQuickProfile(name) end
+                end)
+                local desc = quickGroup:CreateFontString(nil, "ARTWORK"); setFont(desc, 10)
+                desc:SetPoint("TOPLEFT", L, yy - 26); desc:SetWidth(430); desc:SetJustifyH("LEFT")
+                desc:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+                desc:SetText(prof.desc)
+            end
+        end
+        local qpNote = quickGroup:CreateFontString(nil, "ARTWORK"); setFont(qpNote, 10)
+        qpNote:SetPoint("TOPLEFT", L, TOP - #qpOrder * 60 - 4); qpNote:SetWidth(430); qpNote:SetJustifyH("LEFT")
+        qpNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        qpNote:SetText("Applying a profile replaces your current Elements toggles. It never touches Conditions, except Combat also enables 'Always show in combat'.")
 
         ShowExplorerTab("elements")
     end

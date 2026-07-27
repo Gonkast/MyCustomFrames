@@ -248,7 +248,11 @@ local function BuildLockPanel()
     local f = CreateFrame("Frame", "MyCF_LockPanel", UIParent)
     f:SetSize(190, 40 + rows * ROW_H)
     f:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 16, -220)
-    f:SetFrameStrata("DIALOG")
+    -- FULLSCREEN (era DIALOG, 2026-07-27): nada impide tener el panel de
+    -- opciones (Options.lua, ahora en "DIALOG" -- chocaba con MailBanner.lua)
+    -- abierto A LA VEZ que el modo Lock. Un escalon mas arriba evita que este
+    -- panel quede empatado (y potencialmente tapado) por el panel principal.
+    f:SetFrameStrata("FULLSCREEN")
     f:SetMovable(true)
     f:EnableMouse(true)
     f:RegisterForDrag("LeftButton")

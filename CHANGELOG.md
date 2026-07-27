@@ -7,6 +7,19 @@ worth reading before redoing one of them).
 ## Unreleased
 
 ### Added
+- **Explorer → Quick profiles.** A new third tab next to Elements/Conditions, three
+  one-click buttons that replace which elements Explorer manages:
+  - **Exploration** — hides almost everything, keeps minimap, your unit frame and
+    portrait always visible.
+  - **Combat** — only the action bars fade out and reveal automatically when you enter
+    combat (also enables "Always show in combat"); everything else stays visible.
+  - **Minimal** — hides everything except the minimap.
+
+  Only touches Elements membership (never Conditions, aside from Combat's auto-reveal) —
+  picking a profile doesn't lose your opacity/target/casting/zone settings.
+
+  The same three buttons (compact, one line each) are also on the Setup Wizard's Explorer
+  page, so a fresh install can start from one without opening the main panel first.
 - **Module registry + `/mcfdiag verify`.** A passive registry now describes the persistent
   modules, their DB key and public APIs. `verify` checks that each one is initialized and
   included in presets/export/reset, without calling protected frame APIs.
@@ -36,6 +49,11 @@ worth reading before redoing one of them).
 
   A comment in `core.lua` had asserted that `EnableMouse` was safe on protected frames. It
   isn't — that belief is what put both bugs there. Corrected in place.
+- **Options panel clashing with the new-mail banner.** Both were on the `HIGH` frame strata,
+  so which one drew on top was arbitrary. The main panel moves up to `DIALOG`; the Setup
+  Wizard, the Lock-mode panel, and the nameplate designer — all reachable while the panel is
+  open, all previously placed one strata above it on purpose — move up to `FULLSCREEN` so
+  they keep rendering above it instead of tying with it.
 
 ## 8.1 — 2026-07-25
 

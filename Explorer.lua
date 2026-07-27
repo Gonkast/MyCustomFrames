@@ -185,6 +185,72 @@ ns.ExplorerResetAll = function()   -- llamar al APAGAR el toggle maestro
     for key in pairs(db.explorer) do ns.ExplorerReset(key) end
 end
 
+-- ==========================================================================
+-- PERFILES RAPIDOS (2026-07-27, pedido del usuario): 3 configuraciones de
+-- "que elementos gestiona el Explorer" para aplicar de un click, en vez de
+-- tocar los ~31 toggles de la pestaña Elements a mano cada vez que se quiere
+-- cambiar de modo.
+--
+-- ALCANCE (deliberadamente acotado): solo tocan MEMBRESIA (db.explorer, que
+-- elemento esta prendido/apagado). NINGUNO toca Hidden opacity/Always show on
+-- target/Always show while casting/Active in -- el usuario no pidio eso, y
+-- cambiarlo en silencio pisaria ajustes suyos que no vienen al caso. La UNICA
+-- excepcion es "Combat", que ademas prende "Always show in combat": sin eso
+-- el perfil no cumpliria lo que promete (barras que se revelan solas al
+-- entrar en combate) -- las mantendria SIEMPRE ocultas hasta pasar el mouse,
+-- incluso en pelea.
+-- ==========================================================================
+local QUICK_PROFILES = {
+    exploration = {
+        label = "Exploration",
+        desc = "Hides almost everything until you mouse over it. Minimap, your unit frame and portrait stay always visible.",
+        mode = "all_except",
+        exceptLabels = { Minimap = true, Player = true, ["Player portrait"] = true },
+    },
+    combat = {
+        label = "Combat",
+        desc = "Only your action bars fade out, revealing automatically when you enter combat. Everything else stays visible.",
+        mode = "keys_matching",
+        match = function(key) return key:sub(1, 6) == "BT4Bar" end,
+        forceCombat = true,
+    },
+    minimal = {
+        label = "Minimal",
+        desc = "Hides everything except the minimap.",
+        mode = "all_except",
+        exceptLabels = { Minimap = true },
+    },
+}
+ns.EXPLORER_QUICK_PROFILES = QUICK_PROFILES
+
+function ns.ApplyExplorerQuickProfile(name)
+    local prof = QUICK_PROFILES[name]
+    local db = ns.GetDB and ns.GetDB()
+    if not prof or not db then return end
+    db.explorer = db.explorer or {}
+    -- Alpha=1 en TODO lo que estaba gestionado antes de pisar el mapa entero --
+    -- mismo camino que ya usa el toggle maestro al apagarse (ver arriba), evita
+    -- que algo quede congelado a mitad de un desvanecido.
+    ns.ExplorerResetAll()
+
+    for _, e in ipairs(ns.EXPLORER_ELEMENTS) do
+        for _, k in ipairs(e.keys) do
+            local on
+            if prof.mode == "all_except" then
+                on = not (prof.exceptLabels and prof.exceptLabels[e.label])
+            else
+                on = prof.match(k) and true or false
+            end
+            -- Mismo patron que el toggle manual (Options.lua MakeToggle): nunca
+            -- se guarda `false` explicito, solo `true` o ausente (nil).
+            db.explorer[k] = on or nil
+        end
+    end
+
+    db.explorerEnabled = true
+    if prof.forceCombat then db.explorerCombat = true end
+end
+
 -- Tipo de contenido actual → clave de db.explorerZones. IsInInstance devuelve:
 -- "none"(mundo)/"party"(mazmorra)/"raid"/"arena"/"pvp"(BG)/"scenario"(escenario/delve).
 local EXPLORER_ZONE_MAP = {

@@ -259,7 +259,15 @@ local function BuildFrame()
     local f = CreateFrame("Frame", "MCFSetupWizard", UIParent, "BackdropTemplate")
     f:SetSize(960, 760)
     f:SetPoint("CENTER")
-    f:SetFrameStrata("DIALOG")
+    -- FULLSCREEN (era DIALOG, 2026-07-27): el "Setup Wizard" tiene su propio
+    -- boton dentro del panel principal (Options.lua, footer), que se puede
+    -- clickear con el panel YA abierto -- ambos frames pueden estar visibles
+    -- al mismo tiempo. Options.lua subio de "HIGH" a "DIALOG" ese mismo dia
+    -- (chocaba con MailBanner.lua); si el wizard se hubiera quedado en
+    -- "DIALOG", habria empatado con el panel y quedado ARBITRARIAMENTE atras
+    -- (mismo bug que se estaba arreglando, movido de lugar). Un escalon mas
+    -- arriba preserva que el wizard SIEMPRE se vea encima del panel.
+    f:SetFrameStrata("FULLSCREEN")
     f:SetMovable(true); f:EnableMouse(true)
     f:RegisterForDrag("LeftButton")
     f:SetScript("OnDragStart", f.StartMoving)
@@ -539,7 +547,7 @@ local function BuildPage4(content)
         if d then d.explorerEnabled = false end
     end
 
-    Toggle(p, "Enable Explorer Mode", 4, -110,
+    local enableToggle = Toggle(p, "Enable Explorer Mode", 4, -110,
         function() local d = ns.GetDB(); return d and d.explorerEnabled ~= false end,
         function(v)
             local d = ns.GetDB(); if not d then return end
@@ -547,14 +555,57 @@ local function BuildPage4(content)
             if not v and ns.ExplorerResetAll then ns.ExplorerResetAll() end
         end)
 
+    -- Perfiles rapidos (2026-07-27, pedido del usuario): mismos 3 botones que la
+    -- pestaña "Quick profiles" del panel principal (Explorer.lua ->
+    -- ns.ApplyExplorerQuickProfile / ns.EXPLORER_QUICK_PROFILES), reusados aca
+    -- para que elegir un punto de partida durante el wizard no obligue a pasar
+    -- por los ~31 toggles de Elements. Formato mas compacto que en el panel
+    -- principal (boton + descripcion en la MISMA linea, no debajo) -- el wizard
+    -- no scrollea por diseño (ver comentario de la seccion Minimap), asi que el
+    -- espacio vertical es limitado.
+    local qpLabel = p:CreateFontString(nil, "ARTWORK")
+    SF(qpLabel, 12)
+    qpLabel:SetPoint("TOPLEFT", 4, -146)
+    qpLabel:SetTextColor(COLOR_OPTION[1], COLOR_OPTION[2], COLOR_OPTION[3])
+    qpLabel:SetText("Or jump straight to a preset:")
+
+    local QP = ns.EXPLORER_QUICK_PROFILES
+    local qpOrder = { "exploration", "combat", "minimal" }
+    for i, name in ipairs(qpOrder) do
+        local prof = QP and QP[name]
+        if prof then
+            local yy = -168 - (i - 1) * 30
+            local btn = ns.MakeButton and ns.MakeButton(p, prof.label, 110, 22)
+            if btn then
+                btn:SetPoint("TOPLEFT", 4, yy)
+                btn:SetScript("OnClick", function()
+                    if ns.ApplyExplorerQuickProfile then ns.ApplyExplorerQuickProfile(name) end
+                    -- Aplicar un perfil prende db.explorerEnabled solo (ver
+                    -- Explorer.lua) -- sincroniza el tilde del toggle de arriba,
+                    -- que si no quedaria mostrando "apagado" con Explorer ya
+                    -- activo hasta que el usuario lo tocara a mano.
+                    if enableToggle.refresh then enableToggle.refresh() end
+                end)
+                local desc = p:CreateFontString(nil, "ARTWORK")
+                SF(desc, 10)
+                desc:SetPoint("LEFT", btn, "RIGHT", 10, 0)
+                desc:SetPoint("RIGHT", p, "RIGHT", 0, 0)
+                desc:SetJustifyH("LEFT")
+                desc:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+                desc:SetText(prof.desc)
+            end
+        end
+    end
+
     local div = p:CreateTexture(nil, "ARTWORK")
     div:SetTexture(ART.DIVIDER)
     div:SetSize(CONTENT_W, 16)
-    div:SetPoint("TOPLEFT", 0, -226)
+    div:SetPoint("TOPLEFT", 0, -270)
     div:SetVertexColor(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3])
-    Paragraph(p, 0, -242, 11,
-        "Nothing is chosen to fade yet -- enabling this alone won't change anything until you pick " ..
-        "elements later. All of this stays editable from the main options panel.")
+    Paragraph(p, 0, -286, 11,
+        "Nothing is chosen to fade yet -- enabling this alone (or picking a preset above) won't change " ..
+        "anything else until you fine-tune it later. All of this stays editable from the main options " ..
+        "panel.")
     return p
 end
 

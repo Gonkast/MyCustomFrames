@@ -514,11 +514,17 @@ local function CreateDesigner()
     root:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
     -- Pedido del usuario 2026-07-19: "que el strata de mi panel de
     -- nameplates este por encima del menu" -- el panel principal (Options.lua)
-    -- tambien usa "HIGH", asi que cual queda arriba dependia del orden de
-    -- creacion/nivel, no garantizado. "DIALOG" (un escalon arriba en la
-    -- jerarquia de strata de Blizzard) asegura que el Designer SIEMPRE quede
+    -- tambien usaba "HIGH" en ese momento, asi que cual quedaba arriba dependia
+    -- del orden de creacion/nivel, no garantizado. Un escalon arriba en la
+    -- jerarquia de strata de Blizzard aseguraba que el Designer SIEMPRE quedara
     -- por encima del menu, sin importar el orden.
-    root:SetFrameStrata("DIALOG")
+    -- ACTUALIZADO (2026-07-27): el panel principal subio de "HIGH" a "DIALOG"
+    -- (pedido del usuario, chocaba raro con MailBanner.lua -- ver su comentario
+    -- en Options.lua) -- este frame sube un escalon MAS, a "FULLSCREEN", para
+    -- conservar la MISMA garantia de arriba (sin esto, ambos quedarian
+    -- empatados en DIALOG y el problema original volveria, esta vez entre
+    -- Options.lua y este Designer).
+    root:SetFrameStrata("FULLSCREEN")
     -- Pedido del usuario 2026-07-19: "si lo muevo a los bordes de la
     -- pantalla no se esconde" -- mismo SetClampedToScreen(true) que ya usa
     -- el panel principal (Options.lua), evita arrastrarlo mas alla del borde

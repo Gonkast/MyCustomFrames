@@ -42,7 +42,18 @@ None to load — no other addon is a hard dependency. That said, this preset is 
 - **Quest tracker** — recoloring, text alignment, context-aware auto-hide
 - **Info bar** — clock, calendar, zone, FPS/MS
 - **Game Menu (Esc) reskin** (`MainMenu.lua`) — custom frame/buttons, follows the active skin
-- Micro menu, chat bubble text, mouselook, native frame hiding, Explorer Mode (auto-fade), assisted glow, mirror timer, tooltip, extra button — all reskinned
+- **Explorer Mode** — fades elements out until you hover where they are; combat/target/casting can
+  force them fully visible. Three one-click **quick profiles** (Setup Wizard and the Explorer
+  options section) pick which elements it manages:
+  - **Exploration** — hides almost everything, keeps the minimap, your unit frame and portrait
+    always visible.
+  - **Combat** — only the action bars fade out, revealing automatically when you enter combat;
+    everything else stays visible.
+  - **Minimal** — hides everything except the minimap.
+
+  Picking a profile only replaces *which elements* Explorer manages — it never touches opacity,
+  target/casting rules, or zone filters, so those stay exactly as you set them.
+- Micro menu, chat bubble text, mouselook, native frame hiding, assisted glow, mirror timer, tooltip, extra button — all reskinned
 - **Lock/Edit mode** (`/mcf`) — drag/scale/reposition everything, "Hide in Lock" panel, syncs with Blizzard's Edit Mode
 - **Setup Wizard** (`/mcfsetup`) — first-run walkthrough, auto-applies bundled profiles
 - **Preset system** — save/load/export/import the whole config as a string
