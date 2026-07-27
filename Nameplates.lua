@@ -226,6 +226,14 @@ local function NameplateDefaults()
         -- name"), independiente de nameOffsetX/Y (que sigue rigiendo el modo
         -- normal, con la barra visible).
         nameOnlyOffsetX = 0, nameOnlyOffsetY = 0,
+        -- Color de clase para JUGADORES hostiles (2026-07-27, pedido del usuario,
+        -- ver Wowhead "Color-Coding Enemy Nameplates is Returning in Midnight") --
+        -- distinto de nameOnlyFriendlyNeutral (ese es SOLO amistosos, modo sin
+        -- barra); esto aplica en el modo NORMAL (con barra de vida), solo a
+        -- jugadores enemigos reales (nunca NPCs -- GetClassColorForUnit ya
+        -- devuelve nil para esos, no hace falta filtrar aparte). Off por default:
+        -- feature nueva, opt-in.
+        classColorEnemyNames = false,
         -- Nombre: offset relativo al anclaje que YA usa Blizzard (TOP del
         -- nameplate), tamaño de fuente y color.
         nameOffsetX = 0, nameOffsetY = 0,
@@ -742,6 +750,19 @@ local function ReassertNameGeometry(uf)
     if uf.mcfNameOnlyMode then
         local classColor = GetClassColorForUnit(uf.unit)
         if classColor then c = classColor end
+    elseif p and p.classColorEnemyNames then
+        -- 2026-07-27: modo NORMAL (con barra), solo jugadores HOSTILES reales --
+        -- UnitIsPlayer primero (GetClassColorForUnit ya vuelve nil para NPCs, pero
+        -- esto evita hasta el intento en el 99% de las plates, que son creaturas) y
+        -- UnitIsFriend para no recolorear NPCs/jugadores amistosos por error.
+        local okP, isPlayer = pcall(UnitIsPlayer, uf.unit)
+        if okP and isPlayer then
+            local okF, isFriend = pcall(UnitIsFriend, "player", uf.unit)
+            if okF and not isFriend then
+                local classColor = GetClassColorForUnit(uf.unit)
+                if classColor then c = classColor end
+            end
+        end
     end
     local fs = holder.text
     -- Solo re-rasterizar si el tamaño realmente cambio (barato, evita
@@ -1009,6 +1030,17 @@ local function SkinHighlight(uf)
     hooksecurefunc(hl, "SetPoint", Reanchor)
 end
 
+-- QUITADO (2026-07-27, pedido del usuario: "no parece esta funcionando, mejor quita
+-- eso"): un indicador de amenaza/agro paso por 4 versiones el mismo dia (glow nativo
+-- escalado, tinte copiando el color del glow, lectura directa de
+-- UnitDetailedThreatSituation vía OnUpdate, y por ultimo un hook sobre
+-- SetStatusBarColor con hooksecurefunc para ganarle la carrera al color nativo) -- la
+-- ultima version deberia haber funcionado en teoria (mismo patron ya probado que usan
+-- LockSize/LockBar en este archivo), pero el usuario reporto que seguia sin notarse
+-- ningun cambio. Se saco todo -- SkinThreat (el reskin de textura original,
+-- PRE-EXISTENTE de antes de esta sesion) se queda igual que siempre, sin nada
+-- adicional encima. Si se retoma mas adelante, el historial de git tiene las 4
+-- versiones intentadas como referencia de que NO funciono.
 local function SkinThreat(uf)
     local th = uf.aggroHighlight
     if th and not th._mcfSkinned then
@@ -1439,9 +1471,62 @@ SlashCmdList["MCFAURASDIAG"] = function()
     end
 end
 
+-- CORREGIDO (2026-07-27, reportado con captura: nombre/barra/badges de este
+-- addon apareciendo sobre un objeto interactuable del mundo -- "Postbox
+-- Parcel", un buzon): SkinNamePlate nunca filtraba por TIPO de unidad --
+-- cualquier frame que Blizzard cree via NAME_PLATE_UNIT_ADDED se skineaba
+-- igual, sea criatura/jugador real u objeto interactuable (buzones, cofres,
+-- etc. tambien pueden tener nameplate segun CVars). El GUID codifica el tipo
+-- en su prefijo ("GameObject-...", "Creature-...", "Player-...", etc).
+--
+-- CORREGIDO DE NUEVO (2026-07-27, reportado: "en dungeon se siguen
+-- mostrando nameplates en objetos" -- confirmado con /mcfnpobjdiag:
+-- guidPrefix=SECRET para TODO dentro de la mazmorra, hasta para un objeto
+-- ya confirmado antes en mundo abierto). El chequeo por GUID solo funciona
+-- FUERA de contenido restringido -- adentro, se necesita una señal aparte.
+-- Comparando un objeto real (Bench) contra un NPC real (Over-Indulged
+-- Patron) con el mismo diagnostico: UnitCreatureType da `nil` DE VERDAD
+-- (pcall exitoso, resultado no pasa por issecretvalue) para el objeto, pero
+-- un valor SECRETO (protegido, pero PRESENTE -- no nil) para el NPC real.
+-- nil y "secreto" son estados distintos y se pueden diferenciar sin leer
+-- nada -- UnitReaction confirma lo mismo (nil vs numero) como 2da señal,
+-- para no depender de una sola API.
+local function IsObjectNameplate(frame)
+    local unit = frame.namePlateUnitToken or frame.unitToken
+    if not unit then return false end
+
+    local okG, guid = pcall(UnitGUID, unit)
+    if okG and type(guid) == "string" and not (issecretvalue and issecretvalue(guid)) then
+        return guid:match("^GameObject%-") ~= nil
+    end
+
+    -- GUID no disponible/secreto (contenido restringido) -- respaldo via
+    -- UnitCreatureType/UnitReaction, que dan nil REAL (no secreto) para
+    -- unidades que no son criaturas.
+    local okT, creatureType = pcall(UnitCreatureType, unit)
+    local okR, reaction = pcall(UnitReaction, "player", unit)
+    return okT and creatureType == nil and okR and reaction == nil
+end
+
 local function SkinNamePlate(frame)
     if not frame then return end
     local uf = frame.UnitFrame or frame
+    -- CORREGIDO (2026-07-27, confirmado con /mcfnpobjdiag: "Wooden Chair" ya
+    -- detectaba IsObjectNameplate=true pero seguia MOSTRANDOSE skineado --
+    -- skinned=true en el diagnostico). Causa real: Blizzard RECICLA el mismo
+    -- frame Lua para unidades distintas -- este frame especifico ya habia
+    -- sido skineado antes para una criatura REAL, y el chequeo viejo solo
+    -- evitaba un skin NUEVO, sin revertir el anterior (barra/nombre siguen
+    -- siendo mutaciones directas de una sola via, no hay "des-skinear" en
+    -- este archivo). Ocultar el `uf` entero es mas simple y confiable que
+    -- intentar revertir cada pieza -- sus hijos (auras/clase/cast custom)
+    -- quedan ocultos automaticamente al ocultar el padre, sin tocarlos uno
+    -- por uno. Blizzard lo vuelve a mostrar solo cuando reasigna el frame a
+    -- una unidad real de nuevo (mismo ciclo NAME_PLATE_UNIT_ADDED).
+    if IsObjectNameplate(frame) then
+        if uf then uf:Hide() end
+        return
+    end
     if not uf or uf._mcfNPSkinned then return end
     uf._mcfNPSkinned = true
 
@@ -1673,6 +1758,28 @@ ev:SetScript("OnEvent", function(self, event, unit)
     if event == "NAME_PLATE_UNIT_ADDED" then
         if C_NamePlate and C_NamePlate.GetNamePlateForUnit then
             local plate = C_NamePlate.GetNamePlateForUnit(unit)
+            -- MISMO chequeo que SkinNamePlate (2026-07-27): UpdateNameText/
+            -- ApplyNameOnlyMode mas abajo NO pasan por SkinNamePlate, asi que
+            -- su propio guard interno no alcanzaba -- un objeto (buzon, etc)
+            -- seguia recibiendo el nombre/modo estilizados igual.
+            --
+            -- CORREGIDO (2026-07-27, confirmado con /mcfnpobjdiag: "Wooden
+            -- Chair" ya daba IsObjectNameplate=true pero seguia
+            -- MOSTRANDOSE): un simple `return` aca no alcanzaba si este
+            -- frame reciclado YA estaba skineado de una unidad real
+            -- anterior -- el skin viejo (barra/nombre) queda pegado para
+            -- siempre sin un Hide() explicito. Oculta el uf entero (mismo
+            -- criterio que SkinNamePlate) y limpia el estado custom
+            -- (ResetNameplateState) antes de salir.
+            if plate and IsObjectNameplate(plate) then
+                local objUf = plate.UnitFrame or plate
+                if objUf then
+                    objUf:Hide()
+                    activeUF[objUf] = nil
+                    ResetNameplateState(objUf)
+                end
+                return
+            end
             SkinNamePlate(plate)
             -- Actualiza el nombre YA (no esperar el ticker de 0.2s) --
             -- perceptible sobre todo al entrar en zonas con muchos NPCs.
@@ -1939,6 +2046,69 @@ SlashCmdList["MCFNPDIAG"] = function()
                 print(("  statusBarTexture: w=%.1f h=%.1f texcoord=(%.3f,%.3f,%.3f,%.3f)"):format(
                     tex:GetWidth() or -1, tex:GetHeight() or -1, l or -1, r or -1, t or -1, b or -1))
             end
+        end
+    end
+end
+
+-- Diagnostico (2026-07-27, reportado con captura DESPUES de agregar
+-- IsObjectNameplate: "aun sigo viendo nameplates en objetos" -- en "Hall of
+-- the High Command", que suena a portal/entrada de mazmorra, no un buzon).
+-- El filtro anterior asume prefijo de GUID "GameObject-" -- si esta plate
+-- usa otro tipo (o el token/GUID no sale como se esperaba), el filtro no lo
+-- agarra y no hay forma de saberlo sin datos reales en vez de adivinar una
+-- tercera vez. Vuelca unit/GUID(prefijo)/nombre/IsObjectNameplate para CADA
+-- plate visible ahora mismo.
+SLASH_MCFNPOBJDIAG1 = "/mcfnpobjdiag"
+SlashCmdList["MCFNPOBJDIAG"] = function()
+    if not C_NamePlate or not C_NamePlate.GetNamePlates then
+        print("|cff00ff00[MCF obj diag]|r C_NamePlate.GetNamePlates no existe en este cliente")
+        return
+    end
+    local plates = C_NamePlate.GetNamePlates()
+    print("|cff00ff00[MCF obj diag]|r nameplates visibles=" .. tostring(#plates))
+    local function safeField(fn, ...)
+        local ok, v = pcall(fn, ...)
+        if not ok then return "err" end
+        if v == nil then return "nil" end
+        if issecretvalue and issecretvalue(v) then return "SECRET" end
+        return tostring(v)
+    end
+    for _, frame in ipairs(plates) do
+        local unit = frame.namePlateUnitToken or frame.unitToken
+        local uf = frame.UnitFrame or frame
+        local name = "?"
+        if unit then
+            local okN, n = pcall(UnitName, unit)
+            if okN and type(n) == "string" then name = n end
+        end
+        local guidPrefix = "n/a"
+        if unit then
+            local okG, guid = pcall(UnitGUID, unit)
+            if okG and type(guid) == "string" then
+                if issecretvalue and issecretvalue(guid) then
+                    guidPrefix = "SECRET"
+                else
+                    guidPrefix = guid:match("^(%a+)%-") or ("unmatched:" .. guid)
+                end
+            else
+                guidPrefix = "unreadable(ok=" .. tostring(okG) .. ")"
+            end
+        end
+        local isObj = frame and IsObjectNameplate(frame)
+        -- Ampliado (2026-07-27, reportado: "en dungeon se siguen mostrando
+        -- nameplates en objetos" -- guidPrefix salio SECRET para TODO en
+        -- dungeon, incluida la Silla que en mundo abierto SI se detectaba
+        -- bien). Volcado de mas señales candidatas (todas envueltas en
+        -- pcall + type()+issecretvalue() antes de imprimir, nunca se opera
+        -- sobre el valor) para comparar cual sigue siendo legible en
+        -- contenido restringido -- sin esto seria adivinar una 4ta vez.
+        print(("  unit=%s name=%s guidPrefix=%s IsObjectNameplate=%s skinned=%s"):format(
+            tostring(unit), name, guidPrefix, tostring(isObj), tostring(uf and uf._mcfNPSkinned)))
+        if unit then
+            print(("    creatureType=%s classification=%s reaction=%s canAttack=%s isPlayer=%s level=%s"):format(
+                safeField(UnitCreatureType, unit), safeField(UnitClassification, unit),
+                safeField(UnitReaction, "player", unit), safeField(UnitCanAttack, "player", unit),
+                safeField(UnitIsPlayer, unit), safeField(UnitLevel, unit)))
         end
     end
 end

@@ -7,6 +7,37 @@ worth reading before redoing one of them).
 ## Unreleased
 
 ### Added
+- **`/mcfnpobjdiag`** — dumps unit/GUID-prefix/name/`IsObjectNameplate` result for every
+  currently visible nameplate. Built after a report that object nameplates were still
+  getting skinned even after the `IsObjectNameplate` fix ("Hall of the High Command", a
+  dungeon-entrance-looking plate) — rather than guess a second GUID-prefix assumption
+  blindly, this gets real data on what that plate's GUID actually looks like.
+- **Range fade and shield (absorb) bar for Player/Target/Focus/Party/Arena**
+  (`Indicators.lua`, new file, loads before `Units.lua`). Secret-safe using patterns
+  already proven elsewhere in the addon: range uses `UnitInRange`; the shield bar hands
+  `UnitGetTotalAbsorbs`/`UnitHealthMax` straight to a native `StatusBar`
+  (`SetMinMaxValues`/`SetValue`) without ever reading them in Lua, same as the existing
+  cooldown/cast-timer widgets. The shield bar reuses each unit's own `texture`, re-read
+  live every tick, so per-unit texture differences (and future texture changes) are
+  picked up automatically. Not yet exposed in Options.lua — always on for now.
+  **`/mcfindicatortest`** toggles both forced-on for every tracked unit that currently
+  exists, so they can be previewed without needing to actually be out of range or get
+  shielded. A dispel-glow indicator (borde recoloreado por debuff dispelleable) was also
+  built and shipped briefly, but got pulled — no clear way to trigger/test it in
+  practice; see git history if it's worth revisiting later.
+- **Loss of Control icon** (`LossOfControl.lua`, new file) — shows on the player portrait
+  (bottom-right corner, the slot `portrait_player` never uses since it has no role/leader
+  badge) whenever you're stunned/silenced/rooted/feared/etc, with a cooldown swipe for how
+  long is left. Uses `C_LossOfControl.GetActiveLossOfControlData` — always your own data,
+  never another unit's, so no secret-value concerns here at all. `/mcfloctest` toggles a
+  fake 6-second placeholder to preview it without needing a real CC.
+- **`/mcftrinkettest`** (`ArenaTrinket.lua`) — fakes the arena trinket (Gladiator's
+  Medallion) cooldown state on all 3 arena enemy frames and redraws the icon, so the
+  draw path (size/position/whether `showTrinket` is even on) can be checked without a
+  real opponent using their trinket. Doesn't test the *detection* itself (whether the
+  tracked spellID still matches this build) — only a live match confirms that. Needs
+  Lock/Edit mode (`/mcf`) too, since arena frames are otherwise hidden outside a real
+  match.
 - **Sort mode, max icons and icon padding, configurable per group, for all 5 hover aura
   displays** (Player/Target/Focus/Party/Arena) — new controls in each group's options
   section. Sort has 3 modes: `priority` (debuffs before buffs, current default behavior),
@@ -20,6 +51,85 @@ worth reading before redoing one of them).
   gate/carrier alpha) of any hover-aura group. Built to chase down a report that the
   player group stays visible after the mouse leaves — the code reads correctly on two
   passes with no bug found, so this gets real data instead of a third guess.
+- **Hover aura text (countdown number + stack count) is smaller and gold now**, matching
+  the rest of the addon's text color (`ns.GOLD`) instead of Blizzard's default
+  white/whatever-size countdown font. The countdown number needed its own font object
+  (`SetCountdownFont`) — a dedicated one, not the one `Nameplates.lua` already uses for
+  the same purpose on nameplates, since sharing it would have the two systems fight over
+  its size/color.
+- **Threat/aggro indicator was pulled.** Went through 4 versions the same day (scaling
+  the native `aggroHighlight` glow, copying its rendered color onto the health bar,
+  reading `UnitDetailedThreatSituation` directly on a per-frame `OnUpdate`, then finally
+  a `hooksecurefunc` hook on `SetStatusBarColor` to win the race against Blizzard's own
+  native recolor) — the last version should have worked (same override pattern this file
+  already uses for `LockSize`/`LockBar`), but the user still saw no visible change, so it
+  got removed rather than debugged further. `SkinThreat`'s original one-time texture
+  swap on the native highlight (pre-existing, from before this session) is untouched.
+- **Reorganized the Nameplates options menu** ("reacomoda el menu de nameplates") — the
+  "Gen" tab had grown to 4 stacked groups (General, Range, Name-only mode, Enemy player
+  class colors) and the panel has no scroll, so the last checkbox was getting clipped by
+  the bottom button row. "Name-only mode" and "Enemy player class colors" (the two
+  longest groups, both about name color/visibility) moved to a new "Names" tab; "Gen" is
+  back to just General + Range.
+- **Enemy player nameplate class colors** (`Nameplates.lua`), off by default — matches
+  the native "Color-Coding Enemy Nameplates" capability Blizzard re-enabled in Midnight,
+  but implemented as our own name-color override rather than the native
+  `ShowClassColorInEnemyNameplate` CVar: this addon draws its own name text in place of
+  Blizzard's, so that CVar has nothing left to color. Reuses the existing
+  `GetClassColorForUnit` helper already used for the friendly name-only mode, scoped to
+  hostile *players* only (never NPCs — `UnitIsPlayer` gates it before even trying).
+
+### Fixed
+- **Shield bar occasionally showed as a low-opacity black patch.** `SetStatusBarTexture`
+  was never called at creation — only later, on the first real update tick — so an
+  untextured `StatusBar` could render its default placeholder in the gap. Now given an
+  explicit initial texture at creation time, closing that window.
+- **`attempt to perform boolean test on local 'checked' (a secret boolean value)`, 210x,
+  range fade on arena_party2.** The earlier research claim that `UnitInRange` is purely
+  positional and never secret was wrong for this build — it returns secret booleans for
+  at least arena/party units (same anti-scouting treatment `ArenaTrinket.lua` already
+  documents for `UnitGUID`). Added a `type()`+`issecretvalue()` guard before ever testing
+  the result; if either value comes back secret, the range fade just doesn't show for that
+  unit right then instead of crashing — probably still works fine outside
+  arena/M+/raid where the data likely isn't secret.
+- **`/mcfindicatortest` only showed the shield bar on Player-based frames** (Player,
+  Party5, Arena Player — all `unit="player"`). Test mode required `UnitExists(u.unit)`
+  before showing the fake preview, same as the real logic — but
+  `UnitExists("party1")`/`UnitExists("arena1")` etc. are only true while actually grouped
+  or in an arena match, so solo/out-of-arena testing silently skipped everything except
+  the player-based frames. Test mode now bypasses that check entirely, same as
+  `AuraHoverPreview.lua`'s test mode already does — it never touches real unit data in
+  the first place, so there was never a reason to gate it on the unit existing.
+- **This addon's own name/health/highlight styling was bleeding onto interactable world
+  object nameplates** (reported with a screenshot: a "Postbox Parcel" mailbox showing a
+  styled name and health bar) — `SkinNamePlate` never filtered by unit type, so any frame
+  Blizzard created a nameplate for got the full treatment. Added `IsObjectNameplate`,
+  which reads the unit's GUID prefix (`GameObject-...`) to detect non-creature/player
+  nameplates and skip them entirely. `UnitGUID` can be secret for some units (arena
+  enemies, per `ArenaTrinket.lua`) — when unreadable, it's treated as "not an object" so a
+  real (secret-GUID) enemy never gets skipped by mistake.
+- **Still bleeding after the fix above — confirmed via `/mcfnpobjdiag`: "Wooden Chair"
+  correctly evaluated `IsObjectNameplate=true` but still showed skinned.** Root cause was
+  frame reuse: Blizzard recycles the same Lua nameplate frame across different units, and
+  this particular frame had already been skinned earlier for a real creature — a plain
+  `return` prevented any *new* skin from applying, but never undid the old one (this
+  file's skinning is one-way; there's no "revert to native" for the bar texture/name
+  font). Now the whole `uf` gets explicitly `:Hide()`n for objects instead — its custom
+  child overlays (auras/class icon/cast bar) go invisible along with it for free, no need
+  to unwind each one individually. Blizzard shows it again on its own once the frame gets
+  reassigned to a real unit.
+- **Object nameplates kept showing inside dungeons specifically.** `/mcfnpobjdiag` showed
+  `UnitGUID` coming back fully secret for *every* nameplate in there — including objects
+  already correctly detected in open world — so the GUID-prefix check had nothing to work
+  with. No native CVar exists to suppress object nameplates specifically either (checked —
+  the only relevant ones are the friendly-NPC/player visibility CVars this addon already
+  turns on in dungeons for the escort-NPC feature, and those are exactly what's making
+  decorative furniture nameplate-eligible in the first place; turning them off would kill
+  that feature too). Added a fallback for when the GUID is unreadable: `UnitCreatureType`
+  returns a real `nil` for non-creature units but a *secret* (protected, non-nil) value
+  for actual creatures — confirmed side-by-side via the diagnostic (a "Bench" object vs.
+  an "Over-Indulged Patron" NPC) — `UnitReaction` backs up the same nil-vs-secret split as
+  a second signal.
 
 ### Changed
 - **Hover auras hide the instant the mouse leaves, no more 0.35s grace period.** That delay

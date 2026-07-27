@@ -67,6 +67,17 @@ local AURA_BORDER = A .. "actionbutton-border square.tga"
 local BORDER_SCALE = 0.26
 local QUESTION_MARK_ICON = "Interface\\Icons\\INV_Misc_QuestionMark"
 
+-- Fuente compartida para el numero de cuenta regresiva NATIVO del swipe
+-- (2026-07-27, pedido del usuario: "bajarle el tamaño al texto, de todas un
+-- poco, y tambien ponerle el color del addon"). Objeto PROPIO (no el
+-- MCFAuraTimeFontObj que ya usa Nameplates.lua para lo mismo en las
+-- nameplates) -- son 2 sistemas de aura totalmente separados con sus
+-- propios ajustes; compartir el mismo objeto haria que uno pisara al otro.
+-- ns.GOLD (core.lua) es el color de texto default de TODO el addon.
+local MCFAuraHoverTimeFontObj = CreateFont("MCFAuraHoverTimeFontObj")
+MCFAuraHoverTimeFontObj:SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
+MCFAuraHoverTimeFontObj:SetTextColor(ns.GOLD.r, ns.GOLD.g, ns.GOLD.b, 1)
+
 local DIRECTIONS = { "left", "right", "up", "down" }
 ns.PARTY_AURA_DIRECTIONS = DIRECTIONS
 ns.ARENA_AURA_DIRECTIONS = DIRECTIONS
@@ -239,6 +250,9 @@ local function CreateIcon(parent)
     -- C_UnitAuras.GetAuraDuration, asi que el numero que Blizzard dibuja
     -- encima tambien lo es -- sin tocar ningun valor secreto a mano.
     if swipe.SetHideCountdownNumbers then swipe:SetHideCountdownNumbers(false) end
+    -- Fuente/color propios en vez del default de Blizzard (2026-07-27,
+    -- pedido del usuario: texto mas chico, color del addon).
+    pcall(swipe.SetCountdownFont, swipe, "MCFAuraHoverTimeFontObj")
     b.swipe = swipe
 
     local border = b:CreateTexture(nil, "OVERLAY")
@@ -247,10 +261,12 @@ local function CreateIcon(parent)
     iconRegistry[#iconRegistry + 1] = b
     ResizeIcon(b, DEFAULT_ICON_SIZE)
 
+    -- Numero de cargas (2026-07-27): 11->9 y blanco->ns.GOLD, mismo pedido
+    -- que el swipe de arriba.
     local count = b:CreateFontString(nil, "OVERLAY")
-    count:SetFont("Fonts\\FRIZQT__.TTF", 11, "OUTLINE")
+    count:SetFont("Fonts\\FRIZQT__.TTF", 9, "OUTLINE")
     count:SetPoint("BOTTOMRIGHT", 1, 0)
-    count:SetTextColor(1, 1, 1)
+    count:SetTextColor(ns.GOLD.r, ns.GOLD.g, ns.GOLD.b)
     b.count = count
 
     -- Deja pasar el CLICK al mundo/enemigos debajo (protegido en combate: se

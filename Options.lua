@@ -2174,7 +2174,8 @@ local function BuildPanel()
     -- duro en el borde) -- meterlos todos en "Gen" empujaba "Name-only mode"
     -- y sus offsets fuera de la ventana. Pestaña propia = espacio de sobra
     -- para cada grupo, sin apretar pixeles.
-    local nameplatesSecList = { { key = "np_general", label = "Gen" }, { key = "np_alpha", label = "Alpha" } }
+    local nameplatesSecList = { { key = "np_general", label = "Gen" }, { key = "np_alpha", label = "Alpha" },
+        { key = "np_names", label = "Names" } }
     BuildTabRow(nameplatesSecList, 40, true)
 
     -- Pestanas de SECCION para Party Auras (singleton, 1 sola pestaña "Gen" — igual patron que
@@ -3488,9 +3489,18 @@ local function BuildPanel()
         distNote:SetPoint("TOPLEFT", L, -220); distNote:SetWidth(210); distNote:SetJustifyH("LEFT")
         distNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         distNote:SetText("How far away nameplates render.")
+    end
 
-        -- Grupo 3: modo "solo nombre" para jugadores + NPCs amistosos (sin pets).
-        MakeHeader(f, "Name-only mode (friendly)", L, -252, 430)
+    -- Reacomodado (2026-07-27, pedido del usuario: "reacomoda el menu de nameplates"
+    -- -- el ultimo checkbox de "Gen" quedaba pisado por la fila de botones de abajo,
+    -- el panel no tiene scroll). "Name-only mode" + "Enemy player class colors" (los
+    -- 2 grupos mas largos, ambos sobre COLOR/VISIBILIDAD del nombre) se mudan a su
+    -- propia pestaña -- "Gen" queda corto (General + Range nomas).
+    do
+        local f = Section("np_names")
+
+        -- Modo "solo nombre" para jugadores + NPCs amistosos (sin pets).
+        MakeHeader(f, "Name-only mode (friendly)", L, -6, 430)
         -- CAMBIADO (2026-07-19): jugadores amistosos (nombre con color de
         -- CLASE) + NPCs amistosos como vendedores/guardias (nombre con el
         -- color preestablecido del perfil) -- excluye mascotas/totems/
@@ -3501,21 +3511,31 @@ local function BuildPanel()
         -- checkbox se pisaba con el de al lado en la columna R -- L/R estan pensados para
         -- labels cortos, "Only show name on friendly players/NPCs" es demasiado largo para
         -- 226px de columna). Apilados en la misma columna (L) en vez de lado a lado.
-        MakeCheckbox(f, "Only show name on friendly players/NPCs", "nameOnlyFriendlyNeutral", L, -276)
+        MakeCheckbox(f, "Only show name on friendly players/NPCs", "nameOnlyFriendlyNeutral", L, -30)
         -- Pedido del usuario 2026-07-19: solo nombre para NPCs de escolta/
         -- mision EN DUNGEON, via CVars nativos (funciona incluso en
         -- ForbiddenNamePlate, confirmado en vivo -- ver ApplyMaxDistanceNow
         -- en Nameplates.lua). Independiente del checkbox de arriba.
-        MakeCheckbox(f, "Dungeon escort NPCs (native)", "showFriendlyNPCPlates", L, -300)
+        MakeCheckbox(f, "Dungeon escort NPCs (native)", "showFriendlyNPCPlates", L, -54)
         local onlyNameNote = f:CreateFontString(nil, "ARTWORK"); setFont(onlyNameNote, 10)
-        onlyNameNote:SetPoint("TOPLEFT", L, -324); onlyNameNote:SetWidth(430); onlyNameNote:SetJustifyH("LEFT")
+        onlyNameNote:SetPoint("TOPLEFT", L, -78); onlyNameNote:SetWidth(430); onlyNameNote:SetJustifyH("LEFT")
         onlyNameNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         onlyNameNote:SetText("Players: colored by class. NPCs (vendors, guards, etc): preset color. Excludes pets and hostiles.")
 
         -- Offset PROPIO del modo de arriba (pedido del usuario): sin la barra
         -- visible, la posicion normal del nombre puede no quedar bien.
-        MakeSlider(f, "Offset X", -100, 100, 1, "nameOnlyOffsetX", L, -374)
-        MakeSlider(f, "Offset Y", -100, 100, 1, "nameOnlyOffsetY", R, -374)
+        MakeSlider(f, "Offset X", -100, 100, 1, "nameOnlyOffsetX", L, -128)
+        MakeSlider(f, "Offset Y", -100, 100, 1, "nameOnlyOffsetY", R, -128)
+
+        -- Color de clase para jugadores HOSTILES (2026-07-27, pedido del usuario, ver
+        -- Wowhead "Color-Coding Enemy Nameplates is Returning in Midnight"): distinto
+        -- del "Name-only mode" de arriba (ese es SOLO amistosos, sin barra) -- esto es
+        -- en el modo NORMAL (con barra de vida), reusando GetClassColorForUnit (ya
+        -- existe en Nameplates.lua) en vez del CVar nativo (ShowClassColorInEnemyNameplate)
+        -- -- este addon dibuja su PROPIO texto de nombre, reemplazando al nativo, asi
+        -- que ese CVar no tendria ningun efecto visible sobre lo que realmente se ve.
+        MakeHeader(f, "Enemy player class colors", L, -190, 430)
+        MakeCheckbox(f, "Color enemy player names by class", "classColorEnemyNames", L, -214)
     end
 
     -- Nueva pestaña "Alpha" (2026-07-19, pedido del usuario): 5 controles

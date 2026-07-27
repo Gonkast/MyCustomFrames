@@ -1141,6 +1141,11 @@ local function CreateUnit(def)
     end
 
     ns.AttachScaleWheel(u.button, function() return P(u) end, function() UnitApplyLayout(u) end)
+
+    -- Range fade / shield bar (2026-07-27, ver Indicators.lua, que carga
+    -- ANTES de este archivo para que la funcion ya exista aca).
+    if ns.CreateUnitIndicators then ns.CreateUnitIndicators(u) end
+
     ns.frames[def.key] = u
     return u
 end

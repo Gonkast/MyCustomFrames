@@ -138,6 +138,26 @@ prepWatcher:SetScript("OnEvent", function(self, event)
     ScanPrepSpecs()
 end)
 
+-- Test mode (2026-07-27, pedido del usuario: "dejame una forma de testear
+-- los trinkets de arena, que no estoy seguro si estan funcionando"). Ojo con
+-- el alcance real de esto: fuerza ns.ArenaTrinketState + re-dibuja el icono,
+-- exactamente el mismo camino que usaria una deteccion real -- prueba que el
+-- ICONO/COOLDOWN se vea bien (tamaño, posicion, showTrinket prendido). NO
+-- prueba la DETECCION en si (que el buff 208683 sea el correcto en este
+-- build/que UNIT_AURA dispare a tiempo) -- eso solo se confirma viendo a un
+-- rival de verdad usar el trinket en un partido real.
+local trinketTestOn = false
+SLASH_MCFTRINKETTEST1 = "/mcftrinkettest"
+SlashCmdList["MCFTRINKETTEST"] = function()
+    trinketTestOn = not trinketTestOn
+    for _, unit in ipairs(ENEMY_UNITS) do
+        ns.ArenaTrinketState[unit] = trinketTestOn and { start = GetTime(), duration = 120 } or nil
+        if ns.RefreshArenaTrinketIcon then ns.RefreshArenaTrinketIcon(unit) end
+    end
+    print("|cff00ff00[MCF trinket test]|r " .. (trinketTestOn and "ON" or "off") ..
+        " -- tests the icon/cooldown draw path only, not real detection.")
+end
+
 local resetWatcher = CreateFrame("Frame")
 resetWatcher:RegisterEvent("PLAYER_ENTERING_WORLD")
 resetWatcher:SetScript("OnEvent", function()
