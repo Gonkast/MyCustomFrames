@@ -7,6 +7,15 @@ worth reading before redoing one of them).
 ## Unreleased
 
 ### Added
+- **Sort mode, max icons and icon padding, configurable per group, for all 5 hover aura
+  displays** (Player/Target/Focus/Party/Arena) — new controls in each group's options
+  section. Sort has 3 modes: `priority` (debuffs before buffs, current default behavior),
+  `time` (ignore type entirely, soonest-to-expire first across the mix), and `index`
+  (Blizzard's native order, no reordering — for when the sort feels too jumpy). Max icons
+  is 1-8 (was a fixed 4); the icon pool is always pre-created at 8 so raising the limit
+  later doesn't need a `/reload`. Padding is the gap between icons in the row (0-20,
+  separate from the existing "how far from the unit frame" gap). All 3 default to the old
+  fixed behavior (priority sort, 4 icons, 4px padding) — nothing changes unless touched.
 - **`/mcfaurahoverdiag [key]`** — dumps the live internal state (hover/target/combat/cast/
   gate/carrier alpha) of any hover-aura group. Built to chase down a report that the
   player group stays visible after the mouse leaves — the code reads correctly on two

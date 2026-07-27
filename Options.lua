@@ -3564,9 +3564,10 @@ local function BuildPanel()
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", L, -32); note:SetWidth(430); note:SetJustifyH("LEFT")
         note:SetTextColor(0.8, 0.8, 0.8)
-        note:SetText("Applies to ALL 5 party frames at once. Shows up to 4 auras (debuffs take " ..
-            "priority, buffs fill empty slots) on mouseover, or fixed while the unit is in combat. " ..
-            "Try /mcfpartytest to preview without a real group.")
+        note:SetText("Applies to ALL 5 party frames at once. Shows your configured number of auras " ..
+            "(debuffs take priority, buffs fill empty slots) on mouseover, or fixed while the unit " ..
+            "is in combat. Sort/limit/padding below apply to all 5. Try /mcfpartytest to preview " ..
+            "without a real group.")
 
         -- Direccion: boton ciclico (no hay MakeCycle generico para valores GLOBALES, se arma a
         -- mano igual que el resto de los botones ciclicos del addon).
@@ -3590,6 +3591,33 @@ local function BuildPanel()
         MakeSlider(f, "Icon size", 12, 48, 1, "partyAuraIconSize", L, -120,
             function() return ns.GetDB() end,
             function() if ns.RefreshPartyAuraSize then ns.RefreshPartyAuraSize() end end)
+
+        -- Sort/limite/padding (2026-07-27, pedido del usuario: "que este en el menu option de
+        -- elegir sort, limite de buffs y debuffs o auras mostradas y el padding entre ellas").
+        local auraSortBtn = MakeButton(f, "", 220, 24)
+        auraSortBtn:SetPoint("TOPLEFT", L, -164)
+        local function SortText()
+            local d = ns.GetDB() and ns.GetDB().partyAuraSort or "priority"
+            auraSortBtn.text:SetText("Sort: " .. d)
+        end
+        auraSortBtn:SetScript("OnClick", function()
+            local list = ns.AURA_SORT_MODES or { "priority", "time", "index" }
+            local d = ns.GetDB(); if not d then return end
+            local cur, idx = d.partyAuraSort or "priority", 1
+            for i, v in ipairs(list) do if v == cur then idx = i break end end
+            d.partyAuraSort = list[(idx % #list) + 1]
+            SortText()
+            if ns.RefreshPartyAuraSort then ns.RefreshPartyAuraSort() end
+        end)
+        refreshers[#refreshers + 1] = SortText
+
+        MakeSlider(f, "Max icons shown", 1, 8, 1, "partyAuraMaxIcons", L, -208,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshPartyAuraMaxIcons then ns.RefreshPartyAuraMaxIcons() end end)
+
+        MakeSlider(f, "Icon padding", 0, 20, 1, "partyAuraPadding", L, -252,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshPartyAuraPadding then ns.RefreshPartyAuraPadding() end end)
     end
 
     -- =========================== SECCION ARENA AURAS (2026-07-19) ===========================
@@ -3602,9 +3630,10 @@ local function BuildPanel()
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", L, -32); note:SetWidth(430); note:SetJustifyH("LEFT")
         note:SetTextColor(0.8, 0.8, 0.8)
-        note:SetText("Applies to ALL 6 arena frames at once (allies + enemies). Shows up to 4 auras " ..
-            "(debuffs take priority, buffs fill empty slots) on mouseover, or fixed while the unit is " ..
-            "in combat. Arena-only. Try /mcfarenaauratest to preview without a real match.")
+        note:SetText("Applies to ALL 6 arena frames at once (allies + enemies). Shows your " ..
+            "configured number of auras (debuffs take priority, buffs fill empty slots) on " ..
+            "mouseover, or fixed while the unit is in combat. Arena-only. Sort/limit/padding below " ..
+            "apply to all 6. Try /mcfarenaauratest to preview without a real match.")
 
         local dirBtn = MakeButton(f, "", 220, 24)
         dirBtn:SetPoint("TOPLEFT", L, -76)
@@ -3626,6 +3655,31 @@ local function BuildPanel()
         MakeSlider(f, "Icon size", 12, 48, 1, "arenaAuraIconSize", L, -120,
             function() return ns.GetDB() end,
             function() if ns.RefreshArenaAuraSize then ns.RefreshArenaAuraSize() end end)
+
+        local auraSortBtn = MakeButton(f, "", 220, 24)
+        auraSortBtn:SetPoint("TOPLEFT", L, -164)
+        local function SortText()
+            local d = ns.GetDB() and ns.GetDB().arenaAuraSort or "priority"
+            auraSortBtn.text:SetText("Sort: " .. d)
+        end
+        auraSortBtn:SetScript("OnClick", function()
+            local list = ns.AURA_SORT_MODES or { "priority", "time", "index" }
+            local d = ns.GetDB(); if not d then return end
+            local cur, idx = d.arenaAuraSort or "priority", 1
+            for i, v in ipairs(list) do if v == cur then idx = i break end end
+            d.arenaAuraSort = list[(idx % #list) + 1]
+            SortText()
+            if ns.RefreshArenaAuraSort then ns.RefreshArenaAuraSort() end
+        end)
+        refreshers[#refreshers + 1] = SortText
+
+        MakeSlider(f, "Max icons shown", 1, 8, 1, "arenaAuraMaxIcons", L, -208,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshArenaAuraMaxIcons then ns.RefreshArenaAuraMaxIcons() end end)
+
+        MakeSlider(f, "Icon padding", 0, 20, 1, "arenaAuraPadding", L, -252,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshArenaAuraPadding then ns.RefreshArenaAuraPadding() end end)
     end
 
     -- =========================== SECCION FOCUS AURAS (2026-07-27) ===========================
@@ -3639,9 +3693,10 @@ local function BuildPanel()
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", L, -32); note:SetWidth(430); note:SetJustifyH("LEFT")
         note:SetTextColor(0.8, 0.8, 0.8)
-        note:SetText("Shows up to 4 auras on your focus target (debuffs take priority, colored by " ..
-            "dispel type; buffs fill empty slots) on mouseover, or fixed while you're in combat. " ..
-            "Needs a focus target set. Try /mcffocusauratest to preview without one.")
+        note:SetText("Shows your configured number of auras on your focus target (debuffs take " ..
+            "priority, colored by dispel type; buffs fill empty slots) on mouseover, or fixed " ..
+            "while you're in combat. Needs a focus target set. Try /mcffocusauratest to preview " ..
+            "without one.")
 
         local dirBtn = MakeButton(f, "", 220, 24)
         dirBtn:SetPoint("TOPLEFT", L, -76)
@@ -3663,6 +3718,31 @@ local function BuildPanel()
         MakeSlider(f, "Icon size", 12, 48, 1, "focusAuraIconSize", L, -120,
             function() return ns.GetDB() end,
             function() if ns.RefreshFocusAuraSize then ns.RefreshFocusAuraSize() end end)
+
+        local auraSortBtn = MakeButton(f, "", 220, 24)
+        auraSortBtn:SetPoint("TOPLEFT", L, -164)
+        local function SortText()
+            local d = ns.GetDB() and ns.GetDB().focusAuraSort or "priority"
+            auraSortBtn.text:SetText("Sort: " .. d)
+        end
+        auraSortBtn:SetScript("OnClick", function()
+            local list = ns.AURA_SORT_MODES or { "priority", "time", "index" }
+            local d = ns.GetDB(); if not d then return end
+            local cur, idx = d.focusAuraSort or "priority", 1
+            for i, v in ipairs(list) do if v == cur then idx = i break end end
+            d.focusAuraSort = list[(idx % #list) + 1]
+            SortText()
+            if ns.RefreshFocusAuraSort then ns.RefreshFocusAuraSort() end
+        end)
+        refreshers[#refreshers + 1] = SortText
+
+        MakeSlider(f, "Max icons shown", 1, 8, 1, "focusAuraMaxIcons", L, -208,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshFocusAuraMaxIcons then ns.RefreshFocusAuraMaxIcons() end end)
+
+        MakeSlider(f, "Icon padding", 0, 20, 1, "focusAuraPadding", L, -252,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshFocusAuraPadding then ns.RefreshFocusAuraPadding() end end)
     end
 
     -- =========================== SECCION PLAYER AURAS (2026-07-27) ===========================
@@ -3677,8 +3757,9 @@ local function BuildPanel()
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", L, -32); note:SetWidth(430); note:SetJustifyH("LEFT")
         note:SetTextColor(0.8, 0.8, 0.8)
-        note:SetText("Shows up to 4 of your own auras (debuffs take priority, colored by dispel " ..
-            "type; buffs fill empty slots) -- always visible, same as Target Auras.")
+        note:SetText("Shows your configured number of your own auras (debuffs take priority, " ..
+            "colored by dispel type; buffs fill empty slots) -- always visible, same as Target " ..
+            "Auras.")
 
         local dirBtn = MakeButton(f, "", 220, 24)
         dirBtn:SetPoint("TOPLEFT", L, -76)
@@ -3700,6 +3781,31 @@ local function BuildPanel()
         MakeSlider(f, "Icon size", 12, 48, 1, "playerAuraIconSize", L, -120,
             function() return ns.GetDB() end,
             function() if ns.RefreshPlayerAuraSize then ns.RefreshPlayerAuraSize() end end)
+
+        local auraSortBtn = MakeButton(f, "", 220, 24)
+        auraSortBtn:SetPoint("TOPLEFT", L, -164)
+        local function SortText()
+            local d = ns.GetDB() and ns.GetDB().playerAuraSort or "priority"
+            auraSortBtn.text:SetText("Sort: " .. d)
+        end
+        auraSortBtn:SetScript("OnClick", function()
+            local list = ns.AURA_SORT_MODES or { "priority", "time", "index" }
+            local d = ns.GetDB(); if not d then return end
+            local cur, idx = d.playerAuraSort or "priority", 1
+            for i, v in ipairs(list) do if v == cur then idx = i break end end
+            d.playerAuraSort = list[(idx % #list) + 1]
+            SortText()
+            if ns.RefreshPlayerAuraSort then ns.RefreshPlayerAuraSort() end
+        end)
+        refreshers[#refreshers + 1] = SortText
+
+        MakeSlider(f, "Max icons shown", 1, 8, 1, "playerAuraMaxIcons", L, -208,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshPlayerAuraMaxIcons then ns.RefreshPlayerAuraMaxIcons() end end)
+
+        MakeSlider(f, "Icon padding", 0, 20, 1, "playerAuraPadding", L, -252,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshPlayerAuraPadding then ns.RefreshPlayerAuraPadding() end end)
     end
 
     -- =========================== SECCION TARGET AURAS (2026-07-27) ===========================
@@ -3712,9 +3818,10 @@ local function BuildPanel()
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", L, -32); note:SetWidth(430); note:SetJustifyH("LEFT")
         note:SetTextColor(0.8, 0.8, 0.8)
-        note:SetText("Shows up to 4 auras on your target (debuffs take priority, colored by dispel " ..
-            "type; buffs fill empty slots) -- always visible while you have a target, hover just " ..
-            "makes sure it's freshly refreshed. Try /mcftargetauratest to preview without one.")
+        note:SetText("Shows your configured number of auras on your target (debuffs take " ..
+            "priority, colored by dispel type; buffs fill empty slots) -- always visible while " ..
+            "you have a target, hover just makes sure it's freshly refreshed. Try " ..
+            "/mcftargetauratest to preview without one.")
 
         local dirBtn = MakeButton(f, "", 220, 24)
         dirBtn:SetPoint("TOPLEFT", L, -76)
@@ -3736,6 +3843,31 @@ local function BuildPanel()
         MakeSlider(f, "Icon size", 12, 48, 1, "targetAuraIconSize", L, -120,
             function() return ns.GetDB() end,
             function() if ns.RefreshTargetAuraSize then ns.RefreshTargetAuraSize() end end)
+
+        local auraSortBtn = MakeButton(f, "", 220, 24)
+        auraSortBtn:SetPoint("TOPLEFT", L, -164)
+        local function SortText()
+            local d = ns.GetDB() and ns.GetDB().targetAuraSort or "priority"
+            auraSortBtn.text:SetText("Sort: " .. d)
+        end
+        auraSortBtn:SetScript("OnClick", function()
+            local list = ns.AURA_SORT_MODES or { "priority", "time", "index" }
+            local d = ns.GetDB(); if not d then return end
+            local cur, idx = d.targetAuraSort or "priority", 1
+            for i, v in ipairs(list) do if v == cur then idx = i break end end
+            d.targetAuraSort = list[(idx % #list) + 1]
+            SortText()
+            if ns.RefreshTargetAuraSort then ns.RefreshTargetAuraSort() end
+        end)
+        refreshers[#refreshers + 1] = SortText
+
+        MakeSlider(f, "Max icons shown", 1, 8, 1, "targetAuraMaxIcons", L, -208,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshTargetAuraMaxIcons then ns.RefreshTargetAuraMaxIcons() end end)
+
+        MakeSlider(f, "Icon padding", 0, 20, 1, "targetAuraPadding", L, -252,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshTargetAuraPadding then ns.RefreshTargetAuraPadding() end end)
     end
 
     -- =========================== SECCION CLASS POWER (2026-07-19) ===========================

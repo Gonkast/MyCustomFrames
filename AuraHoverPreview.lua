@@ -38,9 +38,19 @@
 -- ==========================================================================
 local ADDON, ns = ...
 
-local MAX_ICONS   = 4
+-- CAMBIADO (2026-07-27, pedido del usuario: "que este en el menu opcion de
+-- elegir... limite de auras mostradas... y el padding"): antes MAX_ICONS/
+-- ICON_GAP eran constantes fijas, iguales para los 5 grupos. Ahora son
+-- valores POR GRUPO, configurables en Options.lua via cfg.maxDBKey/
+-- cfg.paddingDBKey (mismo patron que dirDBKey/sizeDBKey) -- estas 2
+-- constantes quedan como el TOPE del pool de iconos pre-creados (siempre se
+-- crean HARD_MAX_ICONS, se muestran/ocultan segun el limite configurado, sin
+-- necesidad de recrear frames si el usuario sube el limite despues) y el
+-- default de relleno cuando no hay nada guardado todavia.
+local HARD_MAX_ICONS = 8
+local DEFAULT_MAX_ICONS = 4
 local DEFAULT_ICON_SIZE = 26
-local ICON_GAP    = 4
+local DEFAULT_ICON_GAP = 4
 local SLIDE_DIST  = 26
 -- Historia (2026-07-27): empezo compartida por los 5 grupos, subida de 4 a
 -- 14, 17, 20, 25 y 27 (pedido del usuario: "un poco mas de distancia...
@@ -123,28 +133,37 @@ local function ByRemaining(a, b)
     return ra < rb
 end
 
--- Debuffs tienen prioridad; si hay menos de MAX_ICONS debuffs, se rellena con
--- buffs (onlyBuffs salta los debuffs del todo -- unidades "propias", como
--- party5/arena_player, ya muestran sus debuffs en el frame nativo de Blizzard).
--- Dentro de cada categoria (debuff/buff), ordenadas por ByRemaining -- por
--- eso ya no se corta apenas se llega a MAX_ICONS mientras se escanea: hace
--- falta juntar TODAS las de la categoria primero para poder ordenarlas antes
--- de recortar a MAX_ICONS.
-local function CollectAuras(unit, onlyBuffs)
+-- Sort modes (2026-07-27, pedido del usuario: "que este en el menu option
+-- de elegir sort, limite de auras mostradas y el padding" -- para los 5
+-- grupos). Antes esto era fijo (siempre "priority"); ahora es 1 de 3 modos,
+-- configurable por grupo via cfg.sortDBKey:
+--   "priority" -- debuffs primero (prioridad original), buffs rellenan lo
+--                 que sobra; DENTRO de cada categoria, por ByRemaining.
+--   "time"     -- ignora el tipo, mezcla debuffs+buffs en una sola lista y
+--                 ordena todo junto por ByRemaining (el que vence antes,
+--                 sin importar si es buff o debuff, primero).
+--   "index"    -- sin reordenar nada: el orden nativo que devuelve Blizzard
+--                 (debuffs primero iguel, pero SIN el sub-orden por tiempo)
+--                 -- por si el reordenado se siente "saltarin".
+ns.AURA_SORT_MODES = { "priority", "time", "index" }
+
+-- Debuffs tienen prioridad (menos en modo "time"); si hay menos que el limite
+-- configurado, se rellena con buffs (onlyBuffs salta los debuffs del todo --
+-- unidades "propias", como party5/arena_player, ya muestran sus debuffs en
+-- el frame nativo de Blizzard). Se junta TODA la categoria antes de ordenar
+-- y recien ahi recortar al limite -- no se puede cortar mientras se escanea
+-- como antes de tener sort, porque el orden final depende de todas.
+local function CollectAuras(unit, onlyBuffs, maxIcons, sortMode)
+    maxIcons = maxIcons or DEFAULT_MAX_ICONS
     local list = {}
     if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return list end
+    local debuffs = {}
     if not onlyBuffs then
-        local debuffs = {}
         for i = 1, 40 do
             local ok, data = pcall(C_UnitAuras.GetAuraDataByIndex, unit, i, "HARMFUL")
             if not ok or data == nil then break end
             data.__filter = "HARMFUL"
             debuffs[#debuffs + 1] = data
-        end
-        pcall(table.sort, debuffs, ByRemaining)
-        for _, data in ipairs(debuffs) do
-            list[#list + 1] = data
-            if #list >= MAX_ICONS then return list end
         end
     end
     local buffs = {}
@@ -154,10 +173,28 @@ local function CollectAuras(unit, onlyBuffs)
         data.__filter = "HELPFUL"
         buffs[#buffs + 1] = data
     end
-    pcall(table.sort, buffs, ByRemaining)
+
+    if sortMode == "time" then
+        for _, data in ipairs(buffs) do debuffs[#debuffs + 1] = data end
+        pcall(table.sort, debuffs, ByRemaining)
+        for _, data in ipairs(debuffs) do
+            list[#list + 1] = data
+            if #list >= maxIcons then break end
+        end
+        return list
+    end
+
+    if sortMode ~= "index" then
+        pcall(table.sort, debuffs, ByRemaining)
+        pcall(table.sort, buffs, ByRemaining)
+    end
+    for _, data in ipairs(debuffs) do
+        list[#list + 1] = data
+        if #list >= maxIcons then return list end
+    end
     for _, data in ipairs(buffs) do
         list[#list + 1] = data
-        if #list >= MAX_ICONS then break end
+        if #list >= maxIcons then break end
     end
     return list
 end
@@ -238,7 +275,8 @@ end
 -- ==========================================================================
 -- Factory: arma un grupo completo (party o arena) a partir de su config.
 -- cfg = { id, keys, dirDBKey, sizeDBKey, defaultDir, gateFn, autoShowOnCombat,
---         onlyBuffs(key)->bool, skipIfSolo(key)->bool }
+--         onlyBuffs(key)->bool, skipIfSolo(key)->bool, maxDBKey, paddingDBKey,
+--         sortDBKey }
 -- ==========================================================================
 local function MakeAuraHoverGroup(cfg)
     local testMode = false
@@ -253,6 +291,29 @@ local function MakeAuraHoverGroup(cfg)
         local d = ns.GetDB and ns.GetDB()
         local sz = d and d[cfg.sizeDBKey]
         return (type(sz) == "number" and sz >= 12 and sz <= 48) and sz or DEFAULT_ICON_SIZE
+    end
+    -- Mismo patron que GetDirection/GetIconSize arriba (2026-07-27, pedido
+    -- del usuario: menu options para limite de auras, padding y sort, los 5
+    -- grupos). Leidas EN VIVO cada RefreshIcons -- igual que direccion/
+    -- tamaño, un cambio en Options.lua se ve solo en el proximo refresh
+    -- (ticker cada 0.3s como mucho, o al toque si estas con el mouse
+    -- encima), sin necesidad de un callback de refresco dedicado.
+    local function GetMaxIcons()
+        local d = ns.GetDB and ns.GetDB()
+        local v = d and d[cfg.maxDBKey]
+        v = (type(v) == "number") and math.floor(v + 0.5) or nil
+        return (v and v >= 1 and v <= HARD_MAX_ICONS) and v or DEFAULT_MAX_ICONS
+    end
+    local function GetPadding()
+        local d = ns.GetDB and ns.GetDB()
+        local v = d and d[cfg.paddingDBKey]
+        return (type(v) == "number" and v >= 0 and v <= 30) and v or DEFAULT_ICON_GAP
+    end
+    local function GetSortMode()
+        local d = ns.GetDB and ns.GetDB()
+        local v = d and d[cfg.sortDBKey]
+        for _, m in ipairs(ns.AURA_SORT_MODES) do if m == v then return v end end
+        return "priority"
     end
 
     local function Setup(key)
@@ -269,7 +330,7 @@ local function MakeAuraHoverGroup(cfg)
         carrier:SetAlpha(0)
 
         local icons = {}
-        for i = 1, MAX_ICONS do icons[i] = CreateIcon(carrier) end
+        for i = 1, HARD_MAX_ICONS do icons[i] = CreateIcon(carrier) end
 
         local frac, target = 0, 0
         local driver = CreateFrame("Frame")
@@ -311,28 +372,31 @@ local function MakeAuraHoverGroup(cfg)
         end
 
         local function RefreshIcons()
+            local maxIcons = GetMaxIcons()
             local list
             if testMode then
-                list = {
-                    { icon = QUESTION_MARK_ICON, __fake = true },
-                    { icon = QUESTION_MARK_ICON, __fake = true, applications = 2 },
-                    { icon = QUESTION_MARK_ICON, __fake = true },
-                    { icon = QUESTION_MARK_ICON, __fake = true },
-                }
+                -- Refleja el limite configurado en vez de un fijo de 4, para
+                -- que el toggle de test sirva de verdad como preview del
+                -- limite (2026-07-27, pedido del usuario).
+                list = {}
+                for i = 1, maxIcons do
+                    list[i] = { icon = QUESTION_MARK_ICON, __fake = true, applications = (i == 2) and 2 or nil }
+                end
             elseif cfg.skipIfSolo and cfg.skipIfSolo(key) and not IsInGroup() then
                 list = {}
             elseif not cfg.gateFn() then
                 list = {}
             else
-                list = CollectAuras(u.unit, onlyBuffs)
+                list = CollectAuras(u.unit, onlyBuffs, maxIcons, GetSortMode())
             end
-            n = math.min(#list, MAX_ICONS)
+            n = math.min(#list, maxIcons)
             local dir = DIR_INFO[GetDirection()]
             local sz = GetIconSize()
-            local step = sz + ICON_GAP
-            local rowW = n * sz + math.max(n - 1, 0) * ICON_GAP
+            local padding = GetPadding()
+            local step = sz + padding
+            local rowW = n * sz + math.max(n - 1, 0) * padding
             local startX = -rowW / 2 + sz / 2
-            for i = 1, MAX_ICONS do
+            for i = 1, HARD_MAX_ICONS do
                 local b, data = icons[i], list[i]
                 if i <= n and data then
                     ResizeIcon(b, sz)
@@ -494,7 +558,7 @@ local function MakeAuraHoverGroup(cfg)
         hoverZone:SetScript("OnEnter", function() RefreshIcons(); EvaluateHover() end)
         hoverZone:SetScript("OnLeave", EvaluateHover)
 
-        for i = 1, MAX_ICONS do
+        for i = 1, HARD_MAX_ICONS do
             local b = icons[i]
             b:SetScript("OnEnter", function(self)
                 -- El fade es por ALPHA (carrier:SetAlpha), que NO afecta
@@ -652,6 +716,7 @@ end
 local party = MakeAuraHoverGroup({
     id = "party", keys = { "party1", "party2", "party3", "party4", "party5" },
     dirDBKey = "partyAuraDirection", sizeDBKey = "partyAuraIconSize", defaultDir = "left",
+    maxDBKey = "partyAuraMaxIcons", paddingDBKey = "partyAuraPadding", sortDBKey = "partyAuraSort",
     gateFn = InDungeon, autoShowOnCombat = true,
     onlyBuffs = function(key) return key == "party5" end,
     -- party5 usa unit="player" (UnitExists("player") siempre true, a
@@ -663,6 +728,7 @@ local party = MakeAuraHoverGroup({
 local arena = MakeAuraHoverGroup({
     id = "arena", keys = { "arena_player", "arena_party1", "arena_party2", "arena_enemy1", "arena_enemy2", "arena_enemy3" },
     dirDBKey = "arenaAuraDirection", sizeDBKey = "arenaAuraIconSize", defaultDir = "down",
+    maxDBKey = "arenaAuraMaxIcons", paddingDBKey = "arenaAuraPadding", sortDBKey = "arenaAuraSort",
     gateFn = InArenaNow, autoShowOnCombat = false,
     onlyBuffs = function(key) return key == "arena_player" end,
 })
@@ -675,6 +741,7 @@ local arena = MakeAuraHoverGroup({
 local focus = MakeAuraHoverGroup({
     id = "focus", keys = { "focus" },
     dirDBKey = "focusAuraDirection", sizeDBKey = "focusAuraIconSize", defaultDir = "down",
+    maxDBKey = "focusAuraMaxIcons", paddingDBKey = "focusAuraPadding", sortDBKey = "focusAuraSort",
     gateFn = function() return UnitExists("focus") end,
     -- autoShowOnCombat=true (como party, no como arena): un focus target se
     -- usa tipicamente para vigilar a alguien puntual DURANTE una pelea (un
@@ -720,6 +787,7 @@ end
 local playerHover = MakeAuraHoverGroup({
     id = "player", keys = { "player" },
     dirDBKey = "playerAuraDirection", sizeDBKey = "playerAuraIconSize", defaultDir = "down",
+    maxDBKey = "playerAuraMaxIcons", paddingDBKey = "playerAuraPadding", sortDBKey = "playerAuraSort",
     gateFn = PlayerFrameVisible,
     alwaysShowOnGate = true,
     gap = PLAYER_TARGET_GAP,
@@ -727,6 +795,7 @@ local playerHover = MakeAuraHoverGroup({
 local targetHover = MakeAuraHoverGroup({
     id = "target", keys = { "target" },
     dirDBKey = "targetAuraDirection", sizeDBKey = "targetAuraIconSize", defaultDir = "down",
+    maxDBKey = "targetAuraMaxIcons", paddingDBKey = "targetAuraPadding", sortDBKey = "targetAuraSort",
     gateFn = function() return UnitExists("target") end,
     alwaysShowOnGate = true,
     gap = PLAYER_TARGET_GAP,
@@ -750,6 +819,25 @@ ns.RefreshPlayerAuraDirection = playerHover.RefreshDirection
 ns.RefreshPlayerAuraSize = playerHover.RefreshDirection
 ns.RefreshTargetAuraDirection = targetHover.RefreshDirection
 ns.RefreshTargetAuraSize = targetHover.RefreshDirection
+-- Max icons/padding/sort (2026-07-27): mismo "nudge" que Direction/Size --
+-- GetMaxIcons/GetPadding/GetSortMode ya se leen EN VIVO en cada RefreshIcons,
+-- asi que Reanchor (lo que RefreshDirection ejecuta) alcanza para que
+-- Options.lua tenga algo que llamar tras cambiar el valor guardado.
+ns.RefreshPartyAuraMaxIcons = party.RefreshDirection
+ns.RefreshPartyAuraPadding = party.RefreshDirection
+ns.RefreshPartyAuraSort = party.RefreshDirection
+ns.RefreshArenaAuraMaxIcons = arena.RefreshDirection
+ns.RefreshArenaAuraPadding = arena.RefreshDirection
+ns.RefreshArenaAuraSort = arena.RefreshDirection
+ns.RefreshFocusAuraMaxIcons = focus.RefreshDirection
+ns.RefreshFocusAuraPadding = focus.RefreshDirection
+ns.RefreshFocusAuraSort = focus.RefreshDirection
+ns.RefreshPlayerAuraMaxIcons = playerHover.RefreshDirection
+ns.RefreshPlayerAuraPadding = playerHover.RefreshDirection
+ns.RefreshPlayerAuraSort = playerHover.RefreshDirection
+ns.RefreshTargetAuraMaxIcons = targetHover.RefreshDirection
+ns.RefreshTargetAuraPadding = targetHover.RefreshDirection
+ns.RefreshTargetAuraSort = targetHover.RefreshDirection
 ns.TogglePartyAuraTest = party.ToggleTestMode
 ns.ToggleArenaAuraTest = arena.ToggleTestMode
 ns.ToggleFocusAuraTest = focus.ToggleTestMode

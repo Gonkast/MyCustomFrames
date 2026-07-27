@@ -1757,6 +1757,11 @@ local GLOBAL_FLAT_KEYS = {
     "partyAuraDirection", "partyAuraIconSize", "arenaAuraDirection", "arenaAuraIconSize",
     "focusAuraDirection", "focusAuraIconSize",
     "playerAuraDirection", "playerAuraIconSize", "targetAuraDirection", "targetAuraIconSize",
+    "partyAuraMaxIcons", "partyAuraPadding", "partyAuraSort",
+    "arenaAuraMaxIcons", "arenaAuraPadding", "arenaAuraSort",
+    "focusAuraMaxIcons", "focusAuraPadding", "focusAuraSort",
+    "playerAuraMaxIcons", "playerAuraPadding", "playerAuraSort",
+    "targetAuraMaxIcons", "targetAuraPadding", "targetAuraSort",
     "hideChatEditBoxTexture", "raidGhostShowAll",
 }
 local GLOBAL_TABLE_KEYS = { "lockHide", "explorer", "explorerZones", "explorerElementAlpha", "nameplateUserDefault", "nameplateProfiles" }
@@ -2023,6 +2028,45 @@ local function InitDB()
     if db.playerAuraIconSize == nil then db.playerAuraIconSize = 26 end
     if db.targetAuraDirection == nil then db.targetAuraDirection = "down" end
     if db.targetAuraIconSize == nil then db.targetAuraIconSize = 26 end
+    -- Sort/limite de iconos/padding (2026-07-27, pedido del usuario: "que
+    -- este en el menu opcion de elegir sort, limite de auras mostradas... y
+    -- el padding entre ellas... para player, target, focus, party y
+    -- arenas") -- mismo patron de default que direccion/tamaño arriba, para
+    -- los 5 grupos de AuraHoverPreview.lua. "priority" (debuff antes que
+    -- buff, con tiempo restante como sub-orden) y 4 iconos son el
+    -- comportamiento que ya tenian antes de ser configurable -- no cambia
+    -- nada para nadie que no toque estos ajustes nuevos.
+    if db.partyAuraMaxIcons == nil then db.partyAuraMaxIcons = 4 end
+    if db.partyAuraPadding == nil then db.partyAuraPadding = 4 end
+    if db.partyAuraSort == nil then db.partyAuraSort = "priority" end
+    if db.arenaAuraMaxIcons == nil then db.arenaAuraMaxIcons = 4 end
+    if db.arenaAuraPadding == nil then db.arenaAuraPadding = 4 end
+    if db.arenaAuraSort == nil then db.arenaAuraSort = "priority" end
+    if db.focusAuraMaxIcons == nil then db.focusAuraMaxIcons = 4 end
+    if db.focusAuraPadding == nil then db.focusAuraPadding = 4 end
+    if db.focusAuraSort == nil then db.focusAuraSort = "priority" end
+    -- Player/Target arrancan en 6 en vez de 4 (2026-07-27, pedido del usuario: "se que dije
+    -- maximo 4, pero en el de player y target pueden ser 6, el resto dejalas como estan") --
+    -- unico cambio de default, el slider (1-8) ya deja subir/bajar esto desde el menu para
+    -- cualquiera de los 5 grupos.
+    if db.playerAuraMaxIcons == nil then db.playerAuraMaxIcons = 6 end
+    if db.playerAuraPadding == nil then db.playerAuraPadding = 4 end
+    if db.playerAuraSort == nil then db.playerAuraSort = "priority" end
+    if db.targetAuraMaxIcons == nil then db.targetAuraMaxIcons = 6 end
+    if db.targetAuraPadding == nil then db.targetAuraPadding = 4 end
+    if db.targetAuraSort == nil then db.targetAuraSort = "priority" end
+    -- Backfill de una sola vez: si el usuario ya hizo /reload entre agregar el
+    -- slider (default 4 para los 5) y subir el default de Player/Target a 6
+    -- unos minutos despues en la misma sesion, el `if == nil` de arriba ya no
+    -- alcanza (el valor ya quedo guardado en 4). Mismo criterio que
+    -- `_percentColorV2Backfilled`: corre UNA vez, y solo toca el valor si
+    -- sigue en el default viejo exacto (4) -- si el usuario ya lo cambio a
+    -- mano a otra cosa, se respeta.
+    if not db._playerTargetAuraMax6Backfilled then
+        if db.playerAuraMaxIcons == 4 then db.playerAuraMaxIcons = 6 end
+        if db.targetAuraMaxIcons == 4 then db.targetAuraMaxIcons = 6 end
+        db._playerTargetAuraMax6Backfilled = true
+    end
     db.bartenderAutoApplied = db.bartenderAutoApplied or {}
     -- (Inyeccion AzeriteUI ELIMINADA — causaba taint. db.azerite ya no se usa.)
     if db.previewSecureButton == nil then db.previewSecureButton = false end -- B4: dibuja el area de click
