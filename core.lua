@@ -2032,21 +2032,28 @@ local function InitDB()
         db.bartenderAutoApplied = {}
         db._btAutoAppliedResetV2 = true
     end
-    -- Los 3 grupos de auras de nameplate pasaron de colgar del NOMBRE a colgar
-    -- del nameplate (2026-07-28, ver L.AuraGroup en NameplateLayout.lua). Los
-    -- offsets guardados se afinaron contra el ancla vieja, asi que con la nueva
-    -- quedan corridos -- y ademas arrastran el +10 que antes estaba en el offset
-    -- y ahora vive en AURA_BASE_Y, o sea que se sumaria dos veces. Se los
-    -- devuelve al punto de origen UNA vez, que es justamente lo que pidio el
-    -- usuario ("has todo independiente y resetealo al punto de origen").
-    if not db._npAuraAnchorResetV1 then
-        local np = db.nameplates
-        if np then
-            np.bigDebuffOffsetX, np.bigDebuffOffsetY = 0, 0
-            np.personalDebuffsOffsetX, np.personalDebuffsOffsetY = -100, 0
-            np.enemyBuffsOffsetX, np.enemyBuffsOffsetY = 100, 0
-        end
-        db._npAuraAnchorResetV1 = true
+    -- RESET COMPLETO de nameplates, UNA sola vez (2026-07-28, pedido explicito
+    -- del usuario: "reseaaa todoooooo, elimina cualquier perfil por defecto que
+    -- haya ahora mismo, despues lo ponemos otra vez").
+    --
+    -- Por que hacia falta ademas de que lo pidieran: los 3 grupos de auras
+    -- pasaron de colgar del NOMBRE a colgar del nameplate (ver L.AuraGroup en
+    -- NameplateLayout.lua). Todo offset guardado se afino contra el ancla vieja,
+    -- y encima arrastra el +10 que antes vivia en el offset y ahora esta en
+    -- AURA_BASE_Y -- o sea que se sumaria dos veces. Conservarlos daba posiciones
+    -- peores que empezar limpio.
+    --
+    -- Se borran TAMBIEN el default propio y los perfiles guardados: mientras
+    -- existan, Reset vuelve a ESOS (ver ns.ResetUnit) en vez de a fabrica, asi
+    -- que dejarlos haria que "resetear" siguiera restaurando la geometria vieja.
+    -- La version horneada de los tres salio de Defaults.lua en el mismo commit;
+    -- si hace falta recuperarla, esta en el historial de git.
+    if not db._npFullResetV2 then
+        db.nameplates = ns.NameplateDefaults and ns.NameplateDefaults() or {}
+        db.nameplateUserDefault = nil
+        db.nameplateProfiles = nil
+        db._npAuraAnchorResetV1 = nil   -- reemplazada por esta, mas amplia
+        db._npFullResetV2 = true
     end
     -- Direccion del test de auras de party (PartyAuraPreview.lua): izq/der/arriba/abajo.
     if db.partyAuraDirection == nil then db.partyAuraDirection = "left" end
