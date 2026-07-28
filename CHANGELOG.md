@@ -98,13 +98,14 @@ worth reading before redoing one of them).
   choice, so it needed the warning even more.
 - **Stripped personal character data from the bundled third-party profiles.** `Masque.lua`
   shipped a `profileKeys` map of **36 character names across 4 realms**, and
-  `Bartender4.lua` had one left in `LibDualSpec-1.0.char`. Both are per-character
-  pointers, not settings — AceDB assigns "Default" to any character that isn't listed, so
-  emptying them changes nothing for anyone. Verified no config was lost: Masque still has
-  all 456 skin groups, Bartender4 all 11 namespaces, zero differences in the actual
-  profile data. Chattynator's "Gonkast" profile was **left alone** on purpose — it's the
-  author/brand name (already in the addon title) and it holds 7 real settings that differ
-  from its DEFAULT profile, so removing it would have lost configuration.
+  `Bartender4.lua` had one left in `LibDualSpec-1.0.char`. These are per-character
+  pointers, not settings, and no configuration was lost: Masque still has all 456 skin
+  groups, Bartender4 all 11 namespaces, zero differences in the actual profile data.
+  Chattynator's "Gonkast" profile was **left alone** on purpose — it's the author/brand
+  name (already in the addon title) and it holds 7 real settings that differ from its
+  DEFAULT profile, so removing it would have lost configuration.
+  *(Correction: an earlier version of this entry claimed AceDB falls back to "Default" for
+  unlisted characters. It doesn't — see the `bartenderAutoProfile` fix below.)*
 - **`Defaults.lua` regenerated from a fresh export.** Picks up everything this session
   added: all 25 hover-aura settings across the 5 groups (direction/size/max icons/padding/
   sort — 21 of them brand new to the baked defaults), `classColorEnemyNames`, and the
@@ -120,6 +121,17 @@ worth reading before redoing one of them).
 - **Explorer ships disabled by default** (`explorerEnabled = false`), per request.
 
 ### Fixed
+- **Every new character came up without the Bartender4 layout, so the setup had to be
+  redone per character.** `bartenderAutoProfile` — the setting whose entire job is "use
+  this profile for any new character on the account" — shipped as `nil`, i.e. off unless
+  you found it on wizard page 7 and enabled it by hand. Without it, a character with no
+  entry in `profileKeys` hits AceDB's fallback chain (`sv.profileKeys[charKey] or
+  defaultProfile or charKey`) and, since Bartender4 calls `AceDB:New` with no
+  `defaultProfile`, ends up on its **own empty profile named "Name - Realm"** rather than
+  the preset's. Now defaults to `"Default"` and is baked into `Defaults.lua`. Still safe:
+  the profile is only forced on characters that were never configured (current profile
+  still equals the character key) and only once each, so a manual profile choice is never
+  overwritten.
 - **Audit pass: removed dead call sites left behind by the aura-grid removal.** When
   `Auras.lua` was stripped down to just `ns.DebuffTypeColor` this session, four call sites
   in `core.lua` were left calling functions that no longer exist

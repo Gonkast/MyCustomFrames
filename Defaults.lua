@@ -6,6 +6,7 @@ ns.BUILTIN = {
   ["arenaAuraMaxIcons"]=4,
   ["arenaAuraPadding"]=4,
   ["arenaAuraSort"]="priority",
+  ["bartenderAutoProfile"]="Default",
   ["auras"]={
   },
   ["chatbubble"]={

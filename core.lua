@@ -2006,7 +2006,19 @@ local function InitDB()
     -- Bartender4 "usar este perfil para CUALQUIER personaje nuevo de la cuenta" (Setup Wizard
     -- pagina 7). nil/"" = apagado. bartenderAutoApplied = {charKey=true} para no re-forzar el
     -- perfil en personajes que el usuario ya cambio a mano despues del primer auto-apply.
-    db.bartenderAutoProfile = db.bartenderAutoProfile or nil
+    --
+    -- CAMBIADO a "Default" por defecto (2026-07-27, reportado: "entro y tengo que volver a
+    -- correr el setup para cada personaje, no quiero eso"). Venia en nil = APAGADO, o sea el
+    -- mecanismo existia pero no hacia nada salvo que el usuario lo prendiera a mano en la
+    -- pagina 7. Sin el, cada personaje nuevo cae al fallback de AceDB (`profileKey =
+    -- sv.profileKeys[charKey] or defaultProfile or charKey` -- ver initdb en AceDB-3.0):
+    -- Bartender4 llama AceDB:New SIN defaultProfile, asi que un personaje sin entrada previa
+    -- en profileKeys se queda con un perfil PROPIO Y VACIO llamado "Nombre - Reino", no con
+    -- el perfil del preset. Por eso habia que reconfigurar personaje por personaje.
+    -- Sigue siendo seguro: ApplyBartenderAutoProfile solo fuerza el perfil si el personaje
+    -- nunca fue configurado (perfil actual == charKey) y solo una vez por personaje, asi que
+    -- jamas pisa a alguien que eligio otro perfil a mano.
+    if db.bartenderAutoProfile == nil then db.bartenderAutoProfile = "Default" end
     -- Direccion del test de auras de party (PartyAuraPreview.lua): izq/der/arriba/abajo.
     if db.partyAuraDirection == nil then db.partyAuraDirection = "left" end
     if db.partyAuraIconSize == nil then db.partyAuraIconSize = 26 end
