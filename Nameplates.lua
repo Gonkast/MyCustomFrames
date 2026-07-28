@@ -827,7 +827,14 @@ local function ReassertNameGeometry(uf)
     -- el ticker segun ShouldHideExceptName) -- pedido del usuario 2026-07-19:
     -- sin la barra visible, la posicion normal del nombre puede no quedar
     -- bien, asi que se puede ajustar aparte sin afectar el modo normal.
-    holder:SetPoint("BOTTOM", uf, "TOP", offX, 16 + offY)
+    --
+    -- La colocacion sale de ns.NPLayout (2026-07-27): MISMA fuente que usa el
+    -- Nameplate Designer para su mock, para que no puedan divergir. `offX/offY`
+    -- de arriba ya resolvieron cual par de offsets corresponde (normal vs
+    -- name-only), asi que se pasan directo en vez de dejar que el layout los
+    -- lea del perfil.
+    local nl = ns.NPLayout.Name(p)
+    holder:SetPoint(nl.point, uf, nl.relPoint, offX, 16 + offY)
 end
 
 -- El nombre de la unidad NO es secreto (es informacion basica de UI, igual
@@ -1084,25 +1091,23 @@ end
 -- "importante" que nosotros no podemos calcular -- exactamente lo que hace
 -- Platynator en este mismo build.
 -- ==========================================================================
-local AURA_MAX_PER_CAT = 3
+-- Constantes de auras COMPARTIDAS con el Nameplate Designer (2026-07-27): se
+-- toman de ns.NPLayout en vez de tener una copia aca y otra alla. Tenerlas
+-- duplicadas fue una de las causas de que el panel no coincidiera con el juego.
+local AURA_MAX_PER_CAT = ns.NPLayout.AURA_MAX_PER_CAT
+local AURA_GROUP_OFFSET_KEYS = ns.NPLayout.AURA_GROUP_OFFSET_KEYS
+local AURA_GROUP_DIRECTION_KEYS = ns.NPLayout.AURA_GROUP_DIRECTION_KEYS
+local AURA_ANCHOR_POINT = ns.NPLayout.AURA_ANCHOR_POINT
+
 local AURA_GROUPS = { "big", "personal", "enemy" }
-local AURA_GROUP_OFFSET_KEYS = {
-    big      = { "bigDebuffOffsetX", "bigDebuffOffsetY" },
-    personal = { "personalDebuffsOffsetX", "personalDebuffsOffsetY" },
-    enemy    = { "enemyBuffsOffsetX", "enemyBuffsOffsetY" },
-}
 local AURA_GROUP_SHOW_KEYS = {
     big = "auraShowBigDebuff", personal = "auraShowPersonalDebuffs", enemy = "auraShowEnemyBuffs",
-}
-local AURA_GROUP_DIRECTION_KEYS = {
-    big = "bigDebuffDirection", personal = "personalDebuffsDirection", enemy = "enemyBuffsDirection",
 }
 local AURA_SLOT_ORDER = {
     right  = { 1, 2, 3 },
     left   = { 3, 2, 1 },
     center = { 2, 1, 3 },
 }
-local AURA_ANCHOR_POINT = { right = "BOTTOMLEFT", left = "BOTTOMRIGHT", center = "BOTTOM" }
 
 local function GetAuraPadding()
     local p = P()
@@ -1261,7 +1266,12 @@ local function ReassertAuraGroupGeometry(uf, groupKey)
         holder:SetScale(math.max(0.3, math.min(3, 1 / effScale)))
     end
     holder:ClearAllPoints()
-    holder:SetPoint(anchorPoint, uf.mcfNameHolder or uf.name or uf, "TOP", offX, 6 + offY)
+    -- Colocacion desde ns.NPLayout (2026-07-27) -- misma fuente que el mock del
+    -- Designer. `anchorPoint`/`offX`/`offY` ya se resolvieron arriba (se usan
+    -- ademas para el dedupe), asi que se pasan directo; lo que se toma del
+    -- layout es el gap base y el punto relativo, que es lo que se desincronizaba.
+    local al = ns.NPLayout.AuraGroup(p, groupKey)
+    holder:SetPoint(anchorPoint, uf.mcfNameHolder or uf.name or uf, al.relPoint, offX, 6 + offY)
 end
 -- Reaplica offset/tamaño de fuente/color de los textos de cargas Y tiempo
 -- restante de TODOS los iconos de un grupo -- SEPARADO de

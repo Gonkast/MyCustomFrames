@@ -511,9 +511,10 @@ local function LayoutAuraGroupIconsMock(holder, sz, padding)
     end
 end
 
--- Mismo mapeo que AURA_ANCHOR_POINT en Nameplates.lua -- decide que punto del
--- holder queda FIJO en el offset guardado, segun direccion.
-local AURA_ANCHOR_POINT = { right = "BOTTOMLEFT", left = "BOTTOMRIGHT", center = "BOTTOM" }
+-- (AURA_ANCHOR_POINT local ELIMINADO 2026-07-27: era una tercera copia del
+-- mismo mapeo -- una aca, otra en Nameplates.lua -- justo la clase de
+-- duplicacion que desincronizaba el panel del juego. Vive en ns.NPLayout y lo
+-- resuelve ns.NPLayout.AuraGroup, que ya devuelve el punto correcto.)
 
 -- Recuadro placeholder cuadrado CON icono de vista previa real (pedido del
 -- usuario) -- para elite/clasificacion usa la MISMA textura de AzeriteUI que
@@ -1081,8 +1082,11 @@ local function CreateDesigner()
     -- unidades -- con "TOP" el texto colgaba hacia ABAJO, casi tocando la
     -- barra (bug reportado por el usuario, confirmado comparando contra
     -- ReassertNameGeometry en Nameplates.lua).
-    els[#els + 1] = { handle = nameHolder, anchor = hp, point = "BOTTOM", relPoint = "TOP",
-        base = function() return 0, 16 end, xKey = "nameOffsetX", yKey = "nameOffsetY" }
+    -- Ancla al STAGE, no a `hp` (2026-07-27): en el nameplate real el nombre
+    -- cuelga del NAMEPLATE (`uf`), no de la barra -- ver ns.NPLayout.Name. El
+    -- stage es el equivalente del `uf` aca (el (0,0) del que cuelga todo), asi
+    -- que anclando ahi la cadena nombre->auras queda igual que en el juego.
+    els[#els + 1] = { handle = nameHolder, anchor = stage, layout = ns.NPLayout.Name }
     nameHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("name") end end)
     selSpecs.name = { title = "Name", handle = nameHolder,
         xKey = "nameOffsetX", yKey = "nameOffsetY", xyRange = { -150, 150, 1 },
@@ -1107,8 +1111,8 @@ local function CreateDesigner()
     -- base=(0,0): SkinHealthValue en Nameplates.lua usa el offset guardado
     -- DIRECTO, sin sumarle ninguna constante -- sumar -2 aca (bug anterior)
     -- corria el mock -2 unidades de mas respecto de la nameplate real.
-    els[#els + 1] = { handle = hvHolder, anchor = hp, point = "TOP", relPoint = "BOTTOM",
-        base = function() return 0, 0 end, xKey = "healthValueOffsetX", yKey = "healthValueOffsetY" }
+    els[#els + 1] = { handle = hvHolder, anchor = hp,
+        layout = ns.NPLayout.HealthValue }
     hvHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("healthValue") end end)
     selSpecs.healthValue = { title = "Health Value", handle = hvHolder,
         xKey = "healthValueOffsetX", yKey = "healthValueOffsetY", xyRange = { -150, 150, 1 },
@@ -1137,8 +1141,8 @@ local function CreateDesigner()
     -- guardado DIRECTO tambien (el -7 es solo el valor DEFAULT del campo,
     -- no una constante sumada aparte) -- sumar -7 aca (bug anterior)
     -- duplicaba el desplazamiento hacia abajo.
-    els[#els + 1] = { handle = cb, anchor = hp, point = "TOP", relPoint = "BOTTOM",
-        base = function() return 0, 0 end, xKey = "castOffsetX", yKey = "castOffsetY" }
+    els[#els + 1] = { handle = cb, anchor = hp,
+        layout = ns.NPLayout.Cast }
     cb:SetScript("OnMouseDown", function() if SelectElement then SelectElement("castBar") end end)
     selSpecs.castBar = { title = "Cast Bar", handle = cb,
         xKey = "castOffsetX", yKey = "castOffsetY", xyRange = { -150, 150, 1 },
@@ -1166,8 +1170,8 @@ local function CreateDesigner()
     MakeWheelResize(ctHolder, function(p, dir)
         p.castTextFontSize = clamp((p.castTextFontSize or 10) + (dir > 0 and 1 or -1), 6, 20)
     end, root, "castText")
-    els[#els + 1] = { handle = ctHolder, anchor = cb, point = "CENTER", relPoint = "CENTER",
-        base = function() return 0, 0 end, xKey = "castTextOffsetX", yKey = "castTextOffsetY" }
+    els[#els + 1] = { handle = ctHolder, anchor = cb,
+        layout = ns.NPLayout.CastText }
     ctHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("castText") end end)
     selSpecs.castText = { title = "Cast Text", handle = ctHolder,
         xKey = "castTextOffsetX", yKey = "castTextOffsetY", xyRange = { -100, 100, 1 },
@@ -1197,23 +1201,20 @@ local function CreateDesigner()
     local bigHolder, bigHL, bigShownCB = MakeAuraGroupMock(content, "Big Debuff", "auraShowBigDebuff")
     bigHolder:SetScale(ZOOM)
     MakeDraggable(bigHolder, "bigDebuffOffsetX", "bigDebuffOffsetY", NameDivisor, true)
-    els[#els + 1] = { handle = bigHolder, anchor = nameHolder, point = "BOTTOMLEFT", relPoint = "TOP",
-        pointFn = function(p) return AURA_ANCHOR_POINT[p.bigDebuffDirection or "right"] or "BOTTOMLEFT" end,
-        base = function() return 0, 6 end, xKey = "bigDebuffOffsetX", yKey = "bigDebuffOffsetY" }
+    els[#els + 1] = { handle = bigHolder, anchor = nameHolder,
+        layout = function(p) return ns.NPLayout.AuraGroup(p, "big") end }
 
     local personalHolder, personalHL, personalShownCB = MakeAuraGroupMock(content, "Personal Debuffs", "auraShowPersonalDebuffs")
     personalHolder:SetScale(ZOOM)
     MakeDraggable(personalHolder, "personalDebuffsOffsetX", "personalDebuffsOffsetY", NameDivisor, true)
-    els[#els + 1] = { handle = personalHolder, anchor = nameHolder, point = "BOTTOMLEFT", relPoint = "TOP",
-        pointFn = function(p) return AURA_ANCHOR_POINT[p.personalDebuffsDirection or "right"] or "BOTTOMLEFT" end,
-        base = function() return 0, 6 end, xKey = "personalDebuffsOffsetX", yKey = "personalDebuffsOffsetY" }
+    els[#els + 1] = { handle = personalHolder, anchor = nameHolder,
+        layout = function(p) return ns.NPLayout.AuraGroup(p, "personal") end }
 
     local enemyHolder, enemyHL, enemyShownCB = MakeAuraGroupMock(content, "Enemy Buffs", "auraShowEnemyBuffs")
     enemyHolder:SetScale(ZOOM)
     MakeDraggable(enemyHolder, "enemyBuffsOffsetX", "enemyBuffsOffsetY", NameDivisor, true)
-    els[#els + 1] = { handle = enemyHolder, anchor = nameHolder, point = "BOTTOMLEFT", relPoint = "TOP",
-        pointFn = function(p) return AURA_ANCHOR_POINT[p.enemyBuffsDirection or "right"] or "BOTTOMLEFT" end,
-        base = function() return 0, 6 end, xKey = "enemyBuffsOffsetX", yKey = "enemyBuffsOffsetY" }
+    els[#els + 1] = { handle = enemyHolder, anchor = nameHolder,
+        layout = function(p) return ns.NPLayout.AuraGroup(p, "enemy") end }
 
     -- Tamaño de icono COMPARTIDO por las 3 categorias (auraIconSize, igual
     -- que en Nameplates.lua) -- la rueda sobre CUALQUIERA de los 3 grupos
@@ -1251,8 +1252,8 @@ local function CreateDesigner()
     MakeWheelResize(classHolder, function(p, dir)
         p.classificationSize = clamp((p.classificationSize or 40) + (dir > 0 and 2 or -2), 12, 64)
     end, root, "classification")
-    els[#els + 1] = { handle = classHolder, anchor = hp, point = "RIGHT", relPoint = "RIGHT",
-        base = function() return 0, 0 end, xKey = "classificationOffsetX", yKey = "classificationOffsetY" }
+    els[#els + 1] = { handle = classHolder, anchor = hp,
+        layout = ns.NPLayout.Classification }
     classHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("classification") end end)
     selSpecs.classification = { title = "Elite/Rare/Boss icon", handle = classHolder,
         xKey = "classificationOffsetX", yKey = "classificationOffsetY", xyRange = { -100, 100, 1 },
@@ -1265,8 +1266,8 @@ local function CreateDesigner()
     MakeWheelResize(raidHolder, function(p, dir)
         p.raidMarkSize = clamp((p.raidMarkSize or 64) + (dir > 0 and 4 or -4), 16, 96)
     end, root, "raidMark")
-    els[#els + 1] = { handle = raidHolder, anchor = hp, point = "CENTER", relPoint = "CENTER",
-        base = function() return 0, 0 end, xKey = "raidMarkOffsetX", yKey = "raidMarkOffsetY" }
+    els[#els + 1] = { handle = raidHolder, anchor = hp,
+        layout = ns.NPLayout.RaidMark }
     raidHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("raidMark") end end)
     selSpecs.raidMark = { title = "Raid Mark", handle = raidHolder,
         xKey = "raidMarkOffsetX", yKey = "raidMarkOffsetY", xyRange = { -100, 100, 1 },
@@ -1476,14 +1477,17 @@ Reflow = function()
     hp.bg:SetSize(hw, hh)
 
     for _, e in ipairs(els) do
-        local bx, by = e.base(p)
-        local ox = (p[e.xKey] or 0) + bx
-        local oy = (p[e.yKey] or 0) + by
+        -- COLOCACION COMPARTIDA (2026-07-27): el punto, el punto relativo y los
+        -- offsets salen de ns.NPLayout -- el MISMO modulo que usa Nameplates.lua
+        -- para los nameplates de verdad. Antes cada entrada traia su propio
+        -- `base`/`point`/`relPoint` copiados a mano de la otra implementacion, y
+        -- era ahi donde se desincronizaban (el nombre colgaba de la barra en vez
+        -- del nameplate, el gap de auras se escribia dos veces, etc). Ahora una
+        -- sola cuenta alimenta los dos lados: si cambia, cambia en ambos.
+        -- Los offsets del perfil ya vienen sumados por el layout, no se re-suman.
+        local l = e.layout(p)
         e.handle:ClearAllPoints()
-        -- pointFn (auras): el punto de anclaje varia con la direccion
-        -- guardada (right/left/center) -- ver AURA_ANCHOR_POINT.
-        local point = e.pointFn and e.pointFn(p) or e.point
-        e.handle:SetPoint(point, e.anchor, e.relPoint, ox, oy)
+        e.handle:SetPoint(l.point, e.anchor, l.relPoint, l.x, l.y)
     end
 
     -- Los holders de texto (nombre/valor de vida/texto de cast) HUGGEAN el

@@ -90,6 +90,23 @@ worth reading before redoing one of them).
   from breaking. The helpers still exist and are still used from `SelectUnit`/`ShowSection`,
   which have their own budgets.
 
+### Changed
+- **Nameplate geometry now has a single source of truth** (`NameplateLayout.lua`, new file).
+  The layout existed **twice**: `Nameplates.lua` positioned the real elements and
+  `NameplateDesigner.lua` re-implemented the same maths for its mock, kept in sync by hand.
+  That never held — the panel repeatedly failed to predict the game, and each targeted fix
+  ("make the mock match") uncovered another difference: first the name gap, then the scale,
+  then the anchor. With two implementations there's no end to it, since any future change
+  to one silently desyncs the other and the bug is only visible by *looking at the game*,
+  never by reading the code.
+  The new module returns pure numbers — anchor point, offsets, sizes, and which of the two
+  scale regimes an element belongs to — and touches no frames. Both consumers apply the
+  same values, so they can't diverge again. It also absorbed three duplicated constant
+  tables (`AURA_ANCHOR_POINT` existed in *both* files, plus the offset/direction key maps).
+  Two concrete bugs fell out of the merge: the Designer anchored the name to the **health
+  bar** while the real one anchors it to the **nameplate**, and the aura gap was written in
+  both files independently.
+
 ### Fixed
 - **Designer positions didn't match the real nameplate** — personal debuffs sat far from the
   plate in game while looking close in the panel. A real nameplate runs **two scales at

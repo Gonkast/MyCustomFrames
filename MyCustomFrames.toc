@@ -73,6 +73,13 @@ MinimapButtons.lua
 # (regla del addon: nada nuevo grande directo en core.lua/Options.lua).
 MailBanner.lua
 
+# Geometria COMPARTIDA de los nameplates: una sola fuente para donde va cada
+# elemento, usada TANTO por Nameplates.lua (los reales) como por
+# NameplateDesigner.lua (el mock del editor). Antes cada uno tenia su copia y
+# se desincronizaban -- el panel no predecia lo que se veia en el juego.
+# Carga antes que ambos.
+NameplateLayout.lua
+
 # NAMEPLATES estilo AzeriteUI: reskin de textura/tamaño de los CompactUnitFrame
 # NATIVOS de Blizzard (sin oUF, sin tocar color/logica -- cero riesgo de taint).
 Nameplates.lua
