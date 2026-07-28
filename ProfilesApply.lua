@@ -246,12 +246,36 @@ local function ApplyBartenderAutoProfile()
     if d.bartenderAutoApplied[charKey] then return end
     local ok, cur = pcall(addon.db.GetCurrentProfile, addon.db)
     if not ok then return end
+
+    -- Ya esta en el perfil que queremos: nada que hacer, marcar y salir.
+    if cur == wanted then
+        d.bartenderAutoApplied[charKey] = true
+        return
+    end
+
     -- Solo forzar si el personaje NO tiene perfil propio configurado todavia: AceDB usa el
     -- charKey como nombre de perfil de fallback (ver initdb en AceDB-3.0) cuando no hay entrada
     -- previa en profileKeys — eso es la señal de "personaje nunca configurado".
-    if cur == charKey and cur ~= wanted then
-        pcall(addon.db.SetProfile, addon.db, wanted)
+    if cur == charKey then
+        -- CORREGIDO (2026-07-27, reportado: "me toca ir al menu y abrirlo de nuevo para ir al
+        -- setup del bartender4 y aplicar el perfil... no quiero tener que hacerlo para cada
+        -- personaje"). ANTES se marcaba `bartenderAutoApplied[charKey] = true` SIEMPRE, incluso
+        -- si el SetProfile no habia surtido efecto -- y como la marca bloquea el reintento para
+        -- siempre, ese personaje quedaba sin perfil y no habia mas oportunidades de arreglarlo
+        -- solo. Evidencia en la DB real del autor: 8 personajes marcados como aplicados, pero
+        -- solo 6 presentes en el profileKeys de Bartender4 -- 2 marcados "listos" sin perfil.
+        -- Ahora se VERIFICA leyendo el perfil de vuelta, y si no quedo, NO se marca: el proximo
+        -- login lo reintenta.
+        local okSet = pcall(addon.db.SetProfile, addon.db, wanted)
+        local okNow, now = pcall(addon.db.GetCurrentProfile, addon.db)
+        if okSet and okNow and now == wanted then
+            d.bartenderAutoApplied[charKey] = true
+        end
+        return
     end
+
+    -- `cur` es un perfil que el usuario eligio a mano (ni el fallback de charKey ni el nuestro):
+    -- se respeta y se marca, para no volver a pisarlo en cada login.
     d.bartenderAutoApplied[charKey] = true
 end
 

@@ -132,6 +132,16 @@ worth reading before redoing one of them).
   the profile is only forced on characters that were never configured (current profile
   still equals the character key) and only once each, so a manual profile choice is never
   overwritten.
+- **…and the auto-apply marked characters as done even when it hadn't worked.**
+  `bartenderAutoApplied[charKey] = true` was set unconditionally, including when
+  `SetProfile` had no effect — and since that mark blocks all future retries, an affected
+  character could never fix itself. Found by comparing the author's real saved data: **8
+  characters marked applied, only 6 actually present in Bartender4's `profileKeys`** — two
+  flagged "done" with no profile, which is exactly the "I have to redo it per character"
+  report. The profile is now read back after setting and the mark is only written if it
+  actually took, so a failure retries on the next login. Existing marks are cleared once
+  so the two stuck characters get their retry; a manually chosen profile is still detected
+  and respected rather than overwritten.
 - **Audit pass: removed dead call sites left behind by the aura-grid removal.** When
   `Auras.lua` was stripped down to just `ns.DebuffTypeColor` this session, four call sites
   in `core.lua` were left calling functions that no longer exist

@@ -2019,6 +2019,19 @@ local function InitDB()
     -- nunca fue configurado (perfil actual == charKey) y solo una vez por personaje, asi que
     -- jamas pisa a alguien que eligio otro perfil a mano.
     if db.bartenderAutoProfile == nil then db.bartenderAutoProfile = "Default" end
+    -- Reset de una sola vez de las marcas viejas (2026-07-27): hasta hoy
+    -- ApplyBartenderAutoProfile marcaba el personaje como "ya aplicado" INCLUSO si el
+    -- SetProfile no habia surtido efecto, y esa marca bloquea el reintento para siempre --
+    -- personajes que quedaron sin perfil no tenian forma de arreglarse solos (confirmado en
+    -- la DB del autor: 8 marcados, 6 realmente en el profileKeys de Bartender4). La logica
+    -- nueva verifica antes de marcar, pero necesita que las marcas viejas se limpien para
+    -- poder reintentar. Bandera propia, corre UNA vez por cuenta -- no pisa la eleccion de
+    -- nadie: si un personaje esta en un perfil elegido a mano, la logica nueva lo detecta
+    -- (cur ~= charKey) y lo respeta.
+    if not db._btAutoAppliedResetV2 then
+        db.bartenderAutoApplied = {}
+        db._btAutoAppliedResetV2 = true
+    end
     -- Direccion del test de auras de party (PartyAuraPreview.lua): izq/der/arriba/abajo.
     if db.partyAuraDirection == nil then db.partyAuraDirection = "left" end
     if db.partyAuraIconSize == nil then db.partyAuraIconSize = 26 end
