@@ -274,7 +274,53 @@ end
 -- pedido del usuario (2026-07-18): que la barra del Designer se vea del
 -- mismo tamaño relativo que la nameplate REAL de tu target ahora mismo, para
 -- editar con la proporcion correcta en vez de un tamaño fijo arbitrario.
+--
+-- ESCALA DE REFERENCIA (2026-07-27). No es cosmetica: el nameplate real tiene
+-- DOS escalas conviviendo, y esta variable es la que las diferencia.
+--   * barra de vida / cast / clasificacion / marca de raid -> hijos de `uf`,
+--     SIN contra-escala: encogen con la distancia (escala = effScale).
+--   * nombre y los 3 grupos de auras -> `SetScale(1/effScale)` (Nameplates.lua
+--     lineas ~816 y ~1254): quedan a escala de PANTALLA fija, no encogen.
+-- Por eso hay dos divisores: StageDivisor (con stageScale) y NameDivisor (sin).
+--
+-- Si stageScale = 1 los dos divisores colapsan y el panel dibuja todo a la
+-- misma escala -- que es exactamente lo que se reporto: "las posiciones no
+-- concuerdan" / los personal debuffs "se ven muy lejos" en el juego. Con
+-- nameplates corriendo a ~0.64, en el juego la barra es ~36% mas chica
+-- respecto de las auras de lo que mostraba el panel.
+--
+-- Antes esto se sincronizaba con un ticker que leia el target cada 0.2s, y eso
+-- traia el problema opuesto (el lienzo se re-escalaba solo mientras editabas,
+-- ver la nota donde estaba scaleDriver). Ahora es un valor de REFERENCIA:
+-- se muestrea UNA vez, se persiste, y solo cambia si el usuario lo pide.
 local stageScale = 1
+
+-- Escala efectiva de un nameplate REAL para usar como referencia. Prueba
+-- primero el del target y si no hay, cualquiera visible -- asi funciona sin
+-- necesidad de tener algo seleccionado.
+-- GetEffectiveScale (NO GetScale): la geometria real (ReassertNameGeometry)
+-- usa la escala ACUMULADA -- propia por la de todos los padres -- mientras que
+-- GetScale() devuelve solo la propia de la plate, sin UIParent/WorldFrame. Con
+-- uiScale != 1 el stage quedaba desincronizado; eso explicaba el mismatch
+-- reportado el 2026-07-19 ("en el panel esta mas junto, en la realidad esta
+-- mas lejos").
+local function SampleNameplateScale()
+    if not (C_NamePlate and C_NamePlate.GetNamePlateForUnit) then return nil end
+    local plates = {}
+    if UnitExists("target") then
+        local t = C_NamePlate.GetNamePlateForUnit("target")
+        if t then plates[#plates + 1] = t end
+    end
+    if C_NamePlate.GetNamePlates then
+        for _, pl in ipairs(C_NamePlate.GetNamePlates()) do plates[#plates + 1] = pl end
+    end
+    for _, plate in ipairs(plates) do
+        local uf = plate.UnitFrame or plate
+        local ok, s = pcall(uf.GetEffectiveScale, uf)
+        if ok and type(s) == "number" and s > 0 then return s end
+    end
+    return nil
+end
 
 -- ZOOM (pedido del usuario): "ver los elementos mas grande DENTRO del
 -- panel", no solo agrandar la ventana -- multiplicador puramente visual que
@@ -606,7 +652,7 @@ local function CreateDesigner()
     scaleLabel:SetFont(FONT, 10, "")
     scaleLabel:SetPoint("TOP", title, "BOTTOM", 0, -4)
     scaleLabel:SetTextColor(0.7, 0.85, 1)
-    scaleLabel:SetText("Default scale 1.00 — use Panel zoom to see it bigger")
+    scaleLabel:SetText("Reference scale 1.00")
 
     -- Zoom del panel (pedido del usuario: "poder hacer un zoom en el panel,
     -- para ver mas grande los elementos") -- ANTES era un multiplicador fijo
@@ -622,6 +668,40 @@ local function CreateDesigner()
             -- asi nunca se pierde de vista por quedar paneado a un costado.
             if RecenterContent then RecenterContent() end
         end)
+
+    -- Escala de REFERENCIA (2026-07-27) -- ver la nota larga de `stageScale`.
+    -- Distinta del Panel zoom: el zoom agranda TODO por igual (comodidad
+    -- visual), esto reproduce la proporcion REAL entre lo que encoge con la
+    -- distancia (barra) y lo que no (nombre y auras). Es lo unico que hace que
+    -- el panel prediga de verdad como se ve en el juego.
+    -- No se toca sola: se muestrea al abrir y de ahi en mas solo si el usuario
+    -- mueve el slider o aprieta Sample.
+    local refSlider = MakeMiniSlider(root)
+    refSlider:SetPoint("TOP", zoomSlider, "BOTTOM", 0, -18)
+    BindSlider(refSlider, "Reference scale", 0.3, 2, 0.01,
+        function() return stageScale end,
+        function(v)
+            stageScale = v
+            local pr = P(); if pr then pr.designerRefScale = v end
+            designer.scaleLabel:SetText(("Reference scale %.2f"):format(stageScale))
+            designer.stage:SetScale(stageScale * ZOOM)
+            Reflow()
+        end)
+
+    -- Lee la escala de un nameplate real y la vuelca en el slider. Delega en
+    -- SetValue a proposito: dispara el OnValueChanged del propio slider, que ya
+    -- persiste, actualiza el cartel, re-escala el stage y hace Reflow -- una
+    -- sola implementacion en vez de repetirla aca y que se desincronicen.
+    local sampleBtn = MakeStyledButton(root, "Sample", 60, 18)
+    sampleBtn:SetPoint("LEFT", refSlider, "RIGHT", 8, 0)
+    sampleBtn:SetScript("OnClick", function()
+        local s = SampleNameplateScale()
+        if not s then
+            print("|cffff5555[MCF]|r No visible nameplate to sample from -- get one on screen first.")
+            return
+        end
+        refSlider:SetValue(clamp(s, 0.3, 2))
+    end)
 
     -- ---- Perfiles (pedido del usuario: "necesito crear perfiles, y opcion
     -- para tener la configuracion actual como preterminada") -- guardar
@@ -1322,6 +1402,7 @@ local function CreateDesigner()
     end)
 
     root.stage, root.scaleLabel = stage, scaleLabel
+    root.refSlider = refSlider   -- lo sincroniza ToggleNameplateDesigner al abrir
     root.hp, root.nameHolder, root.hvHolder, root.cb, root.ctHolder = hp, nameHolder, hvHolder, cb, ctHolder
     root.bigHolder, root.personalHolder, root.enemyHolder = bigHolder, personalHolder, enemyHolder
     root.bigShownCB, root.personalShownCB, root.enemyShownCB = bigShownCB, personalShownCB, enemyShownCB
@@ -1500,6 +1581,25 @@ ns.ToggleNameplateDesigner = function()
         designer:Hide()
         for _, hl in ipairs(highlights) do hl:Hide() end
     else
+        -- Escala de REFERENCIA al abrir (2026-07-27, ver la nota de stageScale).
+        -- Se resuelve UNA vez aca y no se vuelve a tocar sola mientras el panel
+        -- este abierto -- ese "cambiar solo" era justamente la molestia del
+        -- ticker viejo. Orden: valor guardado -> muestreo de un nameplate real
+        -- (y se guarda, asi la proxima vez ya arranca bien) -> 1 como ultimo
+        -- recurso si no hay ninguno en pantalla.
+        local pr = P()
+        local ref = pr and pr.designerRefScale
+        if not ref then
+            ref = SampleNameplateScale()
+            if ref and pr then pr.designerRefScale = clamp(ref, 0.3, 2) end
+        end
+        stageScale = clamp(ref or 1, 0.3, 2)
+        if designer.scaleLabel then
+            designer.scaleLabel:SetText(("Reference scale %.2f"):format(stageScale))
+        end
+        if designer.stage then designer.stage:SetScale(stageScale * ZOOM) end
+        if designer.refSlider then designer.refSlider:SetValue(stageScale) end
+
         designer:Show()
         for _, hl in ipairs(highlights) do hl:SetShown(outlinesVisible) end
         Reflow()

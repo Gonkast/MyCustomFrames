@@ -90,6 +90,23 @@ worth reading before redoing one of them).
   from breaking. The helpers still exist and are still used from `SelectUnit`/`ShowSection`,
   which have their own budgets.
 
+### Fixed
+- **Designer positions didn't match the real nameplate** — personal debuffs sat far from the
+  plate in game while looking close in the panel. A real nameplate runs **two scales at
+  once**: the health bar, cast bar, classification and raid mark are plain children of the
+  plate and shrink with distance, while the name and the three aura groups are
+  counter-scaled (`SetScale(1/effScale)`) so they stay a fixed on-screen size. The Designer
+  modelled this with two divisors whose only difference was `stageScale` — and pinning that
+  to 1 (the fix below, for the canvas rescaling itself) collapsed both to the same value,
+  so the panel drew everything at one scale. With nameplates running at ~0.64, the bar was
+  ~36% larger relative to the auras than it really is.
+  `stageScale` is now a **reference scale**: sampled once from a real nameplate the first
+  time the Designer opens, saved, and never changed on its own afterwards — so proportions
+  are truthful *and* the canvas still doesn't move while you work. A **Reference scale**
+  slider plus a **Sample** button make it explicit, and it's separate from Panel zoom
+  (which magnifies everything equally for comfort). Exact 1:1 at every distance isn't
+  possible — real scale follows distance — so this is 1:1 at a reference distance you pick.
+
 ### Changed
 - **The Nameplate Designer canvas no longer mirrors your target's scale.** A ticker read the
   target nameplate's effective scale every 0.2s and applied it to the canvas, so the editor

@@ -226,6 +226,13 @@ local function NameplateDefaults()
         -- name"), independiente de nameOffsetX/Y (que sigue rigiendo el modo
         -- normal, con la barra visible).
         nameOnlyOffsetX = 0, nameOnlyOffsetY = 0,
+        -- Escala de referencia del Nameplate Designer (2026-07-27) -- NO afecta
+        -- al nameplate real, es solo con que proporcion se dibuja el lienzo del
+        -- editor. Reproduce que la barra encoge con la distancia y el nombre/
+        -- auras no (ver la nota de stageScale en NameplateDesigner.lua). nil =
+        -- todavia no se muestreo: el Designer lo toma de un nameplate real la
+        -- primera vez que se abre y lo guarda aca.
+        designerRefScale = nil,
         -- Color de clase para JUGADORES hostiles (2026-07-27, pedido del usuario,
         -- ver Wowhead "Color-Coding Enemy Nameplates is Returning in Midnight") --
         -- distinto de nameOnlyFriendlyNeutral (ese es SOLO amistosos, modo sin
