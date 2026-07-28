@@ -157,14 +157,44 @@ local AURA_BASE = {
     enemy    = { -50.02, -24.85 },
 }
 
+-- Tablas de SCRATCH, una por pieza (2026-07-28). Estas funciones devolvian una
+-- tabla NUEVA en cada llamada, y el driver de nameplates las pide 5 veces por
+-- segundo por cada plate visible: en una raid de 30 eran ~450 tablas/segundo
+-- creadas y tiradas, presion de GC pura que no aparece en un profiler de CPU.
+--
+-- Reusarlas es seguro porque se verificaron las tres condiciones: ningun
+-- consumidor RETIENE la tabla (B.Place lee 5 campos y los aplica; LockBar
+-- recibe los valores sueltos), ninguno la MUTA, y nunca hay dos vivas a la vez
+-- (LayoutPlate consume cada una antes de pedir la siguiente).
+--
+-- Una por pieza y no una sola compartida a proposito: asi dos elementos
+-- distintos jamas pueden pisarse, y el unico modo de fallo concebible seria
+-- reentrada sobre la MISMA pieza -- que no puede pasar, esto es codigo
+-- sincronico sin corrutinas.
+--
+-- OJO si tocas esto: si algun dia escribis codigo que guarde una de estas
+-- tablas o que tenga dos de la misma pieza vivas al mismo tiempo, hace una
+-- copia. Devolver un scratch es la razon por la que esto no aloca.
+local SCRATCH = setmetatable({}, { __index = function(t, k)
+    local v = {}
+    rawset(t, k, v)
+    return v
+end })
+
+local function fill(key, point, relTo, relPoint, x, y, regime)
+    local o = SCRATCH[key]
+    o.point, o.relTo, o.relPoint = point, relTo, relPoint
+    o.x, o.y, o.scaleRegime = x, y, regime
+    return o
+end
+
 local function off(p, xKey, yKey, base)
     return base[1] + num(p and p[xKey], 0), base[2] + num(p and p[yKey], 0)
 end
 
 -- Barra de vida: pegada al tope del nameplate. Sin offset de usuario.
 function L.Health(p)
-    return { point = "TOP", relTo = "plate", relPoint = "TOP",
-             x = BASE.health[1], y = BASE.health[2], scaleRegime = "plate" }
+    return fill("health", "TOP", "plate", "TOP", BASE.health[1], BASE.health[2], "plate")
 end
 
 -- Nombre: ancla al NAMEPLATE, no a la barra.
@@ -190,43 +220,37 @@ function L.Name(p, nameOnly)
     local xKey = nameOnly and "nameOnlyOffsetX" or "nameOffsetX"
     local yKey = nameOnly and "nameOnlyOffsetY" or "nameOffsetY"
     local x, y = off(p, xKey, yKey, BASE.name)
-    return { point = "BOTTOM", relTo = "plate", relPoint = "TOP",
-             x = x, y = y, scaleRegime = "plate" }
+    return fill("name", "BOTTOM", "plate", "TOP", x, y, "plate")
 end
 
 -- Valor de vida (% ): respecto de la barra.
 function L.HealthValue(p)
     local x, y = off(p, "healthValueOffsetX", "healthValueOffsetY", BASE.healthValue)
-    return { point = "TOP", relTo = "health", relPoint = "BOTTOM",
-             x = x, y = y, scaleRegime = "plate" }
+    return fill("healthValue", "TOP", "health", "BOTTOM", x, y, "plate")
 end
 
 -- Cast bar: debajo de la barra de vida.
 function L.Cast(p)
     local x, y = off(p, "castOffsetX", "castOffsetY", BASE.cast)
-    return { point = "TOP", relTo = "health", relPoint = "BOTTOM",
-             x = x, y = y, scaleRegime = "plate" }
+    return fill("cast", "TOP", "health", "BOTTOM", x, y, "plate")
 end
 
 -- Texto del cast: centrado en la propia cast bar.
 function L.CastText(p)
     local x, y = off(p, "castTextOffsetX", "castTextOffsetY", BASE.castText)
-    return { point = "CENTER", relTo = "cast", relPoint = "CENTER",
-             x = x, y = y, scaleRegime = "plate" }
+    return fill("castText", "CENTER", "cast", "CENTER", x, y, "plate")
 end
 
 -- Icono de clasificacion (elite/rare): al borde derecho de la barra.
 function L.Classification(p)
     local x, y = off(p, "classificationOffsetX", "classificationOffsetY", BASE.classification)
-    return { point = "RIGHT", relTo = "health", relPoint = "RIGHT",
-             x = x, y = y, scaleRegime = "plate" }
+    return fill("classification", "RIGHT", "health", "RIGHT", x, y, "plate")
 end
 
 -- Marca de raid: respecto del centro de la barra.
 function L.RaidMark(p)
     local x, y = off(p, "raidMarkOffsetX", "raidMarkOffsetY", BASE.raidMark)
-    return { point = "CENTER", relTo = "health", relPoint = "CENTER",
-             x = x, y = y, scaleRegime = "plate" }
+    return fill("raidMark", "CENTER", "health", "CENTER", x, y, "plate")
 end
 
 -- Grupo de auras: ancla al NAMEPLATE, igual que el nombre -- NO al nombre.
@@ -249,6 +273,8 @@ function L.AuraGroup(p, groupKey)
     if not (keys and base) then return nil end
     local dir = (p and p[L.AURA_GROUP_DIRECTION_KEYS[groupKey]]) or "right"
     local x, y = off(p, keys[1], keys[2], base)
-    return { point = AURA_ANCHOR_POINT[dir] or "BOTTOMLEFT", relTo = "plate", relPoint = "TOP",
-             x = x, y = y, scaleRegime = "plate" }
+    -- scratch POR GRUPO ("aura:big" y demas): los tres se piden seguidos en el
+    -- bucle de LayoutPlate, asi que compartir una sola seria correcto igual,
+    -- pero separadas no hay ni que razonarlo.
+    return fill("aura:" .. groupKey, AURA_ANCHOR_POINT[dir] or "BOTTOMLEFT", "plate", "TOP", x, y, "plate")
 end

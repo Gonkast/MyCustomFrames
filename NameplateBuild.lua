@@ -32,6 +32,9 @@ local ADDON, ns = ...
 -- ==========================================================================
 
 local L = ns.NPLayout
+-- Constante, no un literal dentro del bucle: `{ "big", "personal", "enemy" }`
+-- escrito en la llamada a ipairs construia una tabla en CADA LayoutPlate.
+local AURA_KEYS = { "big", "personal", "enemy" }
 local FONT = [[Fonts\FRIZQT__.TTF]]   -- la misma en real y preview
 local B = {}
 ns.NPBuild = B
@@ -285,7 +288,7 @@ function B.LayoutPlate(P, p, scale)
     Place(P, P.classification, L2.Classification(p), scale)
     Place(P, P.raidMark,       L2.RaidMark(p),       scale)
 
-    for _, key in ipairs({ "big", "personal", "enemy" }) do
+    for _, key in ipairs(AURA_KEYS) do
         local holder = P.auras and P.auras[key]
         if holder then
             Place(P, holder, L2.AuraGroup(p, key), scale)
