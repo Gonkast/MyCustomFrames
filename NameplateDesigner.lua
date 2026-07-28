@@ -924,11 +924,17 @@ local function CreateDesigner()
         d:SetHeight(2)
         return d
     end
-    -- root es 580 de alto; viewport va de -110 (TOP) a -380 (= 580-200,
-    -- BOTTOM) medido desde el TOP -- los divisores van pegados a cada
-    -- borde, AFUERA del viewport (no lo tocan).
-    Divider(-102)   -- cierra el bloque de arriba (reset/outlines/zoom/perfiles), justo antes del viewport
-    Divider(-388)   -- abre el bloque de abajo (dropdown + controles), justo despues del viewport
+    -- Posiciones DERIVADAS del alto real, no numeros sueltos: el comentario que
+    -- habia aca decia "root es 580 de alto" cuando ya iba por 630, y de ahi que
+    -- los dos divisores quedaran mal. El de arriba cruzaba las etiquetas de los
+    -- sliders (ocupan ROW4+12 .. ROW4-32) y el de abajo caia DENTRO del lienzo.
+    --
+    -- Arriba: entre la fila de checkboxes y la de sliders (reportado con
+    -- captura: "la linea sobre panel zoom y plate scale un poco mas arriba").
+    -- Abajo: justo debajo del viewport, que termina en -(alto - margen inferior).
+    local VP_BOTTOM = -(select(2, root:GetSize()) - 250)
+    Divider(ROW4 + 16)   -- cierra el bloque de botones, ARRIBA de los sliders
+    Divider(VP_BOTTOM - 4)   -- abre el bloque de abajo (dropdown + controles)
 
     -- ---- Viewport (pedido del usuario: "el zoom se sale del panel, que
     -- siempre este centrado y este en una seccion propia que pueda
