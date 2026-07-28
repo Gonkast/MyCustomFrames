@@ -80,6 +80,36 @@ worth reading before redoing one of them).
   hostile *players* only (never NPCs — `UnitIsPlayer` gates it before even trying).
 
 ### Fixed
+- **Nameplate Designer didn't match the real nameplate 1:1** — the reference scale was
+  never actually sampled. Root cause found by *measuring* instead of reasoning, after
+  three reasoned fixes in a row failed: `designerRefScale` was `nil` in the live profile
+  while real nameplates were running at `GetEffectiveScale() = 0.768`, so the panel fell
+  back to **1.0** and drew the health bar ~30% too large relative to everything else. The
+  cause was pure timing — the scale is sampled when the Designer opens, and the natural
+  order is to open the panel *and then* target something, so at that instant there was no
+  plate to sample from and nothing got persisted. There is now a **bounded retry**: while
+  no real reference exists, it re-checks every 0.5s until it gets one (or gives up after
+  20s), then stops for good. This is deliberately *not* the old scale ticker that was
+  removed for making the canvas jump — it settles once, at the start, and never re-scales
+  while you're editing.
+
+  Worth knowing, because it's a genuine limit and not a bug: **there is no single "1:1"**.
+  The health bar is a plain child of the plate and shrinks with distance, while the name
+  and aura holders get `SetScale(1/effScale)` so they stay at constant screen size (that's
+  what keeps text and icons crisp). So the *proportion* between them really does change as
+  a mob gets closer or farther, and the panel can only match one distance at a time —
+  whichever the **Reference scale** slider is set to. `Sample` sets it from the plate
+  you're currently looking at, which is normally what you want.
+- **`/mcfnplayoutdiag` was built to compare something that can't be read.** Its first
+  version compared each element's *position* relative to the health bar. Measured in vivo
+  on a real nameplate, `GetRect`, `GetLeft`, `GetBottom` and `GetCenter` are **all**
+  blocked (`Can't measure restricted regions`); only `GetWidth`, `GetHeight` and
+  `GetEffectiveScale` answer. Position-vs-position verification is therefore impossible on
+  this client, and the helpers that attempted it were deleted rather than left around
+  implying the data exists. The command now compares the one thing that both matters and
+  is measurable — real effective scale vs the panel's reference scale — and prints the
+  fix when they diverge. Since geometry moved into `ns.NPLayout`, both sides apply
+  identical offsets by construction, so scale is the only remaining way they can disagree.
 - **`LUA_WARNING: function at line 1396 has more than 60 upvalues`.** `BuildPanel` had been
   sitting at exactly 60 — Lua 5.1's hard ceiling — for a while, and the aura-hover move
   earlier this session pushed it to 61, where it stayed for several commits before being

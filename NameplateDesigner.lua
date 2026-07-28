@@ -675,8 +675,9 @@ local function CreateDesigner()
     -- visual), esto reproduce la proporcion REAL entre lo que encoge con la
     -- distancia (barra) y lo que no (nombre y auras). Es lo unico que hace que
     -- el panel prediga de verdad como se ve en el juego.
-    -- No se toca sola: se muestrea al abrir y de ahi en mas solo si el usuario
-    -- mueve el slider o aprieta Sample.
+    -- No se toca sola mientras editas: se muestrea al abrir (con reintento
+    -- acotado hasta conseguir un nameplate real, ver ToggleNameplateDesigner) y
+    -- de ahi en mas solo si el usuario mueve el slider o aprieta Sample.
     local refSlider = MakeMiniSlider(root)
     refSlider:SetPoint("TOP", zoomSlider, "BOTTOM", 0, -18)
     BindSlider(refSlider, "Reference scale", 0.3, 2, 0.01,
@@ -1598,6 +1599,31 @@ ns.ToggleNameplateDesigner = function()
             if ref and pr then pr.designerRefScale = clamp(ref, 0.3, 2) end
         end
         stageScale = clamp(ref or 1, 0.3, 2)
+
+        -- Reintento ACOTADO si todavia no hay una referencia real (2026-07-27).
+        -- Confirmado con /mcfnplayoutdiag: `designerRefScale` quedaba en nil y el
+        -- panel dibujaba a escala 1 con nameplates reales a 0.768 -- un 30% de
+        -- error, que es exactamente el desajuste reportado. La causa es de
+        -- TIMING: lo normal es abrir el Designer y DESPUES apuntar a algo, y en
+        -- ese instante no habia ningun nameplate del cual muestrear.
+        -- Esto NO es el ticker viejo que se saco por hacer saltar el lienzo: solo
+        -- corre mientras no tengamos un valor real, se detiene apenas consigue
+        -- uno (o a los 20s), y nunca vuelve a tocar la escala despues. O sea,
+        -- asienta una vez al principio en vez de re-escalar mientras editas.
+        if not (pr and pr.designerRefScale) then
+            local tries = 0
+            C_Timer.NewTicker(0.5, function(self)
+                tries = tries + 1
+                if not (designer and designer:IsShown()) or tries > 40 then self:Cancel(); return end
+                local s = SampleNameplateScale()
+                if not s then return end
+                self:Cancel()
+                -- Via el slider, igual que el boton Sample: su OnValueChanged ya
+                -- persiste, actualiza el cartel, re-escala el stage y hace
+                -- Reflow -- una sola implementacion en vez de repetirla aca.
+                if designer.refSlider then designer.refSlider:SetValue(clamp(s, 0.3, 2)) end
+            end)
+        end
         if designer.scaleLabel then
             designer.scaleLabel:SetText(("Reference scale %.2f"):format(stageScale))
         end
@@ -1636,128 +1662,65 @@ SlashCmdList["MCFNPDESIGNER"] = function() ns.ToggleNameplateDesigner() end
 --
 -- Por que existe: el panel seguia sin coincidir con el juego despues de varios
 -- arreglos razonados LEYENDO el codigo. La matematica cerraba en papel y en
--- pantalla no, asi que hacen falta NUMEROS REALES de los dos lados en vez de
--- una cuarta hipotesis.
+-- pantalla no, asi que hacian falta NUMEROS REALES en vez de otra hipotesis.
 --
--- Que compara: la posicion y el tamaño de cada elemento RELATIVOS a la barra de
--- vida, normalizados por el tamaño de esa barra. Esa razon es independiente de
--- la escala -- si el panel y el nameplate real muestran lo mismo, los numeros
--- tienen que coincidir aunque uno este magnificado por el zoom y el otro
--- encogido por la distancia. Si NO coinciden, la fila que difiere señala el
--- elemento y el eje exactos donde esta el problema.
+-- La primera version intentaba comparar POSICIONES (cada elemento respecto de
+-- la barra de vida, normalizado). No se puede: medido en vivo sobre un
+-- nameplate real, GetRect / GetLeft / GetBottom / GetCenter estan TODOS
+-- bloqueados ("Can't measure restricted regions"). Lo unico que responde es
+-- GetWidth, GetHeight y GetEffectiveScale. O sea que verificar el 1:1
+-- comparando posicion contra posicion es imposible en este cliente, y los
+-- helpers que lo intentaban se borraron en vez de dejarlos ahi sugiriendo que
+-- el dato existe.
+--
+-- Pero tampoco hace falta. Desde que la geometria vive en ns.NPLayout, los dos
+-- lados aplican EXACTAMENTE los mismos offsets: ya no pueden divergir por
+-- posicion. Lo unico que queda capaz de desalinear el resultado es que el panel
+-- dibuje a una ESCALA distinta de la real -- y eso si es medible. Fue
+-- justamente el problema: designerRefScale estaba en nil, el panel corria a 1.0
+-- y los nameplates reales a 0.768 (30% de error).
 -- ==========================================================================
--- Devuelve (rect, motivo). El motivo importa: en los nameplates hay APIs de
--- medicion RESTRINGIDAS (GetPoint/GetNumPoints ya se sabe que estan bloqueadas,
--- "Can't measure restricted regions") y ademas Midnight puede devolver numeros
--- SECRETOS en geometria de frames ajenos -- comparar uno de esos con 0 revienta.
--- Por eso cada paso va con pcall + chequeo de tipo/secreto ANTES de operar, y
--- si algo falla se informa QUE fallo en vez de un "no pude medir" generico.
-local function IsUsableNumber(v)
-    if type(v) ~= "number" then return false end
-    if issecretvalue and issecretvalue(v) then return false end
-    return true
-end
-
-local function RectOf(f)
-    if not f then return nil, "frame inexistente" end
-    -- 1) GetRect (lo mas directo: izquierda, abajo, ancho, alto en pantalla).
-    local ok, l, b, w, h = pcall(f.GetRect, f)
-    if ok and IsUsableNumber(l) and IsUsableNumber(b) and IsUsableNumber(w) and IsUsableNumber(h) and w > 0 then
-        return { l = l, b = b, w = w, h = h }
-    end
-    local why = (not ok) and ("GetRect fallo: " .. tostring(l)) or "GetRect devolvio valores no usables (secretos/nil/0)"
-    -- 2) Fallback por partes -- a veces GetRect esta bloqueado pero los
-    -- getters sueltos no (o al reves).
-    local okL, ll = pcall(f.GetLeft, f)
-    local okB, bb = pcall(f.GetBottom, f)
-    local okW, ww = pcall(f.GetWidth, f)
-    local okH, hh = pcall(f.GetHeight, f)
-    if okL and okB and okW and okH
-        and IsUsableNumber(ll) and IsUsableNumber(bb) and IsUsableNumber(ww) and IsUsableNumber(hh) and ww > 0 then
-        return { l = ll, b = bb, w = ww, h = hh }
-    end
-    return nil, why .. (okL and "" or "; GetLeft tambien fallo")
-end
-
--- Posicion del elemento respecto de la barra, en "anchos/altos de barra".
-local function Norm(el, hp)
-    if not (el and hp) then return nil end
-    return {
-        dx = (el.l - hp.l) / hp.w,
-        dy = (el.b - hp.b) / hp.h,
-        rw = el.w / hp.w,
-        rh = el.h / hp.h,
-    }
-end
-
 SLASH_MCFNPLAYOUTDIAG1 = "/mcfnplayoutdiag"
 SlashCmdList["MCFNPLAYOUTDIAG"] = function()
-    if not (designer and designer:IsShown()) then
-        print("|cffff5555[MCF]|r Abri el Designer primero (/mcfnpdesigner).")
-        return
-    end
     local plate = UnitExists("target") and C_NamePlate and C_NamePlate.GetNamePlateForUnit
         and C_NamePlate.GetNamePlateForUnit("target")
     local uf = plate and (plate.UnitFrame or plate)
     if not uf or not uf.healthBar then
-        print("|cffff5555[MCF]|r Necesito un target con nameplate visible para comparar.")
+        print("|cffff5555[MCF]|r Necesito un target con nameplate visible.")
         return
     end
 
-    -- Mismos elementos en los dos lados, en el mismo orden.
-    local pairsList = {
-        { "name",       uf.mcfNameHolder,                        designer.nameHolder },
-        { "healthText", uf.healthBar and uf.healthBar.mcfValue,   designer.hvHolder },
-        { "cast",       uf.mcfCast,                              designer.cb },
-        { "aura/big",      uf.mcfAuraGroups and uf.mcfAuraGroups.big,      designer.bigHolder },
-        { "aura/personal", uf.mcfAuraGroups and uf.mcfAuraGroups.personal, designer.personalHolder },
-        { "aura/enemy",    uf.mcfAuraGroups and uf.mcfAuraGroups.enemy,    designer.enemyHolder },
-        { "classif",    uf.mcfClass,                             designer.classHolder },
-        { "raidmark",   uf.RaidTargetFrame,                      designer.raidHolder },
-    }
+    -- LIMITACION CONFIRMADA EN VIVO (2026-07-27): en un nameplate real,
+    -- GetRect/GetLeft/GetBottom/GetCenter estan BLOQUEADOS ("Can't measure
+    -- restricted regions"). Solo GetWidth/GetHeight/GetEffectiveScale
+    -- responden. O sea: la POSICION real no se puede leer desde Lua, y por lo
+    -- tanto no se puede comparar posicion contra posicion.
+    -- Pero no hace falta: con el layout ya compartido (ns.NPLayout) los dos
+    -- lados aplican los mismos offsets, asi que lo unico que puede desalinear
+    -- el resultado es que el panel use una ESCALA distinta a la real. Eso si se
+    -- puede medir, y es lo que compara este comando.
+    local okS, effScale = pcall(uf.GetEffectiveScale, uf)
+    local okW, realW = pcall(uf.healthBar.GetWidth, uf.healthBar)
+    local okH, realH = pcall(uf.healthBar.GetHeight, uf.healthBar)
+    local p = P()
 
-    local realHP, whyReal = RectOf(uf.healthBar)
-    local mockHP, whyMock = RectOf(designer.hp)
-    if not (realHP and mockHP) then
-        print("|cffff5555[MCF]|r No pude medir la barra de vida:")
-        print("   real  = " .. (realHP and "OK" or ("|cffff5555" .. tostring(whyReal) .. "|r")))
-        print("   panel = " .. (mockHP and "OK" or ("|cffff5555" .. tostring(whyMock) .. "|r")))
-        -- Que SI se puede leer de la barra real -- para saber con que trabajar.
-        print("   sondeo de la barra real:")
-        for _, probe in ipairs({ "GetRect", "GetLeft", "GetBottom", "GetWidth", "GetHeight",
-                                 "GetSize", "GetCenter", "GetEffectiveScale" }) do
-            local okP, v = pcall(uf.healthBar[probe], uf.healthBar)
-            local desc
-            if not okP then desc = "|cffff5555bloqueado|r (" .. tostring(v):sub(1, 60) .. ")"
-            elseif v == nil then desc = "nil"
-            elseif issecretvalue and issecretvalue(v) then desc = "|cffff5555SECRETO|r"
-            else desc = tostring(v) end
-            print(("     %-18s %s"):format(probe, desc))
-        end
-        return
-    end
-
-    print("|cffffe19b[MCF layout]|r escalas -- nameplate=" .. string.format("%.3f", uf:GetEffectiveScale())
-        .. "  barra real=" .. string.format("%.3f", uf.healthBar:GetEffectiveScale())
-        .. "  barra panel=" .. string.format("%.3f", designer.hp:GetEffectiveScale()))
-    print(("  barra px  real=%.1fx%.1f  panel=%.1fx%.1f"):format(realHP.w, realHP.h, mockHP.w, mockHP.h))
-    print("  (dx/dy = desplazamiento desde la barra, en anchos/altos de barra; rw/rh = tamaño relativo)")
-    print("  |cff00ff00verde|r = coincide   |cffff5555rojo|r = NO coincide")
-
-    for _, row in ipairs(pairsList) do
-        local label, realF, mockF = row[1], row[2], row[3]
-        local rr, whyR = RectOf(realF)
-        local mr, whyM = RectOf(mockF)
-        local a, b = Norm(rr, realHP), Norm(mr, mockHP)
-        if not a or not b then
-            print(("  |cff888888%-15s sin datos -- real: %s | panel: %s|r"):format(
-                label, a and "ok" or tostring(whyR), b and "ok" or tostring(whyM)))
+    print("|cffffe19b[MCF layout]|r nameplate real vs panel:")
+    print(("  escala real del nameplate : %s"):format(okS and string.format("%.3f", effScale) or "ilegible"))
+    print(("  escala de referencia panel: %.3f%s"):format(stageScale,
+        (P() and P().designerRefScale) and "" or "  |cffff5555(sin guardar todavia)|r"))
+    if okS and effScale then
+        local err = math.abs(stageScale - effScale) / effScale
+        if err < 0.02 then
+            print("  |cff00ff00coinciden|r -- las proporciones del panel son las del juego.")
         else
-            local worst = math.max(math.abs(a.dx - b.dx), math.abs(a.dy - b.dy),
-                                   math.abs(a.rw - b.rw), math.abs(a.rh - b.rh))
-            local col = worst < 0.02 and "|cff00ff00" or "|cffff5555"
-            print(("  %s%-15s|r real dx=%+.3f dy=%+.3f rw=%.3f rh=%.3f"):format(col, label, a.dx, a.dy, a.rw, a.rh))
-            print(("  %s%-15s|r panel dx=%+.3f dy=%+.3f rw=%.3f rh=%.3f   (dif max %.3f)"):format(col, "", b.dx, b.dy, b.rw, b.rh, worst))
+            print(("  |cffff5555DIFIEREN en %.0f%%|r -- el panel dibuja la barra %s de lo que deberia"):format(
+                err * 100, stageScale > effScale and "MAS GRANDE" or "MAS CHICA"))
+            print("  Arreglo: apreta |cffffff00Sample|r en el Designer (o move Reference scale a "
+                .. string.format("%.2f", effScale) .. ").")
         end
     end
+    print(("  barra de vida  real=%sx%s  perfil=%sx%s"):format(
+        okW and string.format("%.0f", realW) or "?", okH and string.format("%.0f", realH) or "?",
+        tostring(p and p.healthWidth), tostring(p and p.healthHeight)))
+    print("  (posicion real no medible: GetRect/GetLeft/GetCenter estan bloqueados en nameplates)")
 end
