@@ -2062,11 +2062,17 @@ local function InitDB()
     --
     -- Reemplaza a _npFullResetV2: bandera nueva para que corra tambien en las
     -- cuentas donde aquella ya habia corrido.
+    -- Escala del lienzo del Designer: 1 por defecto (pedido del usuario). Ya no
+    -- afecta proporciones -- multiplica el lienzo entero y se cancela en
+    -- cualquier razon entre piezas -- asi que arrancar en 1 es simplemente ver
+    -- los elementos a su tamaño real.
+    if db.designerRefScale == nil then db.designerRefScale = 1 end
     if not db._npNativeBakeV1 then
         db.nameplates = ns.NameplateDefaults and ns.NameplateDefaults() or {}
         db.nameplateUserDefault = nil
         db.nameplateProfiles = nil
         db._npFullResetV2 = nil
+        db.designerRefScale = 1
         db._npNativeBakeV1 = true
     end
     -- Direccion del test de auras de party (PartyAuraPreview.lua): izq/der/arriba/abajo.

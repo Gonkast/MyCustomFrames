@@ -340,23 +340,6 @@ local stageScale = 1
 -- uiScale != 1 el stage quedaba desincronizado; eso explicaba el mismatch
 -- reportado el 2026-07-19 ("en el panel esta mas junto, en la realidad esta
 -- mas lejos").
-local function SampleNameplateScale()
-    if not (C_NamePlate and C_NamePlate.GetNamePlateForUnit) then return nil end
-    local plates = {}
-    if UnitExists("target") then
-        local t = C_NamePlate.GetNamePlateForUnit("target")
-        if t then plates[#plates + 1] = t end
-    end
-    if C_NamePlate.GetNamePlates then
-        for _, pl in ipairs(C_NamePlate.GetNamePlates()) do plates[#plates + 1] = pl end
-    end
-    for _, plate in ipairs(plates) do
-        local uf = plate.UnitFrame or plate
-        local ok, s = pcall(uf.GetEffectiveScale, uf)
-        if ok and type(s) == "number" and s > 0 then return s end
-    end
-    return nil
-end
 
 -- ZOOM (pedido del usuario): "ver los elementos mas grande DENTRO del
 -- panel", no solo agrandar la ventana -- multiplicador puramente visual que
@@ -474,7 +457,7 @@ end
 -- centro -- y por lo tanto TODOS los iconos -- a un X distinto. Con 2 en vez
 -- de 3 el mock quedaba desalineado del real incluso con el mismo offsetX
 -- guardado (bug reportado 2026-07-19, "no concuerda con la ubicacion real").
-local function MakeAuraGroupMock(root, label, showKey)
+local function MakeAuraGroupMock(root, label)
     -- Holder + iconos vienen de ns.NPBuild con preview=true: EL MISMO codigo
     -- que arma los reales en Nameplates.lua, con la misma cuenta de iconos y la
     -- misma formula de tamaño/inset. Lo unico que cambia es lo que no puede
@@ -482,22 +465,12 @@ local function MakeAuraGroupMock(root, label, showKey)
     local holder = ns.NPBuild.AuraGroup(root, P(), true)
     local hl = TrackHighlight(ns.MakeEditHighlight(holder, label))
 
-    local shownCB = CreateFrame("CheckButton", nil, root, "UICheckButtonTemplate")
-    shownCB:SetSize(16, 16)
-    shownCB:SetPoint("BOTTOMLEFT", hl, "TOPLEFT", -18, -1)
-    shownCB:SetScript("OnClick", function(self)
-        if CombatBlocked() then
-            -- Revierte el check visual -- el click ya cambio GetChecked()
-            -- antes de que corra este script.
-            self:SetChecked(not self:GetChecked())
-            return
-        end
-        local p = P(); if not p then return end
-        p[showKey] = self:GetChecked() and true or false
-        Reflow()
-    end)
-
-    return holder, hl, shownCB
+    -- El checkbox de mostrar/ocultar NO se crea aca (2026-07-28, pedido del
+    -- usuario: "las auras que no esten con ellos, mejor ponelo en un panel
+    -- superior"). Colgaba del recuadro de edicion del propio grupo, asi que los
+    -- tres quedaban sueltos FLOTANDO dentro del lienzo, moviendose con la pieza
+    -- y tapando el preview. Ahora viven juntos en la barra de arriba.
+    return holder, hl
 end
 
 -- (AURA_ANCHOR_POINT local ELIMINADO 2026-07-27: era una tercera copia del
@@ -543,7 +516,10 @@ local function CreateDesigner()
     -- del viewport crece la MISMA cantidad (ver viewport:SetPoint mas abajo)
     -- para que el viewport en si NO cambie de tamaño, todo el espacio extra
     -- va a la franja de controles de abajo.
-    root:SetSize(480, 630)
+    -- 672 (antes 630, +42): la barra superior reorganizada ocupa 42px mas que
+    -- la version amontonada, y ese alto se le suma al root en vez de
+    -- restarselo al lienzo -- asi el viewport conserva sus 270px de siempre.
+    root:SetSize(480, 672)
     root:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
     -- Pedido del usuario 2026-07-19: "que el strata de mi panel de
     -- nameplates este por encima del menu" -- el panel principal (Options.lua)
@@ -617,68 +593,107 @@ local function CreateDesigner()
     -- y=-28 (pedido del usuario, "organiceme el panel"): misma fila que la
     -- columna de perfiles a la derecha (antes esta arrancaba en -4 y
     -- quedaba desalineada, chocando en altura con el boton de cerrar).
-    resetBtn:SetPoint("TOPLEFT", root, "TOPLEFT", 8, -28)
+    -- ==================================================================
+    -- BARRA SUPERIOR (reorganizada 2026-07-28, "reorganizalo mejor ... para
+    -- que este todo mas organizado"). Antes cada control se anclaba por su
+    -- cuenta y los tres se peleaban la misma franja de 110px: los sliders del
+    -- centro pasaban por encima de Reset/Outlines a la izquierda y de la
+    -- columna de perfiles a la derecha. Ahora son FILAS explicitas:
+    --
+    --   fila 1   Reset | Outlines                    Save As [nombre]
+    --   fila 2                                       Set as Default
+    --   fila 3   Show: [Big] [Personal] [Enemy]      Load profile...
+    --   fila 4   Panel zoom          Plate scale     (lado a lado, no apilados)
+    --
+    -- Las alturas de fila salen del alto real de cada widget (20 los botones,
+    -- ~42 un MiniSlider contando etiqueta arriba y fila "- valor +" abajo).
+    -- ==================================================================
+    local ROW1, ROW2, ROW3, ROW4 = -28, -52, -76, -112
+
+    resetBtn:SetPoint("TOPLEFT", root, "TOPLEFT", 8, ROW1)
     resetBtn:SetScript("OnClick", function()
         if ns.ResetUnit then ns.ResetUnit(ns.NAMEPLATES_KEY) end
         Reflow()
     end)
 
-    -- Toggle de outlines/regiones (pedido del usuario, faltaba): apaga/prende
-    -- los bordes verdes de edicion de TODOS los elementos sin cerrar el
-    -- panel -- util para ver como queda "limpio" sin las guias encima.
+    -- Toggle de outlines/regiones: apaga/prende los bordes verdes de edicion de
+    -- TODOS los elementos sin cerrar el panel -- util para ver como queda
+    -- "limpio" sin las guias encima.
     local outlineBtn = MakeStyledButton(root, "Outlines: On", 90, 20)
-    outlineBtn:SetPoint("TOPLEFT", resetBtn, "BOTTOMLEFT", 0, -4)
+    outlineBtn:SetPoint("LEFT", resetBtn, "RIGHT", 6, 0)
     outlineBtn:SetScript("OnClick", function(self)
         outlinesVisible = not outlinesVisible
         self:SetLabel(outlinesVisible and "Outlines: On" or "Outlines: Off")
         for _, hl in ipairs(highlights) do hl:SetShown(outlinesVisible) end
     end)
 
-    -- Texto FIJO desde 2026-07-27: el lienzo ya no espeja la escala del target
-    -- (ver la nota larga donde estaba el scaleDriver). Se deja el cartel para
-    -- que quede claro QUE escala estas viendo -- si no, al comparar con un
-    -- nameplate real de cerca o de lejos parece que el panel "miente".
+    -- ---- Fila 3: mostrar/ocultar cada grupo de auras -------------------
+    -- Estos tres colgaban del recuadro de edicion de su propio grupo, o sea
+    -- flotando DENTRO del lienzo y moviendose con la pieza. Juntos y fuera del
+    -- lienzo se leen de un vistazo y no tapan el preview.
+    local showLbl = root:CreateFontString(nil, "OVERLAY")
+    showLbl:SetFont(FONT, 10, "")
+    showLbl:SetTextColor(0.75, 0.75, 0.75)
+    showLbl:SetText("Show:")
+    showLbl:SetPoint("TOPLEFT", root, "TOPLEFT", 10, ROW3 - 4)
+
+    local function MakeShowToggle(label, showKey, anchorTo, gap)
+        local cb = CreateFrame("CheckButton", nil, root, "UICheckButtonTemplate")
+        cb:SetSize(16, 16)
+        cb:SetPoint("LEFT", anchorTo, "RIGHT", gap, 0)
+        local t = root:CreateFontString(nil, "OVERLAY")
+        t:SetFont(FONT, 10, "")
+        t:SetTextColor(0.85, 0.85, 0.85)
+        t:SetText(label)
+        t:SetPoint("LEFT", cb, "RIGHT", 1, 0)
+        cb.labelText = t
+        cb:SetScript("OnClick", function(self)
+            if CombatBlocked() then
+                -- Revierte el check visual: el click ya cambio GetChecked()
+                -- antes de que corra este script.
+                self:SetChecked(not self:GetChecked())
+                return
+            end
+            local pr = P(); if not pr then return end
+            pr[showKey] = self:GetChecked() and true or false
+            Reflow()
+        end)
+        return cb
+    end
+    local bigShownCB      = MakeShowToggle("Big",      "auraShowBigDebuff",       showLbl, 2)
+    local personalShownCB = MakeShowToggle("Personal", "auraShowPersonalDebuffs", bigShownCB.labelText, 6)
+    local enemyShownCB    = MakeShowToggle("Enemy",    "auraShowEnemyBuffs",      personalShownCB.labelText, 6)
+
+    -- Texto FIJO: el lienzo ya no espeja la escala del target. Explica QUE hace
+    -- el slider de abajo en vez de repetir su nombre y su valor.
     local scaleLabel = root:CreateFontString(nil, "OVERLAY")
     scaleLabel:SetFont(FONT, 10, "")
     scaleLabel:SetPoint("TOP", title, "BOTTOM", 0, -4)
     scaleLabel:SetTextColor(0.7, 0.85, 1)
-    -- Explica QUE hace el slider en vez de repetir su nombre y su valor, que
-    -- ya muestra el propio slider. Desde que los offsets van en unidades del
-    -- plate, esta escala NO mueve nada: se cancela en las proporciones. Lo
-    -- unico que sigue dependiendo de ella es el tamaño del texto del nombre,
-    -- que es lo unico que a proposito no escala -- o sea que el slider simula
-    -- a que DISTANCIA estas viendo el nameplate.
-    scaleLabel:SetText("Plate scale = simulated distance")
+    scaleLabel:SetText("Drag a piece to move it - scroll to resize")
 
-    -- Zoom del panel (pedido del usuario: "poder hacer un zoom en el panel,
-    -- para ver mas grande los elementos") -- ANTES era un multiplicador fijo
-    -- (1.6), ahora ajustable en vivo. Liga a la variable local ZOOM (no un
-    -- campo del perfil, es solo una preferencia visual del Designer).
+    -- ---- Fila 4: los dos sliders, LADO A LADO --------------------------
+    -- Apilados se comian 84px de alto (cada MiniSlider ocupa ~42 entre etiqueta
+    -- y fila de valor) y empujaban el lienzo hacia abajo. En paralelo entran en
+    -- una sola franja y no chocan: cada riel mide 110 y el root 480.
     local zoomSlider = MakeMiniSlider(root)
-    zoomSlider:SetPoint("TOP", scaleLabel, "BOTTOM", 0, -22)
+    zoomSlider:SetPoint("TOP", root, "TOP", -112, ROW4)
     BindSlider(zoomSlider, "Panel zoom", 1, 3, 0.1,
         function() return ZOOM end,
         function(v)
             ZOOM = v
-            -- "Que siempre este centrado" -- recentra al cambiar el zoom,
-            -- asi nunca se pierde de vista por quedar paneado a un costado.
+            -- "Que siempre este centrado" -- recentra al cambiar el zoom, asi
+            -- nunca se pierde de vista por quedar paneado a un costado.
             if RecenterContent then RecenterContent() end
         end)
 
-    -- Escala de REFERENCIA (2026-07-27) -- ver la nota larga de `stageScale`.
-    -- Distinta del Panel zoom: el zoom agranda TODO por igual (comodidad
-    -- visual), esto reproduce la proporcion REAL entre lo que encoge con la
-    -- distancia (barra) y lo que no (nombre y auras). Es lo unico que hace que
-    -- el panel prediga de verdad como se ve en el juego.
-    -- No se toca sola mientras editas: se muestrea al abrir (con reintento
-    -- acotado hasta conseguir un nameplate real, ver ToggleNameplateDesigner) y
-    -- de ahi en mas solo si el usuario mueve el slider o aprieta Sample.
+    -- Escala del plate: multiplica el lienzo entero. Ya NO cambia proporciones
+    -- (todos los elementos estan en regimen "plate", asi que se cancela en
+    -- cualquier razon entre piezas) -- es un segundo multiplicador de tamaño
+    -- al lado del zoom. Arranca en 1 por defecto.
     local refSlider = MakeMiniSlider(root)
-    -- 36, no 18: hay que despejar la fila "- [valor] +" del slider de arriba
-    -- (~16px bajo su riel) MAS la etiqueta de este (~12px sobre el suyo).
-    -- Con 18 se superponian (reportado con captura 2026-07-28).
-    refSlider:SetPoint("TOP", zoomSlider, "BOTTOM", 0, -36)
-    BindSlider(refSlider, "Plate scale (distance)", 0.3, 2, 0.01,
+    refSlider:SetPoint("TOP", root, "TOP", 112, ROW4)
+    BindSlider(refSlider, "Plate scale", 0.3, 2, 0.01,
         function() return stageScale end,
         function(v)
             stageScale = v
@@ -687,30 +702,10 @@ local function CreateDesigner()
             Reflow()
         end)
 
-    -- Lee la escala de un nameplate real y la vuelca en el slider. Delega en
-    -- SetValue a proposito: dispara el OnValueChanged del propio slider, que ya
-    -- persiste, actualiza el cartel, re-escala el stage y hace Reflow -- una
-    -- sola implementacion en vez de repetirla aca y que se desincronicen.
-    local sampleBtn = MakeStyledButton(root, "Sample", 60, 18)
-    sampleBtn:SetPoint("LEFT", refSlider, "RIGHT", 8, 0)
-    sampleBtn:SetScript("OnClick", function()
-        local s = SampleNameplateScale()
-        if not s then
-            print("|cffff5555[MCF]|r No visible nameplate to sample from -- get one on screen first.")
-            return
-        end
-        refSlider:SetValue(clamp(s, 0.3, 2))
-    end)
-
-    -- ---- Perfiles (pedido del usuario: "necesito crear perfiles, y opcion
-    -- para tener la configuracion actual como preterminada") -- guardar
-    -- snapshots con nombre (ns.SaveNameplateProfile) y cargarlos despues
-    -- (ns.LoadNameplateProfile), o fijar el estado actual como lo que Reset
-    -- restaura de ahi en mas (ns.SetNameplateUserDefault). Todo en
-    -- Nameplates.lua, esto solo arma los widgets.
+    -- ---- Columna derecha: perfiles -------------------------------------
     local profileBox = CreateFrame("EditBox", nil, root, "InputBoxTemplate")
     profileBox:SetSize(100, 20)
-    profileBox:SetPoint("TOPRIGHT", root, "TOPRIGHT", -8, -28)
+    profileBox:SetPoint("TOPRIGHT", root, "TOPRIGHT", -8, ROW1)
     profileBox:SetAutoFocus(false)
     profileBox:SetText("My Profile")
 
@@ -722,14 +717,14 @@ local function CreateDesigner()
     end)
 
     local defaultBtn = MakeStyledButton(root, "Set as Default", 174, 20)
-    defaultBtn:SetPoint("TOPRIGHT", profileBox, "BOTTOMRIGHT", 0, -4)
+    defaultBtn:SetPoint("TOPRIGHT", root, "TOPRIGHT", -8, ROW2)
     defaultBtn:SetScript("OnClick", function()
         if ns.SetNameplateUserDefault then ns.SetNameplateUserDefault() end
     end)
 
     -- Dropdown para CARGAR un perfil guardado (mismo estilo Setup Wizard).
     local profileDropdown = MakeDropdownButton(root, 174, 20, "Load profile...")
-    profileDropdown:SetPoint("TOPRIGHT", defaultBtn, "BOTTOMRIGHT", 0, -4)
+    profileDropdown:SetPoint("TOPRIGHT", root, "TOPRIGHT", -8, ROW3)
     local profileList = CreateFrame("Frame", nil, root)
     profileList:SetFrameLevel(profileDropdown:GetFrameLevel() + 5)
     profileList:SetPoint("TOP", profileDropdown, "BOTTOM", 0, -2)
@@ -943,7 +938,9 @@ local function CreateDesigner()
     -- cuelga de `content`, que vive DENTRO del viewport y se puede arrastrar
     -- (pan) libremente sin que nada se salga del recuadro.
     local viewport = CreateFrame("Frame", nil, root)
-    viewport:SetPoint("TOPLEFT", root, "TOPLEFT", 8, -110)
+    -- -152: la fila de sliders (ROW4 = -108) ocupa ~42px entre su etiqueta y
+    -- la fila "- valor +", asi que el lienzo tiene que empezar despues.
+    viewport:SetPoint("TOPLEFT", root, "TOPLEFT", 8, -152)
     -- 240 (antes 200, +40 -- ver comentario en root:SetSize): mismo tamaño
     -- de viewport que antes, el espacio extra del root mas alto queda TODO
     -- abajo del viewport para la nueva fila de padding/direccion.
@@ -1207,15 +1204,15 @@ local function CreateDesigner()
     --
     -- combatGuard=true en TODO lo de auras (drag/rueda/checkbox) -- pedido del
     -- usuario 2026-07-19: "que no pueda alterar las auras en combate".
-    local bigHolder, bigHL, bigShownCB = MakeAuraGroupMock(stage, "Big Debuff", "auraShowBigDebuff")
+    local bigHolder, bigHL = MakeAuraGroupMock(stage, "Big Debuff")
     pieces.auras.big = bigHolder
     MakeDraggable(bigHolder, "bigDebuffOffsetX", "bigDebuffOffsetY", StageDivisor, true)
 
-    local personalHolder, personalHL, personalShownCB = MakeAuraGroupMock(stage, "Personal Debuffs", "auraShowPersonalDebuffs")
+    local personalHolder, personalHL = MakeAuraGroupMock(stage, "Personal Debuffs")
     pieces.auras.personal = personalHolder
     MakeDraggable(personalHolder, "personalDebuffsOffsetX", "personalDebuffsOffsetY", StageDivisor, true)
 
-    local enemyHolder, enemyHL, enemyShownCB = MakeAuraGroupMock(stage, "Enemy Buffs", "auraShowEnemyBuffs")
+    local enemyHolder, enemyHL = MakeAuraGroupMock(stage, "Enemy Buffs")
     pieces.auras.enemy = enemyHolder
     MakeDraggable(enemyHolder, "enemyBuffsOffsetX", "enemyBuffsOffsetY", StageDivisor, true)
 
@@ -1429,10 +1426,10 @@ local function CreateDesigner()
     end)
 
     root.stage, root.scaleLabel = stage, scaleLabel
+    root.bigShownCB, root.personalShownCB, root.enemyShownCB = bigShownCB, personalShownCB, enemyShownCB
     root.refSlider = refSlider   -- lo sincroniza ToggleNameplateDesigner al abrir
     root.hp, root.nameHolder, root.hvHolder, root.cb, root.ctHolder = hp, nameHolder, hvHolder, cb, ctHolder
     root.bigHolder, root.personalHolder, root.enemyHolder = bigHolder, personalHolder, enemyHolder
-    root.bigShownCB, root.personalShownCB, root.enemyShownCB = bigShownCB, personalShownCB, enemyShownCB
     root.classHolder, root.raidHolder = classHolder, raidHolder
     root.SelectElement = SelectElement
     -- Seleccion inicial: la barra de vida, asi el panel de control no arranca vacio.
@@ -1611,43 +1608,18 @@ ns.ToggleNameplateDesigner = function()
         designer:Hide()
         for _, hl in ipairs(highlights) do hl:Hide() end
     else
-        -- Escala de REFERENCIA al abrir (2026-07-27, ver la nota de stageScale).
-        -- Se resuelve UNA vez aca y no se vuelve a tocar sola mientras el panel
-        -- este abierto -- ese "cambiar solo" era justamente la molestia del
-        -- ticker viejo. Orden: valor guardado -> muestreo de un nameplate real
-        -- (y se guarda, asi la proxima vez ya arranca bien) -> 1 como ultimo
-        -- recurso si no hay ninguno en pantalla.
-        local ref = GetRefScale()
-        if not ref then
-            ref = SampleNameplateScale()
-            if ref then SetRefScale(clamp(ref, 0.3, 2)) end
-        end
-        stageScale = clamp(ref or 1, 0.3, 2)
-
-        -- Reintento ACOTADO si todavia no hay una referencia real (2026-07-27).
-        -- Confirmado con /mcfnplayoutdiag: `designerRefScale` quedaba en nil y el
-        -- panel dibujaba a escala 1 con nameplates reales a 0.768 -- un 30% de
-        -- error, que es exactamente el desajuste reportado. La causa es de
-        -- TIMING: lo normal es abrir el Designer y DESPUES apuntar a algo, y en
-        -- ese instante no habia ningun nameplate del cual muestrear.
-        -- Esto NO es el ticker viejo que se saco por hacer saltar el lienzo: solo
-        -- corre mientras no tengamos un valor real, se detiene apenas consigue
-        -- uno (o a los 20s), y nunca vuelve a tocar la escala despues. O sea,
-        -- asienta una vez al principio en vez de re-escalar mientras editas.
-        if not GetRefScale() then
-            local tries = 0
-            C_Timer.NewTicker(0.5, function(self)
-                tries = tries + 1
-                if not (designer and designer:IsShown()) or tries > 40 then self:Cancel(); return end
-                local s = SampleNameplateScale()
-                if not s then return end
-                self:Cancel()
-                -- Via el slider, igual que el boton Sample: su OnValueChanged ya
-                -- persiste, actualiza el cartel, re-escala el stage y hace
-                -- Reflow -- una sola implementacion en vez de repetirla aca.
-                if designer.refSlider then designer.refSlider:SetValue(clamp(s, 0.3, 2)) end
-            end)
-        end
+        -- Escala del plate al abrir: 1 por defecto (pedido del usuario
+        -- 2026-07-28, "que el plate scale por defecto sea 1 en el panel").
+        --
+        -- Se saco todo el muestreo automatico que habia aca. Existia para que el
+        -- lienzo copiara la escala de un nameplate real, porque entonces las
+        -- proporciones del panel DEPENDIAN de ella. Ya no: con todos los
+        -- elementos en regimen "plate", esta escala multiplica el stage entero y
+        -- se cancela en cualquier razon entre piezas. O sea que muestrear solo
+        -- servia para abrir el panel mas chico -- y encima pisaba el 1 que se
+        -- pide aca. Lo que quedo es un segundo multiplicador de tamaño, al lado
+        -- del zoom.
+        stageScale = clamp(GetRefScale() or 1, 0.3, 2)
         if designer.stage then designer.stage:SetScale(stageScale * ZOOM) end
         if designer.refSlider then designer.refSlider:SetValue(stageScale) end
 
