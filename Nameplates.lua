@@ -721,7 +721,7 @@ end
 local function CreateNameHolder(uf)
     if uf.mcfNameHolder then return uf.mcfNameHolder end
     local holder = CreateFrame("Frame", nil, uf)
-    holder:SetSize(220, 20)
+    holder:SetSize(ns.NPBuild.NAME_HOLDER_W, ns.NPBuild.NAME_HOLDER_H)
     local fs = holder:CreateFontString(nil, "OVERLAY")
     fs:SetPoint("CENTER")
     fs:SetJustifyH("CENTER")

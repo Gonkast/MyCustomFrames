@@ -40,6 +40,14 @@ ns.NPBuild = B
 -- local en Nameplates.lua y como literal 0.26 en el designer.
 B.AURA_BORDER_SCALE = 0.26
 
+-- Caja del holder del NOMBRE. Es FIJA a proposito y los dos lados deben usar la
+-- misma: el holder se ancla por BOTTOM con el texto en CENTER, asi que el texto
+-- queda a ALTURA/2 sobre el punto de anclaje. Si un lado dimensiona la caja al
+-- texto y el otro no, el nombre cae a distinta altura -- y la diferencia crece
+-- con el tamaño de fuente. Fue exactamente ese bug (reportado 2026-07-28): el
+-- panel la ajustaba al texto, el real la tenia clavada en 220x20.
+B.NAME_HOLDER_W, B.NAME_HOLDER_H = 220, 20
+
 -- ---- Geometria de auras (una sola formula para real y preview) ------------
 
 -- Tamaño del holder: SIEMPRE para AURA_MAX_PER_CAT iconos aunque se muestren

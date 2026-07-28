@@ -1052,7 +1052,7 @@ local function CreateDesigner()
     -- verlo mejor en el panel, pedido del usuario).
     local nameHolder = CreateFrame("Frame", nil, content)
     nameHolder:SetScale(ZOOM)
-    nameHolder:SetSize(160, 20)
+    nameHolder:SetSize(ns.NPBuild.NAME_HOLDER_W, ns.NPBuild.NAME_HOLDER_H)
     local nameFS = nameHolder:CreateFontString(nil, "OVERLAY")
     nameFS:SetFont(FONT, 16, "OUTLINE")
     nameFS:SetPoint("CENTER")
@@ -1507,22 +1507,36 @@ Reflow = function()
         e.handle:SetPoint(l.point, e.anchor, l.relPoint, l.x, l.y)
     end
 
-    -- Los holders de texto (nombre/valor de vida/texto de cast) HUGGEAN el
-    -- texto real (GetStringWidth/Height) en vez de una caja fija adivinada --
-    -- pedido del usuario 2026-07-19 ("la region de seleccion sea mas precisa
-    -- con el tamaño real"), asi el aro verde de seleccion coincide con lo que
-    -- se ve, no con un rectangulo generico mas grande.
+    -- TAMAÑO DE LOS HOLDERS DE TEXTO -- tiene que copiar la ESTRUCTURA del real,
+    -- no ajustarse al texto (2026-07-28, bug reportado con capturas: el nombre
+    -- no caia donde el panel lo mostraba, y empeoraba cuanto mas grande la
+    -- fuente). Antes los tres holders se redimensionaban al texto
+    -- (GetStringWidth/Height + padding) para que el aro de seleccion quedara
+    -- ajustado. Eso es incompatible con como esta armado el nameplate real:
+    --
+    --   * NOMBRE  -> el real usa un holder de tamaño FIJO 220x20 con el texto
+    --     en CENTER, y ancla ese holder por BOTTOM. Con el ancla en BOTTOM, el
+    --     texto queda a altura/2 por encima del punto de anclaje: SIEMPRE +10
+    --     en el real, pero altura_del_texto/2 en el panel -- o sea que la
+    --     diferencia CRECIA con el tamaño de fuente. Por eso ningun arrastre lo
+    --     corregia: cada Reflow volvia a redimensionar el holder.
+    --   * VALOR DE VIDA -> el real no tiene holder: ancla el FontString por TOP
+    --     directamente. Para que anclar el holder equivalga a anclar el texto,
+    --     los bordes del holder tienen que ser EXACTAMENTE los del texto (el
+    --     padding de +4 lo bajaba 2px).
+    --   * TEXTO DE CAST -> tambien FontString directo, pero anclado por CENTER,
+    --     y un padding simetrico no mueve un CENTER. Se deja exacto igual, para
+    --     que nadie reintroduzca el bug si algun dia pasa a anclarse por TOP.
     designer.nameHolder.fs:SetFont(FONT, p.nameFontSize or 16, "OUTLINE")
     local nc = p.nameColor
     if nc then designer.nameHolder.fs:SetTextColor(nc.r, nc.g, nc.b, p.nameAlpha or 1) end
-    designer.nameHolder:SetSize(math.max(20, designer.nameHolder.fs:GetStringWidth() + 8),
-        math.max(14, designer.nameHolder.fs:GetStringHeight() + 4))
+    designer.nameHolder:SetSize(ns.NPBuild.NAME_HOLDER_W, ns.NPBuild.NAME_HOLDER_H)
 
     designer.hvHolder.fs:SetFont(FONT, p.healthValueFontSize or 12, "OUTLINE")
     local hvc = p.healthValueColor
     if hvc then designer.hvHolder.fs:SetTextColor(hvc.r, hvc.g, hvc.b, p.healthValueAlpha or 1) end
-    designer.hvHolder:SetSize(math.max(20, designer.hvHolder.fs:GetStringWidth() + 8),
-        math.max(12, designer.hvHolder.fs:GetStringHeight() + 4))
+    designer.hvHolder:SetSize(math.max(1, designer.hvHolder.fs:GetStringWidth()),
+        math.max(1, designer.hvHolder.fs:GetStringHeight()))
 
     local cw, ch = ns.NPLayout.CastSize(p)
     designer.cb:SetSize(cw, ch)
@@ -1531,8 +1545,8 @@ Reflow = function()
     designer.ctHolder.fs:SetFont(FONT, p.castTextFontSize or 10, "OUTLINE")
     local ctc = p.castTextColor
     if ctc then designer.ctHolder.fs:SetTextColor(ctc.r, ctc.g, ctc.b, p.castTextAlpha or 1) end
-    designer.ctHolder:SetSize(math.max(20, designer.ctHolder.fs:GetStringWidth() + 8),
-        math.max(12, designer.ctHolder.fs:GetStringHeight() + 4))
+    designer.ctHolder:SetSize(math.max(1, designer.ctHolder.fs:GetStringWidth()),
+        math.max(1, designer.ctHolder.fs:GetStringHeight()))
 
     -- Mismo LayoutAuraGroup que corre sobre los nameplates reales -- ya no hay
     -- una copia local de la formula ni un `or 26`/`or 4` que pueda quedar

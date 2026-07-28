@@ -107,6 +107,25 @@ worth reading before redoing one of them).
   in sync" — a comment that had already failed twice.
 
 ### Fixed
+- **The Designer sized its text holders to fit the text; the real nameplate doesn't.** The
+  name landed at a different height than the panel showed, and the error *grew with font
+  size* — which is why it looked worst in the screenshots that reported it, and why no
+  amount of dragging fixed it: every `Reflow` re-sized the holder again.
+
+  The name holder is anchored by `BOTTOM` with its FontString at `CENTER`, so the text sits
+  **height/2** above the anchor point. The real one is a fixed 220x20 box, so that is always
+  +10. The panel sized the box to the string, so it was +9 at font 12, +12 at font 16, +17
+  at font 24. The panel now uses the same fixed box, from one shared constant
+  (`ns.NPBuild.NAME_HOLDER_W/H`) that both sides read.
+
+  Same class of bug, smaller, on the health value: the real anchors its FontString by `TOP`
+  with no wrapper frame at all, so the mock's `+4` of vertical padding pushed it 2px down.
+  The mock holders are now exactly the text's bounds. (Cast text was unaffected — it
+  anchors by `CENTER`, and symmetric padding doesn't move a center — but it was made exact
+  too so the bug can't come back if it's ever re-anchored.)
+
+  The cost is that the green selection ring around the name is now the element's true
+  220x20 bounds rather than hugging the glyphs.
 - **The Designer drew the name and the aura groups *behind* the health bar; in game they're
   in front.** Reported with two screenshots — the name text sitting behind the bar in the
   panel but above it on a real nameplate, and the aura icons under the bar instead of over
