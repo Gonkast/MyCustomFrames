@@ -83,6 +83,14 @@ function B.AuraIcon(holder, slot, p, preview)
     if not preview then
         -- "los numeros siempre por encima en el strata" (pedido 2026-07-19):
         -- TOOLTIP es la strata que usa el resto del addon para eso.
+        --
+        -- En el PREVIEW no se sube la strata a proposito: TOOLTIP pondria los
+        -- iconos por encima de los controles del propio panel. El mismo orden
+        -- relativo (auras arriba de la barra) se consigue alla con NIVELES --
+        -- ver el bloque "ORDEN DE DIBUJADO" en NameplateDesigner.lua. Sin eso,
+        -- el holder heredaba una capa por debajo del stage y las auras salian
+        -- detras de la barra en el panel pero encima en el juego (reportado con
+        -- capturas 2026-07-28).
         b:SetFrameStrata("TOOLTIP")
     end
 

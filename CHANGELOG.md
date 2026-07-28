@@ -107,6 +107,24 @@ worth reading before redoing one of them).
   in sync" — a comment that had already failed twice.
 
 ### Fixed
+- **The Designer drew the name and the aura groups *behind* the health bar; in game they're
+  in front.** Reported with two screenshots — the name text sitting behind the bar in the
+  panel but above it on a real nameplate, and the aura icons under the bar instead of over
+  it. This was never a position problem, which is why several rounds of moving things
+  never fixed it: it's **depth**, and no offset can change draw order.
+
+  The cause is structural. `stage` is a child of `content`, and the bar, health value, cast
+  bar, classification and raid mark all hang off `stage`. But the name and the three aura
+  groups hang off `content` *directly* — they have to, because they run at screen scale
+  rather than the stage's. Since a child draws above its parent in WoW, everything inside
+  `stage` sat one layer above them. That's exactly the four elements that looked wrong, and
+  only those — which is why the other elements never showed the problem.
+
+  The panel now reproduces the real nameplate's order explicitly: health bar → name →
+  classification / raid mark / auras. The real one puts the last three at strata `TOOLTIP`
+  level 200; the preview uses frame *levels* within one strata on purpose, since `TOOLTIP`
+  would place them above the panel's own controls. The selection ring was raised too — as a
+  sibling of `content` it was already being hidden behind anything on the stage.
 - **Nameplate aura groups were anchored to the name, not the nameplate.** Spotted by the
   user from the symptom — "if I scale or move the name text, those move". Moving or
   resizing the name dragged all three aura groups (Big Debuff / Personal Debuffs / Enemy

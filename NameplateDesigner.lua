@@ -988,6 +988,11 @@ local function CreateDesigner()
     local selRing = CreateFrame("Frame", nil, viewport, "BackdropTemplate")
     selRing:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 2 })
     selRing:SetBackdropBorderColor(0.3, 1, 0.4, 1)
+    -- Por encima de TODOS los elementos: es hermano de `content`, asi que sin
+    -- esto quedaba debajo de cualquier cosa colgada del stage (el anillo verde
+    -- desaparecia detras de la barra). Tiene que superar el +10 que se le da a
+    -- auras/clasificacion mas abajo, en "ORDEN DE DIBUJADO".
+    selRing:SetFrameLevel(viewport:GetFrameLevel() + 30)
     selRing:Hide()
 
     -- "Stage": envuelve vida/valor de vida/cast bar/texto de cast -- su
@@ -1258,6 +1263,31 @@ local function CreateDesigner()
     selSpecs.raidMark = { title = "Raid Mark", handle = raidHolder,
         xKey = "raidMarkOffsetX", yKey = "raidMarkOffsetY", xyRange = { -100, 100, 1 },
         sizeKey = "raidMarkSize", sizeRange = { 16, 96, 4 } }
+
+    -- ---- ORDEN DE DIBUJADO (2026-07-28) -------------------------------
+    -- Reportado por el usuario con dos capturas: en el panel el NOMBRE salia
+    -- detras de la barra y las AURAS por debajo, mientras que en el nameplate
+    -- real los dos van encima. No era posicion -- era profundidad, y de ahi que
+    -- moverlos nunca lo arreglara.
+    --
+    -- La causa es estructural: `stage` es hijo de `content`, y de `stage`
+    -- cuelgan barra/valor/cast/clasificacion/marca. Pero el nombre y los 3
+    -- grupos de auras cuelgan de `content` DIRECTAMENTE (tienen que hacerlo:
+    -- van a escala de pantalla, no a la del stage). Como en WoW un hijo se
+    -- dibuja sobre su padre, todo lo de `stage` quedaba una capa POR ENCIMA de
+    -- ellos. Justo los cuatro elementos que fallaban, y solo esos.
+    --
+    -- Se reproduce el orden del nameplate real, que es (de abajo hacia arriba):
+    --   barra de vida -> nombre -> clasificacion / marca de raid / auras
+    -- En el real las tres ultimas van a strata TOOLTIP nivel 200 (ver
+    -- CreateCustomClassification y ns.NPBuild.AuraIcon). Aca se hace con NIVELES
+    -- dentro de la misma strata a proposito: subirlas a TOOLTIP las pondria por
+    -- encima de los controles del propio panel.
+    local zBase = stage:GetFrameLevel()
+    nameHolder:SetFrameLevel(zBase + 5)
+    for _, h in ipairs({ classHolder, raidHolder, bigHolder, personalHolder, enemyHolder }) do
+        h:SetFrameLevel(zBase + 10)
+    end
 
     -- Deselecciona todo (pedido del usuario: click en "vacio" del viewport) --
     -- oculta el anillo verde y los sliders/color de la fila de control, y
