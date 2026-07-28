@@ -91,6 +91,14 @@ worth reading before redoing one of them).
   which have their own budgets.
 
 ### Changed
+- **The Nameplate Designer canvas no longer mirrors your target's scale.** A ticker read the
+  target nameplate's effective scale every 0.2s and applied it to the canvas, so the editor
+  would rescale itself while you worked — on picking a target, on losing one, or just from
+  walking, since nameplate scale follows distance. The same edit looked different one
+  second to the next, which made changes hard to judge. The canvas now always shows scale
+  **1.00**, and the only thing that changes its size is the explicit **Panel zoom** slider.
+  Removing the ticker also retires `anyDragActive`, which existed solely to freeze that
+  scale mid-drag so the dragged piece wouldn't tug against the cursor.
 - **Section "Preview" buttons.** Each section that has a preview now has its own button next
   to the controls it affects, scoped to that group, and it stays visibly lit while the
   preview is on — a forgotten test mode is now something you can see rather than invisible

@@ -287,10 +287,9 @@ local ZOOM = 1.6
 local function StageDivisor() return stageScale * ZOOM end
 local function NameDivisor() return ZOOM end
 
--- true mientras CUALQUIER elemento se esta arrastrando -- ver scaleDriver
--- mas abajo (evita que el ticker de escala cambie stage:SetScale() a mitad
--- de un drag, que se sentia como "tironeo").
-local anyDragActive = false
+-- (`anyDragActive` eliminado 2026-07-27: existia solo para congelar el ticker
+-- de escala del stage a mitad de un arrastre. Ese ticker ya no existe -- el
+-- lienzo no espeja la escala del target -- asi que no hay nada que congelar.)
 
 -- ==========================================================================
 -- Helper: sub-elemento ARRASTRABLE (mueve un par offsetX/offsetY del perfil).
@@ -348,7 +347,6 @@ local function MakeDraggable(handle, xKey, yKey, getDivisor, combatGuard)
         local p = P(); if not p then return end
         local startCursorX, startCursorY = GetCursorPosition()
         local startValX, startValY = p[xKey] or 0, p[yKey] or 0
-        anyDragActive = true
         self:SetScript("OnUpdate", function()
             local p2 = P(); if not p2 then return end
             local div = (getDivisor and getDivisor() or 1) * UIParent:GetEffectiveScale()
@@ -361,7 +359,6 @@ local function MakeDraggable(handle, xKey, yKey, getDivisor, combatGuard)
     end)
     handle:SetScript("OnDragStop", function(self)
         self:SetScript("OnUpdate", nil)
-        anyDragActive = false
         if combatGuard and CombatBlocked() then return end
         Reflow()
     end)
@@ -601,11 +598,15 @@ local function CreateDesigner()
         for _, hl in ipairs(highlights) do hl:SetShown(outlinesVisible) end
     end)
 
+    -- Texto FIJO desde 2026-07-27: el lienzo ya no espeja la escala del target
+    -- (ver la nota larga donde estaba el scaleDriver). Se deja el cartel para
+    -- que quede claro QUE escala estas viendo -- si no, al comparar con un
+    -- nameplate real de cerca o de lejos parece que el panel "miente".
     local scaleLabel = root:CreateFontString(nil, "OVERLAY")
     scaleLabel:SetFont(FONT, 10, "")
     scaleLabel:SetPoint("TOP", title, "BOTTOM", 0, -4)
     scaleLabel:SetTextColor(0.7, 0.85, 1)
-    scaleLabel:SetText("Mirroring target scale: 1.00")
+    scaleLabel:SetText("Default scale 1.00 — use Panel zoom to see it bigger")
 
     -- Zoom del panel (pedido del usuario: "poder hacer un zoom en el panel,
     -- para ver mas grande los elementos") -- ANTES era un multiplicador fijo
@@ -1336,55 +1337,34 @@ local function CreateDesigner()
     return root
 end
 
--- ==========================================================================
--- Escala en vivo del stage -- mirroreando la nameplate REAL de tu target
--- (pedido del usuario). GetScale() no es un valor secreto (es geometria de
--- UI, no datos de la unidad), asi que no hace falta pcall por taint -- si
--- igual falla por algun motivo, se cae a escala 1 sin romper nada.
--- ==========================================================================
-local function GetTargetNameplateScale()
-    if not (UnitExists("target") and C_NamePlate and C_NamePlate.GetNamePlateForUnit) then return nil end
-    local plate = C_NamePlate.GetNamePlateForUnit("target")
-    if not plate then return nil end
-    local uf = plate.UnitFrame or plate
-    -- GetEffectiveScale (NO GetScale): la real ReassertNameGeometry usa
-    -- uf:GetEffectiveScale() (escala ACUMULADA, propia * de todos los
-    -- padres) para su contra-escala -- GetScale() solo devuelve la escala
-    -- PROPIA de la plate, sin contar UIParent/WorldFrame. Si esos no son
-    -- exactamente 1 (uiScale, etc), stage terminaba desincronizado del
-    -- ratio real -- eso explicaba el mismatch reportado 2026-07-19 ("en el
-    -- panel esta mas junto, en la realidad esta mas lejos").
-    local ok, s = pcall(uf.GetEffectiveScale, uf)
-    if ok and type(s) == "number" and s > 0 then return s end
-    return nil
-end
-
-local scaleDriver = CreateFrame("Frame")
-local scaleAcc = 0
-scaleDriver:SetScript("OnUpdate", function(self, elapsed)
-    if not designer or not designer:IsShown() then return end
-    -- Pedido del usuario 2026-07-19 ("se resiste/tironea durante el
-    -- arrastre"): este ticker cambia stage:SetScale() cada 0.2s para
-    -- reflejar la distancia REAL del target -- si corre a mitad de un drag,
-    -- el frame arrastrado (hijo de stage) salta respecto del cursor cada vez
-    -- que la escala cambia, sintiendose como si "algo lo atrajera". Con
-    -- anyDragActive (seteado por MakeDraggable) la escala queda CONGELADA
-    -- mientras haya un drag en curso, y se retoma normal al soltar.
-    if anyDragActive then return end
-    scaleAcc = scaleAcc + elapsed
-    if scaleAcc < 0.2 then return end
-    scaleAcc = 0
-    local s = GetTargetNameplateScale()
-    local hasTarget = s ~= nil
-    s = clamp(s or 1, 0.3, 3)
-    if s ~= stageScale then
-        stageScale = s
-        designer.stage:SetScale(stageScale * ZOOM)
-    end
-    designer.scaleLabel:SetText(hasTarget
-        and ("Mirroring target scale: " .. string.format("%.2f", stageScale))
-        or "No target — showing default scale 1.00")
-end)
+-- QUITADO el espejado de escala del target (2026-07-27, pedido del usuario:
+-- "no me gusta que cambie de escala el panel si tengo o no seleccionado un
+-- target... hace que los cambios no los entienda bien").
+--
+-- Habia un ticker que cada 0.2s leia la escala EFECTIVA del nameplate del
+-- target y se la aplicaba al stage, para que el lienzo mostrara el tamaño real
+-- a esa distancia. En la practica hacia lo contrario de lo que un editor
+-- necesita: el lienzo se re-escalaba solo mientras trabajabas -- al elegir
+-- target, al perderlo, o simplemente al caminar (la escala del nameplate
+-- depende de la distancia) -- asi que el MISMO ajuste se veia distinto de un
+-- segundo a otro y era imposible juzgar un cambio.
+--
+-- Ahora `stageScale` queda FIJO en 1: el lienzo siempre muestra la escala por
+-- defecto, y lo unico que cambia el tamaño es el slider "Panel zoom", que es
+-- explicito y lo maneja el usuario. Con esto tambien se va el ticker entero y
+-- el motivo de `anyDragActive` (existia solo para congelar esa escala a mitad
+-- de un arrastre y que el frame no "tironeara" respecto del cursor) -- sin
+-- escala cambiante, no hay nada que congelar.
+--
+-- Si algun dia se quiere un boton "previsualizar a la distancia del target"
+-- (puntual y a pedido, NO automatico -- esa fue justamente la molestia), el
+-- dato clave que costo encontrar la primera vez: hay que leer
+-- `uf:GetEffectiveScale()`, NO `GetScale()`. La geometria real
+-- (ReassertNameGeometry en Nameplates.lua) usa la escala ACUMULADA -- propia
+-- por la de todos los padres -- mientras que GetScale() devuelve solo la
+-- propia de la plate, sin UIParent/WorldFrame. Con uiScale != 1 el stage
+-- quedaba desincronizado, y eso explicaba el mismatch reportado el 2026-07-19
+-- ("en el panel esta mas junto, en la realidad esta mas lejos").
 
 -- ==========================================================================
 -- Reflow: reaplica tamaño/posicion de TODO segun el perfil actual -- se
