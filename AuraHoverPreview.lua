@@ -58,10 +58,10 @@ local SLIDE_DIST  = 26
 -- down"). Despues el usuario pidio que el aumento fuera SOLO para
 -- Player/Target ("el gap solo para player y target, el focus, arena o party
 -- igual que como estaban") -- Party/Arena/Focus vuelven al valor original
--- (4), Player/Target quedan en 30. `cfg.gap` (por grupo, opcional) manda
+-- (4), Player/Target quedan en 35. `cfg.gap` (por grupo, opcional) manda
 -- sobre este default cuando esta presente.
 local DEFAULT_GAP = 4
-local PLAYER_TARGET_GAP = 30
+local PLAYER_TARGET_GAP = 35
 local A = "Interface\\AddOns\\MyCustomFrames\\Assets\\"
 local AURA_BORDER = A .. "actionbutton-border square.tga"
 local BORDER_SCALE = 0.26
