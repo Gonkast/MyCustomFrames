@@ -79,6 +79,33 @@ worth reading before redoing one of them).
   `GetClassColorForUnit` helper already used for the friendly name-only mode, scoped to
   hostile *players* only (never NPCs — `UnitIsPlayer` gates it before even trying).
 
+### Changed
+- **The Designer's preview and the real nameplates now share one constructor**
+  (`NameplateBuild.lua`, new file, loads between `NameplateLayout.lua` and
+  `Nameplates.lua`). `ns.NPLayout` had already unified *where* each element goes, but the
+  widgets themselves were still built twice, each side carrying its own copy of the sizing
+  formula — `ResizeAuraIcon`/`ResizeAuraHolder` on one side, `LayoutAuraGroupIconsMock` on
+  the other with the `3` and the `0.26` typed in by hand. `ns.NPBuild` now builds both,
+  with a `preview` flag for the only things that genuinely can't exist in a panel: the
+  native Cooldown widget and live unit data. The geometry is the same line of code for
+  both.
+
+  The tell that this was overdue: **all seven size helpers in `ns.NPLayout`
+  (`AuraHolderSize`, `AuraIconOffset`, `HealthSize`, `CastSize`, …) had zero callers.**
+  They'd been written as the single source and never wired up, so both sides went on
+  computing sizes independently. They're wired now.
+
+  Two concrete mismatches fell out of doing it:
+  - `NPLayout`'s own factory sizes were **150x24 health / 150x12 cast** against the real
+    **92x24 / 92x24** — the file that exists to prevent silent drift had drifted, in the
+    file itself. Its header claimed these matched `NameplateDefaults`; they didn't.
+  - The Designer carried its own `or 92` / `or 24` / `or 26` / `or 4` fallbacks, a third
+    set of numbers that could go stale independently.
+
+  Both are structurally impossible now: `NameplateDefaults` builds from
+  `ns.NPLayout.FACTORY`, so there is one set of numbers rather than two that "must be kept
+  in sync" — a comment that had already failed twice.
+
 ### Fixed
 - **Nameplate aura groups were anchored to the name, not the nameplate.** Spotted by the
   user from the symptom — "if I scale or move the name text, those move". Moving or

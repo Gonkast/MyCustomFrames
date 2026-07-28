@@ -21,14 +21,14 @@ local GLOW_TEX       = A .. "nameplate_glow.tga"
 -- un marco fino de mas alrededor del relleno real.
 local BAR_TEXCOORD = { 14/256, 242/256, 14/64, 50/64 }
 
-local HEALTH_SIZE = { 92, 24 }
-local CAST_SIZE   = { 92, 24 }
+-- (HEALTH_SIZE/CAST_SIZE se mudaron a ns.NPLayout.FACTORY -- eran una
+-- segunda copia que debia coincidir con la de alla y no coincidia.)
 -- El highlight de seleccion es un poco mas grande que la barra de vida (ver
 -- GetHighlightSize, mas abajo) -- ya no es una constante fija, se deriva EN
 -- VIVO del tamaño de vida configurado (healthWidth/healthHeight).
-local AURA_BORDER_SCALE = 0.26
-local AURA_ICON_SIZE = 26
-local AURA_SPACING = 4
+-- (AURA_BORDER_SCALE se mudo a ns.NPBuild: el designer tenia su propia copia
+-- como literal 0.26 -- ahora hay una sola.)
+-- (AURA_ICON_SIZE/AURA_SPACING tambien viven en ns.NPLayout.FACTORY.)
 
 -- Font object global para el numero de "tiempo restante" que Blizzard dibuja
 -- de forma NATIVA/secret-safe dentro del widget Cooldown (ver CreateAuraIcon)
@@ -141,22 +141,13 @@ end
 -- aca solo se cambia la TEXTURA de base, sin tocar esa logica de color.
 
 local function P() return ns.GetDB() and ns.GetDB().nameplates end
-local function GetHealthSize()
-    local p = P()
-    return (p and p.healthWidth) or HEALTH_SIZE[1], (p and p.healthHeight) or HEALTH_SIZE[2]
-end
-local function GetCastSize()
-    local p = P()
-    return (p and p.castWidth) or CAST_SIZE[1], (p and p.castHeight) or CAST_SIZE[2]
-end
-local function GetHighlightSize()
-    local w, h = GetHealthSize()
-    return w + 4, h + 4
-end
-local function GetAuraIconSize()
-    local p = P()
-    return (p and p.auraIconSize) or AURA_ICON_SIZE
-end
+-- Tamaños: los resuelve ns.NPLayout, la MISMA fuente que consulta el Designer
+-- (2026-07-28). Antes cada lado tenia su cuenta con su propio fallback, y los
+-- fallbacks ni siquiera coincidian entre si.
+local function GetHealthSize()    return ns.NPLayout.HealthSize(P()) end
+local function GetCastSize()      return ns.NPLayout.CastSize(P()) end
+local function GetHighlightSize() return ns.NPLayout.HighlightSize(P()) end
+local function GetAuraIconSize()  return ns.NPLayout.AuraIconSize(P()) end
 ns.NAMEPLATES_KEY = "nameplates"
 ns.IsNameplates = function(key) return key == ns.NAMEPLATES_KEY end
 
@@ -250,7 +241,7 @@ local function NameplateDefaults()
         -- PROPIOS independientes (Big Debuff/Personal Debuffs/Enemy Buffs),
         -- cada uno con su offset -- ver ClassifyAura mas abajo para el
         -- mapeo real via IsAuraFilteredOutByInstanceID.
-        auraIconSize = AURA_ICON_SIZE,
+        auraIconSize = ns.NPLayout.FACTORY.auraIcon,
         -- Y = 0: la altura base de los grupos ahora vive en AURA_BASE_Y dentro
         -- de ns.NPLayout (antes el +10 estaba aca, sumado a un gap disperso).
         -- X separa los tres grupos para que al resetear no queden apilados.
@@ -265,7 +256,7 @@ local function NameplateDefaults()
         -- left o center". Con menos de 3 auras activas, la direccion decide
         -- de que lado del punto de offset se van agregando (ver
         -- AURA_SLOT_ORDER mas abajo).
-        auraPadding = AURA_SPACING,
+        auraPadding = ns.NPLayout.FACTORY.auraPad,
         bigDebuffDirection = "right",
         personalDebuffsDirection = "right",
         enemyBuffsDirection = "right",
@@ -298,7 +289,7 @@ local function NameplateDefaults()
         -- rojo nativo) -- ver UpdateCastBar/UNIT_SPELLCAST_INTERRUPTED.
         castUninterruptibleColor = { r = 0.7, g = 0.7, b = 0.7 },
         castInterruptFlashColor = { r = 1, g = 0.2, b = 0.2 },
-        castWidth = CAST_SIZE[1], castHeight = CAST_SIZE[2],
+        castWidth = ns.NPLayout.FACTORY.castW, castHeight = ns.NPLayout.FACTORY.castH,
         -- Texto del nombre del hechizo, DENTRO de la cast bar.
         castTextFontSize = 10,
         castTextColor = { r = 1, g = 1, b = 1 },
@@ -307,7 +298,7 @@ local function NameplateDefaults()
         -- Tamaño de la barra de vida (pedido del usuario: control de escala, no
         -- solo posicion -- ver NameplateDesigner.lua). El highlight de seleccion
         -- se deriva de esto (HIGHLIGHT_SIZE ya no es una constante fija).
-        healthWidth = HEALTH_SIZE[1], healthHeight = HEALTH_SIZE[2],
+        healthWidth = ns.NPLayout.FACTORY.healthW, healthHeight = ns.NPLayout.FACTORY.healthH,
         -- Distancia maxima de renderizado de nameplates (CVar nativo de
         -- Blizzard "nameplateMaxDistance").
         maxDistance = 40,
@@ -1104,10 +1095,7 @@ local AURA_SLOT_ORDER = {
     center = { 2, 1, 3 },
 }
 
-local function GetAuraPadding()
-    local p = P()
-    return (p and p.auraPadding) or AURA_SPACING
-end
+local function GetAuraPadding() return ns.NPLayout.AuraPadding(P()) end
 
 -- Engancha uf.AurasFrame.RefreshAuras UNA VEZ por frame (guard con
 -- _mcfImportantHooked) -- vuelca buffList/debuffList (ya calculados por
@@ -1168,76 +1156,17 @@ local function ClassifyAura(data, isHarmful, unit, uf)
     return group
 end
 
-local function ResizeAuraIcon(b, slot, sz, padding)
-    b:SetSize(sz, sz)
-    b:ClearAllPoints()
-    b:SetPoint("BOTTOMLEFT", (slot - 1) * (sz + padding), 0)
-    local inset = sz * AURA_BORDER_SCALE
-    b.border:ClearAllPoints()
-    b.border:SetPoint("TOPLEFT", -inset, inset)
-    b.border:SetPoint("BOTTOMRIGHT", inset, -inset)
-end
-
--- Pedido del usuario 2026-07-19: "los numeros [tiempo/cargas] siempre por
--- encima en el strata" -- TOOLTIP es la strata mas alta que usa el resto del
--- addon para "esto va SIEMPRE arriba de todo" (clasificacion/marca de raid,
--- ver CreateCustomClassification/LockRaidMark) -- mismo tratamiento aca.
-local function CreateAuraIcon(holder, slot)
-    local b = CreateFrame("Button", nil, holder)
-    b:SetFrameStrata("TOOLTIP")
-    local icon = b:CreateTexture(nil, "ARTWORK")
-    icon:SetAllPoints()
-    icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-    b.icon = icon
-    local cd = CreateFrame("Cooldown", nil, b, "CooldownFrameTemplate")
-    cd:SetAllPoints()
-    cd:SetDrawEdge(false)
-    -- FIX 2026-07-19: el "tiempo restante" via Lua (EvaluateRemainingTime en
-    -- un duration object) NUNCA aparecio -- comparado con Platynator/Plumber
-    -- (unicos usuarios reales de C_UnitAuras.GetAuraDuration en este disco),
-    -- NINGUNO llama a un metodo "EvaluateRemainingTime": solo usan
-    -- SetCooldownFromDurationObject (swipe) y EvaluateRemainingPercent/IsZero
-    -- (fraccion declasificada via curva). Ese metodo no existe -- por eso el
-    -- pcall nunca poblaba `remaining` y el texto quedaba vacio siempre, sin
-    -- error. La cuenta regresiva NATIVA del widget Cooldown SI es secret-safe
-    -- (la calcula el motor en C, no Lua) -- la habilitamos en vez de intentar
-    -- leer el numero nosotros mismos.
-    if cd.SetHideCountdownNumbers then cd:SetHideCountdownNumbers(false) end
-    pcall(cd.SetCountdownFont, cd, "MCFAuraTimeFontObj")
-    cd:SetDrawSwipe(true)
-    cd:SetSwipeColor(0, 0, 0, 0.7)
-    b.cd = cd
-    local border = b:CreateTexture(nil, "OVERLAY")
-    border:SetTexture(ns.AURA_BORDER)
-    b.border = border
-    local count = b:CreateFontString(nil, "OVERLAY")
-    count:SetFont("Fonts\\FRIZQT__.TTF", 11, "OUTLINE")
-    count:SetPoint("TOPRIGHT", 2, 2)
-    count:SetTextColor(1, 1, 1, 1)
-    b.count = count
-    -- Tiempo restante: NO es un FontString propio -- lo dibuja el widget
-    -- Cooldown nativamente (ver SetCountdownFont mas arriba), asi que no hay
-    -- offset propio que reasignar aca (queda centrado en el icono, como
-    -- cualquier cooldown de Blizzard).
-    ResizeAuraIcon(b, slot, GetAuraIconSize(), GetAuraPadding())
-    b:Hide()
-    return b
-end
-
-local function ResizeAuraHolder(holder, sz, padding)
-    holder:SetSize(sz * AURA_MAX_PER_CAT + padding * (AURA_MAX_PER_CAT - 1), sz)
-end
-
+-- Construccion y geometria de auras: DELEGADAS a ns.NPBuild (2026-07-28), que
+-- es el mismo codigo que usa el Nameplate Designer para su preview. Antes cada
+-- lado tenia su copia de la formula (aca ResizeAuraIcon/ResizeAuraHolder, alla
+-- LayoutAuraGroupIconsMock con el 3 y el 0.26 escritos a mano) y se
+-- desincronizaban sin aviso -- ver la cabecera de NameplateBuild.lua.
 local function CreateAuraGroup(uf, groupKey)
     uf.mcfAuraGroups = uf.mcfAuraGroups or {}
     if uf.mcfAuraGroups[groupKey] then return uf.mcfAuraGroups[groupKey] end
-    local holder = CreateFrame("Frame", nil, uf)
-    local sz, padding = GetAuraIconSize(), GetAuraPadding()
-    ResizeAuraHolder(holder, sz, padding)
-    local icons = {}
-    for slot = 1, AURA_MAX_PER_CAT do icons[slot] = CreateAuraIcon(holder, slot) end
-    holder.icons = icons
-    holder._mcfLastPadding = padding
+    local p = P()
+    local holder = ns.NPBuild.AuraGroup(uf, p, false)
+    holder._mcfLastPadding = ns.NPLayout.AuraPadding(p)
     uf.mcfAuraGroups[groupKey] = holder
     return holder
 end
@@ -1381,8 +1310,7 @@ local function UpdateAuras(uf, unit)
         if holder._mcfLastIconSize ~= sz or holder._mcfLastPadding ~= padding then
             holder._mcfLastIconSize = sz
             holder._mcfLastPadding = padding
-            ResizeAuraHolder(holder, sz, padding)
-            for slot = 1, AURA_MAX_PER_CAT do ResizeAuraIcon(holder.icons[slot], slot, sz, padding) end
+            ns.NPBuild.LayoutAuraGroup(holder, p0)
         end
     end
 
@@ -1582,8 +1510,7 @@ local function RefreshNameplateStyle()
                     if holder._mcfLastIconSize ~= sz or holder._mcfLastPadding ~= padding then
                         holder._mcfLastIconSize = sz
                         holder._mcfLastPadding = padding
-                        ResizeAuraHolder(holder, sz, padding)
-                        for slot = 1, AURA_MAX_PER_CAT do ResizeAuraIcon(holder.icons[slot], slot, sz, padding) end
+                        ns.NPBuild.LayoutAuraGroup(holder, P())
                     end
                 end
             end

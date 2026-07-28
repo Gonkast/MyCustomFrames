@@ -457,34 +457,6 @@ end
 -- antes" -- de vuelta a 3 grupos INDEPENDIENTES (2 iconos de mentira cada
 -- uno, alcanza para ver posicion/tamaño), cada uno con su propio checkbox
 -- de "shown" (mismo patron que antes de pasar a auras nativas).
-local function MakeAuraIconMock(holder)
-    local b = CreateFrame("Frame", nil, holder)
-    local tex = b:CreateTexture(nil, "ARTWORK")
-    tex:SetAllPoints()
-    tex:SetColorTexture(1, 1, 1, 0.15)
-    local border = b:CreateTexture(nil, "OVERLAY")
-    border:SetTexture(ns.AURA_BORDER)
-    b.border = border
-    local count = b:CreateFontString(nil, "OVERLAY")
-    count:SetFont(FONT, 11, "OUTLINE")
-    count:SetPoint("TOPRIGHT", 2, 2)
-    count:SetTextColor(1, 1, 1, 1)
-    count:SetText("2")
-    b.count = count
-    -- Preview del numero de tiempo restante (pedido del usuario 2026-07-19:
-    -- "solo tienen un 2 estatico y no previsualiza mis cambios") -- el real
-    -- (Nameplates.lua) usa el numero NATIVO del widget Cooldown, centrado,
-    -- sin offset propio (por eso aca tambien va fijo en CENTER, sin leer
-    -- ningun *OffsetX/Y de tiempo -- ver Reflow() para el porque).
-    local time = b:CreateFontString(nil, "OVERLAY")
-    time:SetFont(FONT, 10, "OUTLINE")
-    time:SetPoint("CENTER", 0, 0)
-    time:SetTextColor(1, 1, 1, 1)
-    time:SetText("5")
-    b.time = time
-    return b
-end
-
 -- 3 iconos de mentira (NO 2) -- tiene que ser EXACTO al AURA_MAX_PER_CAT=3
 -- real (Nameplates.lua): el holder real SIEMPRE se dimensiona para 3 iconos
 -- aunque muestre menos, y como se ancla por el punto "BOTTOM" (centrado
@@ -493,9 +465,11 @@ end
 -- de 3 el mock quedaba desalineado del real incluso con el mismo offsetX
 -- guardado (bug reportado 2026-07-19, "no concuerda con la ubicacion real").
 local function MakeAuraGroupMock(root, label, showKey)
-    local holder = CreateFrame("Frame", nil, root)
-    local icons = { MakeAuraIconMock(holder), MakeAuraIconMock(holder), MakeAuraIconMock(holder) }
-    holder.icons = icons
+    -- Holder + iconos vienen de ns.NPBuild con preview=true: EL MISMO codigo
+    -- que arma los reales en Nameplates.lua, con la misma cuenta de iconos y la
+    -- misma formula de tamaño/inset. Lo unico que cambia es lo que no puede
+    -- existir en un panel (widget Cooldown y datos de unidad en vivo).
+    local holder = ns.NPBuild.AuraGroup(root, P(), true)
     local hl = TrackHighlight(ns.MakeEditHighlight(holder, label))
 
     local shownCB = CreateFrame("CheckButton", nil, root, "UICheckButtonTemplate")
@@ -514,26 +488,6 @@ local function MakeAuraGroupMock(root, label, showKey)
     end)
 
     return holder, hl, shownCB
-end
-
--- Redimensiona/reancla los 3 iconos de mentira de UN grupo -- formula
--- IDENTICA a ResizeAuraHolder/ResizeAuraIcon en Nameplates.lua (mismo
--- AURA_MAX_PER_CAT=3, AURA_SPACING=4, AURA_BORDER_SCALE=0.26, mismo anclaje
--- BOTTOMLEFT en grilla de a 3 por fila) para que el holder real y el mock
--- tengan EXACTAMENTE el mismo tamaño/centro.
--- `padding`: pedido del usuario 2026-07-19, ya no es un "4" fijo -- lee
--- p.auraPadding (ver GetAuraPadding en Nameplates.lua, mismo campo).
-local function LayoutAuraGroupIconsMock(holder, sz, padding)
-    holder:SetSize(sz * 3 + padding * 2, sz)
-    for slot, b in ipairs(holder.icons) do
-        b:SetSize(sz, sz)
-        b:ClearAllPoints()
-        b:SetPoint("BOTTOMLEFT", holder, "BOTTOMLEFT", (slot - 1) * (sz + padding), 0)
-        local inset = sz * 0.26
-        b.border:ClearAllPoints()
-        b.border:SetPoint("TOPLEFT", -inset, inset)
-        b.border:SetPoint("BOTTOMRIGHT", inset, -inset)
-    end
 end
 
 -- (AURA_ANCHOR_POINT local ELIMINADO 2026-07-27: era una tercera copia del
@@ -1077,8 +1031,9 @@ local function CreateDesigner()
     hp.bg = hpBg
     TrackHighlight(ns.MakeEditHighlight(hp))
     MakeWheelResize(hp, function(p, dir)
-        p.healthWidth  = clamp((p.healthWidth or 92) + (dir > 0 and 4 or -4), 40, 200)
-        p.healthHeight = clamp((p.healthHeight or 24) + (dir > 0 and 1 or -1), 12, 48)
+        local w, h = ns.NPLayout.HealthSize(p)
+        p.healthWidth  = clamp(w + (dir > 0 and 4 or -4), 40, 200)
+        p.healthHeight = clamp(h + (dir > 0 and 1 or -1), 12, 48)
     end, root, "healthBar")
     hp:EnableMouse(true)
     hp:SetScript("OnMouseDown", function() if SelectElement then SelectElement("healthBar") end end)
@@ -1160,8 +1115,9 @@ local function CreateDesigner()
     TrackHighlight(ns.MakeEditHighlight(cb))
     MakeDraggable(cb, "castOffsetX", "castOffsetY", StageDivisor)
     MakeWheelResize(cb, function(p, dir)
-        p.castWidth  = clamp((p.castWidth or 92) + (dir > 0 and 4 or -4), 40, 200)
-        p.castHeight = clamp((p.castHeight or 24) + (dir > 0 and 1 or -1), 12, 48)
+        local w, h = ns.NPLayout.CastSize(p)
+        p.castWidth  = clamp(w + (dir > 0 and 4 or -4), 40, 200)
+        p.castHeight = clamp(h + (dir > 0 and 1 or -1), 12, 48)
     end, root, "castBar")
     -- base=(0,0): ReassertCastGeometry en Nameplates.lua usa el offset
     -- guardado DIRECTO tambien (el -7 es solo el valor DEFAULT del campo,
@@ -1251,7 +1207,7 @@ local function CreateDesigner()
     -- ajusta el mismo campo.
     for holder, auraKey in pairs({ [bigHolder] = "bigDebuff", [personalHolder] = "personalDebuffs", [enemyHolder] = "enemyBuffs" }) do
         MakeWheelResize(holder, function(p, dir)
-            p.auraIconSize = clamp((p.auraIconSize or 26) + (dir > 0 and 2 or -2), 8, 40)
+            p.auraIconSize = clamp(ns.NPLayout.AuraIconSize(p) + (dir > 0 and 2 or -2), 8, 40)
         end, root, auraKey, true)
     end
     bigHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("bigDebuff") end end)
@@ -1501,8 +1457,9 @@ Reflow = function()
     designer.personalHolder:SetScale(ZOOM)
     designer.enemyHolder:SetScale(ZOOM)
 
-    local hw = p.healthWidth or 92
-    local hh = p.healthHeight or 24
+    -- Tamaños desde ns.NPLayout, igual que el nameplate real -- ya no hay
+    -- `or 92`/`or 24` propios que puedan quedar desfasados de los defaults.
+    local hw, hh = ns.NPLayout.HealthSize(p)
     hp:SetSize(hw, hh)
     hp.bg:SetSize(hw, hh)
 
@@ -1537,8 +1494,7 @@ Reflow = function()
     designer.hvHolder:SetSize(math.max(20, designer.hvHolder.fs:GetStringWidth() + 8),
         math.max(12, designer.hvHolder.fs:GetStringHeight() + 4))
 
-    local cw = p.castWidth or 92
-    local ch = p.castHeight or 24
+    local cw, ch = ns.NPLayout.CastSize(p)
     designer.cb:SetSize(cw, ch)
     designer.cb.bg:SetSize(cw, ch)
 
@@ -1548,11 +1504,12 @@ Reflow = function()
     designer.ctHolder:SetSize(math.max(20, designer.ctHolder.fs:GetStringWidth() + 8),
         math.max(12, designer.ctHolder.fs:GetStringHeight() + 4))
 
-    local sz = p.auraIconSize or 26
-    local auraPadding = p.auraPadding or 4
-    LayoutAuraGroupIconsMock(designer.bigHolder, sz, auraPadding)
-    LayoutAuraGroupIconsMock(designer.personalHolder, sz, auraPadding)
-    LayoutAuraGroupIconsMock(designer.enemyHolder, sz, auraPadding)
+    -- Mismo LayoutAuraGroup que corre sobre los nameplates reales -- ya no hay
+    -- una copia local de la formula ni un `or 26`/`or 4` que pueda quedar
+    -- desfasado de los defaults (los toma ns.NPLayout).
+    ns.NPBuild.LayoutAuraGroup(designer.bigHolder, p)
+    ns.NPBuild.LayoutAuraGroup(designer.personalHolder, p)
+    ns.NPBuild.LayoutAuraGroup(designer.enemyHolder, p)
 
     -- Pedido del usuario 2026-07-19: "el panel de auras no previsualiza mis
     -- cambios de carga/tiempo restante" -- reaplica offset/tamaño/color de

@@ -38,8 +38,13 @@ local ADDON, ns = ...
 -- Defaults de fabrica (mismos valores que NameplateDefaults en Nameplates.lua
 -- -- se repiten aca para que las funciones sean PURAS y no dependan de que la
 -- DB este inicializada; el perfil siempre pisa estos valores cuando existe).
-local HEALTH_W, HEALTH_H = 150, 24
-local CAST_W, CAST_H = 150, 12
+-- OJO: estos DEBEN ser los mismos que HEALTH_SIZE/CAST_SIZE en Nameplates.lua
+-- (de donde salen healthWidth/healthHeight/castWidth/castHeight en
+-- NameplateDefaults). Estuvieron en 150x24 y 150x12 contra los 92x24 y 92x24
+-- reales -- justo la deriva silenciosa que este archivo existe para impedir,
+-- pero en el archivo mismo. Se corrigio 2026-07-28 al conectar los helpers.
+local HEALTH_W, HEALTH_H = 92, 24
+local CAST_W, CAST_H = 92, 24
 local AURA_ICON = 26
 local AURA_PAD = 4
 local AURA_MAX_PER_CAT = 3
@@ -62,6 +67,17 @@ ns.NPLayout = L
 
 L.AURA_ANCHOR_POINT = AURA_ANCHOR_POINT
 L.AURA_MAX_PER_CAT = AURA_MAX_PER_CAT
+
+-- Valores de fabrica EXPUESTOS para que NameplateDefaults (Nameplates.lua) los
+-- construya desde aca en vez de tener su propia copia. Antes habia dos juegos
+-- de constantes que "debian coincidir" y no coincidian (150x24 aca contra 92x24
+-- alla). Una sola fuente elimina el problema en vez de documentarlo.
+L.FACTORY = {
+    healthW = HEALTH_W, healthH = HEALTH_H,
+    castW = CAST_W, castH = CAST_H,
+    auraIcon = AURA_ICON, auraPad = AURA_PAD,
+    auraBaseX = AURA_BASE_X, auraBaseY = AURA_BASE_Y,
+}
 
 -- Claves de offset por grupo de auras (mismas 3 categorias que ClassifyAura).
 L.AURA_GROUP_OFFSET_KEYS = {

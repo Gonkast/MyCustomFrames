@@ -80,6 +80,12 @@ MailBanner.lua
 # Carga antes que ambos.
 NameplateLayout.lua
 
+# CONSTRUCCION compartida de los elementos del nameplate: los MISMOS
+# constructores arman el nameplate real y la vista previa del Designer (flag
+# `preview`), en vez de dos implementaciones que se desincronizaban en silencio.
+# Carga despues de NameplateLayout.lua (usa ns.NPLayout) y antes de ambos.
+NameplateBuild.lua
+
 # NAMEPLATES estilo AzeriteUI: reskin de textura/tamaño de los CompactUnitFrame
 # NATIVOS de Blizzard (sin oUF, sin tocar color/logica -- cero riesgo de taint).
 Nameplates.lua
