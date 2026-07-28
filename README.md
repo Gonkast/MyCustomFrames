@@ -40,8 +40,12 @@ None to load — no other addon is a hard dependency. That said, this preset is 
   priority, colored border by dispel type): party (dungeon-only), arena (arena-only) and
   focus reveal on mouseover or in combat; player and target are always visible, no
   mouseover or target required
+- **Unit indicators** (`Indicators.lua`) — out-of-range dimming and an absorb/shield overlay
+  on player/target/focus/party/arena, drawn with each unit's own bar texture
+- **Loss of Control** (`LossOfControl.lua`) — icon + countdown on the player portrait while
+  you're stunned/silenced/rooted/feared
 - **Minimap reskin** (`Minimap.lua`) — custom ring/border, coordinates, mail/eye/dismount/tracking icons, mail notification banner
-- **Nameplate reskin** (`Nameplates.lua` + `NameplateDesigner.lua`) — custom bars, aura filtering, per-zone profiles, in-game designer
+- **Nameplate reskin** (`Nameplates.lua` + `NameplateDesigner.lua`) — custom bars, aura filtering, per-zone profiles, in-game designer, optional class-colored enemy player names
 - **Quest tracker** — recoloring, text alignment, context-aware auto-hide
 - **Info bar** — clock, calendar, zone, FPS/MS
 - **Game Menu (Esc) reskin** (`MainMenu.lua`) — custom frame/buttons, follows the active skin
@@ -98,8 +102,13 @@ Each dumps what a subsystem is *actually* seeing right now, which usually beats 
 | `/mcfbt4diag` | Which Bartender4 bar frames exist and under what names |
 | `/mcfaurasdiag` | Aura data for the current target |
 | `/mcfnpdiag`, `/mcfcastwatch` | Nameplates; `castwatch` toggles live cast logging |
+| `/mcfnpobjdiag` | Per-nameplate unit/GUID/creature-type dump — for chasing nameplates that shouldn't be there (world objects, furniture) |
 | `/mcfmmdiag`, `/mcfringdiag`, `/mcfmapiconsdiag` | Minimap: general state, XP/reputation/honor/renown rings, icons |
-| `/mcfpartytest`, `/mcfarenaauratest`, `/mcffocusauratest` | Toggle the party / arena / focus hover aura previews for placement without a real group, match or target |
+| `/mcfpartytest`, `/mcfarenaauratest`, `/mcffocusauratest`, `/mcfplayerauratest`, `/mcftargetauratest` | Toggle the party / arena / focus / player / target hover aura previews for placement without a real group, match or target |
+| `/mcfaurahoverdiag [key]` | Live internal state of a hover aura group (hover/target/combat/cast/gate/alpha) |
+| `/mcfindicatortest` | Force the range fade and shield bar on every tracked unit, to preview them without being out of range or shielded |
+| `/mcfloctest` | Fake a Loss of Control icon on the player portrait, to preview it without a real stun |
+| `/mcftrinkettest` | Fake the arena trinket cooldown on the 3 arena enemy frames (needs `/mcf` to see them outside a match). Tests the icon only, not detection |
 | `/mcfarenadiag` | Which arena-detection method is returning what |
 | `/mcfclasspowerdiag` | Class resource detection for your class and spec |
 | `/mcfmirrordiag`, `/mcfmirrortargetdiag` | Mirror timer, and the mirrored-target portrait |

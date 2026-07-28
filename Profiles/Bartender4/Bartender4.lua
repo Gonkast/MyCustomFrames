@@ -11,8 +11,8 @@ Bartender4DB = {
 ["count"] = {
 ["font"] = "Friz Quadrata TT",
 ["fontColor"] = {
-[2] = 0.8823530077934265,
-[3] = 0.6078431606292725,
+[2] = 0.88235300779342651,
+[3] = 0.60784316062927246,
 },
 ["fontSize"] = 21,
 ["textAnchor"] = "CENTER",
@@ -24,8 +24,8 @@ Bartender4DB = {
 ["font"] = "Friz Quadrata TT",
 ["fontColor"] = {
 [1] = 1,
-[2] = 0.8823530077934265,
-[3] = 0.6078431606292725,
+[2] = 0.88235300779342651,
+[3] = 0.60784316062927246,
 },
 ["textAnchor"] = "TOP",
 ["textOffsetX"] = 10,
@@ -33,8 +33,8 @@ Bartender4DB = {
 },
 ["macro"] = {
 ["fontColor"] = {
-[2] = 0.8823530077934265,
-[3] = 0.6078431606292725,
+[2] = 0.88235300779342651,
+[3] = 0.60784316062927246,
 },
 },
 },
@@ -43,7 +43,7 @@ Bartender4DB = {
 ["padding"] = 17,
 ["position"] = {
 ["point"] = "BOTTOM",
-["scale"] = 0.6700000166893005,
+["scale"] = 0.67000001668930054,
 ["x"] = -250,
 ["y"] = 213,
 },
@@ -64,7 +64,7 @@ Bartender4DB = {
 ["enabled"] = false,
 ["position"] = {
 ["point"] = "CENTER",
-["x"] = -284.5000305175781,
+["x"] = -284.50003051757812,
 ["y"] = -224,
 },
 ["version"] = 3,
@@ -76,8 +76,8 @@ Bartender4DB = {
 ["count"] = {
 ["font"] = "Friz Quadrata TT",
 ["fontColor"] = {
-[2] = 0.8823530077934265,
-[3] = 0.6078431606292725,
+[2] = 0.88235300779342651,
+[3] = 0.60784316062927246,
 },
 ["fontSize"] = 18,
 },
@@ -85,8 +85,8 @@ Bartender4DB = {
 ["font"] = "Friz Quadrata TT",
 ["fontColor"] = {
 [1] = 1,
-[2] = 0.8823530077934265,
-[3] = 0.6078431606292725,
+[2] = 0.88235300779342651,
+[3] = 0.60784316062927246,
 },
 ["fontSize"] = 18,
 ["textOffsetX"] = 10,
@@ -94,8 +94,8 @@ Bartender4DB = {
 },
 ["macro"] = {
 ["fontColor"] = {
-[2] = 0.8823530077934265,
-[3] = 0.6078431606292725,
+[2] = 0.88235300779342651,
+[3] = 0.60784316062927246,
 },
 ["fontSize"] = 14,
 },
@@ -107,9 +107,9 @@ Bartender4DB = {
 ["padding"] = 20,
 ["position"] = {
 ["point"] = "CENTER",
-["scale"] = 0.6000000238418579,
-["x"] = 436.7500310877949,
-["y"] = 80.82346216930455,
+["scale"] = 0.60000002384185791,
+["x"] = 436.75003108779492,
+["y"] = 80.823462169304548,
 },
 ["rows"] = 6,
 ["showgrid"] = true,
@@ -158,8 +158,8 @@ Bartender4DB = {
 ["padding"] = 17,
 ["position"] = {
 ["point"] = "CENTER",
-["scale"] = 0.6700000166893005,
-["x"] = 467.9997755608565,
+["scale"] = 0.67000001668930054,
+["x"] = 467.99977556085651,
 ["y"] = 41.00003827607361,
 },
 ["rows"] = 2,
@@ -184,8 +184,8 @@ Bartender4DB = {
 ["font"] = "Friz Quadrata TT",
 ["fontColor"] = {
 [1] = 1,
-[2] = 0.8823530077934265,
-[3] = 0.6078431606292725,
+[2] = 0.88235300779342651,
+[3] = 0.60784316062927246,
 },
 ["fontSize"] = 15,
 ["textOffsetX"] = 10,
@@ -197,7 +197,7 @@ Bartender4DB = {
 ["padding"] = 17,
 ["position"] = {
 ["point"] = "BOTTOM",
-["scale"] = 0.6700000166893005,
+["scale"] = 0.67000001668930054,
 ["x"] = 4,
 ["y"] = 213,
 },
@@ -219,7 +219,7 @@ Bartender4DB = {
 ["position"] = {
 ["point"] = "CENTER",
 ["x"] = -284.5,
-["y"] = -223.9998168945313,
+["y"] = -223.99981689453131,
 },
 ["version"] = 3,
 },
@@ -237,7 +237,7 @@ Bartender4DB = {
 ["position"] = {
 ["point"] = "CENTER",
 ["x"] = -284.5,
-["y"] = -223.9998168945313,
+["y"] = -223.99981689453131,
 },
 ["version"] = 3,
 },
@@ -246,7 +246,7 @@ Bartender4DB = {
 ["position"] = {
 ["point"] = "CENTER",
 ["x"] = -284.5,
-["y"] = -223.9998168945313,
+["y"] = -223.99981689453131,
 },
 ["version"] = 3,
 },
@@ -255,79 +255,9 @@ Bartender4DB = {
 ["position"] = {
 ["point"] = "CENTER",
 ["x"] = -284.5,
-["y"] = -223.9998168945313,
+["y"] = -223.99981689453131,
 },
 ["version"] = 3,
-},
-},
-},
-["Gonkast - Ragnaros"] = {
-["actionbars"] = {
-[1] = {
-["WoW10Layout"] = true,
-["position"] = {
-["point"] = "CENTER",
-["x"] = -284.5,
-["y"] = -223.9998168945313,
-},
-["version"] = 3,
-},
-[2] = {
-["WoW10Layout"] = true,
-["position"] = {
-["point"] = "CENTER",
-["x"] = -284.5,
-["y"] = -223.9998168945313,
-},
-["version"] = 3,
-},
-[3] = {
-["WoW10Layout"] = true,
-["position"] = {
-["point"] = "CENTER",
-["x"] = -284.5,
-["y"] = -223.9998168945313,
-},
-["version"] = 3,
-},
-[4] = {
-["WoW10Layout"] = true,
-["position"] = {
-["point"] = "CENTER",
-["x"] = -284.5,
-["y"] = -223.9998168945313,
-},
-["version"] = 3,
-},
-[5] = {
-["WoW10Layout"] = true,
-["position"] = {
-["point"] = "CENTER",
-["x"] = -284.5,
-["y"] = -223.9998168945313,
-},
-["version"] = 3,
-},
-[6] = {
-["WoW10Layout"] = true,
-["position"] = {
-["point"] = "CENTER",
-["x"] = -284.5,
-["y"] = -223.9998168945313,
-},
-["version"] = 3,
-},
-[7] = {
-},
-[8] = {
-},
-[9] = {
-},
-[10] = {
-},
-[13] = {
-},
-[15] = {
 },
 },
 },
@@ -340,17 +270,9 @@ Bartender4DB = {
 ["onebagreagents"] = false,
 ["position"] = {
 ["point"] = "BOTTOMRIGHT",
-["scale"] = 0.8500000238418579,
-["x"] = -139.5184803322773,
-["y"] = 185.997698851128,
-},
-["version"] = 3,
-},
-["Gonkast - Ragnaros"] = {
-["position"] = {
-["point"] = "CENTER",
-["x"] = 43.49984741210938,
-["y"] = 0.5001220703125,
+["scale"] = 0.85000002384185791,
+["x"] = -139.51848033227731,
+["y"] = 185.99769885112801,
 },
 ["version"] = 3,
 },
@@ -362,7 +284,7 @@ Bartender4DB = {
 ["artLayout"] = "TWOBAR",
 ["position"] = {
 ["point"] = "BOTTOM",
-["scale"] = 0.7000000000000001,
+["scale"] = 0.70000000000000007,
 ["x"] = -288.5,
 ["y"] = 87,
 },
@@ -373,12 +295,12 @@ Bartender4DB = {
 ["ExtraActionBar"] = {
 ["profiles"] = {
 ["Default"] = {
-["fadeoutalpha"] = 0.65,
+["fadeoutalpha"] = 0.65000000000000002,
 ["position"] = {
 ["point"] = "BOTTOMRIGHT",
-["scale"] = 0.699999988079071,
-["x"] = -321.6500028056762,
-["y"] = 209.6499964296818,
+["scale"] = 0.69999998807907104,
+["x"] = -321.65000280567619,
+["y"] = 209.64999642968181,
 },
 ["version"] = 3,
 ["visibility"] = {
@@ -388,14 +310,6 @@ Bartender4DB = {
 ",
 ["nocombat"] = true,
 },
-},
-["Gonkast - Ragnaros"] = {
-["position"] = {
-["point"] = "CENTER",
-["x"] = -63.50006103515625,
-["y"] = -252.4999389648438,
-},
-["version"] = 3,
 },
 },
 },
@@ -413,16 +327,8 @@ Bartender4DB = {
 ["position"] = {
 ["point"] = "LEFT",
 ["scale"] = 1.5,
-["x"] = 43.87998390197754,
-["y"] = 35.25000762939453,
-},
-["version"] = 3,
-},
-["Gonkast - Ragnaros"] = {
-["position"] = {
-["point"] = "CENTER",
-["x"] = -261.9999084472656,
-["y"] = 53.50006103515625,
+["x"] = 43.879983901977539,
+["y"] = 35.250007629394531,
 },
 ["version"] = 3,
 },
@@ -435,9 +341,9 @@ Bartender4DB = {
 ["padding"] = 10,
 ["position"] = {
 ["point"] = "BOTTOM",
-["scale"] = 0.9500000000000001,
-["x"] = -189.0499420166016,
-["y"] = 259.5743797203068,
+["scale"] = 0.95000000000000007,
+["x"] = -189.04994201660159,
+["y"] = 259.57437972030681,
 },
 ["showgrid"] = true,
 ["version"] = 3,
@@ -453,14 +359,6 @@ Bartender4DB = {
 ["vehicleui"] = false,
 },
 },
-["Gonkast - Ragnaros"] = {
-["position"] = {
-["point"] = "CENTER",
-["x"] = -162.5,
-["y"] = 88.5001220703125,
-},
-["version"] = 3,
-},
 },
 },
 ["QueueStatus"] = {
@@ -469,13 +367,10 @@ Bartender4DB = {
 ["enabled"] = false,
 ["position"] = {
 ["point"] = "RIGHT",
-["scale"] = 0.699999988079071,
-["x"] = -214.6408774017036,
-["y"] = -230.0673738536261,
+["scale"] = 0.69999998807907104,
+["x"] = -214.64087740170359,
+["y"] = -230.06737385362609,
 },
-["version"] = 3,
-},
-["Gonkast - Ragnaros"] = {
 ["version"] = 3,
 },
 },
@@ -487,26 +382,18 @@ Bartender4DB = {
 ["padding"] = 9,
 ["position"] = {
 ["point"] = "BOTTOM",
-["scale"] = 1.1,
-["x"] = -63.80000839233399,
-["y"] = 265.2507307549604,
+["scale"] = 1.1000000000000001,
+["x"] = -63.800008392333993,
+["y"] = 265.25073075496039,
 },
 ["version"] = 3,
 ["visibility"] = {
-["custom"] = true,
+["custom"] = false,
 ["customdata"] = "[@player,dead] fade; [overridebar][possessbar][bonusbar][vehicleui] hide; [mounted] hide; [@target,dead] hide; [combat][@target,exists,harm][@focus,exists] show; fade\
 \
 \
 ",
 },
-},
-["Gonkast - Ragnaros"] = {
-["position"] = {
-["point"] = "CENTER",
-["x"] = -82.5,
-["y"] = -14.99996185302734,
-},
-["version"] = 3,
 },
 },
 },
@@ -530,15 +417,7 @@ Bartender4DB = {
 ["point"] = "BOTTOM",
 ["scale"] = 0.75,
 ["x"] = -271.95166015625,
-["y"] = 71.47856712341309,
-},
-["version"] = 3,
-},
-["Gonkast - Ragnaros"] = {
-["position"] = {
-["point"] = "CENTER",
-["x"] = 104.5,
-["y"] = 42.50006103515625,
+["y"] = 71.478567123413086,
 },
 ["version"] = 3,
 },
@@ -546,8 +425,6 @@ Bartender4DB = {
 },
 },
 ["profileKeys"] = {
-["Gnomegoat - Ragnaros"] = "Default",
-["Gonkast - Ragnaros"] = "Default",
 },
 ["profiles"] = {
 ["Default"] = {
@@ -555,12 +432,9 @@ Bartender4DB = {
 ["focuscastmodifier"] = false,
 ["minimapIcon"] = {
 ["hide"] = false,
-["minimapPos"] = 175.3062338099355,
+["minimapPos"] = 175.30623380993549,
 },
 ["outofrange"] = "hotkey",
-["snapping"] = false,
-},
-["Gonkast - Ragnaros"] = {
 ["snapping"] = false,
 },
 },

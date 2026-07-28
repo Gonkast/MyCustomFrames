@@ -79,7 +79,55 @@ worth reading before redoing one of them).
   `GetClassColorForUnit` helper already used for the friendly name-only mode, scoped to
   hostile *players* only (never NPCs — `UnitIsPlayer` gates it before even trying).
 
+### Changed
+- **`Defaults.lua` regenerated from a fresh export.** Picks up everything this session
+  added: all 25 hover-aura settings across the 5 groups (direction/size/max icons/padding/
+  sort — 21 of them brand new to the baked defaults), `classColorEnemyNames`, and the
+  expanded Explorer element selection. Verified against the previous file: **zero keys
+  lost**, every module sub-table the same size except the two that were meant to grow.
+  The dead aura-grid entries (`auras.aura_player`/`aura_target`) are gone, since the new
+  purge cleared them before the export was taken.
+- **Baked new nameplate range/alpha defaults**: max distance 40 → **60**, max alpha
+  0.6 → **0.80**, min alpha **0.20**. Also forced onto `nameplateUserDefault` during the
+  bake — the export carried the user's live snapshot of it (10 / 1 / 0), and that's what
+  "Reset nameplates" restores, so shipping it as-is would have made Reset drop render
+  distance to 10 yards and contradict the shipped default immediately.
+- **Explorer ships disabled by default** (`explorerEnabled = false`), per request.
+
 ### Fixed
+- **Audit pass: removed dead call sites left behind by the aura-grid removal.** When
+  `Auras.lua` was stripped down to just `ns.DebuffTypeColor` this session, four call sites
+  in `core.lua` were left calling functions that no longer exist
+  (`ns.EnsureCancelOverlay`, `ns.UpdateAuraGroup` ×3) with no nil-guard. They never fired
+  — the `auras` runtime table is permanently empty now — but they were landmines: the day
+  anything repopulated it, they'd have thrown "attempt to call a nil value". Also dropped
+  `core.lua`'s blanket `UNIT_AURA` registration, whose only handler was one of those: it
+  was waking that frame on one of the game's highest-frequency events to do nothing.
+  (`ArenaTrinket.lua`/`ClassPower.lua` register `UNIT_AURA` on their own frames and are
+  unaffected.) Plus the now-dead `ns.TickAuras` per-tick call and `ns.RefreshAllAuras`.
+- **`PurgeDeadKeys` couldn't clean keys inside module sub-tables**, only `db.units[*]` and
+  the root of `db`. That left no way to retire a setting belonging to a module like
+  nameplates or minimap. Added a nameplate-scoped list (applied to the live DB *and*
+  saved presets), and populated both lists with this session's abandoned experiments —
+  the 7 per-unit `dispelGlow*` fields and the 3 `threat*` nameplate fields — so anyone who
+  ran an intermediate build doesn't keep carrying them in their saved config or exports.
+- **`db.auras` was never purged either, and was still carrying the entire removed aura
+  grid** — `aura_player` and `aura_target`, ~54 config fields each, found by inspecting a
+  real export (108 dead fields riding along in every export and preset). Nothing has read
+  them since `Auras.lua` was reduced to `ns.DebuffTypeColor`; the hover display keeps its
+  settings in flat globals (`playerAuraDirection` etc.) instead. Now purged as whole
+  entries, live DB and saved presets alike.
+- **Pet action bar reappeared (even without an active pet) when toggling Explorer mode
+  on/off, needing a `/reload` to hide it again.** Same bug class already fixed once
+  (2026-07-25) for entering/exiting Lock mode, but through a different path this time:
+  `ns.ExplorerResetAll()` force-sets alpha 1 on every Explorer-managed element, including
+  `BT4BarPetBar` — undoing the "no pet, stay hidden" state from `BartenderScale.lua` — and
+  3 separate call sites do this without ever reapplying it afterward: `Explorer.lua`'s
+  central ticker (`TickExplorer`, fires whenever the master toggle or a zone filter turns
+  Explorer off), and 2 checkbox handlers in `Options.lua` (the master switch, and each
+  per-zone toggle). All 3 now call `ns.RefreshPetBarVisibility()` right after — same fix,
+  applied everywhere the underlying reset can happen instead of just the one path that
+  was reported last time.
 - **Shield bar occasionally showed as a low-opacity black patch.** `SetStatusBarTexture`
   was never called at creation — only later, on the first real update tick — so an
   untextured `StatusBar` could render its default placeholder in the gap. Now given an

@@ -216,6 +216,12 @@ ns.ExplorerReset = function(key)   -- llamar al APAGAR el explorer de un element
     if key == "minimap" and ns.SetMinimapPinsShown then
         ns.SetMinimapPinsShown(true)
     end
+    -- Mismo motivo (2026-07-27): apagar SOLO "Pet Bar" en la lista de
+    -- elementos del Explorer (no el master toggle) pasa por aca, no por
+    -- ExplorerResetAll -- necesita el mismo parche.
+    if key == "BT4BarPetBar" and ns.RefreshPetBarVisibility then
+        ns.RefreshPetBarVisibility()
+    end
 end
 ns.ExplorerResetAll = function()   -- llamar al APAGAR el toggle maestro
     local db = ns.GetDB()
@@ -351,6 +357,15 @@ ns.TickExplorer = function()
     elseif explorerDriver._wasOn then
         -- Se apago (zona no permitida o master off): restaurar alpha 1 UNA vez.
         if ns.ExplorerResetAll then ns.ExplorerResetAll() end
+        -- FIX (2026-07-27, reportado: "el pet bar volvio a salir entre cambio de
+        -- explorer mode on y off, aun sin tener pet activa, necesito reload para
+        -- ocultarla"): mismo bug ya arreglado el 2026-07-25 para Lock mode (ver
+        -- ApplyAllBarScales en BartenderScale.lua) pero por OTRA via -- este
+        -- ticker central tambien llama ExplorerResetAll() (SetAlpha(1) a TODO lo
+        -- gestionado, incluida BT4BarPetBar) cada vez que el Explorer se apaga
+        -- (master toggle off, o zona no permitida), sin reaplicar despues el
+        -- ocultado por "sin mascota". Mismo parche: reaplicar ahora mismo.
+        if ns.RefreshPetBarVisibility then ns.RefreshPetBarVisibility() end
     end
     explorerDriver._wasOn = exOn and true or false
     explorerDriver:SetShown(exOn and true or false)

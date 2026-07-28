@@ -4235,6 +4235,9 @@ local function BuildPanel()
             function(v)
                 ns.GetDB().explorerEnabled = v and true or false
                 if not v and ns.ExplorerResetAll then ns.ExplorerResetAll() end
+                -- Mismo fix que Explorer.lua TickExplorer (2026-07-27, pet bar
+                -- reaparecia sin mascota al apagar Explorer desde este toggle).
+                if not v and ns.RefreshPetBarVisibility then ns.RefreshPetBarVisibility() end
             end)
         -- Grid a 2 columnas (llenado por columna, no por fila).
         local ROWS = math.ceil(#EXPLORER_ELEMENTS / 2)
@@ -4283,6 +4286,8 @@ local function BuildPanel()
                 function(v)
                     ns.GetDB().explorerZones[zk] = v and true or false
                     if not v and ns.ExplorerResetAll then ns.ExplorerResetAll() end
+                    -- Mismo fix que el master toggle de arriba (2026-07-27).
+                    if not v and ns.RefreshPetBarVisibility then ns.RefreshPetBarVisibility() end
                 end)
         end
         -- FIX (2026-07-25, reportado por el usuario: "el texto en explorer conditions

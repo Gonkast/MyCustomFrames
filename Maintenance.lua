@@ -125,11 +125,31 @@ local DEAD_UNIT_FIELDS = {
     "hideWhenMounted",   -- feature quitada 2026-07-24 (reemplazo: Explorer)
     "textLowHealthShow",       -- antiguo reveal por HP: no era secret-safe en Midnight
     "textLowHealthThreshold",  -- reemplazado por percentLowHealthThreshold + ColorCurve
+    -- Dispel glow (2026-07-27): se implemento completo (deteccion + pestaña
+    -- propia en Options) y se quito el mismo dia -- sin forma practica de
+    -- probarlo. Cualquiera que corriera esa version intermedia tiene los 7
+    -- campos guardados en cada unidad.
+    "dispelGlowTexture", "dispelGlowWidth", "dispelGlowHeight",
+    "dispelGlowOffsetX", "dispelGlowOffsetY", "dispelGlowColor", "dispelGlowAlpha",
 }
 local DEAD_GLOBALS = {
     "barReposition",     -- BarReposition.lua borrado 2026-07-24
     "explorerDamage",    -- condicion "recibi daño" revertida 2026-07-24
 }
+-- Claves muertas dentro de db.nameplates (2026-07-27). Categoria NUEVA: hasta
+-- ahora solo se purgaba db.units[*] y la raiz de db, asi que una feature
+-- quitada de una SUB-TABLA de modulo (nameplates/minimap/etc) no tenia forma
+-- de limpiarse. El indicador de amenaza paso por 4 versiones el mismo dia y se
+-- descarto; quien corriera alguna de las intermedias arrastra estas 3.
+local DEAD_NAMEPLATE_FIELDS = {
+    "showThreat", "threatScale", "threatAlpha",
+}
+-- Entradas ENTERAS muertas de db.auras (2026-07-27). El grid siempre-visible de
+-- Auras.lua se elimino (Player/Target/Focus pasaron a AuraHoverPreview.lua, que
+-- guarda su config en claves GLOBALES planas -- playerAuraDirection y demas, no
+-- en db.auras). ns.AURAS quedo vacio, asi que NADA lee ya estas tablas, pero
+-- seguian viajando en cada export: ~54 campos por entrada de peso muerto.
+local DEAD_AURA_KEYS = { "aura_player", "aura_target", "aura_focus" }
 
 function ns.PurgeDeadKeys(verbose)
     local db = ns.GetDB and ns.GetDB()
@@ -143,6 +163,12 @@ function ns.PurgeDeadKeys(verbose)
     for _, g in ipairs(DEAD_GLOBALS) do
         if db[g] ~= nil then db[g] = nil; n = n + 1 end
     end
+    for _, f in ipairs(DEAD_NAMEPLATE_FIELDS) do
+        if db.nameplates and db.nameplates[f] ~= nil then db.nameplates[f] = nil; n = n + 1 end
+    end
+    for _, k in ipairs(DEAD_AURA_KEYS) do
+        if db.auras and db.auras[k] ~= nil then db.auras[k] = nil; n = n + 1 end
+    end
     -- Los presets guardados arrastran lo mismo.
     for _, pr in pairs(db.presets or {}) do
         for _, t in pairs(pr.units or {}) do
@@ -152,6 +178,12 @@ function ns.PurgeDeadKeys(verbose)
         end
         for _, g in ipairs(DEAD_GLOBALS) do
             if pr.globals and pr.globals[g] ~= nil then pr.globals[g] = nil; n = n + 1 end
+        end
+        for _, f in ipairs(DEAD_NAMEPLATE_FIELDS) do
+            if pr.nameplates and pr.nameplates[f] ~= nil then pr.nameplates[f] = nil; n = n + 1 end
+        end
+        for _, k in ipairs(DEAD_AURA_KEYS) do
+            if pr.auras and pr.auras[k] ~= nil then pr.auras[k] = nil; n = n + 1 end
         end
     end
     if verbose then

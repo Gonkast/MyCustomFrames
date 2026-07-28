@@ -1152,7 +1152,7 @@ end
 local function RefreshAll()
     if ns.RefreshAllUnits then ns.RefreshAllUnits() end
     if ns.RefreshAllPortraits then ns.RefreshAllPortraits() end
-    if ns.RefreshAllAuras then ns.RefreshAllAuras() end
+    -- (ns.RefreshAllAuras quitado 2026-07-27: se fue con el grid de Auras.lua.)
     if ns.RefreshInfoBar then ns.RefreshInfoBar() end
     if ns.RefreshMicroMenu then ns.RefreshMicroMenu() end
     if ns.RefreshChatBubble then ns.RefreshChatBubble() end
@@ -2164,7 +2164,11 @@ events:RegisterEvent("PLAYER_FLAGS_CHANGED")   -- toggle de Modo Guerra → refr
 -- filtra por FRAME, no por llamada).
 events:RegisterEvent("UNIT_MODEL_CHANGED")
 events:RegisterEvent("UNIT_PORTRAIT_UPDATE")
-events:RegisterEvent("UNIT_AURA")
+-- UNIT_AURA: registro QUITADO 2026-07-27. Su unico handler refrescaba los
+-- grupos del grid de auras (ns.UpdateAuraGroup), que ya no existe -- quedaba
+-- despertando este frame en uno de los eventos MAS frecuentes del juego (cada
+-- aura que aparece/vence en CUALQUIER unidad visible) para no hacer nada.
+-- AuraHoverPreview.lua tiene su propio ticker y no depende de esto.
 -- ARENA (pedido del usuario 2026-07-19): dispara cuando Blizzard resuelve/
 -- actualiza los oponentes de arena (arena1/2/3) -- mas responsivo que esperar
 -- solo a GROUP_ROSTER_UPDATE/ZONE_CHANGED_NEW_AREA para el lado enemigo.
@@ -2250,18 +2254,15 @@ events:SetScript("OnEvent", function(self, event, arg1)
         if ns.micromenu and ns.micromenu.needsLayout and ns.RefreshMicroMenu then ns.RefreshMicroMenu() end
         -- Botones estaticos de personaje: recolocar por si la config cambio mientras estabamos en combate.
         if ns.LayoutPortraitCharButtonsAll then ns.LayoutPortraitCharButtonsAll() end
-        -- Auras: crea overlays de cancelacion que no se pudieron crear en combate
-        -- y refresca el grupo del player para poner al dia el macrotext.
-        if db then
-            for _, g in pairs(auras) do
-                for _, b in ipairs(g.buttons) do ns.EnsureCancelOverlay(b) end
-            end
-            if not unlocked then
-                for _, g in pairs(auras) do
-                    if g.unit == "player" then ns.UpdateAuraGroup(g) end
-                end
-            end
-        end
+        -- (Aca habia 2 bloques de auras -- crear overlays de cancelacion
+        -- diferidos y refrescar el grupo del player -- ELIMINADOS 2026-07-27:
+        -- llamaban a ns.EnsureCancelOverlay/ns.UpdateAuraGroup, que dejaron de
+        -- existir cuando Auras.lua se redujo a solo ns.DebuffTypeColor y las
+        -- auras pasaron a AuraHoverPreview.lua. No crasheaban porque la tabla
+        -- `auras` quedo permanentemente vacia (AURAS = {}), pero eran una mina:
+        -- el dia que alguien volviera a poblarla, reventaban con "attempt to
+        -- call a nil value". Ver los otros 3 call sites (PLAYER_TARGET_CHANGED
+        -- y UNIT_AURA mas abajo), quitados por lo mismo.)
     elseif event == "UNIT_MODEL_CHANGED" or event == "UNIT_PORTRAIT_UPDATE" then
         if db then
             for _, u in pairs(portraits) do
@@ -2287,18 +2288,8 @@ events:SetScript("OnEvent", function(self, event, arg1)
                 ns.PortraitUpdatePicture(portraits[k])
             end
         end
-        -- Y sus auras.
-        if db and not unlocked then
-            for _, g in pairs(auras) do
-                if g.unit == "target" then ns.UpdateAuraGroup(g) end
-            end
-        end
-    elseif event == "UNIT_AURA" then
-        if db and not unlocked then
-            for _, g in pairs(auras) do
-                if g.unit == arg1 then ns.UpdateAuraGroup(g) end
-            end
-        end
+        -- (Bloque de auras del target quitado 2026-07-27 -- ver nota en
+        -- PLAYER_REGEN_ENABLED mas arriba.)
     end
 end)
 
@@ -2319,8 +2310,8 @@ C_Timer.NewTicker(0.1, function()
     if ns.TickUnits then ns.TickUnits() end
     -- Tick por-portrait (badges/posicion/estado): extraido a Portraits.lua.
     if ns.TickPortraits then ns.TickPortraits() end
-    -- Tick de auras (reposicion/opacidad/texto/overlay de cancelar): extraido a Auras.lua.
-    if ns.TickAuras then ns.TickAuras() end
+    -- (Tick de auras QUITADO 2026-07-27: ns.TickAuras se fue con el grid de
+    -- Auras.lua. AuraHoverPreview.lua tiene su propio ticker.)
     -- Tick de raid (Raid.lua): 40 barras de vida no necesitan 10Hz reales, cada 2do ciclo (~0.2s).
     if tickState.n % 2 == 0 and ns.TickRaid then ns.TickRaid() end
     -- Info bar: refrescar valores ~1/seg.
