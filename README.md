@@ -188,7 +188,7 @@ Previews (`/mcfdiag test…`) are toggles — run them again to turn them off.
 
 ## Credits
 
-- **[AzeriteUI](https://github.com/AzeriteTeam/Azerite5)** by Daniel Troko and Lars Norberg — original source of the textures/visual language this preset is built on. Wouldn't exist without it.
+- **[AzeriteUI](https://github.com/AzeriteTeam/Azerite5)** by Daniel Troko and Lars Norberg — original source of the textures/visual language this preset is built on, including the bundled "Azerite HEX" Masque skin (ported from their `Masque_Azerite_Hex`, same assets). Wouldn't exist without it.
 - **[AzeriteUI JuNNeZ Edition (Midnight)](https://www.curseforge.com/wow/addons/azeriteui-junnez-edition-wow12)** — the Midnight-compatible fork this preset was originally built to run on.
 - **[Plumber](https://github.com/Peterodox/Plumber)** by Peterodox — menu styling, using real assets from its `Art/` folder. This project ships under **Plumber's license (GPLv3)** as a result.
 - **[W2UI](https://www.curseforge.com/wow/addons/w2ui)** — the micro menu icons come from its `Media/MenuBar` set.
