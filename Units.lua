@@ -470,6 +470,26 @@ local function UnitUpdateBar(u)
             u.bar:SetReverseFill(p.reverseFill and true or false)
         end
     end
+    -- FIX (2026-07-27, reportado: "el unitframe del player no sale si estas
+    -- muerto"): con la vida en 0 no queda NADA dibujado de la barra -- el
+    -- relleno manual se oculta (RenderManualFill sale temprano con frac<=0) y
+    -- la textura nativa ya esta en alpha 0. Si ademas `showBackground` esta
+    -- apagado -- que es el default del player en este preset -- lo unico que
+    -- sobrevive es el cage, y el frame parece haber desaparecido justo cuando
+    -- mas querés verlo (para leer el % / saber donde vas a revivir).
+    --
+    -- Se fuerza el fondo visible MIENTRAS la unidad este muerta. Preferido
+    -- sobre dibujar la barra llena de otro color: una barra vacia sobre fondo
+    -- sigue leyendose como "0 de vida", mientras que una llena tintada se
+    -- confunde con vida completa a simple vista. No toca la preferencia
+    -- guardada (p.showBackground): es solo lo dibujado en este tick, y el
+    -- proximo tick con la unidad viva lo devuelve a su valor normal.
+    -- Aplica a CUALQUIER unidad, no solo al player: el mismo camino de codigo
+    -- las borra a todas igual (target/focus/party incluidos).
+    if u.bg then
+        local dead = ns.safeBool(UnitExists, u.unit) and ns.safeBool(UnitIsDeadOrGhost, u.unit)
+        u.bg:SetShown(p.showBackground or dead or false)
+    end
     UnitUpdateText(u)
     UnitUpdateName(u)
 end

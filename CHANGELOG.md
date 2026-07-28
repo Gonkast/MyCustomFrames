@@ -120,6 +120,14 @@ worth reading before redoing one of them).
 - **Explorer ships disabled by default** (`explorerEnabled = false`), per request.
 
 ### Fixed
+- **The player unit frame looked like it vanished while you were dead.** At 0 health there
+  was nothing left to draw: the manual fill bails out early on a zero fraction, the native
+  bar texture is already at alpha 0, and the player's profile ships with `showBackground`
+  off — so only the cage outline survived. The frame's background is now forced visible
+  while a unit is dead, which reads correctly as "empty bar" rather than the alternative
+  (drawing a full bar in a different colour, which looks like full health at a glance).
+  The saved `showBackground` preference isn't touched — it's per-tick draw state only, and
+  it applies to any dead unit, not just the player.
 - **Audit pass: removed dead call sites left behind by the aura-grid removal.** When
   `Auras.lua` was stripped down to just `ns.DebuffTypeColor` this session, four call sites
   in `core.lua` were left calling functions that no longer exist
