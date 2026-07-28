@@ -147,14 +147,22 @@ end)
 -- build/que UNIT_AURA dispare a tiempo) -- eso solo se confirma viendo a un
 -- rival de verdad usar el trinket en un partido real.
 local trinketTestOn = false
-SLASH_MCFTRINKETTEST1 = "/mcftrinkettest"
-SlashCmdList["MCFTRINKETTEST"] = function()
+-- Expuesto en ns (2026-07-27) para el boton "Preview" de la seccion Trinket en
+-- Options.lua. Devuelve el estado NUEVO -- el boton lo usa para quedar marcado
+-- como activo mientras el preview este prendido (mismo contrato que los
+-- ns.ToggleXxxAuraTest de AuraHoverPreview.lua).
+function ns.ToggleArenaTrinketTest()
     trinketTestOn = not trinketTestOn
     for _, unit in ipairs(ENEMY_UNITS) do
         ns.ArenaTrinketState[unit] = trinketTestOn and { start = GetTime(), duration = 120 } or nil
         if ns.RefreshArenaTrinketIcon then ns.RefreshArenaTrinketIcon(unit) end
     end
-    print("|cff00ff00[MCF trinket test]|r " .. (trinketTestOn and "ON" or "off") ..
+    return trinketTestOn
+end
+
+SLASH_MCFTRINKETTEST1 = "/mcftrinkettest"
+SlashCmdList["MCFTRINKETTEST"] = function()
+    print("|cff00ff00[MCF trinket test]|r " .. (ns.ToggleArenaTrinketTest() and "ON" or "off") ..
         " -- tests the icon/cooldown draw path only, not real detection.")
 end
 

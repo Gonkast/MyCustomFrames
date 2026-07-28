@@ -1925,39 +1925,50 @@ local function BuildPanel()
     -- Descripcion corta por familia de seccion (arrays = puntos separados con
     -- bullet). Se resuelve por prefijo de key (mismo criterio que
     -- IsPortraitSection/IsAuraSection/etc, definidas mas arriba).
+    --
+    -- Los prefijos van INLINE a proposito, en vez de llamar a esos helpers
+    -- (2026-07-27, error real en juego: "function at line 1396 has more than 60
+    -- upvalues"). Este era el UNICO lugar de BuildPanel que los usaba, y eran 14
+    -- upvalues -- casi una cuarta parte del limite de 60 de Lua 5.1 -- gastados
+    -- en 14 comparaciones de prefijo de una linea. Inlinearlos bajo BuildPanel de
+    -- 61 a 47. Mismo criterio que ya se aplico antes en este archivo con los
+    -- prefijos "pa_"/"ta_" por identica razon.
+    -- Los helpers SIGUEN existiendo y en uso desde SelectUnit/ShowSection, que
+    -- son funciones aparte y tienen su propio presupuesto de upvalues.
+    -- Al agregar una familia nueva aca: inline, no el helper.
     local FAMILY_DESC = {
-        { test = function(k) return IsPortraitSection(k) end, title = "Portraits", desc = {
+        { test = function(k) return k:sub(1, 2) == "p_" end, title = "Portraits", desc = {
             "Portrait: frame, 3D model or icon.", "Badges and raid role/target marker." } },
-        { test = function(k) return IsAuraSection(k) end, title = "Auras", desc = {
+        { test = function(k) return k:sub(1, 2) == "a_" end, title = "Auras", desc = {
             "Grid, position and border of the group.", "Death/no-target icons and text." } },
-        { test = function(k) return IsInfoSection(k) end, title = "Info Bar", desc = {
+        { test = function(k) return k:sub(1, 2) == "i_" end, title = "Info Bar", desc = {
             "Visible elements and their position.", "Text and background of the bar." } },
-        { test = function(k) return IsMicroSection(k) end, title = "Micro Menu", desc = {
+        { test = function(k) return k:sub(1, 3) == "mm_" end, title = "Micro Menu", desc = {
             "Reskin of Blizzard's micro buttons.", "Movable and scalable." } },
-        { test = function(k) return IsChatSection(k) end, title = "Chat Bubble", desc = {
+        { test = function(k) return k:sub(1, 3) == "cb_" end, title = "Chat Bubble", desc = {
             "Background of world chat bubbles.", "Font and text color." } },
-        { test = function(k) return IsTrackerSection(k) end, title = "Quest Tracker", desc = {
+        { test = function(k) return k:sub(1, 2) == "t_" end, title = "Quest Tracker", desc = {
             "Colors of the quest tracker.", "Auto-hide in combat/instances." } },
-        { test = function(k) return IsGlowSection(k) end, title = "Assisted Glow", desc = {
+        { test = function(k) return k:sub(1, 2) == "g_" end, title = "Assisted Glow", desc = {
             "Assisted highlight for available abilities." } },
-        { test = function(k) return IsPartyAuraSection(k) end, title = "Party Auras", desc = {
+        { test = function(k) return k:sub(1, 3) == "ap_" end, title = "Party Auras", desc = {
             "Auras for Party1-5.", "Revealed on hover or in combat." } },
-        { test = function(k) return IsArenaAuraSection(k) end, title = "Arena Auras", desc = {
+        { test = function(k) return k:sub(1, 3) == "aa_" end, title = "Arena Auras", desc = {
             "Auras for the 6 arena frames.", "Revealed on hover or in combat, arena-only." } },
-        { test = function(k) return IsFocusAuraSection(k) end, title = "Focus Auras", desc = {
+        { test = function(k) return k:sub(1, 3) == "af_" end, title = "Focus Auras", desc = {
             "Auras for your focus target.", "Revealed on hover or in combat, whenever you have a focus." } },
         { test = function(k) return k:sub(1, 3) == "pa_" end, title = "Player Auras", desc = {
             "Your own buffs and debuffs.", "Revealed on hover, in combat, or while casting." } },
         { test = function(k) return k:sub(1, 3) == "ta_" end, title = "Target Auras", desc = {
             "Auras on your target.", "Always visible while you have a target -- also reveals on hover." } },
-        { test = function(k) return IsMinimapSection(k) end, title = "Minimap", desc = {
+        { test = function(k) return k:sub(1, 3) == "mn_" end, title = "Minimap", desc = {
             "Round custom skin around the native map.", "Compass, coordinates, LFG eye, XP/Rep ring." } },
-        { test = function(k) return IsNameplatesSection(k) end, title = "Nameplates", desc = {
+        { test = function(k) return k:sub(1, 3) == "np_" end, title = "Nameplates", desc = {
             "Reskin of Blizzard's native nameplates.", "Size/offsets via the Nameplate Designer (drag + wheel)." } },
-        { test = function(k) return IsClassPowerSection(k) end, title = "Class Power", desc = {
+        { test = function(k) return k:sub(1, 3) == "cp_" end, title = "Class Power", desc = {
             "Combo Points/Holy Power/Chi/Soul Shards/Arcane Charges/Essence/Runes/Soul Fragments/Maelstrom Weapon.",
             "Movable and scalable in Lock, even without an active class resource." } },
-        { test = function(k) return IsRaidSection(k) end, title = "Raid Frames", desc = {
+        { test = function(k) return k:sub(1, 2) == "r_" end, title = "Raid Frames", desc = {
             "Up to 40 players, AzeriteUI look. Shows in raid groups and battlegrounds only.",
             "Growth direction, spacing, and icon position/size are configurable — the rest of the look is fixed by design." } },
         { test = function(k) return k == "presets" end, title = "Profiles", desc = {
@@ -2396,6 +2407,38 @@ local function BuildPanel()
     end
     local L, R = 6, 232
 
+    -- Boton "Preview" de seccion (2026-07-27). Reemplaza al unico "Test Aura
+    -- Hover" que vivia en la fila FIJA del pie del panel: ese era global
+    -- (aparecia estuvieras donde estuvieras) y ademas se quedo viejo -- togglea
+    -- Party+Arena, y cuando Focus/Player/Target se sumaron al mismo sistema de
+    -- auras hover no los incluyo, asi que previsualizaba 2 de 5 grupos sin que
+    -- nada lo indicara. Ahora cada seccion tiene el suyo, al lado de los
+    -- controles que afecta y acotado a ESE grupo. El boton queda MARCADO como
+    -- activo mientras el preview este prendido: un test olvidado se ve, en vez
+    -- de ser un estado invisible prendido por chat hace diez minutos (paso esta
+    -- misma sesion -- auras que "no se escondian" por un testMode trabado).
+    --
+    -- OJO -- definida ACA ADENTRO, no a nivel de archivo, y no es cosmetico:
+    -- BuildPanel ya estaba al limite de 60 UPVALUES de Lua, y como local de
+    -- archivo referenciada desde aca sumaba uno y lo pasaba ("function at line
+    -- 1396 has more than 60 upvalues", visto en juego). Adentro es un LOCAL de
+    -- BuildPanel (limite aparte, 200) y no suma upvalues. Misma razon por la
+    -- que este archivo ya inlinea chequeos de prefijo en vez de darles nombre.
+    --
+    -- `toggleFn` se resuelve al hacer CLICK, no al construir el panel: varios
+    -- ns.ToggleXxxTest los definen AuraHoverPreview.lua/Indicators.lua, que en
+    -- el .toc cargan DESPUES que Options.lua -- capturarlos aca seria nil.
+    local function MakePreviewButton(parent, x, y, toggleFn)
+        local b = MakeButton(parent, "Preview", 90, 22)
+        b:SetPoint("TOPLEFT", x, y)
+        b:SetScript("OnClick", function()
+            local fn = toggleFn()
+            if type(fn) ~= "function" then return end
+            b:SetActive(fn() and true or false)
+        end)
+        return b
+    end
+
     -- General
     do
         local f = Section("general")
@@ -2520,6 +2563,9 @@ local function BuildPanel()
         note:SetPoint("TOPLEFT", L, -56); note:SetWidth(210); note:SetJustifyH("LEFT")
         note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("Detected via combat log only (public API) -- same as Blizzard's own arena frames.")
+        -- Solo prueba el DIBUJO (tamaño/posicion/que showTrinket este on), no la
+        -- deteccion -- eso unicamente se confirma con un rival usandolo de verdad.
+        MakePreviewButton(f, L, -96, function() return ns.ToggleArenaTrinketTest end)
 
         MakeHeader(f, "Position & size", R, -6, 210)
         MakeSlider(f, "Size", 8, 64, 1, "trinketSize", R, -48)
@@ -3793,6 +3839,8 @@ local function BuildPanel()
         MakeSlider(f, "Icon padding", 0, 20, 1, "partyAuraPadding", L, -252,
             function() return ns.GetDB() end,
             function() if ns.RefreshPartyAuraPadding then ns.RefreshPartyAuraPadding() end end)
+
+        MakePreviewButton(f, R, -164, function() return ns.TogglePartyAuraTest end)
     end
 
     -- =========================== SECCION ARENA AURAS (2026-07-19) ===========================
@@ -3855,6 +3903,8 @@ local function BuildPanel()
         MakeSlider(f, "Icon padding", 0, 20, 1, "arenaAuraPadding", L, -252,
             function() return ns.GetDB() end,
             function() if ns.RefreshArenaAuraPadding then ns.RefreshArenaAuraPadding() end end)
+
+        MakePreviewButton(f, R, -164, function() return ns.ToggleArenaAuraTest end)
     end
 
     -- =========================== SECCION FOCUS AURAS (2026-07-27) ===========================
@@ -3918,6 +3968,8 @@ local function BuildPanel()
         MakeSlider(f, "Icon padding", 0, 20, 1, "focusAuraPadding", L, -252,
             function() return ns.GetDB() end,
             function() if ns.RefreshFocusAuraPadding then ns.RefreshFocusAuraPadding() end end)
+
+        MakePreviewButton(f, R, -164, function() return ns.ToggleFocusAuraTest end)
     end
 
     -- =========================== SECCION PLAYER AURAS (2026-07-27) ===========================
@@ -3981,6 +4033,8 @@ local function BuildPanel()
         MakeSlider(f, "Icon padding", 0, 20, 1, "playerAuraPadding", L, -252,
             function() return ns.GetDB() end,
             function() if ns.RefreshPlayerAuraPadding then ns.RefreshPlayerAuraPadding() end end)
+
+        MakePreviewButton(f, R, -164, function() return ns.TogglePlayerAuraTest end)
     end
 
     -- =========================== SECCION TARGET AURAS (2026-07-27) ===========================
@@ -4043,6 +4097,8 @@ local function BuildPanel()
         MakeSlider(f, "Icon padding", 0, 20, 1, "targetAuraPadding", L, -252,
             function() return ns.GetDB() end,
             function() if ns.RefreshTargetAuraPadding then ns.RefreshTargetAuraPadding() end end)
+
+        MakePreviewButton(f, R, -164, function() return ns.ToggleTargetAuraTest end)
     end
 
     -- =========================== SECCION CLASS POWER (2026-07-19) ===========================
@@ -4584,19 +4640,14 @@ local function BuildPanel()
     panelButtons[#panelButtons + 1] = wizardBtn
     AddTooltip(wizardBtn, "Setup Wizard", "Reopens the first-install wizard (addon integration, profiles, Explorer Mode, etc).")
 
-    -- Pedido del usuario 2026-07-19: boton para testear el hover de las
-    -- auras de Party + Arena sin necesitar grupo/partido real -- togglea
-    -- AMBOS sistemas a la vez (PartyAuraPreview.lua/ArenaAuraPreview.lua).
-    local auraTestBtn = MakeTabButton(panel, "Test Aura Hover", 150, 24)
-    auraTestBtn:SetPoint("LEFT", wizardBtn, "RIGHT", 6, 0)
-    auraTestBtn:SetScript("OnClick", function()
-        local state = false
-        if ns.TogglePartyAuraTest then state = ns.TogglePartyAuraTest() end
-        if ns.ToggleArenaAuraTest then state = ns.ToggleArenaAuraTest() end
-        auraTestBtn:SetActive(state and true or false)
-    end)
-    panelButtons[#panelButtons + 1] = auraTestBtn
-    AddTooltip(auraTestBtn, "Test Aura Hover", "Shows placeholder auras on Party + Arena frames to test the hover/combat reveal, without needing a real group or match. Same as /mcfpartytest + /mcfarenaauratest.")
+    -- QUITADO "Test Aura Hover" (2026-07-27). Era el unico boton de preview del
+    -- addon y vivia aca, en la fila FIJA del pie: global (visible estuvieras
+    -- donde estuvieras) y desactualizado -- togglea Party+Arena, y cuando
+    -- Focus/Player/Target se sumaron al mismo sistema de auras hover no los
+    -- incluyo, asi que previsualizaba 2 de 5 grupos sin que nada lo indicara.
+    -- Reemplazado por un boton "Preview" POR SECCION (ver MakePreviewButton),
+    -- al lado de los controles que afecta y acotado a ese grupo.
+    -- `skinsBtn` se anclaba a este boton: ahora va directo contra wizardBtn.
 
     -- Pedido del usuario 2026-07-23: reemplaza "Set Default" (que sigue
     -- disponible en la pestaña Profile, esto solo saca el ATAJO del footer)
@@ -4705,7 +4756,7 @@ local function BuildPanel()
         p:Show(); p:Raise()
     end
     local skinsBtn = MakeTabButton(panel, "Skins", 90, 24)
-    skinsBtn:SetPoint("LEFT", auraTestBtn, "RIGHT", 6, 0)
+    skinsBtn:SetPoint("LEFT", wizardBtn, "RIGHT", 6, 0)
     -- Toggle (pedido del usuario 2026-07-23): apretar el boton de nuevo con
     -- el popup YA abierto lo CIERRA, en vez de solo re-posicionarlo/mostrarlo.
     skinsBtn:SetScript("OnClick", function()
@@ -4718,7 +4769,7 @@ local function BuildPanel()
     panelButtons[#panelButtons + 1] = skinsBtn
 
     -- 2026-07-17: centrar el grupo entero (estaba pegado a la izquierda). Como
-    -- greenBtn/resetAllFooterBtn/wizardBtn/auraTestBtn/skinsBtn estan
+    -- greenBtn/resetAllFooterBtn/wizardBtn/skinsBtn estan
     -- anclados EN CADENA relativos a moveBtn, alcanza con re-anclar solo
     -- moveBtn — el resto se mueve con el.
     local totalW = skinsBtn:GetRight() - moveBtn:GetLeft()

@@ -105,9 +105,15 @@ eventFrame:SetScript("OnEvent", function(self)
     end)
 end)
 
+-- Expuesto en ns (2026-07-27) para el boton "Preview" de Options.lua. Devuelve
+-- el estado NUEVO, que el boton usa para quedar marcado mientras este activo.
+function ns.ToggleLossOfControlTest()
+    testMode = not testMode
+    Refresh()
+    return testMode
+end
+
 SLASH_MCFLOCTEST1 = "/mcfloctest"
 SlashCmdList["MCFLOCTEST"] = function()
-    testMode = not testMode
-    print("|cff00ff00[MCF Loss of Control test]|r " .. (testMode and "ON" or "off"))
-    Refresh()
+    print("|cff00ff00[MCF Loss of Control test]|r " .. (ns.ToggleLossOfControlTest() and "ON" or "off"))
 end

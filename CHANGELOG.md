@@ -79,7 +79,27 @@ worth reading before redoing one of them).
   `GetClassColorForUnit` helper already used for the friendly name-only mode, scoped to
   hostile *players* only (never NPCs — `UnitIsPlayer` gates it before even trying).
 
+### Fixed
+- **`LUA_WARNING: function at line 1396 has more than 60 upvalues`.** `BuildPanel` had been
+  sitting at exactly 60 — Lua 5.1's hard ceiling — for a while, and the aura-hover move
+  earlier this session pushed it to 61, where it stayed for several commits before being
+  noticed. Traced with `luac -l -p` rather than guessing: **14 of the 61 were
+  `IsXxxSection` helpers**, one-line prefix checks, all used in a single place (the
+  section-family description table). Inlining the prefix comparison there drops
+  `BuildPanel` to **47**, so there's real headroom again instead of being one addition away
+  from breaking. The helpers still exist and are still used from `SelectUnit`/`ShowSection`,
+  which have their own budgets.
+
 ### Changed
+- **Section "Preview" buttons.** Each section that has a preview now has its own button next
+  to the controls it affects, scoped to that group, and it stays visibly lit while the
+  preview is on — a forgotten test mode is now something you can see rather than invisible
+  state toggled from chat (which bit this session: auras that "wouldn't hide" were a stuck
+  `testMode`). Replaces the single **Test Aura Hover** button in the footer, which was
+  global and had gone stale: it toggled Party+Arena only, so once Focus/Player/Target
+  joined the same system it silently previewed 2 of 5 groups. `ns.ToggleArenaTrinketTest`,
+  `ns.ToggleIndicatorTest` and `ns.ToggleLossOfControlTest` are exposed for it, with the
+  slash commands now routing through the same functions.
 - **All ~40 slash commands are discoverable in-game now.** The `/mcfdiag` router existed but
   only 4 commands were registered with it; the other 36 could only be found by reading the
   README. Everything is registered now, and the listing is grouped rather than one flat
