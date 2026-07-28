@@ -1008,6 +1008,72 @@ local UpdatePreview   -- asignada en BuildPanel (3ra columna estilo Plumber, ver
 -- dando la sensacion de estar en dos secciones a la vez. Se ocultan explicito aca.
 local GLOBAL_SECTION_TITLE = { presets = "Profile", explorer = "Explorer", editing = "Editing", setup = "Setup", extras = "Extras" }
 
+-- Alto REAL del contenido de una seccion (2026-07-27, junto con el scroll de
+-- secArea). Las secciones no declaran su alto en ningun lado: cada control se
+-- ancla a mano con un offset Y negativo, asi que el unico modo de saber cuanto
+-- ocupa una es MEDIR el elemento mas bajo ya renderizado. Recursivo con tope de
+-- profundidad porque hay controles compuestos (los sliders cuelgan su label y su
+-- editbox como hijos, los grupos anidan frames) y el GetBottom del padre no
+-- siempre los cubre. Solo cuenta lo VISIBLE: varias secciones ocultan widgets
+-- segun la unidad (power/color), y contarlos inflaria el scroll con espacio
+-- vacio.
+local function MeasureSectionBottom(obj, lowest, depth)
+    if depth > 3 then return lowest end
+    local okKids, kids = pcall(function() return { obj:GetChildren() } end)
+    if okKids then
+        for _, c in ipairs(kids) do
+            if c.IsShown and c:IsShown() then
+                local b = c.GetBottom and c:GetBottom()
+                if b and b < lowest then lowest = b end
+                lowest = MeasureSectionBottom(c, lowest, depth + 1)
+            end
+        end
+    end
+    local okRegs, regs = pcall(function() return { obj:GetRegions() } end)
+    if okRegs then
+        for _, r in ipairs(regs) do
+            if r.IsShown and r:IsShown() and r.GetBottom then
+                local b = r:GetBottom()
+                if b and b < lowest then lowest = b end
+            end
+        end
+    end
+    return lowest
+end
+
+-- Redimensiona el child del scroll al alto de la seccion visible y muestra u
+-- oculta la barrita. Llega a secScroll/secArea por GetParent() en vez de por un
+-- local de archivo: BuildPanel ya rozo el limite de 60 upvalues de Lua.
+local function UpdateSectionScroll(f)
+    if not f then return end
+    local area = f:GetParent()
+    local scroll = area and area:GetParent()
+    if not (area and scroll and scroll.SetVerticalScroll) then return end
+    local viewH = scroll:GetHeight() or 0
+    if viewH <= 0 then return end
+    local top = f:GetTop()
+    local contentH = viewH
+    if top then
+        local lowest = MeasureSectionBottom(f, top, 1)
+        -- +18 de aire abajo para que el ultimo control no quede pegado al borde.
+        contentH = math.max((top - lowest) + 18, viewH)
+    end
+    area:SetHeight(contentH)
+    scroll:SetVerticalScroll(0)
+
+    local track, thumb = scroll.mcfTrack, scroll.mcfThumb
+    if not (track and thumb) then return end
+    local maxScroll = contentH - viewH
+    if maxScroll <= 0 then
+        track:Hide()
+        return
+    end
+    track:Show()
+    -- Alto del thumb proporcional a cuanto del contenido se ve (minimo 24px para
+    -- que siga siendo agarrable en secciones muy largas).
+    thumb:SetHeight(math.max(viewH * (viewH / contentH), 24))
+end
+
 local function ShowSection(key)
     if not sections[key] then return end
     currentSection = key
@@ -1040,6 +1106,9 @@ local function ShowSection(key)
     -- "botones que no aparecen hasta salir y volver"). Aplicarlo en CADA cambio de seccion.
     local f = sections[key]
     if f and f:IsShown() then f:Hide(); f:Show() end
+    -- Recalcular el scroll DESPUES del nudge: la medicion lee posiciones ya
+    -- renderizadas, y antes del Hide/Show pueden no estar asentadas todavia.
+    UpdateSectionScroll(f)
     -- Transicion suave (2026-07-17): un fade-in corto en vez de aparecer de golpe,
     -- calcando el pulido de Plumber al cambiar de categoria.
     if f and UIFrameFadeIn then
@@ -2169,11 +2238,13 @@ local function BuildPanel()
     BuildTabRow(raidSecList, 40, true)
 
     -- Pestanas de SECCION para Nameplates -- 2do tab "Alpha" agregado
-    -- 2026-07-19 (pedido del usuario, 5 controles de alpha nuevos): el panel
-    -- NO tiene scroll (content:SetPoint BOTTOMRIGHT contra preview, corte
-    -- duro en el borde) -- meterlos todos en "Gen" empujaba "Name-only mode"
-    -- y sus offsets fuera de la ventana. Pestaña propia = espacio de sobra
-    -- para cada grupo, sin apretar pixeles.
+    -- 2026-07-19 (pedido del usuario, 5 controles de alpha nuevos) y 3ro
+    -- "Names" el 2026-07-27, los dos por FALTA DE ESPACIO: el panel no tenia
+    -- scroll y lo que no entraba quedaba cortado en el borde.
+    -- DESDE 2026-07-27 secArea SI scrollea (ver secScroll mas abajo), asi que
+    -- esa restriccion ya no aplica -- estas 3 pestañas se dejan como estan
+    -- porque agrupan bien por tema, no porque haga falta. Una seccion larga
+    -- ahora es una decision de diseño, no un limite tecnico.
     local nameplatesSecList = { { key = "np_general", label = "Gen" }, { key = "np_alpha", label = "Alpha" },
         { key = "np_names", label = "Names" } }
     BuildTabRow(nameplatesSecList, 40, true)
@@ -2224,9 +2295,93 @@ local function BuildPanel()
 
     -- Area de controles de la seccion activa. (2026-07-17: bajada de -54 a -70,
     -- el usuario la queria mas separada de la fila de pestañas Gen/Bar/Cage/...)
-    local secArea = CreateFrame("Frame", nil, content)
-    secArea:SetPoint("TOPLEFT", 0, -70)
-    secArea:SetPoint("BOTTOMRIGHT", 0, 0)
+    --
+    -- AHORA CON SCROLL (2026-07-27). Antes `secArea` era un Frame pelado anclado
+    -- contra el borde de `content`: todo lo que no entraba en la ventana quedaba
+    -- CORTADO -- sin error, sin aviso, y sin forma de llegar al control. Ya habia
+    -- forzado a partir secciones en pestañas nuevas varias veces solo por espacio
+    -- (ver el comentario de nameplatesSecList mas arriba, que documentaba
+    -- justamente "el panel NO tiene scroll... corte duro en el borde"), y el
+    -- ultimo caso fue un checkbox de Nameplates tapado por la fila de botones de
+    -- abajo. Con scroll, agregar opciones deja de tener techo.
+    --
+    -- OJO al tocar esto: `secArea` es el CHILD del scroll, asi que NO puede usar
+    -- anclaje de 2 puntos (un scroll child se dimensiona con SetSize; el ancho lo
+    -- sigue el OnSizeChanged de abajo y el alto lo fija ShowSection midiendo la
+    -- seccion visible).
+    local secScroll = CreateFrame("ScrollFrame", nil, content)
+    secScroll:SetPoint("TOPLEFT", 0, -70)
+    secScroll:SetPoint("BOTTOMRIGHT", -10, 0)
+    secScroll:EnableMouseWheel(true)
+    secScroll:SetScript("OnMouseWheel", function(self, delta)
+        local child = self:GetScrollChild()
+        local maxScroll = math.max((child and child:GetHeight() or 0) - (self:GetHeight() or 0), 0)
+        self:SetVerticalScroll(math.min(math.max(self:GetVerticalScroll() - delta * 40, 0), maxScroll))
+    end)
+
+    local secArea = CreateFrame("Frame", nil, secScroll)
+    -- Alto inicial GENEROSO a proposito: un ScrollFrame SI recorta a su hijo, asi
+    -- que si naciera con 1px todo lo de mas abajo quedaria invisible hasta el
+    -- primer ShowSection. Se corrige al alto real medido en cuanto se muestra una
+    -- seccion; esto solo cubre el primer frame.
+    secArea:SetSize(math.max(secScroll:GetWidth() or 0, 1), 1500)
+    secScroll:SetScrollChild(secArea)
+    -- El ancho del child tiene que seguir al del viewport: los controles se anclan
+    -- con offsets X fijos (L=6 / R=232) y si el child naciera con ancho 0 quedarian
+    -- todos apilados en el borde izquierdo. El SetWidth de arriba cubre el caso en
+    -- que el scroll YA tenga tamaño al crearse (OnSizeChanged no dispara si nunca
+    -- cambia despues).
+    secScroll:SetScript("OnSizeChanged", function(_, w) secArea:SetWidth(w) end)
+
+    -- Barrita de scroll: fina, sin flechas (a diferencia de la del sidebar) y
+    -- OCULTA cuando la seccion entra entera -- asi el 90% de las secciones, que
+    -- no scrollean, se ven igual que antes. La actualiza ShowSection.
+    local secTrack = CreateFrame("Frame", nil, content)
+    secTrack:SetWidth(4)
+    secTrack:SetPoint("TOPRIGHT", secScroll, "TOPRIGHT", 8, 0)
+    secTrack:SetPoint("BOTTOMRIGHT", secScroll, "BOTTOMRIGHT", 8, 0)
+    local secRail = secTrack:CreateTexture(nil, "BACKGROUND")
+    secRail:SetAllPoints()
+    secRail:SetColorTexture(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.25)
+    local secThumb = CreateFrame("Button", nil, secTrack)
+    secThumb:SetWidth(4)
+    secThumb:SetPoint("TOP")
+    local secThumbTex = secThumb:CreateTexture(nil, "ARTWORK")
+    secThumbTex:SetAllPoints()
+    secThumbTex:SetColorTexture(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3], 0.75)
+    secTrack:Hide()
+    -- Arrastre del thumb: convierte la posicion del mouse dentro del track en
+    -- scroll (misma idea que el del sidebar, sin las flechas).
+    secThumb:RegisterForDrag("LeftButton")
+    secThumb:SetScript("OnDragStart", function(self) self.dragging = true end)
+    secThumb:SetScript("OnDragStop", function(self) self.dragging = false end)
+    secThumb:SetScript("OnUpdate", function(self)
+        if not self.dragging then return end
+        local _, cursorY = GetCursorPosition()
+        local scale = secTrack:GetEffectiveScale()
+        if not scale or scale == 0 then return end
+        cursorY = cursorY / scale
+        local top, height = secTrack:GetTop(), secTrack:GetHeight()
+        local child = secScroll:GetScrollChild()
+        local maxScroll = math.max((child and child:GetHeight() or 0) - (secScroll:GetHeight() or 0), 0)
+        if not (top and height and height > 0) or maxScroll <= 0 then return end
+        local frac = math.min(math.max((top - cursorY) / height, 0), 1)
+        secScroll:SetVerticalScroll(frac * maxScroll)
+    end)
+    -- Expuestos para ShowSection (que vive a nivel de archivo y llega hasta aca
+    -- via GetParent()): se cuelgan del propio ScrollFrame en vez de crear locals
+    -- de archivo nuevos -- BuildPanel ya rozo el limite de 60 upvalues de Lua
+    -- (paso de verdad esta sesion), asi que no se le suman referencias nuevas.
+    secScroll.mcfTrack, secScroll.mcfThumb = secTrack, secThumb
+    -- El thumb sigue la posicion del scroll venga de donde venga (rueda, arrastre
+    -- o el reset a 0 de ShowSection) -- OnVerticalScroll dispara en los 3 casos.
+    secScroll:SetScript("OnVerticalScroll", function(self, offset)
+        local child = self:GetScrollChild()
+        local maxScroll = math.max((child and child:GetHeight() or 0) - (self:GetHeight() or 0), 0)
+        if maxScroll <= 0 then return end
+        local travel = math.max((secTrack:GetHeight() or 0) - (secThumb:GetHeight() or 0), 0)
+        secThumb:SetPoint("TOP", secTrack, "TOP", 0, -(offset / maxScroll) * travel)
+    end)
 
     local cdiv = secArea:CreateTexture(nil, "ARTWORK")
     cdiv:SetTexture(PL.DIV_V)

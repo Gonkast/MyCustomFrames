@@ -80,6 +80,18 @@ worth reading before redoing one of them).
   hostile *players* only (never NPCs — `UnitIsPlayer` gates it before even trying).
 
 ### Changed
+- **The options panel's section area scrolls now.** It never did: each section was a plain
+  frame pinned to the edge of the content area, so anything that didn't fit was clipped —
+  no error, no scrollbar, no way to reach the control. It had already forced splitting
+  sections into extra tabs purely for room (the Nameplates "Alpha" and "Names" tabs both
+  exist for that reason), and the most recent case was a checkbox hidden behind the bottom
+  button row. Adding options no longer has a ceiling.
+  Since sections declare no height — every control is hand-placed at a negative Y offset —
+  the height is measured from the lowest rendered element each time a section is shown,
+  walking children recursively (composite controls like sliders park their label and edit
+  box as children) and counting only what's visible, so sections that hide widgets per unit
+  don't scroll into empty space. Mouse wheel plus a thin draggable bar that stays hidden
+  when everything fits, which is most sections.
 - **Setup Wizard page 2 now states the recommendation in yellow**, above the red warning:
   ticking all of them is what the preset is designed around, and nothing is pre-selected on
   purpose so you have to tick them yourself. Without this the opt-in change below reads as
