@@ -306,7 +306,11 @@ end
 --     SIN contra-escala: encogen con la distancia (escala = effScale).
 --   * nombre y los 3 grupos de auras -> `SetScale(1/effScale)` (Nameplates.lua
 --     lineas ~816 y ~1254): quedan a escala de PANTALLA fija, no encogen.
--- Por eso hay dos divisores: StageDivisor (con stageScale) y NameDivisor (sin).
+-- YA NO hay dos divisores (2026-07-28). Desde que TODOS los offsets de
+-- ns.NPLayout estan en unidades del plate -- tambien los del regimen
+-- "screen" -- el factor es el mismo para todos: stageScale * ZOOM. Antes el
+-- nombre y las auras usaban uno sin stageScale, que era coherente con como se
+-- dibujaban entonces pero acoplaba su posicion a la distancia del mob.
 --
 -- Si stageScale = 1 los dos divisores colapsan y el panel dibuja todo a la
 -- misma escala -- que es exactamente lo que se reporto: "las posiciones no
@@ -356,7 +360,6 @@ end
 -- en pantalla siga guardando el mismo offset de siempre, zoom aparte.
 local ZOOM = 1.6
 local function StageDivisor() return stageScale * ZOOM end
-local function NameDivisor() return ZOOM end
 
 -- (`anyDragActive` eliminado 2026-07-27: existia solo para congelar el ticker
 -- de escala del stage a mitad de un arrastre. Ese ticker ya no existe -- el
@@ -1059,7 +1062,7 @@ local function CreateDesigner()
     nameFS:SetText("Cheesanator")
     nameHolder.fs = nameFS
     TrackHighlight(ns.MakeEditHighlight(nameHolder))
-    MakeDraggable(nameHolder, "nameOffsetX", "nameOffsetY", NameDivisor)
+    MakeDraggable(nameHolder, "nameOffsetX", "nameOffsetY", StageDivisor)
     MakeWheelResize(nameHolder, function(p, dir)
         p.nameFontSize = clamp((p.nameFontSize or 16) + (dir > 0 and 1 or -1), 8, 28)
     end, root, "name")
@@ -1191,19 +1194,19 @@ local function CreateDesigner()
     -- usuario 2026-07-19: "que no pueda alterar las auras en combate".
     local bigHolder, bigHL, bigShownCB = MakeAuraGroupMock(content, "Big Debuff", "auraShowBigDebuff")
     bigHolder:SetScale(ZOOM)
-    MakeDraggable(bigHolder, "bigDebuffOffsetX", "bigDebuffOffsetY", NameDivisor, true)
+    MakeDraggable(bigHolder, "bigDebuffOffsetX", "bigDebuffOffsetY", StageDivisor, true)
     els[#els + 1] = { handle = bigHolder, anchor = stage,
         layout = function(p) return ns.NPLayout.AuraGroup(p, "big") end }
 
     local personalHolder, personalHL, personalShownCB = MakeAuraGroupMock(content, "Personal Debuffs", "auraShowPersonalDebuffs")
     personalHolder:SetScale(ZOOM)
-    MakeDraggable(personalHolder, "personalDebuffsOffsetX", "personalDebuffsOffsetY", NameDivisor, true)
+    MakeDraggable(personalHolder, "personalDebuffsOffsetX", "personalDebuffsOffsetY", StageDivisor, true)
     els[#els + 1] = { handle = personalHolder, anchor = stage,
         layout = function(p) return ns.NPLayout.AuraGroup(p, "personal") end }
 
     local enemyHolder, enemyHL, enemyShownCB = MakeAuraGroupMock(content, "Enemy Buffs", "auraShowEnemyBuffs")
     enemyHolder:SetScale(ZOOM)
-    MakeDraggable(enemyHolder, "enemyBuffsOffsetX", "enemyBuffsOffsetY", NameDivisor, true)
+    MakeDraggable(enemyHolder, "enemyBuffsOffsetX", "enemyBuffsOffsetY", StageDivisor, true)
     els[#els + 1] = { handle = enemyHolder, anchor = stage,
         layout = function(p) return ns.NPLayout.AuraGroup(p, "enemy") end }
 
@@ -1504,7 +1507,16 @@ Reflow = function()
         -- Los offsets del perfil ya vienen sumados por el layout, no se re-suman.
         local l = e.layout(p)
         e.handle:ClearAllPoints()
-        e.handle:SetPoint(l.point, e.anchor, l.relPoint, l.x, l.y)
+        -- Los offsets de ns.NPLayout estan en unidades del PLATE, tambien para
+        -- los elementos del regimen "screen" (nombre y auras) -- ver la nota en
+        -- NameplateLayout.lua. Los del regimen "plate" ya cuelgan de `stage`,
+        -- que YA tiene stageScale aplicado, asi que no hay que escalarlos otra
+        -- vez; los "screen" cuelgan de `content` a escala ZOOM pelada, asi que
+        -- se les aplica aca. Con esto la proporcion nombre-barra del panel es
+        -- la misma a cualquier zoom Y a cualquier escala de referencia: los dos
+        -- factores se cancelan en la razon.
+        local k = (l.scaleRegime == "screen") and stageScale or 1
+        e.handle:SetPoint(l.point, e.anchor, l.relPoint, l.x * k, l.y * k)
     end
 
     -- TAMAÑO DE LOS HOLDERS DE TEXTO -- tiene que copiar la ESTRUCTURA del real,
@@ -1763,61 +1775,65 @@ end
 -- ==========================================================================
 -- DIAGNOSTICO /mcfnpanchordiag (2026-07-28)
 --
--- Mide la distancia REAL entre el tope de `uf` (el UnitFrame del nameplate, al
--- que se ancla el nombre) y el tope de la barra de vida (que es contra lo que
--- el panel dibuja todo). El panel asume que son el mismo punto -- `stage` mide
--- 1x1 y la barra cuelga de el -- pero en el nameplate real `uf` es el frame
--- ENTERO de Blizzard, y su tope esta mas arriba que la barra.
+-- La primera version intentaba MEDIR la distancia entre el tope de `uf` y el
+-- tope de la barra anclando dos sondas propias. No sirve: anclar a un frame
+-- restringido restringe tambien la posicion de la sonda, asi que tampoco se
+-- pueden medir. (Y la pregunta quedo respondida por codigo: LockBar ancla la
+-- barra real a uf TOP/TOP con y=-1, o sea que el panel modela bien el origen.)
 --
--- COMO mide, si GetTop/GetRect estan bloqueados en nameplates: no se mide el
--- nameplate. Se crean dos frames PROPIOS, hijos de UIParent (no del nameplate,
--- asi no heredan la restriccion), y se ANCLA cada uno a uno de los dos puntos.
--- Anclar a un frame restringido esta permitido; lo que esta prohibido es
--- medirlo. Midiendo nuestros propios frames se obtiene la distancia exacta.
+-- Esta version NO MIDE NADA: CALCULA lo que cada lado dibuja, a partir de
+-- numeros que si se pueden obtener (offsets del perfil, altura configurada,
+-- GetEffectiveScale, stageScale, ZOOM). Compara la unica cosa que tiene que
+-- coincidir para que el panel prediga el juego: la separacion nombre-barra
+-- EXPRESADA EN ALTURAS DE BARRA. Esa razon no depende del zoom ni de la
+-- distancia, asi que si los dos lados no dan el mismo numero, ahi esta el bug
+-- -- y el desglose muestra en cual de los factores se separa.
 -- ==========================================================================
-local probeA, probeB
 SLASH_MCFNPANCHORDIAG1 = "/mcfnpanchordiag"
 SlashCmdList["MCFNPANCHORDIAG"] = function()
     local plate = UnitExists("target") and C_NamePlate and C_NamePlate.GetNamePlateForUnit
         and C_NamePlate.GetNamePlateForUnit("target")
     local uf = plate and (plate.UnitFrame or plate)
-    if not uf or not uf.healthBar then
+    if not uf then
         print("|cffff5555[MCF]|r Necesito un target con nameplate visible.")
         return
     end
-    probeA = probeA or CreateFrame("Frame", nil, UIParent)
-    probeB = probeB or CreateFrame("Frame", nil, UIParent)
-    probeA:SetSize(1, 1); probeB:SetSize(1, 1)
-    probeA:ClearAllPoints(); probeB:ClearAllPoints()
-    local okA = pcall(probeA.SetPoint, probeA, "TOP", uf, "TOP", 0, 0)
-    local okB = pcall(probeB.SetPoint, probeB, "TOP", uf.healthBar, "TOP", 0, 0)
-    if not (okA and okB) then
-        print("|cffff5555[MCF]|r No pude anclar las sondas (" ..
-            (okA and "healthBar" or "uf") .. " rechazo el anclaje).")
+    local p = P()
+    if not p then print("|cffff5555[MCF]|r Sin perfil."); return end
+    local okS, eff = pcall(uf.GetEffectiveScale, uf)
+    if not (okS and type(eff) == "number" and eff > 0) then
+        print("|cffff5555[MCF]|r No pude leer la escala del nameplate.")
         return
     end
-    local okTA, topA = pcall(probeA.GetTop, probeA)
-    local okTB, topB = pcall(probeB.GetTop, probeB)
-    print("|cffffe19b[MCF anchor]|r tope de uf vs tope de la barra:")
-    if okTA and okTB and type(topA) == "number" and type(topB) == "number"
-        and not (issecretvalue and (issecretvalue(topA) or issecretvalue(topB))) then
-        local d = topA - topB
-        print(("  tope uf     = %.1f"):format(topA))
-        print(("  tope barra  = %.1f"):format(topB))
-        print(("  |cffffff00DIFERENCIA = %.1f px de pantalla|r"):format(d))
-        if math.abs(d) < 2 then
-            print("  ~0 -> el panel tiene razon: uf y la barra empiezan igual.")
-        else
-            print("  =/= 0 -> CONFIRMADO: el nombre y las auras se anclan " ..
-                ("%.1f px mas arriba"):format(d) .. " en el juego que en el panel.")
-        end
+
+    local nl = ns.NPLayout.Name(p)
+    local hl = ns.NPLayout.Health(p)
+    local _, barH = ns.NPLayout.HealthSize(p)
+
+    -- REAL: el holder del nombre lleva contra-escala, o sea escala efectiva 1
+    -- -- sus offsets son pixeles de pantalla tal cual. La barra va a `eff`.
+    local realGap  = nl.y * 1.0 + math.abs(hl.y) * eff
+    local realBar  = barH * eff
+    -- PANEL: el nombre va a escala ZOOM, la barra a stageScale*ZOOM.
+    local panelGap = nl.y * ZOOM + math.abs(hl.y) * stageScale * ZOOM
+    local panelBar = barH * stageScale * ZOOM
+
+    print("|cffffe19b[MCF anchor]|r separacion nombre-barra, en ALTURAS DE BARRA:")
+    print(("  perfil: nameOffsetY=%s  ->  L.Name.y=%s   |   healthHeight=%s  L.Health.y=%s"):format(
+        tostring(p.nameOffsetY), tostring(nl.y), tostring(barH), tostring(hl.y)))
+    print(("  escalas: nameplate real=%.3f   panel stage=%.3f  zoom=%.2f"):format(eff, stageScale, ZOOM))
+    print(("  REAL  : hueco %.1f px / barra %.1f px = |cff00ff00%.3f|r"):format(
+        realGap, realBar, realGap / realBar))
+    print(("  PANEL : hueco %.1f px / barra %.1f px = |cff00ff00%.3f|r"):format(
+        panelGap, panelBar, panelGap / panelBar))
+    local d = math.abs(realGap / realBar - panelGap / panelBar)
+    if d < 0.02 then
+        print("  |cff00ff00Coinciden.|r El modelo geometrico NO es la causa -- el problema")
+        print("  esta en el dibujado (tamaño de fuente, punto del texto o capa), no en la")
+        print("  posicion. Decimelo y busco por ese lado.")
     else
-        print("  |cffff5555las sondas tampoco se pudieron medir|r")
+        print(("  |cffff5555DIFIEREN por %.3f alturas de barra|r -- aca esta el bug."):format(d))
+        print(("  El nombre del panel esta %s que en el juego."):format(
+            (panelGap / panelBar > realGap / realBar) and "MAS LEJOS de la barra" or "MAS CERCA de la barra"))
     end
-    local okH, ufH = pcall(uf.GetHeight, uf)
-    local okB2, barH = pcall(uf.healthBar.GetHeight, uf.healthBar)
-    print(("  alto uf=%s  alto barra=%s  escala=%.3f"):format(
-        okH and string.format("%.1f", ufH) or "?",
-        okB2 and string.format("%.1f", barH) or "?",
-        select(2, pcall(uf.GetEffectiveScale, uf)) or 0))
 end

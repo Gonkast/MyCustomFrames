@@ -818,8 +818,14 @@ local function ReassertNameGeometry(uf)
     -- de arriba ya resolvieron cual par de offsets corresponde (normal vs
     -- name-only), asi que se pasan directo en vez de dejar que el layout los
     -- lea del perfil.
+    -- Offsets en unidades del PLATE: se multiplican por effScale (ver la nota
+    -- del regimen "screen" en NameplateLayout.lua). El holder conserva su
+    -- contra-escala, asi que la FUENTE sigue nitida; lo que ahora acompaña a la
+    -- barra es la POSICION. Sin esto la separacion nombre-barra variaba mas del
+    -- doble con la distancia y ningun panel podia predecirla.
     local nl = ns.NPLayout.Name(p)
-    holder:SetPoint(nl.point, uf, nl.relPoint, offX, 16 + offY)
+    local k = (effScale and effScale > 0) and effScale or 1
+    holder:SetPoint(nl.point, uf, nl.relPoint, offX * k, (16 + offY) * k)
 end
 
 -- El nombre de la unidad NO es secreto (es informacion basica de UI, igual
@@ -1195,7 +1201,9 @@ local function ReassertAuraGroupGeometry(uf, groupKey)
     -- acabo la cadena `uf.mcfNameHolder or uf.name or uf`: esa podia dejar el
     -- grupo colgado de la FontString de Blizzard de forma permanente, porque el
     -- dedupe de arriba nunca comparo el frame de ancla.
-    holder:SetPoint(al.point, uf, al.relPoint, al.x, al.y)
+    -- Mismo criterio que el nombre: offsets en unidades del plate.
+    local k = (effScale and effScale > 0) and effScale or 1
+    holder:SetPoint(al.point, uf, al.relPoint, al.x * k, al.y * k)
 end
 -- Reaplica offset/tamaño de fuente/color de los textos de cargas Y tiempo
 -- restante de TODOS los iconos de un grupo -- SEPARADO de

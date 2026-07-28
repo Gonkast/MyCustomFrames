@@ -31,6 +31,24 @@ local ADDON, ns = ...
 -- repartido entre los dos archivos, y fue justamente la causa de que el panel
 -- dibujara la barra ~36% mas grande de lo real respecto de las auras.
 --
+-- OJO CON EL REGIMEN "screen" (2026-07-28, la causa de fondo de que el panel
+-- nunca coincidiera): la contra-escala existe para que la FUENTE se rasterice
+-- siempre al mismo tamaño fisico (texto nitido a cualquier distancia). Pero
+-- arrastraba consigo la POSICION: con escala efectiva 1, un offset de 16 son 16
+-- pixeles de pantalla FIJOS, mientras la barra encoge con la distancia. O sea
+-- que la separacion nombre-barra, medida en alturas de barra, variaba mas del
+-- DOBLE segun lo lejos que estuviera el mob (0.71 a 1.52), y un panel dibujado
+-- a una sola escala no puede predecir eso: coincidia a una distancia exacta y
+-- fallaba en todas las demas.
+--
+-- Por eso los offsets de este archivo se interpretan SIEMPRE en unidades del
+-- PLATE, tambien para los elementos "screen". Quien los aplica los multiplica
+-- por la escala del plate (el real por GetEffectiveScale, el Designer por su
+-- escala de referencia). Asi la proporcion queda fija a cualquier distancia, el
+-- texto sigue nitido porque la contra-escala del holder no se toca, y de yapa la
+-- escala de referencia del panel deja de afectar la POSICION -- se cancela en la
+-- razon, asi que un valor de referencia equivocado ya no puede desalinear nada.
+--
 -- Carga ANTES de Nameplates.lua en el .toc (que a su vez carga antes que
 -- NameplateDesigner.lua), asi ambos lo tienen disponible al construirse.
 -- ==========================================================================
