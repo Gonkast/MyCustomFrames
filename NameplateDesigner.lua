@@ -32,6 +32,31 @@ local BAR_TEXCOORD = { 14/256, 242/256, 14/64, 50/64 }
 local FONT = "Fonts\\FRIZQT__.TTF"
 
 local function P() return ns.GetDB() and ns.GetDB().nameplates end
+
+-- La escala de referencia del lienzo vive en la RAIZ de la DB, NO en
+-- db.nameplates (2026-07-27). Dos motivos, el primero es un bug real que costo
+-- encontrar:
+--   1. db.nameplates se REEMPLAZA entera al cargar un perfil de nameplates
+--      (Nameplates.lua: `d.nameplates = ns.DeepCopy(p)`) y al resetear
+--      (core.lua). Guardada ahi, la referencia desaparecia en silencio y el
+--      panel volvia a dibujar a escala 1 -- el sintoma era desconcertante
+--      porque `stageScale` (variable Lua en memoria) seguia con el valor bueno
+--      mientras la clave del perfil ya no existia.
+--   2. Conceptualmente no es un ajuste de ASPECTO: no afecta al nameplate real,
+--      solo a con que proporcion se dibuja el editor. No tiene por que viajar
+--      dentro de un perfil exportado -- la escala muestreada en la UI de una
+--      persona no sirve para la de otra.
+-- No hace falta migrar el valor viejo: si falta, se vuelve a muestrear solo en
+-- medio segundo (ver el reintento en ToggleNameplateDesigner). La copia vieja se
+-- limpia de perfiles/presets via DEAD_NAMEPLATE_FIELDS en Maintenance.lua.
+local function GetRefScale()
+    local d = ns.GetDB()
+    return d and d.designerRefScale
+end
+local function SetRefScale(v)
+    local d = ns.GetDB()
+    if d then d.designerRefScale = v end
+end
 local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
 
 -- Dropdown estilo Setup Wizard paso 7 (pedido del usuario) -- MISMO asset
@@ -684,7 +709,7 @@ local function CreateDesigner()
         function() return stageScale end,
         function(v)
             stageScale = v
-            local pr = P(); if pr then pr.designerRefScale = v end
+            SetRefScale(v)
             designer.scaleLabel:SetText(("Reference scale %.2f"):format(stageScale))
             designer.stage:SetScale(stageScale * ZOOM)
             Reflow()
@@ -1592,11 +1617,10 @@ ns.ToggleNameplateDesigner = function()
         -- ticker viejo. Orden: valor guardado -> muestreo de un nameplate real
         -- (y se guarda, asi la proxima vez ya arranca bien) -> 1 como ultimo
         -- recurso si no hay ninguno en pantalla.
-        local pr = P()
-        local ref = pr and pr.designerRefScale
+        local ref = GetRefScale()
         if not ref then
             ref = SampleNameplateScale()
-            if ref and pr then pr.designerRefScale = clamp(ref, 0.3, 2) end
+            if ref then SetRefScale(clamp(ref, 0.3, 2)) end
         end
         stageScale = clamp(ref or 1, 0.3, 2)
 
@@ -1610,7 +1634,7 @@ ns.ToggleNameplateDesigner = function()
         -- corre mientras no tengamos un valor real, se detiene apenas consigue
         -- uno (o a los 20s), y nunca vuelve a tocar la escala despues. O sea,
         -- asienta una vez al principio en vez de re-escalar mientras editas.
-        if not (pr and pr.designerRefScale) then
+        if not GetRefScale() then
             local tries = 0
             C_Timer.NewTicker(0.5, function(self)
                 tries = tries + 1
@@ -1706,8 +1730,14 @@ SlashCmdList["MCFNPLAYOUTDIAG"] = function()
 
     print("|cffffe19b[MCF layout]|r nameplate real vs panel:")
     print(("  escala real del nameplate : %s"):format(okS and string.format("%.3f", effScale) or "ilegible"))
-    print(("  escala de referencia panel: %.3f%s"):format(stageScale,
-        (P() and P().designerRefScale) and "" or "  |cffff5555(sin guardar todavia)|r"))
+    -- Se imprime el valor CRUDO guardado, no un si/no. La primera version decia
+    -- "sin guardar" mientras stageScale ya valia 0.770 -- y 0.770 solo puede
+    -- salir del setter del slider, que persiste en la misma linea. Esa
+    -- contradiccion fue justamente la pista: el setter SI escribia, pero la
+    -- tabla donde escribia (db.nameplates) se reemplaza entera al cargar un
+    -- perfil o resetear. Un booleano lo habria seguido tapando.
+    print(("  escala de referencia panel: %.3f   (guardado: %s)"):format(
+        stageScale, tostring(GetRefScale())))
     if okS and effScale then
         local err = math.abs(stageScale - effScale) / effScale
         if err < 0.02 then

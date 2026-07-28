@@ -85,9 +85,25 @@ worth reading before redoing one of them).
   three reasoned fixes in a row failed: `designerRefScale` was `nil` in the live profile
   while real nameplates were running at `GetEffectiveScale() = 0.768`, so the panel fell
   back to **1.0** and drew the health bar ~30% too large relative to everything else. The
-  cause was pure timing — the scale is sampled when the Designer opens, and the natural
-  order is to open the panel *and then* target something, so at that instant there was no
-  plate to sample from and nothing got persisted. There is now a **bounded retry**: while
+  There were **two** causes, and the first fix only caught one of them:
+
+  1. *Timing.* The scale is sampled when the Designer opens, and the natural order is to
+     open the panel *and then* target something — at that instant there's no plate to
+     sample from, so nothing got persisted.
+  2. *Wrong home for the key.* `designerRefScale` was stored inside `db.nameplates`, and
+     that table gets **replaced wholesale** by loading a nameplate profile
+     (`d.nameplates = ns.DeepCopy(p)`) and by resetting (`core.lua`). So even when it was
+     saved correctly, the next profile load silently threw it away. This one surfaced only
+     because the diagnostic printed a contradiction — `stageScale` (a Lua local, still
+     holding the good value in memory) said `0.770` while the profile key said "not
+     saved". It's now a **top-level `db.designerRefScale`**, which is also where it
+     belongs conceptually: it doesn't affect the real nameplate at all, only the
+     proportion the editor draws at, so it has no business travelling inside an exported
+     nameplate profile — a scale sampled on one person's UI is wrong for anyone else's.
+     No migration needed (a missing value re-samples itself within half a second); the
+     stale copy is cleaned out of existing profiles/presets via `DEAD_NAMEPLATE_FIELDS`.
+
+  For the timing half there is now a **bounded retry**: while
   no real reference exists, it re-checks every 0.5s until it gets one (or gives up after
   20s), then stops for good. This is deliberately *not* the old scale ticker that was
   removed for making the canvas jump — it settles once, at the start, and never re-scales

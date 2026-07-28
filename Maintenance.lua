@@ -143,6 +143,11 @@ local DEAD_GLOBALS = {
 -- descarto; quien corriera alguna de las intermedias arrastra estas 3.
 local DEAD_NAMEPLATE_FIELDS = {
     "showThreat", "threatScale", "threatAlpha",
+    -- Se mudo a la raiz de la DB (db.designerRefScale, 2026-07-27): aca dentro
+    -- se perdia cada vez que se cargaba un perfil de nameplates o se reseteaba,
+    -- porque esas dos operaciones reemplazan db.nameplates ENTERA. Ademas es un
+    -- ajuste del editor, no del aspecto -- no debe viajar en un perfil exportado.
+    "designerRefScale",
 }
 -- Entradas ENTERAS muertas de db.auras (2026-07-27). El grid siempre-visible de
 -- Auras.lua se elimino (Player/Target/Focus pasaron a AuraHoverPreview.lua, que
