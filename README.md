@@ -18,7 +18,6 @@ None to load — no other addon is a hard dependency. That said, this preset is 
 - **[DynamicCam](https://www.curseforge.com/wow/addons/dynamiccam)** — camera
 - **[Masque](https://www.curseforge.com/wow/addons/masque)** — action button skinning (skin bundled, `MasqueSkin.lua`)
 - **[Chattynator](https://www.curseforge.com/wow/addons/chattynator)** — chat
-- **[BetterBags](https://www.curseforge.com/wow/addons/better-bags)** — bags
 
 ## Other addons that pair well (not auto-configured)
 
@@ -72,8 +71,8 @@ as a roadmap.
 
 - **No action bars.** This preset positions and scales Bartender4's bars; it doesn't provide
   any. Without Bartender4 you keep Blizzard's default bars.
-- **No chat, bag, or damage-meter replacement.** Pairs with Chattynator / BetterBags; you
-  bring your own meter.
+- **No chat, bag, or damage-meter replacement.** Pairs with Chattynator for chat; bags and
+  meters are your own choice.
 - **No boss-mod integration.** DBM/BigWigs bars aren't skinned or repositioned.
 - **No world map or dungeon-journal reskin.** Only the minimap is themed.
 - **No range or dispel indicators on the 40-player raid frames.** The range fade and shield
