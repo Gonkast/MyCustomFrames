@@ -194,6 +194,7 @@ Previews (`/mcfdiag test…`) are toggles — run them again to turn them off.
 - **[W2UI](https://www.curseforge.com/wow/addons/w2ui)** — the micro menu icons come from its `Media/MenuBar` set.
 - **M33kAuras** — player-rest flipbook animation data.
 - **["You've got mail!"](https://wago.io/1wKfUxJ8U)** WeakAura — inspired the new-mail banner, rebuilt with native Blizzard textures.
+- **Platynator** — the idea for the Nameplate Designer. No code from it was used.
 
 ## License
 
