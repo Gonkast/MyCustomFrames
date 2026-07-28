@@ -1657,141 +1657,19 @@ SLASH_MCFNPDESIGNER1 = "/mcfnpdesigner"
 SlashCmdList["MCFNPDESIGNER"] = function() ns.ToggleNameplateDesigner() end
 
 -- ==========================================================================
--- DIAGNOSTICO /mcfnplayoutdiag (2026-07-27)
+-- Los diagnosticos /mcfnplayoutdiag y /mcfnpanchordiag se ELIMINARON el
+-- 2026-07-28. Estan en el historial de git si alguna vez hacen falta.
 --
--- Por que existe: el panel seguia sin coincidir con el juego despues de varios
--- arreglos razonados LEYENDO el codigo. La matematica cerraba en papel y en
--- pantalla no, asi que hacian falta NUMEROS REALES en vez de otra hipotesis.
+-- Se construyeron para cazar divergencias entre el panel y el nameplate real
+-- cuando cada lado aplicaba su propia geometria. Desde que ns.NPBuild.Place es
+-- la UNICA funcion que coloca piezas en los dos lados, y desde que todos los
+-- elementos estan en regimen "plate" (o sea que la escala se cancela en
+-- cualquier razon entre piezas), esa clase de divergencia es imposible por
+-- construccion: no queda nada que medir.
 --
--- La primera version intentaba comparar POSICIONES (cada elemento respecto de
--- la barra de vida, normalizado). No se puede: medido en vivo sobre un
--- nameplate real, GetRect / GetLeft / GetBottom / GetCenter estan TODOS
--- bloqueados ("Can't measure restricted regions"). Lo unico que responde es
--- GetWidth, GetHeight y GetEffectiveScale. O sea que verificar el 1:1
--- comparando posicion contra posicion es imposible en este cliente, y los
--- helpers que lo intentaban se borraron en vez de dejarlos ahi sugiriendo que
--- el dato existe.
---
--- Pero tampoco hace falta. Desde que la geometria vive en ns.NPLayout, los dos
--- lados aplican EXACTAMENTE los mismos offsets: ya no pueden divergir por
--- posicion. Lo unico que queda capaz de desalinear el resultado es que el panel
--- dibuje a una ESCALA distinta de la real -- y eso si es medible. Fue
--- justamente el problema: designerRefScale estaba en nil, el panel corria a 1.0
--- y los nameplates reales a 0.768 (30% de error).
+-- Y peor que inutiles: seguian comparando `stageScale` contra la escala real
+-- del nameplate y avisaban "DIFIEREN en 30%" cuando esos dos valores son
+-- legitimamente distintos -- el del panel arranca en 1 y el real varia con la
+-- distancia. Un diagnostico que da falsas alarmas es peor que no tenerlo:
+-- manda a perseguir un problema que no existe.
 -- ==========================================================================
-SLASH_MCFNPLAYOUTDIAG1 = "/mcfnplayoutdiag"
-SlashCmdList["MCFNPLAYOUTDIAG"] = function()
-    local plate = UnitExists("target") and C_NamePlate and C_NamePlate.GetNamePlateForUnit
-        and C_NamePlate.GetNamePlateForUnit("target")
-    local uf = plate and (plate.UnitFrame or plate)
-    if not uf or not uf.healthBar then
-        print("|cffff5555[MCF]|r Necesito un target con nameplate visible.")
-        return
-    end
-
-    -- LIMITACION CONFIRMADA EN VIVO (2026-07-27): en un nameplate real,
-    -- GetRect/GetLeft/GetBottom/GetCenter estan BLOQUEADOS ("Can't measure
-    -- restricted regions"). Solo GetWidth/GetHeight/GetEffectiveScale
-    -- responden. O sea: la POSICION real no se puede leer desde Lua, y por lo
-    -- tanto no se puede comparar posicion contra posicion.
-    -- Pero no hace falta: con el layout ya compartido (ns.NPLayout) los dos
-    -- lados aplican los mismos offsets, asi que lo unico que puede desalinear
-    -- el resultado es que el panel use una ESCALA distinta a la real. Eso si se
-    -- puede medir, y es lo que compara este comando.
-    local okS, effScale = pcall(uf.GetEffectiveScale, uf)
-    local okW, realW = pcall(uf.healthBar.GetWidth, uf.healthBar)
-    local okH, realH = pcall(uf.healthBar.GetHeight, uf.healthBar)
-    local p = P()
-
-    print("|cffffe19b[MCF layout]|r nameplate real vs panel:")
-    print(("  escala real del nameplate : %s"):format(okS and string.format("%.3f", effScale) or "ilegible"))
-    -- Se imprime el valor CRUDO guardado, no un si/no. La primera version decia
-    -- "sin guardar" mientras stageScale ya valia 0.770 -- y 0.770 solo puede
-    -- salir del setter del slider, que persiste en la misma linea. Esa
-    -- contradiccion fue justamente la pista: el setter SI escribia, pero la
-    -- tabla donde escribia (db.nameplates) se reemplaza entera al cargar un
-    -- perfil o resetear. Un booleano lo habria seguido tapando.
-    print(("  escala de referencia panel: %.3f   (guardado: %s)"):format(
-        stageScale, tostring(GetRefScale())))
-    if okS and effScale then
-        local err = math.abs(stageScale - effScale) / effScale
-        if err < 0.02 then
-            print("  |cff00ff00coinciden|r -- las proporciones del panel son las del juego.")
-        else
-            print(("  |cffff5555DIFIEREN en %.0f%%|r -- el panel dibuja la barra %s de lo que deberia"):format(
-                err * 100, stageScale > effScale and "MAS GRANDE" or "MAS CHICA"))
-            print("  Arreglo: apreta |cffffff00Sample|r en el Designer (o move Reference scale a "
-                .. string.format("%.2f", effScale) .. ").")
-        end
-    end
-    print(("  barra de vida  real=%sx%s  perfil=%sx%s"):format(
-        okW and string.format("%.0f", realW) or "?", okH and string.format("%.0f", realH) or "?",
-        tostring(p and p.healthWidth), tostring(p and p.healthHeight)))
-    print("  (posicion real no medible: GetRect/GetLeft/GetCenter estan bloqueados en nameplates)")
-end
-
--- ==========================================================================
--- DIAGNOSTICO /mcfnpanchordiag (2026-07-28)
---
--- La primera version intentaba MEDIR la distancia entre el tope de `uf` y el
--- tope de la barra anclando dos sondas propias. No sirve: anclar a un frame
--- restringido restringe tambien la posicion de la sonda, asi que tampoco se
--- pueden medir. (Y la pregunta quedo respondida por codigo: LockBar ancla la
--- barra real a uf TOP/TOP con y=-1, o sea que el panel modela bien el origen.)
---
--- Esta version NO MIDE NADA: CALCULA lo que cada lado dibuja, a partir de
--- numeros que si se pueden obtener (offsets del perfil, altura configurada,
--- GetEffectiveScale, stageScale, ZOOM). Compara la unica cosa que tiene que
--- coincidir para que el panel prediga el juego: la separacion nombre-barra
--- EXPRESADA EN ALTURAS DE BARRA. Esa razon no depende del zoom ni de la
--- distancia, asi que si los dos lados no dan el mismo numero, ahi esta el bug
--- -- y el desglose muestra en cual de los factores se separa.
--- ==========================================================================
-SLASH_MCFNPANCHORDIAG1 = "/mcfnpanchordiag"
-SlashCmdList["MCFNPANCHORDIAG"] = function()
-    local plate = UnitExists("target") and C_NamePlate and C_NamePlate.GetNamePlateForUnit
-        and C_NamePlate.GetNamePlateForUnit("target")
-    local uf = plate and (plate.UnitFrame or plate)
-    if not uf then
-        print("|cffff5555[MCF]|r Necesito un target con nameplate visible.")
-        return
-    end
-    local p = P()
-    if not p then print("|cffff5555[MCF]|r Sin perfil."); return end
-    local okS, eff = pcall(uf.GetEffectiveScale, uf)
-    if not (okS and type(eff) == "number" and eff > 0) then
-        print("|cffff5555[MCF]|r No pude leer la escala del nameplate.")
-        return
-    end
-
-    local nl = ns.NPLayout.Name(p)
-    local hl = ns.NPLayout.Health(p)
-    local _, barH = ns.NPLayout.HealthSize(p)
-
-    -- REAL: el holder del nombre lleva contra-escala, o sea escala efectiva 1
-    -- -- sus offsets son pixeles de pantalla tal cual. La barra va a `eff`.
-    local realGap  = nl.y * 1.0 + math.abs(hl.y) * eff
-    local realBar  = barH * eff
-    -- PANEL: el nombre va a escala ZOOM, la barra a stageScale*ZOOM.
-    local panelGap = nl.y * ZOOM + math.abs(hl.y) * stageScale * ZOOM
-    local panelBar = barH * stageScale * ZOOM
-
-    print("|cffffe19b[MCF anchor]|r separacion nombre-barra, en ALTURAS DE BARRA:")
-    print(("  perfil: nameOffsetY=%s  ->  L.Name.y=%s   |   healthHeight=%s  L.Health.y=%s"):format(
-        tostring(p.nameOffsetY), tostring(nl.y), tostring(barH), tostring(hl.y)))
-    print(("  escalas: nameplate real=%.3f   panel stage=%.3f  zoom=%.2f"):format(eff, stageScale, ZOOM))
-    print(("  REAL  : hueco %.1f px / barra %.1f px = |cff00ff00%.3f|r"):format(
-        realGap, realBar, realGap / realBar))
-    print(("  PANEL : hueco %.1f px / barra %.1f px = |cff00ff00%.3f|r"):format(
-        panelGap, panelBar, panelGap / panelBar))
-    local d = math.abs(realGap / realBar - panelGap / panelBar)
-    if d < 0.02 then
-        print("  |cff00ff00Coinciden.|r El modelo geometrico NO es la causa -- el problema")
-        print("  esta en el dibujado (tamaño de fuente, punto del texto o capa), no en la")
-        print("  posicion. Decimelo y busco por ese lado.")
-    else
-        print(("  |cffff5555DIFIEREN por %.3f alturas de barra|r -- aca esta el bug."):format(d))
-        print(("  El nombre del panel esta %s que en el juego."):format(
-            (panelGap / panelBar > realGap / realBar) and "MAS LEJOS de la barra" or "MAS CERCA de la barra"))
-    end
-end

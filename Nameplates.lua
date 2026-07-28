@@ -1622,8 +1622,28 @@ end)
 -- ADDED/REMOVED mas abajo y SkinExistingNamePlates) -- cero allocations por
 -- frame, mismo resultado.
 local activeUF = setmetatable({}, { __mode = "k" })
+-- Este driver corria SIN throttle (todos los frames, por cada nameplate
+-- visible). Tenia sentido cuando el nombre y las auras llevaban contra-escala:
+-- habia que seguir la animacion de escala de Blizzard cuadro a cuadro o el
+-- tamaño se veia cambiar en escalones. Desde que todo pasó al regimen "plate"
+-- (2026-07-28) no hay contra-escala que seguir, y los dedupes de las dos
+-- funciones ya no miran effScale -- o sea que en una raid con 30 nameplates
+-- eran ~3600 llamadas por segundo que salian por `return` sin hacer nada.
+--
+-- Se THROTTLEA en vez de eliminarse, a proposito. Ademas de posicion, estas dos
+-- reaplican el COLOR del nombre, que depende de la unidad (color de clase de
+-- jugadores hostiles, color del modo solo-nombre) y no solo del perfil. Los
+-- otros tres llamadores cubren los casos conocidos -- al skinear, al cambiar el
+-- perfil y al alternar modo solo-nombre -- pero dejar esa red sin nada a cambio
+-- de un ahorro ya conseguido no vale la pena: con 0.2s la correccion sigue
+-- llegando y el costo baja de 60 pasadas por segundo a 5.
+local NAME_DRIVER_INTERVAL = 0.2
 local nameScaleDriver = CreateFrame("Frame")
-nameScaleDriver:SetScript("OnUpdate", function()
+local nameDriverElapsed = 0
+nameScaleDriver:SetScript("OnUpdate", function(_, dt)
+    nameDriverElapsed = nameDriverElapsed + (dt or 0)
+    if nameDriverElapsed < NAME_DRIVER_INTERVAL then return end
+    nameDriverElapsed = 0
     for uf in pairs(activeUF) do
         if uf.mcfNameHolder then ReassertNameGeometry(uf) end
         if uf.mcfAuraGroups then ReassertAurasGeometry(uf) end

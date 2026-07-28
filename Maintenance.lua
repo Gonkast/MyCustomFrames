@@ -303,7 +303,6 @@ ns.RegisterDiag("bt4",          "Que barras de Bartender4 existen y con que nomb
 ns.RegisterDiag("auras",        "Datos de auras del objetivo actual", Cmd("MCFAURASDIAG"))
 ns.RegisterDiag("aurahover",    "Estado interno de un grupo de auras hover (hover/combate/gate/alpha)", Cmd("MCFAURAHOVERDIAG"))
 ns.RegisterDiag("nameplates",   "Estado general de los nameplates", Cmd("MCFNPDIAG"))
-ns.RegisterDiag("nplayout",     "Compara Designer vs nameplate REAL, elemento por elemento", Cmd("MCFNPLAYOUTDIAG"))
 ns.RegisterDiag("npobjects",    "unit/GUID/tipo por nameplate -- para plates que no deberian estar (objetos)", Cmd("MCFNPOBJDIAG"))
 ns.RegisterDiag("castwatch",    "Togglea el log en vivo de casteos de nameplates", Cmd("MCFCASTWATCH"))
 ns.RegisterDiag("minimap",      "Estado general del minimapa", Cmd("MCFMMDIAG"))
