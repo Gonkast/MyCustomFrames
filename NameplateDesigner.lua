@@ -1630,3 +1630,91 @@ end
 
 SLASH_MCFNPDESIGNER1 = "/mcfnpdesigner"
 SlashCmdList["MCFNPDESIGNER"] = function() ns.ToggleNameplateDesigner() end
+
+-- ==========================================================================
+-- DIAGNOSTICO /mcfnplayoutdiag (2026-07-27)
+--
+-- Por que existe: el panel seguia sin coincidir con el juego despues de varios
+-- arreglos razonados LEYENDO el codigo. La matematica cerraba en papel y en
+-- pantalla no, asi que hacen falta NUMEROS REALES de los dos lados en vez de
+-- una cuarta hipotesis.
+--
+-- Que compara: la posicion y el tamaño de cada elemento RELATIVOS a la barra de
+-- vida, normalizados por el tamaño de esa barra. Esa razon es independiente de
+-- la escala -- si el panel y el nameplate real muestran lo mismo, los numeros
+-- tienen que coincidir aunque uno este magnificado por el zoom y el otro
+-- encogido por la distancia. Si NO coinciden, la fila que difiere señala el
+-- elemento y el eje exactos donde esta el problema.
+-- ==========================================================================
+local function RectOf(f)
+    if not f then return nil end
+    local ok, l, b, w, h = pcall(function() local x, y, ww, hh = f:GetRect(); return x, y, ww, hh end)
+    if not ok or not l or not w or w == 0 then return nil end
+    return { l = l, b = b, w = w, h = h }
+end
+
+-- Posicion del elemento respecto de la barra, en "anchos/altos de barra".
+local function Norm(el, hp)
+    if not (el and hp) then return nil end
+    return {
+        dx = (el.l - hp.l) / hp.w,
+        dy = (el.b - hp.b) / hp.h,
+        rw = el.w / hp.w,
+        rh = el.h / hp.h,
+    }
+end
+
+SLASH_MCFNPLAYOUTDIAG1 = "/mcfnplayoutdiag"
+SlashCmdList["MCFNPLAYOUTDIAG"] = function()
+    if not (designer and designer:IsShown()) then
+        print("|cffff5555[MCF]|r Abri el Designer primero (/mcfnpdesigner).")
+        return
+    end
+    local plate = UnitExists("target") and C_NamePlate and C_NamePlate.GetNamePlateForUnit
+        and C_NamePlate.GetNamePlateForUnit("target")
+    local uf = plate and (plate.UnitFrame or plate)
+    if not uf or not uf.healthBar then
+        print("|cffff5555[MCF]|r Necesito un target con nameplate visible para comparar.")
+        return
+    end
+
+    -- Mismos elementos en los dos lados, en el mismo orden.
+    local pairsList = {
+        { "name",       uf.mcfNameHolder,                        designer.nameHolder },
+        { "healthText", uf.healthBar and uf.healthBar.mcfValue,   designer.hvHolder },
+        { "cast",       uf.mcfCast,                              designer.cb },
+        { "aura/big",      uf.mcfAuraGroups and uf.mcfAuraGroups.big,      designer.bigHolder },
+        { "aura/personal", uf.mcfAuraGroups and uf.mcfAuraGroups.personal, designer.personalHolder },
+        { "aura/enemy",    uf.mcfAuraGroups and uf.mcfAuraGroups.enemy,    designer.enemyHolder },
+        { "classif",    uf.mcfClass,                             designer.classHolder },
+        { "raidmark",   uf.RaidTargetFrame,                      designer.raidHolder },
+    }
+
+    local realHP, mockHP = RectOf(uf.healthBar), RectOf(designer.hp)
+    if not (realHP and mockHP) then
+        print("|cffff5555[MCF]|r No pude medir la barra de vida de un lado.")
+        return
+    end
+
+    print("|cffffe19b[MCF layout]|r escalas -- nameplate=" .. string.format("%.3f", uf:GetEffectiveScale())
+        .. "  barra real=" .. string.format("%.3f", uf.healthBar:GetEffectiveScale())
+        .. "  barra panel=" .. string.format("%.3f", designer.hp:GetEffectiveScale()))
+    print(("  barra px  real=%.1fx%.1f  panel=%.1fx%.1f"):format(realHP.w, realHP.h, mockHP.w, mockHP.h))
+    print("  (dx/dy = desplazamiento desde la barra, en anchos/altos de barra; rw/rh = tamaño relativo)")
+    print("  |cff00ff00verde|r = coincide   |cffff5555rojo|r = NO coincide")
+
+    for _, row in ipairs(pairsList) do
+        local label, realF, mockF = row[1], row[2], row[3]
+        local a, b = Norm(RectOf(realF), realHP), Norm(RectOf(mockF), mockHP)
+        if not a or not b then
+            print(("  |cff888888%-15s sin datos (real=%s panel=%s)|r"):format(
+                label, a and "ok" or "-", b and "ok" or "-"))
+        else
+            local worst = math.max(math.abs(a.dx - b.dx), math.abs(a.dy - b.dy),
+                                   math.abs(a.rw - b.rw), math.abs(a.rh - b.rh))
+            local col = worst < 0.02 and "|cff00ff00" or "|cffff5555"
+            print(("  %s%-15s|r real dx=%+.3f dy=%+.3f rw=%.3f rh=%.3f"):format(col, label, a.dx, a.dy, a.rw, a.rh))
+            print(("  %s%-15s|r panel dx=%+.3f dy=%+.3f rw=%.3f rh=%.3f   (dif max %.3f)"):format(col, "", b.dx, b.dy, b.rw, b.rh, worst))
+        end
+    end
+end
