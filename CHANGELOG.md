@@ -80,6 +80,11 @@ worth reading before redoing one of them).
   hostile *players* only (never NPCs — `UnitIsPlayer` gates it before even trying).
 
 ### Changed
+- **Setup Wizard page 2 now states the recommendation in yellow**, above the red warning:
+  ticking all of them is what the preset is designed around, and nothing is pre-selected on
+  purpose so you have to tick them yourself. Without this the opt-in change below reads as
+  "leave it empty" — which gives a half-applied look and no way to tell that was the wrong
+  call.
 - **Bundled third-party profiles are now opt-in, not opt-out.** Setup Wizard page 2 used to
   pre-tick every detected addon and say "untick any you DON'T want replaced" — so the
   default path, clicking Next without reading, permanently destroyed the user's

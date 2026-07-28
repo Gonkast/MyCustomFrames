@@ -427,11 +427,20 @@ local function BuildPage2(content)
     -- chat del usuario para siempre. Ahora arrancan TODOS apagados: no marcar
     -- nada es seguro, y marcar es un acto deliberado.
     Paragraph(p, 4, -26, 11,
-        "These addons are loaded and ship a bundled Gonkast profile. Tick only the ones you " ..
-        "want REPLACED -- leaving them all unticked is safe and changes nothing.")
-    local warn = Paragraph(p, 4, -60, 11,
-        "This overwrites that addon's entire configuration and CANNOT be undone -- not by " ..
-        "/mcfundo, not by reinstalling. If you have layouts you care about, back them up first.")
+        "These addons are loaded and ship a bundled Gonkast profile.")
+    -- Amarillo: la RECOMENDACION del autor. El preset esta diseñado alrededor de
+    -- estos perfiles (posiciones de barras, skin de Masque, etc), asi que tildarlos
+    -- es lo que da el resultado previsto -- pero nada viene pre-marcado a proposito
+    -- (ver la nota de opt-in mas abajo), asi que hay que decirlo explicitamente o
+    -- el usuario asume que dejarlo vacio es "la opcion correcta".
+    local rec = Paragraph(p, 4, -48, 11,
+        "Recommended: tick them all -- the preset is built around these profiles and won't " ..
+        "look as intended without them. Nothing is pre-selected on purpose, so you have to " ..
+        "tick them yourself.")
+    rec:SetTextColor(1, 0.82, 0.2)
+    local warn = Paragraph(p, 4, -92, 11,
+        "Before you do: this overwrites that addon's entire configuration and CANNOT be undone " ..
+        "-- not by /mcfundo, not by reinstalling. Back up any layout you care about first.")
     warn:SetTextColor(1, 0.35, 0.35)
     p._list = p._list or {}
     return p
@@ -441,9 +450,9 @@ local function RefreshPage2(p)
     for _, w in ipairs(p._list) do w:Hide() end
     wipe(p._list)
     local list = (ns.ProfilesStatus and ns.ProfilesStatus()) or {}
-    -- -100 (antes -50): el aviso rojo de BuildPage2 ocupa 2 lineas debajo del
-    -- parrafo normal, la lista arranca despues de ambos.
-    local y = -100
+    -- -136 (originalmente -50): arriba hay 3 parrafos -- intro (1 linea), la
+    -- recomendacion en amarillo (2 lineas) y el aviso rojo (2 lineas).
+    local y = -136
     if #list == 0 then
         local fs = Paragraph(p, 4, y, 12,
             "No supported addons detected (Bartender4, DynamicCam, Masque, Chattynator).")
