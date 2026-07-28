@@ -18,7 +18,7 @@ None to load — no other addon is a hard dependency. That said, this preset is 
 - **[DynamicCam](https://www.curseforge.com/wow/addons/dynamiccam)** — camera
 - **[Masque](https://www.curseforge.com/wow/addons/masque)** — action button skinning (skin bundled, `MasqueSkin.lua`)
 - **[Chattynator](https://www.curseforge.com/wow/addons/chattynator)** — chat
-- **[BetterBags](https://www.curseforge.com/wow/addons/better-bags)** + **[BetterBagsSkinGonkast](https://github.com/Gonkast/BetterBagsSkinGonkast)** — bags
+- **[BetterBags](https://www.curseforge.com/wow/addons/better-bags)** — bags
 
 ## Other addons that pair well (not auto-configured)
 
