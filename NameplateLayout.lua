@@ -43,7 +43,15 @@ local CAST_W, CAST_H = 150, 12
 local AURA_ICON = 26
 local AURA_PAD = 4
 local AURA_MAX_PER_CAT = 3
-local AURA_NUDGE_Y = 10
+-- Altura base de los grupos de auras sobre el tope del nameplate. Sale de donde
+-- quedaban cuando colgaban del nombre (nombre en +16, holder de alto 20, gap de
+-- 6+10) -- se fija como constante para que ya no dependa del nombre. Ver
+-- L.AuraGroup.
+local AURA_BASE_Y = 52
+-- X de fabrica POR GRUPO, para que los tres no queden apilados al resetear.
+-- Tienen que seguir siendo los mismos valores que NameplateDefaults (este
+-- archivo promete eso en la cabecera y es facil que se desincronice).
+local AURA_BASE_X = { big = 0, personal = -100, enemy = 100 }
 
 -- Punto del holder de auras que queda FIJO en el offset guardado, segun la
 -- direccion en que crece el grupo.
@@ -147,14 +155,33 @@ function L.RaidMark(p)
              scaleRegime = "plate" }
 end
 
--- Grupo de auras: ancla al NOMBRE (que ya esta colocado respecto del
--- nameplate), con un gap base de 6. El punto del holder depende de la
--- direccion, para que crezca hacia el lado correcto sin mover el offset.
+-- Grupo de auras: ancla al NAMEPLATE, igual que el nombre -- NO al nombre.
+--
+-- Antes colgaba del nombre (relTo = "name") y eso era un error de diseño que
+-- costo caro (lo detecto el usuario 2026-07-28: "si escalo o muevo el texto se
+-- mueven esas"). Tres problemas, en orden de gravedad:
+--   1. Acoplamiento invisible: ajustar el nombre movia los tres grupos de auras,
+--      asi que no se podia afinar uno sin desajustar el otro.
+--   2. El ancla real era `uf.mcfNameHolder or uf.name or uf` -- una cadena de
+--      fallback. Si el holder propio todavia no existia cuando se colocaba el
+--      grupo, quedaba anclado a la FontString de Blizzard (`uf.name`), que esta
+--      en otro lado; y como el dedupe de ReassertAuraGroupGeometry compara
+--      escala/punto/offsets pero NO el frame de ancla, ese anclaje equivocado
+--      no se corregia nunca. El Designer, en cambio, siempre usaba el holder --
+--      o sea que los dos lados podian estar anclados a frames distintos.
+--   3. La posicion dependia de la ALTURA del holder del nombre (el ancla es su
+--      TOP), otro numero mas que tenia que coincidir entre real y mock.
+-- Anclando al plate los tres desaparecen de una: cada grupo es independiente,
+-- no hay cadena de fallback posible, y no depende del tamaño de nadie.
+--
+-- AURA_BASE_Y reproduce donde quedaban antes (nombre en +16, alto 20, gap 16),
+-- asi que el aspecto de fabrica no cambia -- lo que cambia es de QUE cuelgan.
 function L.AuraGroup(p, groupKey)
     local keys = L.AURA_GROUP_OFFSET_KEYS[groupKey]
     if not keys then return nil end
     local dir = (p and p[L.AURA_GROUP_DIRECTION_KEYS[groupKey]]) or "right"
-    return { point = AURA_ANCHOR_POINT[dir] or "BOTTOMLEFT", relTo = "name", relPoint = "TOP",
-             x = num(p and p[keys[1]], 0), y = 6 + num(p and p[keys[2]], AURA_NUDGE_Y),
+    return { point = AURA_ANCHOR_POINT[dir] or "BOTTOMLEFT", relTo = "plate", relPoint = "TOP",
+             x = num(p and p[keys[1]], AURA_BASE_X[groupKey] or 0),
+             y = AURA_BASE_Y + num(p and p[keys[2]], 0),
              scaleRegime = "screen" }
 end

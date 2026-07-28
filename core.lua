@@ -2032,6 +2032,22 @@ local function InitDB()
         db.bartenderAutoApplied = {}
         db._btAutoAppliedResetV2 = true
     end
+    -- Los 3 grupos de auras de nameplate pasaron de colgar del NOMBRE a colgar
+    -- del nameplate (2026-07-28, ver L.AuraGroup en NameplateLayout.lua). Los
+    -- offsets guardados se afinaron contra el ancla vieja, asi que con la nueva
+    -- quedan corridos -- y ademas arrastran el +10 que antes estaba en el offset
+    -- y ahora vive en AURA_BASE_Y, o sea que se sumaria dos veces. Se los
+    -- devuelve al punto de origen UNA vez, que es justamente lo que pidio el
+    -- usuario ("has todo independiente y resetealo al punto de origen").
+    if not db._npAuraAnchorResetV1 then
+        local np = db.nameplates
+        if np then
+            np.bigDebuffOffsetX, np.bigDebuffOffsetY = 0, 0
+            np.personalDebuffsOffsetX, np.personalDebuffsOffsetY = -100, 0
+            np.enemyBuffsOffsetX, np.enemyBuffsOffsetY = 100, 0
+        end
+        db._npAuraAnchorResetV1 = true
+    end
     -- Direccion del test de auras de party (PartyAuraPreview.lua): izq/der/arriba/abajo.
     if db.partyAuraDirection == nil then db.partyAuraDirection = "left" end
     if db.partyAuraIconSize == nil then db.partyAuraIconSize = 26 end

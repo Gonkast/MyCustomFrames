@@ -26,8 +26,6 @@ local CAST_SIZE   = { 92, 24 }
 -- El highlight de seleccion es un poco mas grande que la barra de vida (ver
 -- GetHighlightSize, mas abajo) -- ya no es una constante fija, se deriva EN
 -- VIVO del tamaño de vida configurado (healthWidth/healthHeight).
--- Cuanto subir el contenedor de auras respecto de donde Blizzard lo ancla.
-local AURA_NUDGE_Y = 10
 local AURA_BORDER_SCALE = 0.26
 local AURA_ICON_SIZE = 26
 local AURA_SPACING = 4
@@ -253,9 +251,12 @@ local function NameplateDefaults()
         -- cada uno con su offset -- ver ClassifyAura mas abajo para el
         -- mapeo real via IsAuraFilteredOutByInstanceID.
         auraIconSize = AURA_ICON_SIZE,
-        bigDebuffOffsetX = 0, bigDebuffOffsetY = AURA_NUDGE_Y,
-        personalDebuffsOffsetX = -100, personalDebuffsOffsetY = AURA_NUDGE_Y,
-        enemyBuffsOffsetX = 100, enemyBuffsOffsetY = AURA_NUDGE_Y,
+        -- Y = 0: la altura base de los grupos ahora vive en AURA_BASE_Y dentro
+        -- de ns.NPLayout (antes el +10 estaba aca, sumado a un gap disperso).
+        -- X separa los tres grupos para que al resetear no queden apilados.
+        bigDebuffOffsetX = 0, bigDebuffOffsetY = 0,
+        personalDebuffsOffsetX = -100, personalDebuffsOffsetY = 0,
+        enemyBuffsOffsetX = 100, enemyBuffsOffsetY = 0,
         auraShowBigDebuff = true,
         auraShowPersonalDebuffs = true,
         auraShowEnemyBuffs = true,
@@ -1090,7 +1091,8 @@ end
 local AURA_MAX_PER_CAT = ns.NPLayout.AURA_MAX_PER_CAT
 local AURA_GROUP_OFFSET_KEYS = ns.NPLayout.AURA_GROUP_OFFSET_KEYS
 local AURA_GROUP_DIRECTION_KEYS = ns.NPLayout.AURA_GROUP_DIRECTION_KEYS
-local AURA_ANCHOR_POINT = ns.NPLayout.AURA_ANCHOR_POINT
+-- (AURA_ANCHOR_POINT ya no se aliasea aca: el punto de anclaje lo resuelve
+-- ns.NPLayout.AuraGroup y viene dentro de la tabla que devuelve.)
 
 local AURA_GROUPS = { "big", "personal", "enemy" }
 local AURA_GROUP_SHOW_KEYS = {
@@ -1243,28 +1245,28 @@ end
 local function ReassertAuraGroupGeometry(uf, groupKey)
     local holder = uf.mcfAuraGroups and uf.mcfAuraGroups[groupKey]
     if not holder then return end
-    local p = P()
-    local xKey, yKey = AURA_GROUP_OFFSET_KEYS[groupKey][1], AURA_GROUP_OFFSET_KEYS[groupKey][2]
     local effScale = uf:GetEffectiveScale()
-    local dir = (p and p[AURA_GROUP_DIRECTION_KEYS[groupKey]]) or "right"
-    local anchorPoint = AURA_ANCHOR_POINT[dir] or "BOTTOMLEFT"
-    local offX, offY = (p and p[xKey]) or 0, (p and p[yKey]) or AURA_NUDGE_Y
-    if holder._mcfLastEffScale == effScale and holder._mcfLastAnchor == anchorPoint
-        and holder._mcfLastOffX == offX and holder._mcfLastOffY == offY then
+    -- TODO el emplazamiento sale de ns.NPLayout, incluidos los offsets. Antes se
+    -- recalculaban aca y del layout solo se tomaba el punto relativo -- o sea
+    -- que seguian existiendo dos cuentas, que es exactamente lo que ese archivo
+    -- existe para impedir. El dedupe ahora compara los valores YA resueltos.
+    local al = ns.NPLayout.AuraGroup(P(), groupKey)
+    if not al then return end
+    if holder._mcfLastEffScale == effScale and holder._mcfLastAnchor == al.point
+        and holder._mcfLastOffX == al.x and holder._mcfLastOffY == al.y then
         return
     end
-    holder._mcfLastEffScale, holder._mcfLastAnchor = effScale, anchorPoint
-    holder._mcfLastOffX, holder._mcfLastOffY = offX, offY
+    holder._mcfLastEffScale, holder._mcfLastAnchor = effScale, al.point
+    holder._mcfLastOffX, holder._mcfLastOffY = al.x, al.y
     if effScale and effScale > 0 then
         holder:SetScale(math.max(0.3, math.min(3, 1 / effScale)))
     end
     holder:ClearAllPoints()
-    -- Colocacion desde ns.NPLayout (2026-07-27) -- misma fuente que el mock del
-    -- Designer. `anchorPoint`/`offX`/`offY` ya se resolvieron arriba (se usan
-    -- ademas para el dedupe), asi que se pasan directo; lo que se toma del
-    -- layout es el gap base y el punto relativo, que es lo que se desincronizaba.
-    local al = ns.NPLayout.AuraGroup(p, groupKey)
-    holder:SetPoint(anchorPoint, uf.mcfNameHolder or uf.name or uf, al.relPoint, offX, 6 + offY)
+    -- Ancla al NAMEPLATE, no al nombre (ver la nota larga en L.AuraGroup). Se
+    -- acabo la cadena `uf.mcfNameHolder or uf.name or uf`: esa podia dejar el
+    -- grupo colgado de la FontString de Blizzard de forma permanente, porque el
+    -- dedupe de arriba nunca comparo el frame de ancla.
+    holder:SetPoint(al.point, uf, al.relPoint, al.x, al.y)
 end
 -- Reaplica offset/tamaño de fuente/color de los textos de cargas Y tiempo
 -- restante de TODOS los iconos de un grupo -- SEPARADO de

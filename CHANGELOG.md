@@ -80,6 +80,35 @@ worth reading before redoing one of them).
   hostile *players* only (never NPCs — `UnitIsPlayer` gates it before even trying).
 
 ### Fixed
+- **Nameplate aura groups were anchored to the name, not the nameplate.** Spotted by the
+  user from the symptom — "if I scale or move the name text, those move". Moving or
+  resizing the name dragged all three aura groups (Big Debuff / Personal Debuffs / Enemy
+  Buffs) with it, so the two couldn't be tuned independently. Two more problems came out
+  of the same anchor:
+  - The real side anchored to `uf.mcfNameHolder or uf.name or uf` — a fallback chain. If
+    our own name holder didn't exist yet when the group was placed, it latched onto
+    Blizzard's `uf.name` FontString instead, and since `ReassertAuraGroupGeometry`'s dedupe
+    compares scale/point/offsets but **not the anchor frame**, that wrong anchor was never
+    corrected. The Designer always used the holder — so the two sides could genuinely be
+    anchored to different frames.
+  - The position depended on the name holder's *height* (the anchor was its `TOP`), one
+    more number that had to agree between real and mock.
+
+  All three groups now anchor to the nameplate itself, like the name does. The factory
+  look is unchanged (`AURA_BASE_Y = 52` reproduces exactly where they used to land —
+  verified numerically), but nothing about them depends on the name any more. Existing
+  saved offsets were tuned against the old anchor and also carry a `+10` that has moved
+  into the base, so they'd be double-counted; they're reset to the origin once via
+  `_npAuraAnchorResetV1`.
+
+  `Nameplates.lua` also stopped *recomputing* the aura offsets and now takes them from
+  `ns.NPLayout` like everything else — it had been pulling only the relative point from
+  the layout while calculating x/y itself, which is exactly the two-implementations
+  problem that module exists to prevent.
+
+  Note that the bar-attached elements (health value, cast bar, classification, raid mark)
+  are deliberately **still** anchored to the health bar: there the coupling is wanted, so
+  that resizing the bar keeps the elite icon on its right edge.
 - **Nameplate Designer didn't match the real nameplate 1:1** — the reference scale was
   never actually sampled. Root cause found by *measuring* instead of reasoning, after
   three reasoned fixes in a row failed: `designerRefScale` was `nil` in the live profile

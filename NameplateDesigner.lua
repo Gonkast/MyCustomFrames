@@ -1205,41 +1205,45 @@ local function CreateDesigner()
         alphaKey = "castTextAlpha", alphaRange = { 0, 1, 0.05 },
         colorKey = "castTextColor", colorLabel = "Color" }
 
-    -- ---- Auras: 2026-07-19, pedido del usuario -- de vuelta a 3 grupos
-    -- INDEPENDIENTES (Big Debuff/Personal Debuffs/Enemy Buffs), cada uno
-    -- con su propio offset -- ver AURA_GROUPS/ClassifyAura en Nameplates.lua.
-    -- FIX 2026-07-19: ReassertAuraGroupGeometry (real) ahora ancla a
-    -- mcfNameHolder (nuestro nombre propio, posicion 100% conocida: 16 +
-    -- nameOffsetY sobre hp, altura fija 20) en vez de uf.name nativo (cuya
-    -- posicion real no controlamos) -- antes esto usaba un gap "42"
-    -- adivinado a ojo que nunca coincidia con el juego real. Ahora se
-    -- replica la MISMA cuenta exacta: nameHolder ya esta anclado a hp con
-    -- base (0,16), asi que anclar aca a nameHolder con gap fijo "6" (mas
-    -- offsetY) da el mismo resultado pixel-a-pixel que el codigo real.
-    -- FIX 2026-07-19 (2): el holder real ahora tiene CONTRA-ESCALA fija
-    -- (ver ReassertAuraGroupGeometry) -- el mock tiene que ser hijo de
-    -- `content` con escala ZOOM fija (igual que nameHolder), NO de `stage`
-    -- (que mezcla stageScale*ZOOM, la escala VIEJA que ya no usa el real).
-    -- Con esto ambos interpretan el offset guardado en la MISMA "unidad"
-    -- (pixeles de pantalla reales * el mismo factor de zoom del panel).
-    -- combatGuard=true en TODO lo de auras (drag/rueda/checkbox) -- pedido
-    -- del usuario 2026-07-19: "que no pueda alterar las auras en combate".
+    -- ---- Auras: 3 grupos INDEPENDIENTES (Big Debuff/Personal Debuffs/Enemy
+    -- Buffs), cada uno con su propio offset -- ver AURA_GROUPS/ClassifyAura en
+    -- Nameplates.lua.
+    --
+    -- ANCLAJE (2026-07-28): al `stage`, o sea al nameplate, NO al nombre. Antes
+    -- colgaban de nameHolder en los dos lados, y el usuario lo detecto desde el
+    -- sintoma: "si escalo o muevo el texto se mueven esas". Era un acoplamiento
+    -- que impedia afinar el nombre sin desajustar las auras, y del lado real
+    -- traia ademas una cadena de fallback que podia dejarlas colgadas del
+    -- FontString de Blizzard para siempre. El motivo completo esta en
+    -- L.AuraGroup (NameplateLayout.lua); aca solo hay que reflejarlo.
+    --
+    -- ESCALA: el holder real lleva contra-escala fija (ver
+    -- ReassertAuraGroupGeometry), asi que el mock es hijo de `content` con
+    -- escala ZOOM fija -- igual que nameHolder, y NO de `stage` (que mezcla
+    -- stageScale*ZOOM, el regimen de la barra). Ser hijo de `content` pero
+    -- anclarse a `stage` es a proposito: el padre define la ESCALA, el ancla
+    -- define la POSICION, y aca hacen falta distintos. Con esto ambos lados
+    -- interpretan el offset guardado en la misma unidad (pixeles de pantalla
+    -- reales por el zoom del panel).
+    --
+    -- combatGuard=true en TODO lo de auras (drag/rueda/checkbox) -- pedido del
+    -- usuario 2026-07-19: "que no pueda alterar las auras en combate".
     local bigHolder, bigHL, bigShownCB = MakeAuraGroupMock(content, "Big Debuff", "auraShowBigDebuff")
     bigHolder:SetScale(ZOOM)
     MakeDraggable(bigHolder, "bigDebuffOffsetX", "bigDebuffOffsetY", NameDivisor, true)
-    els[#els + 1] = { handle = bigHolder, anchor = nameHolder,
+    els[#els + 1] = { handle = bigHolder, anchor = stage,
         layout = function(p) return ns.NPLayout.AuraGroup(p, "big") end }
 
     local personalHolder, personalHL, personalShownCB = MakeAuraGroupMock(content, "Personal Debuffs", "auraShowPersonalDebuffs")
     personalHolder:SetScale(ZOOM)
     MakeDraggable(personalHolder, "personalDebuffsOffsetX", "personalDebuffsOffsetY", NameDivisor, true)
-    els[#els + 1] = { handle = personalHolder, anchor = nameHolder,
+    els[#els + 1] = { handle = personalHolder, anchor = stage,
         layout = function(p) return ns.NPLayout.AuraGroup(p, "personal") end }
 
     local enemyHolder, enemyHL, enemyShownCB = MakeAuraGroupMock(content, "Enemy Buffs", "auraShowEnemyBuffs")
     enemyHolder:SetScale(ZOOM)
     MakeDraggable(enemyHolder, "enemyBuffsOffsetX", "enemyBuffsOffsetY", NameDivisor, true)
-    els[#els + 1] = { handle = enemyHolder, anchor = nameHolder,
+    els[#els + 1] = { handle = enemyHolder, anchor = stage,
         layout = function(p) return ns.NPLayout.AuraGroup(p, "enemy") end }
 
     -- Tamaño de icono COMPARTIDO por las 3 categorias (auraIconSize, igual
