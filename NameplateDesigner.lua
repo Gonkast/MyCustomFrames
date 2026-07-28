@@ -1646,11 +1646,37 @@ SlashCmdList["MCFNPDESIGNER"] = function() ns.ToggleNameplateDesigner() end
 -- encogido por la distancia. Si NO coinciden, la fila que difiere señala el
 -- elemento y el eje exactos donde esta el problema.
 -- ==========================================================================
+-- Devuelve (rect, motivo). El motivo importa: en los nameplates hay APIs de
+-- medicion RESTRINGIDAS (GetPoint/GetNumPoints ya se sabe que estan bloqueadas,
+-- "Can't measure restricted regions") y ademas Midnight puede devolver numeros
+-- SECRETOS en geometria de frames ajenos -- comparar uno de esos con 0 revienta.
+-- Por eso cada paso va con pcall + chequeo de tipo/secreto ANTES de operar, y
+-- si algo falla se informa QUE fallo en vez de un "no pude medir" generico.
+local function IsUsableNumber(v)
+    if type(v) ~= "number" then return false end
+    if issecretvalue and issecretvalue(v) then return false end
+    return true
+end
+
 local function RectOf(f)
-    if not f then return nil end
-    local ok, l, b, w, h = pcall(function() local x, y, ww, hh = f:GetRect(); return x, y, ww, hh end)
-    if not ok or not l or not w or w == 0 then return nil end
-    return { l = l, b = b, w = w, h = h }
+    if not f then return nil, "frame inexistente" end
+    -- 1) GetRect (lo mas directo: izquierda, abajo, ancho, alto en pantalla).
+    local ok, l, b, w, h = pcall(f.GetRect, f)
+    if ok and IsUsableNumber(l) and IsUsableNumber(b) and IsUsableNumber(w) and IsUsableNumber(h) and w > 0 then
+        return { l = l, b = b, w = w, h = h }
+    end
+    local why = (not ok) and ("GetRect fallo: " .. tostring(l)) or "GetRect devolvio valores no usables (secretos/nil/0)"
+    -- 2) Fallback por partes -- a veces GetRect esta bloqueado pero los
+    -- getters sueltos no (o al reves).
+    local okL, ll = pcall(f.GetLeft, f)
+    local okB, bb = pcall(f.GetBottom, f)
+    local okW, ww = pcall(f.GetWidth, f)
+    local okH, hh = pcall(f.GetHeight, f)
+    if okL and okB and okW and okH
+        and IsUsableNumber(ll) and IsUsableNumber(bb) and IsUsableNumber(ww) and IsUsableNumber(hh) and ww > 0 then
+        return { l = ll, b = bb, w = ww, h = hh }
+    end
+    return nil, why .. (okL and "" or "; GetLeft tambien fallo")
 end
 
 -- Posicion del elemento respecto de la barra, en "anchos/altos de barra".
@@ -1690,9 +1716,24 @@ SlashCmdList["MCFNPLAYOUTDIAG"] = function()
         { "raidmark",   uf.RaidTargetFrame,                      designer.raidHolder },
     }
 
-    local realHP, mockHP = RectOf(uf.healthBar), RectOf(designer.hp)
+    local realHP, whyReal = RectOf(uf.healthBar)
+    local mockHP, whyMock = RectOf(designer.hp)
     if not (realHP and mockHP) then
-        print("|cffff5555[MCF]|r No pude medir la barra de vida de un lado.")
+        print("|cffff5555[MCF]|r No pude medir la barra de vida:")
+        print("   real  = " .. (realHP and "OK" or ("|cffff5555" .. tostring(whyReal) .. "|r")))
+        print("   panel = " .. (mockHP and "OK" or ("|cffff5555" .. tostring(whyMock) .. "|r")))
+        -- Que SI se puede leer de la barra real -- para saber con que trabajar.
+        print("   sondeo de la barra real:")
+        for _, probe in ipairs({ "GetRect", "GetLeft", "GetBottom", "GetWidth", "GetHeight",
+                                 "GetSize", "GetCenter", "GetEffectiveScale" }) do
+            local okP, v = pcall(uf.healthBar[probe], uf.healthBar)
+            local desc
+            if not okP then desc = "|cffff5555bloqueado|r (" .. tostring(v):sub(1, 60) .. ")"
+            elseif v == nil then desc = "nil"
+            elseif issecretvalue and issecretvalue(v) then desc = "|cffff5555SECRETO|r"
+            else desc = tostring(v) end
+            print(("     %-18s %s"):format(probe, desc))
+        end
         return
     end
 
@@ -1705,10 +1746,12 @@ SlashCmdList["MCFNPLAYOUTDIAG"] = function()
 
     for _, row in ipairs(pairsList) do
         local label, realF, mockF = row[1], row[2], row[3]
-        local a, b = Norm(RectOf(realF), realHP), Norm(RectOf(mockF), mockHP)
+        local rr, whyR = RectOf(realF)
+        local mr, whyM = RectOf(mockF)
+        local a, b = Norm(rr, realHP), Norm(mr, mockHP)
         if not a or not b then
-            print(("  |cff888888%-15s sin datos (real=%s panel=%s)|r"):format(
-                label, a and "ok" or "-", b and "ok" or "-"))
+            print(("  |cff888888%-15s sin datos -- real: %s | panel: %s|r"):format(
+                label, a and "ok" or tostring(whyR), b and "ok" or tostring(whyM)))
         else
             local worst = math.max(math.abs(a.dx - b.dx), math.abs(a.dy - b.dy),
                                    math.abs(a.rw - b.rw), math.abs(a.rh - b.rh))
