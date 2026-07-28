@@ -62,8 +62,69 @@ None to load — no other addon is a hard dependency. That said, this preset is 
   target/casting rules, or zone filters, so those stay exactly as you set them.
 - Micro menu, chat bubble text, mouselook, native frame hiding, assisted glow, mirror timer, tooltip, extra button — all reskinned
 - **Lock/Edit mode** (`/mcf`) — drag/scale/reposition everything, "Hide in Lock" panel, syncs with Blizzard's Edit Mode
-- **Setup Wizard** (`/mcfsetup`) — first-run walkthrough, auto-applies bundled profiles
+- **Setup Wizard** (`/mcfsetup`) — first-run walkthrough, optionally applies bundled profiles
 - **Preset system** — save/load/export/import the whole config as a string
+
+## What's *not* inside
+
+So you know before installing. None of this is planned — it's here to set expectations, not
+as a roadmap.
+
+- **No action bars.** This preset positions and scales Bartender4's bars; it doesn't provide
+  any. Without Bartender4 you keep Blizzard's default bars.
+- **No chat, bag, or damage-meter replacement.** Pairs with Chattynator / BetterBags; you
+  bring your own meter.
+- **No boss-mod integration.** DBM/BigWigs bars aren't skinned or repositioned.
+- **No world map or dungeon-journal reskin.** Only the minimap is themed.
+- **No range or dispel indicators on the 40-player raid frames.** The range fade and shield
+  bar only cover the individual frames (player/target/focus/party/arena).
+- **No threat/aggro indicator.** Attempted several ways and dropped — see the Midnight
+  limits below.
+- **No dispel-type highlight on unit frames.** Nameplates do filter and colour auras by
+  dispel type; unit frames only colour the aura icon's own border.
+- **No aura whitelist/blacklist on unit frames.** You choose how many icons and how they
+  sort, not which specific spells appear. Nameplates *do* have real filtering.
+- **No localisation.** English only, hardcoded.
+- **No profile-per-character or per-spec.** One config per account, plus the preset
+  save/load system.
+- **Tuned for 16:9 at 100% UI scale.** Other aspect ratios or a custom UI scale will need
+  manual repositioning.
+
+## Midnight (12.0) API limits that shape this addon
+
+Midnight wraps a lot of combat data in "secret values" — an addon can pass them to Blizzard
+widgets but can't read, compare, or do maths on them. These are limits of the client, not
+bugs to report, and every one below was confirmed in-game on 12.0.7:
+
+- **Health and power of other units are unreadable.** Bars are filled by handing the secret
+  straight to a `StatusBar`; text uses `UnitHealthPercent`, which stays readable. Exact
+  values (`123456 / 200000`) are not obtainable for anyone but yourself.
+- **Aura timers on other units are secret.** `expirationTime`/`duration` can't be read, so
+  the countdown is drawn by Blizzard's own cooldown widget from a duration object. The
+  "sort by time remaining" option therefore only truly reorders *your own* auras; elsewhere
+  it falls back to the game's native order.
+- **Stack counts and dispel types are secret.** Dispel colouring goes through
+  `C_UnitAuras.GetAuraDispelTypeColor` / `IsAuraFilteredOutByInstanceID` instead of reading
+  the type directly.
+- **`UnitInRange` returns secret booleans for party and arena units.** The range fade
+  simply won't show for those units rather than guessing — it works in open world.
+- **`UnitGUID`, `UnitCreatureType` and `UnitReaction` go secret inside dungeons**
+  (anti-scouting). This is why filtering nameplates off world objects needs a fallback
+  chain, and why arena opponents can't be identified by GUID.
+- **`COMBAT_LOG_EVENT_UNFILTERED` is gone for addons.** The arena trinket tracker detects
+  the buff via `UNIT_AURA` instead; anything that genuinely needs the combat log can't be
+  done.
+- **Threat data proved unusable for a visible indicator.** Four different approaches, none
+  produced a reliable on-screen change — Blizzard's own recolouring reasserts on its own
+  schedule and the native highlight rarely fires. Dropped rather than shipped half-working.
+- **Native minimap pins ignore parent alpha** (`SetIgnoreParentAlpha`), so Explorer can't
+  fade them — it moves the minimap off-screen instead. That makes minimap hiding snap
+  instantly rather than fade.
+- **Many calls are blocked in combat**, including `SetCVar`, `EnableMouse`, `Show`/`Hide`
+  and `SetPoint` on protected frames, and `Minimap:ClearAllPoints()`. Anything that lands
+  mid-combat is deferred to when you leave combat, so a few changes apply a moment late.
+- **The `AuraContainer` widget doesn't exist on 12.0.7** — it's from a later build — so
+  nameplate aura classification leans on Blizzard's own already-computed lists.
 
 ## Slash commands
 
