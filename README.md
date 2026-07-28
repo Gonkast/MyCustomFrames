@@ -26,7 +26,7 @@ None to load — no other addon is a hard dependency. That said, this preset is 
 - **[WaypointUI](https://www.curseforge.com/wow/addons/waypointui)** — waypoint/map arrow
 - **[Bartender4 Animations](https://www.curseforge.com/wow/addons/bartender4-animations)** — button-press animations
 - **[DF Friendly Nameplates](https://www.curseforge.com/wow/addons/df-friendly-nameplates)** — friendly nameplate visibility
-- **Masque Skinner: Blizz Buffs** — skins native buff/debuff icons
+- **[Masque Skinner: Blizz Buffs](https://www.curseforge.com/wow/addons/blizzbuffsfacade)** — skins native buff/debuff icons
 - **[ChatBubbleReplacements](https://github.com/Luckyone961/ChatBubbleReplacements)** — bubble textures (this preset only reskins the *text*)
 
 ## What's inside
