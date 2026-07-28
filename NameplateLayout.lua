@@ -25,7 +25,12 @@ local ADDON, ns = ...
 --   * "plate"  -> hijo directo del nameplate, SIN contra-escala: encoge con la
 --                 distancia. Barra de vida, cast, clasificacion, marca de raid.
 --   * "screen" -> lleva SetScale(1/effScale): queda a tamaño de PANTALLA fijo,
---                 no encoge. Nombre y los 3 grupos de auras.
+--                 no encoge. SOLO el nombre. Los 3 grupos de auras estuvieron
+--                 aca y se pasaron a "plate" el 2026-07-28: la contra-escala es
+--                 para que la FUENTE no se rasterice a tamaño fraccionario, y
+--                 los iconos son texturas -- escalan suave. Tenerlos en
+--                 "screen" hacia que su tamaño relativo a la barra se disparara
+--                 con la distancia (1.08 alturas de cerca, 2.41 de lejos).
 -- Cada elemento declara su regimen aca (campo `scaleRegime`) para que el
 -- consumidor sepa que escala aplicarle -- antes esto vivia implicito y
 -- repartido entre los dos archivos, y fue justamente la causa de que el panel
@@ -214,8 +219,15 @@ function L.AuraGroup(p, groupKey)
     local keys = L.AURA_GROUP_OFFSET_KEYS[groupKey]
     if not keys then return nil end
     local dir = (p and p[L.AURA_GROUP_DIRECTION_KEYS[groupKey]]) or "right"
+    -- Regimen "plate", NO "screen" (2026-07-28). Con contra-escala los iconos
+    -- quedaban a tamaño de PANTALLA fijo mientras la barra encogia, asi que su
+    -- tamaño relativo se disparaba con la distancia: 1.08 alturas de barra de
+    -- cerca y 2.41 de lejos, contra un valor clavado en el editor. La posicion
+    -- ya se habia hecho invariante; el TAMAÑO no lo era. Como son texturas (no
+    -- texto), escalarlas no tiene el problema de rasterizado que motivo la
+    -- contra-escala del nombre -- se escalan suave y quedan proporcionadas.
     return { point = AURA_ANCHOR_POINT[dir] or "BOTTOMLEFT", relTo = "plate", relPoint = "TOP",
              x = num(p and p[keys[1]], AURA_BASE_X[groupKey] or 0),
              y = AURA_BASE_Y + num(p and p[keys[2]], 0),
-             scaleRegime = "screen" }
+             scaleRegime = "plate" }
 end

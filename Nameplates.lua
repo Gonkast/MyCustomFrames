@@ -51,19 +51,8 @@ local DEFAULT_HIGHLIGHT_COLOR = { r = 255/255, g = 239/255, b = 169/255 }
 -- pixel FISICO mas cercano segun la escala efectiva del momento, evitando
 -- posiciones sub-pixel que blurrean texto/texturas cuando el nameplate se
 -- achica por distancia. Misma tecnica, version chica solo para texto.
-local uiUnitFactor = 768.0 / select(2, GetPhysicalScreenSize())
-local pixelMonitor = CreateFrame("Frame")
-pixelMonitor:RegisterEvent("DISPLAY_SIZE_CHANGED")
-pixelMonitor:SetScript("OnEvent", function()
-    uiUnitFactor = 768.0 / select(2, GetPhysicalScreenSize())
-end)
-local function SnapToPixel(region, uiUnitSize)
-    if uiUnitSize == 0 then return 0 end
-    local scale = region:GetEffectiveScale()
-    if not scale or scale == 0 then return uiUnitSize end
-    local numPixels = math.floor((uiUnitSize * scale) / uiUnitFactor + 0.5)
-    return numPixels * uiUnitFactor / scale
-end
+-- (SnapToPixel se mudo a NameplateBuild.lua: ahora lo aplica B.Place, asi el
+-- redondeo al pixel fisico lo reciben las piezas reales Y las del editor.)
 
 -- hooksecurefunc en vez de HookScript: highlight/bgTexture son Texture (no
 -- Frame, sin scripts como OnSizeChanged -- confirmado por error en vivo), y
@@ -614,8 +603,8 @@ local function ReassertCastGeometry(uf)
     local cb = uf.mcfCast
     if not cb then return end
     local p = P()
-    cb:ClearAllPoints()
-    cb:SetPoint("TOP", uf.healthBar or uf, "BOTTOM", (p and p.castOffsetX) or 0, (p and p.castOffsetY) or -7)
+    -- Colocada por ns.NPBuild.Place, la MISMA funcion que usa el editor.
+    ns.NPBuild.Place(cb, uf.healthBar or uf, ns.NPLayout.Cast(p), uf:GetEffectiveScale())
     local cw, ch = GetCastSize()
     cb:SetSize(cw, ch)
     if cb.bg then cb.bg:SetSize(cw, ch) end
@@ -629,10 +618,7 @@ local function ReassertCastGeometry(uf)
         cb.text:SetFont("Fonts\\FRIZQT__.TTF", tsize, "OUTLINE")
     end
     cb.text:SetTextColor(tc.r, tc.g, tc.b, (p and p.castTextAlpha) or 1)
-    cb.text:ClearAllPoints()
-    cb.text:SetPoint("CENTER",
-        SnapToPixel(cb.text, (p and p.castTextOffsetX) or 0),
-        SnapToPixel(cb.text, (p and p.castTextOffsetY) or 0))
+    ns.NPBuild.Place(cb.text, cb, ns.NPLayout.CastText(p), cb:GetEffectiveScale())
 end
 
 -- Se llama desde el ticker de mas abajo (no por evento): UnitCastingInfo/
@@ -828,9 +814,11 @@ local function ReassertNameGeometry(uf)
     -- contra-escala, asi que la FUENTE sigue nitida; lo que ahora acompaña a la
     -- barra es la POSICION. Sin esto la separacion nombre-barra variaba mas del
     -- doble con la distancia y ningun panel podia predecirla.
+    -- `offX/offY` de arriba ya eligieron el par correcto (normal vs solo-nombre),
+    -- asi que se inyectan en la tabla del layout antes de colocarla.
     local nl = ns.NPLayout.Name(p)
-    local k = (effScale and effScale > 0) and effScale or 1
-    holder:SetPoint(nl.point, uf, nl.relPoint, offX * k, (16 + offY) * k)
+    nl.x, nl.y = offX, 16 + offY
+    ns.NPBuild.Place(holder, uf, nl, effScale)
 end
 
 -- El nombre de la unidad NO es secreto (es informacion basica de UI, igual
@@ -872,10 +860,7 @@ local function SkinHealthValue(uf)
             fs:SetFont("Fonts\\FRIZQT__.TTF", size, "OUTLINE")
         end
         fs:SetTextColor(c.r, c.g, c.b, (p and p.healthValueAlpha) or 1)
-        fs:ClearAllPoints()
-        fs:SetPoint("TOP", hp, "BOTTOM",
-            SnapToPixel(fs, (p and p.healthValueOffsetX) or 0),
-            SnapToPixel(fs, (p and p.healthValueOffsetY) or -2))
+        ns.NPBuild.Place(fs, hp, ns.NPLayout.HealthValue(p), hp:GetEffectiveScale())
     end
     Reassert()
     fs._mcfReassert = Reassert
@@ -923,9 +908,7 @@ local function ReassertClassification(uf)
     local p = P()
     local sz = (p and p.classificationSize) or 40
     holder:SetSize(sz, sz)
-    holder:ClearAllPoints()
-    holder:SetPoint("RIGHT", uf.healthBar or uf, "RIGHT",
-        (p and p.classificationOffsetX) or 20, (p and p.classificationOffsetY) or -1)
+    ns.NPBuild.Place(holder, uf.healthBar or uf, ns.NPLayout.Classification(p), uf:GetEffectiveScale())
 end
 
 local function UpdateClassification(uf, unit)
@@ -965,9 +948,7 @@ local function ReassertRaidMark(uf)
     local p = P()
     local sz = (p and p.raidMarkSize) or 64
     rt:SetSize(sz, sz)
-    rt:ClearAllPoints()
-    rt:SetPoint("CENTER", uf.healthBar or uf, "CENTER",
-        (p and p.raidMarkOffsetX) or 0, (p and p.raidMarkOffsetY) or 0)
+    ns.NPBuild.Place(rt, uf.healthBar or uf, ns.NPLayout.RaidMark(p), uf:GetEffectiveScale())
 end
 local function LockRaidMark(uf)
     local rt = uf.RaidTargetFrame
@@ -1198,17 +1179,12 @@ local function ReassertAuraGroupGeometry(uf, groupKey)
     end
     holder._mcfLastEffScale, holder._mcfLastAnchor = effScale, al.point
     holder._mcfLastOffX, holder._mcfLastOffY = al.x, al.y
-    if effScale and effScale > 0 then
-        holder:SetScale(math.max(0.3, math.min(3, 1 / effScale)))
-    end
-    holder:ClearAllPoints()
     -- Ancla al NAMEPLATE, no al nombre (ver la nota larga en L.AuraGroup). Se
     -- acabo la cadena `uf.mcfNameHolder or uf.name or uf`: esa podia dejar el
     -- grupo colgado de la FontString de Blizzard de forma permanente, porque el
     -- dedupe de arriba nunca comparo el frame de ancla.
-    -- Mismo criterio que el nombre: offsets en unidades del plate.
-    local k = (effScale and effScale > 0) and effScale or 1
-    holder:SetPoint(al.point, uf, al.relPoint, al.x * k, al.y * k)
+    -- La escala tambien la pone B.Place segun el regimen -- ya no se fija aca.
+    ns.NPBuild.Place(holder, uf, al, effScale)
 end
 -- Reaplica offset/tamaño de fuente/color de los textos de cargas Y tiempo
 -- restante de TODOS los iconos de un grupo -- SEPARADO de

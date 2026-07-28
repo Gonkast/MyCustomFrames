@@ -201,19 +201,58 @@ local function Resolve(P, relTo)
     return P.root
 end
 
+-- Redondeo al pixel FISICO. Vivia en Nameplates.lua y solo lo recibian el %% de
+-- vida y el texto del cast; al pasar la colocacion a esta funcion lo reciben
+-- todas las piezas de los dos lados. Existe porque una posicion sub-pixel
+-- blurrea texto y texturas cuando el nameplate esta a escala chica.
+local uiUnitFactor = 1
+local pixelMon = CreateFrame("Frame")
+local function RefreshUnitFactor()
+    local _, h = GetPhysicalScreenSize()
+    if h and h > 0 then uiUnitFactor = 768.0 / h end
+end
+pixelMon:RegisterEvent("DISPLAY_SIZE_CHANGED")
+pixelMon:SetScript("OnEvent", RefreshUnitFactor)
+RefreshUnitFactor()
+
+local function Snap(region, v)
+    if v == 0 then return 0 end
+    local ok, scale = pcall(region.GetEffectiveScale, region)
+    if not (ok and type(scale) == "number" and scale > 0) then return v end
+    return math.floor((v * scale) / uiUnitFactor + 0.5) * uiUnitFactor / scale
+end
+
+-- Coloca UNA pieza. EXPORTADA: Nameplates.lua la llama para cada elemento real,
+-- asi los dos lados no solo comparten los numeros sino la linea de codigo que
+-- los aplica -- que es lo unico que impide de verdad que vuelvan a divergir.
+--
+-- `scale` = escala del plate (GetEffectiveScale del nameplate real, o la escala
+-- de referencia del editor). Ver la nota de los regimenes en NameplateLayout.
+function B.Place(elem, anchor, l, scale)
+    if not (elem and anchor and l) then return end
+    scale = (type(scale) == "number" and scale > 0) and scale or 1
+    local k = 1
+    if l.scaleRegime == "screen" then
+        -- Contra-escala para que la FUENTE quede a tamaño fisico fijo, y offset
+        -- multiplicado por la escala para compensarla y que la POSICION siga
+        -- acompañando a la barra.
+        k = scale
+        elem:SetScale(math.max(0.3, math.min(3, 1 / scale)))
+    else
+        -- Explicito, no implicito: si una pieza cambia de regimen (paso con los
+        -- grupos de auras), hay que borrar la contra-escala que tenia puesta o
+        -- se queda pegada un valor viejo.
+        elem:SetScale(1)
+    end
+    elem:ClearAllPoints()
+    elem:SetPoint(l.point, anchor, l.relPoint, Snap(elem, l.x * k), Snap(elem, l.y * k))
+end
+
 local function Place(P, elem, l, scale)
     if not (elem and l) then return end
     local anchor = Resolve(P, l.relTo)
     if not anchor then return end
-    local k = 1
-    if l.scaleRegime == "screen" then
-        k = scale
-        if scale and scale > 0 then
-            elem:SetScale(math.max(0.3, math.min(3, 1 / scale)))
-        end
-    end
-    elem:ClearAllPoints()
-    elem:SetPoint(l.point, anchor, l.relPoint, l.x * k, l.y * k)
+    B.Place(elem, anchor, l, scale)
 end
 
 -- P: { root, health, healthBg, healthValue, cast, castText, name,
