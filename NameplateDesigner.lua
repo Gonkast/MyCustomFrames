@@ -642,14 +642,20 @@ local function CreateDesigner()
     scaleLabel:SetFont(FONT, 10, "")
     scaleLabel:SetPoint("TOP", title, "BOTTOM", 0, -4)
     scaleLabel:SetTextColor(0.7, 0.85, 1)
-    scaleLabel:SetText("Reference scale 1.00")
+    -- Explica QUE hace el slider en vez de repetir su nombre y su valor, que
+    -- ya muestra el propio slider. Desde que los offsets van en unidades del
+    -- plate, esta escala NO mueve nada: se cancela en las proporciones. Lo
+    -- unico que sigue dependiendo de ella es el tamaño del texto del nombre,
+    -- que es lo unico que a proposito no escala -- o sea que el slider simula
+    -- a que DISTANCIA estas viendo el nameplate.
+    scaleLabel:SetText("Plate scale = simulated distance")
 
     -- Zoom del panel (pedido del usuario: "poder hacer un zoom en el panel,
     -- para ver mas grande los elementos") -- ANTES era un multiplicador fijo
     -- (1.6), ahora ajustable en vivo. Liga a la variable local ZOOM (no un
     -- campo del perfil, es solo una preferencia visual del Designer).
     local zoomSlider = MakeMiniSlider(root)
-    zoomSlider:SetPoint("TOP", scaleLabel, "BOTTOM", 0, -18)
+    zoomSlider:SetPoint("TOP", scaleLabel, "BOTTOM", 0, -22)
     BindSlider(zoomSlider, "Panel zoom", 1, 3, 0.1,
         function() return ZOOM end,
         function(v)
@@ -668,13 +674,15 @@ local function CreateDesigner()
     -- acotado hasta conseguir un nameplate real, ver ToggleNameplateDesigner) y
     -- de ahi en mas solo si el usuario mueve el slider o aprieta Sample.
     local refSlider = MakeMiniSlider(root)
-    refSlider:SetPoint("TOP", zoomSlider, "BOTTOM", 0, -18)
-    BindSlider(refSlider, "Reference scale", 0.3, 2, 0.01,
+    -- 36, no 18: hay que despejar la fila "- [valor] +" del slider de arriba
+    -- (~16px bajo su riel) MAS la etiqueta de este (~12px sobre el suyo).
+    -- Con 18 se superponian (reportado con captura 2026-07-28).
+    refSlider:SetPoint("TOP", zoomSlider, "BOTTOM", 0, -36)
+    BindSlider(refSlider, "Plate scale (distance)", 0.3, 2, 0.01,
         function() return stageScale end,
         function(v)
             stageScale = v
             SetRefScale(v)
-            designer.scaleLabel:SetText(("Reference scale %.2f"):format(stageScale))
             designer.stage:SetScale(stageScale * ZOOM)
             Reflow()
         end)
@@ -1639,9 +1647,6 @@ ns.ToggleNameplateDesigner = function()
                 -- Reflow -- una sola implementacion en vez de repetirla aca.
                 if designer.refSlider then designer.refSlider:SetValue(clamp(s, 0.3, 2)) end
             end)
-        end
-        if designer.scaleLabel then
-            designer.scaleLabel:SetText(("Reference scale %.2f"):format(stageScale))
         end
         if designer.stage then designer.stage:SetScale(stageScale * ZOOM) end
         if designer.refSlider then designer.refSlider:SetValue(stageScale) end
