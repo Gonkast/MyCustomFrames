@@ -1759,3 +1759,65 @@ SlashCmdList["MCFNPLAYOUTDIAG"] = function()
         tostring(p and p.healthWidth), tostring(p and p.healthHeight)))
     print("  (posicion real no medible: GetRect/GetLeft/GetCenter estan bloqueados en nameplates)")
 end
+
+-- ==========================================================================
+-- DIAGNOSTICO /mcfnpanchordiag (2026-07-28)
+--
+-- Mide la distancia REAL entre el tope de `uf` (el UnitFrame del nameplate, al
+-- que se ancla el nombre) y el tope de la barra de vida (que es contra lo que
+-- el panel dibuja todo). El panel asume que son el mismo punto -- `stage` mide
+-- 1x1 y la barra cuelga de el -- pero en el nameplate real `uf` es el frame
+-- ENTERO de Blizzard, y su tope esta mas arriba que la barra.
+--
+-- COMO mide, si GetTop/GetRect estan bloqueados en nameplates: no se mide el
+-- nameplate. Se crean dos frames PROPIOS, hijos de UIParent (no del nameplate,
+-- asi no heredan la restriccion), y se ANCLA cada uno a uno de los dos puntos.
+-- Anclar a un frame restringido esta permitido; lo que esta prohibido es
+-- medirlo. Midiendo nuestros propios frames se obtiene la distancia exacta.
+-- ==========================================================================
+local probeA, probeB
+SLASH_MCFNPANCHORDIAG1 = "/mcfnpanchordiag"
+SlashCmdList["MCFNPANCHORDIAG"] = function()
+    local plate = UnitExists("target") and C_NamePlate and C_NamePlate.GetNamePlateForUnit
+        and C_NamePlate.GetNamePlateForUnit("target")
+    local uf = plate and (plate.UnitFrame or plate)
+    if not uf or not uf.healthBar then
+        print("|cffff5555[MCF]|r Necesito un target con nameplate visible.")
+        return
+    end
+    probeA = probeA or CreateFrame("Frame", nil, UIParent)
+    probeB = probeB or CreateFrame("Frame", nil, UIParent)
+    probeA:SetSize(1, 1); probeB:SetSize(1, 1)
+    probeA:ClearAllPoints(); probeB:ClearAllPoints()
+    local okA = pcall(probeA.SetPoint, probeA, "TOP", uf, "TOP", 0, 0)
+    local okB = pcall(probeB.SetPoint, probeB, "TOP", uf.healthBar, "TOP", 0, 0)
+    if not (okA and okB) then
+        print("|cffff5555[MCF]|r No pude anclar las sondas (" ..
+            (okA and "healthBar" or "uf") .. " rechazo el anclaje).")
+        return
+    end
+    local okTA, topA = pcall(probeA.GetTop, probeA)
+    local okTB, topB = pcall(probeB.GetTop, probeB)
+    print("|cffffe19b[MCF anchor]|r tope de uf vs tope de la barra:")
+    if okTA and okTB and type(topA) == "number" and type(topB) == "number"
+        and not (issecretvalue and (issecretvalue(topA) or issecretvalue(topB))) then
+        local d = topA - topB
+        print(("  tope uf     = %.1f"):format(topA))
+        print(("  tope barra  = %.1f"):format(topB))
+        print(("  |cffffff00DIFERENCIA = %.1f px de pantalla|r"):format(d))
+        if math.abs(d) < 2 then
+            print("  ~0 -> el panel tiene razon: uf y la barra empiezan igual.")
+        else
+            print("  =/= 0 -> CONFIRMADO: el nombre y las auras se anclan " ..
+                ("%.1f px mas arriba"):format(d) .. " en el juego que en el panel.")
+        end
+    else
+        print("  |cffff5555las sondas tampoco se pudieron medir|r")
+    end
+    local okH, ufH = pcall(uf.GetHeight, uf)
+    local okB2, barH = pcall(uf.healthBar.GetHeight, uf.healthBar)
+    print(("  alto uf=%s  alto barra=%s  escala=%.3f"):format(
+        okH and string.format("%.1f", ufH) or "?",
+        okB2 and string.format("%.1f", barH) or "?",
+        select(2, pcall(uf.GetEffectiveScale, uf)) or 0))
+end
