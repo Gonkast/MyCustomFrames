@@ -418,8 +418,21 @@ local function BuildPage2(content)
     icon:SetSize(18, 18)
     icon:SetPoint("TOPLEFT", 0, 1)
     Header(p, "Bundled profiles for other addons", 22, -2, CONTENT_W - 20)
+    -- CAMBIADO A OPT-IN (2026-07-27, antes de publicar): esta pagina no aplica
+    -- una preferencia, REEMPLAZA los SavedVariables enteros de otro addon --
+    -- y eso NO se puede deshacer (ver ns.ApplyProfilesFiltered: son globals de
+    -- OTRO addon, /mcfundo solo cubre los de MyCustomFrames). Con los tildes
+    -- pre-marcados y el texto en modo "destilda lo que NO quieras", el camino
+    -- por defecto -- darle Next sin leer -- borraba la config de barras/camara/
+    -- chat del usuario para siempre. Ahora arrancan TODOS apagados: no marcar
+    -- nada es seguro, y marcar es un acto deliberado.
     Paragraph(p, 4, -26, 11,
-        "These addons are loaded and have a bundled Gonkast profile. Untick any you DON'T want replaced:")
+        "These addons are loaded and ship a bundled Gonkast profile. Tick only the ones you " ..
+        "want REPLACED -- leaving them all unticked is safe and changes nothing.")
+    local warn = Paragraph(p, 4, -60, 11,
+        "This overwrites that addon's entire configuration and CANNOT be undone -- not by " ..
+        "/mcfundo, not by reinstalling. If you have layouts you care about, back them up first.")
+    warn:SetTextColor(1, 0.35, 0.35)
     p._list = p._list or {}
     return p
 end
@@ -428,7 +441,9 @@ local function RefreshPage2(p)
     for _, w in ipairs(p._list) do w:Hide() end
     wipe(p._list)
     local list = (ns.ProfilesStatus and ns.ProfilesStatus()) or {}
-    local y = -50
+    -- -100 (antes -50): el aviso rojo de BuildPage2 ocupa 2 lineas debajo del
+    -- parrafo normal, la lista arranca despues de ambos.
+    local y = -100
     if #list == 0 then
         local fs = Paragraph(p, 4, y, 12,
             "No supported addons detected (Bartender4, DynamicCam, Masque, Chattynator).")
@@ -436,7 +451,8 @@ local function RefreshPage2(p)
         return
     end
     for _, addon in ipairs(list) do
-        if selected[addon] == nil then selected[addon] = true end
+        -- Default OFF (opt-in) -- ver la nota larga en BuildPage2.
+        if selected[addon] == nil then selected[addon] = false end
         local label = (ns.ProfilesInfo and ns.ProfilesInfo[addon]) or addon
         local cb = Toggle(p, label, 4, y,
             function() return selected[addon] end,
@@ -619,11 +635,15 @@ local function BuildPage5(content)
     local p = CreateFrame("Frame", nil, content)
     p:SetAllPoints()
     Header(p, "Apply the Gonkast preset", 0, -2)
+    -- Redactado para el modelo OPT-IN (2026-07-27): antes decia "los que dejaste
+    -- tildados", que asumia que venian tildados de fabrica. Ahora la pagina 2
+    -- arranca todo apagado, asi que lo normal es que aca no se reemplace nada.
     Paragraph(p, 4, -30, 12,
-        "This REPLACES the SavedVariables of the addons you kept ticked on the previous page " ..
-        "with the bundled Gonkast profile (Bartender4 bars, DynamicCam, Masque skin, " ..
-        "Chattynator chat). A manual /reload is required afterwards. Only one profile is bundled per " ..
-        "addon (\"Default\" for Bartender4/DynamicCam) — that's the recommended one, applied automatically.")
+        "Applies the Gonkast preset itself. If you ticked any addon on the previous page, this " ..
+        "also REPLACES that addon's entire SavedVariables with the bundled profile (Bartender4 " ..
+        "bars, DynamicCam, Masque skin, Chattynator chat) — permanently. Ticked nothing? Then " ..
+        "only this addon's own preset is applied and nothing else is touched. A manual /reload " ..
+        "is required afterwards.")
 
     -- Boton propio del usuario (Apply_Button.tga): la accion principal de la pagina. Separado un
     -- poco mas del parrafo de arriba (2026-07-16, pedido del usuario: se veian pegados).

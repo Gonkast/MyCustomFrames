@@ -178,9 +178,18 @@ StaticPopupDialogs["MCF_APPLY_PROFILES_DONE"] = {
     timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
 }
 
--- Confirmacion (destructivo).
+-- Confirmacion (destructivo e IRREVERSIBLE).
+-- Texto reforzado (2026-07-27, antes de publicar): decia "REPLACES their current
+-- configuration", que suena a algo que se puede volver a cambiar. No: se
+-- sobrescribe el global de OTRO addon y su archivo original se pierde en el
+-- proximo /reload -- /mcfundo NO lo cubre (solo respalda MyCustomFramesDB, ver
+-- ApplyProfilesFiltered). A diferencia del wizard, esta via aplica TODOS los
+-- addons detectados de una, sin eleccion por addon -- por eso el aviso tiene
+-- que ser explicito.
 StaticPopupDialogs["MCF_APPLY_PROFILES"] = {
-    text = "Apply the Gonkast preset profiles to the detected addons?\n\nThis REPLACES their current configuration with the bundled profiles and reloads the UI.\n\n%s",
+    text = "Replace these addons' configuration with the bundled Gonkast profiles?\n\n%s\n\n"
+        .. "|cffff5555This cannot be undone.|r Their current settings are overwritten for good "
+        .. "-- /mcfundo does not cover other addons. Back them up first if you care about them.",
     button1 = ACCEPT or "Accept", button2 = CANCEL or "Cancel",
     OnAccept = function() DoApply() end,
     timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,

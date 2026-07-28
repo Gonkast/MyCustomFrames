@@ -80,6 +80,26 @@ worth reading before redoing one of them).
   hostile *players* only (never NPCs — `UnitIsPlayer` gates it before even trying).
 
 ### Changed
+- **Bundled third-party profiles are now opt-in, not opt-out.** Setup Wizard page 2 used to
+  pre-tick every detected addon and say "untick any you DON'T want replaced" — so the
+  default path, clicking Next without reading, permanently destroyed the user's
+  Bartender4 / DynamicCam / Masque / Chattynator configuration. That's fine on a personal
+  install where you made the bundled copies yourself; it isn't something to ship. All
+  boxes now start **unticked** (ticking nothing is safe and changes nothing), with a red
+  warning that this overwrites the addon's entire config and cannot be undone — `/mcfundo`
+  only ever covered `MyCustomFramesDB`, since you can't write another addon's
+  SavedVariables from your own. The standalone "Apply Profiles" button's confirmation was
+  reworded the same way; it applies to every detected addon at once with no per-addon
+  choice, so it needed the warning even more.
+- **Stripped personal character data from the bundled third-party profiles.** `Masque.lua`
+  shipped a `profileKeys` map of **36 character names across 4 realms**, and
+  `Bartender4.lua` had one left in `LibDualSpec-1.0.char`. Both are per-character
+  pointers, not settings — AceDB assigns "Default" to any character that isn't listed, so
+  emptying them changes nothing for anyone. Verified no config was lost: Masque still has
+  all 456 skin groups, Bartender4 all 11 namespaces, zero differences in the actual
+  profile data. Chattynator's "Gonkast" profile was **left alone** on purpose — it's the
+  author/brand name (already in the addon title) and it holds 7 real settings that differ
+  from its DEFAULT profile, so removing it would have lost configuration.
 - **`Defaults.lua` regenerated from a fresh export.** Picks up everything this session
   added: all 25 hover-aura settings across the 5 groups (direction/size/max icons/padding/
   sort — 21 of them brand new to the baked defaults), `classColorEnemyNames`, and the

@@ -315,9 +315,6 @@ Bartender4DB = {
 },
 ["LibDualSpec-1.0"] = {
 ["char"] = {
-["Gnomegoat - Ragnaros"] = {
-["enabled"] = false,
-},
 },
 },
 ["MicroMenu"] = {
