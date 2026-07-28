@@ -180,8 +180,16 @@ end
 -- tamaños fraccionarios (texto borroso a distancia). Vuelve a estar expuesta.
 -- Alternativa si molesta: mantener la contra-escala y escalar nameFontSize por
 -- la escala del plate -- nitido, pero el tamaño cambia en escalones.
-function L.Name(p)
-    local x, y = off(p, "nameOffsetX", "nameOffsetY", BASE.name)
+-- `nameOnly`: en modo "solo nombre" (jugadores amistosos, sin barra) el nombre
+-- usa SU PROPIO par de offsets, para poder ajustarlo sin tocar el modo normal.
+-- Ese caso lo resuelve el layout, no el consumidor: Nameplates.lua lo hacia
+-- pisando nl.x/nl.y con `16 + offY` DESPUES de pedir la tabla, y esa formula
+-- vieja se quedo cuando la posicion nativa paso a BASE -- el nombre volvia a
+-- +16 en vez de quedarse en su posicion horneada (reportado 2026-07-28).
+function L.Name(p, nameOnly)
+    local xKey = nameOnly and "nameOnlyOffsetX" or "nameOffsetX"
+    local yKey = nameOnly and "nameOnlyOffsetY" or "nameOffsetY"
+    local x, y = off(p, xKey, yKey, BASE.name)
     return { point = "BOTTOM", relTo = "plate", relPoint = "TOP",
              x = x, y = y, scaleRegime = "plate" }
 end

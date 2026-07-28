@@ -809,21 +809,13 @@ local function ReassertNameGeometry(uf)
     -- sin la barra visible, la posicion normal del nombre puede no quedar
     -- bien, asi que se puede ajustar aparte sin afectar el modo normal.
     --
-    -- La colocacion sale de ns.NPLayout (2026-07-27): MISMA fuente que usa el
-    -- Nameplate Designer para su mock, para que no puedan divergir. `offX/offY`
-    -- de arriba ya resolvieron cual par de offsets corresponde (normal vs
-    -- name-only), asi que se pasan directo en vez de dejar que el layout los
-    -- lea del perfil.
-    -- Offsets en unidades del PLATE: se multiplican por effScale (ver la nota
-    -- del regimen "screen" en NameplateLayout.lua). El holder conserva su
-    -- contra-escala, asi que la FUENTE sigue nitida; lo que ahora acompaña a la
-    -- barra es la POSICION. Sin esto la separacion nombre-barra variaba mas del
-    -- doble con la distancia y ningun panel podia predecirla.
-    -- `offX/offY` de arriba ya eligieron el par correcto (normal vs solo-nombre),
-    -- asi que se inyectan en la tabla del layout antes de colocarla.
-    local nl = ns.NPLayout.Name(p)
-    nl.x, nl.y = offX, 16 + offY
-    ns.NPBuild.Place(holder, uf, nl, effScale)
+    -- La colocacion sale ENTERA de ns.NPLayout: misma fuente y misma funcion que
+    -- usa el Designer. El modo solo-nombre lo resuelve L.Name por su 2do
+    -- argumento -- aca se inyectaban los offsets pisando nl.x/nl.y, y esa
+    -- formula (`16 + offY`) sobrevivio a que la posicion nativa se mudara a la
+    -- tabla BASE: el nombre volvia a +16 en vez de quedarse donde estaba
+    -- horneado. `offX/offY` de arriba siguen usandose, pero SOLO para el dedupe.
+    ns.NPBuild.Place(holder, uf, ns.NPLayout.Name(p, uf.mcfNameOnlyMode), effScale)
 end
 
 -- El nombre de la unidad NO es secreto (es informacion basica de UI, igual
