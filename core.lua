@@ -2048,12 +2048,26 @@ local function InitDB()
     -- que dejarlos haria que "resetear" siguiera restaurando la geometria vieja.
     -- La version horneada de los tres salio de Defaults.lua en el mismo commit;
     -- si hace falta recuperarla, esta en el historial de git.
-    if not db._npFullResetV2 then
+    -- Las posiciones NATIVAS pasaron a vivir en NameplateLayout.lua (tabla BASE)
+    -- y el perfil ahora guarda solo un DELTA sobre ellas, que vale 0 de fabrica
+    -- (2026-07-28, pedido del usuario: "no quiero que quede rastro de las
+    -- anteriores posiciones nativas").
+    --
+    -- Hay que limpiar si o si: los offsets guardados se afinaron cuando el
+    -- offset ERA la posicion, asi que con la convencion nueva se SUMARIAN a la
+    -- base y todo quedaria al doble de desplazamiento. Ademas el mismo cambio
+    -- unifico dos convenciones que convivian (unos elementos usaban base+delta
+    -- y otros el offset como posicion absoluta), o sea que los valores viejos
+    -- no significan lo mismo segun de que elemento sean.
+    --
+    -- Reemplaza a _npFullResetV2: bandera nueva para que corra tambien en las
+    -- cuentas donde aquella ya habia corrido.
+    if not db._npNativeBakeV1 then
         db.nameplates = ns.NameplateDefaults and ns.NameplateDefaults() or {}
         db.nameplateUserDefault = nil
         db.nameplateProfiles = nil
-        db._npAuraAnchorResetV1 = nil   -- reemplazada por esta, mas amplia
-        db._npFullResetV2 = true
+        db._npFullResetV2 = nil
+        db._npNativeBakeV1 = true
     end
     -- Direccion del test de auras de party (PartyAuraPreview.lua): izq/der/arriba/abajo.
     if db.partyAuraDirection == nil then db.partyAuraDirection = "left" end

@@ -80,6 +80,27 @@ worth reading before redoing one of them).
   hostile *players* only (never NPCs — `UnitIsPlayer` gates it before even trying).
 
 ### Changed
+- **Nameplate factory positions rebaked from the author's live tuning, and the offset
+  convention unified.** Read straight out of SavedVariables rather than transcribed by
+  hand.
+
+  The important part is not the numbers but the convention. Two were coexisting: the name
+  and the aura groups did `16 + offset` / `52 + offset`, where the offset is a *delta*
+  from a base; cast, health value, classification and raid mark did `num(offset, -7)`,
+  where the offset *is* the position and the number beside it is only a fallback. So
+  "set the offset to 0" meant different things depending on the element, and baking the
+  values as-is would have mixed the two.
+
+  There is now one convention: **position = BASE + delta, delta 0 = factory.** Every
+  element's native position lives in a single `BASE` table in `NameplateLayout.lua`, and
+  the profile stores pure deltas. Verified that the baked layout reproduces the tuned
+  positions to within 0.0047 plate units — about 0.0036 screen pixels, which is just the
+  rounding to two decimals.
+
+  Saved profiles are wiped once via `_npNativeBakeV1`. This is not optional: the stored
+  offsets were tuned when the offset *was* the position, so under the new convention they
+  would add to the base and double every displacement.
+
 - **The Designer's preview and the real nameplates now share one constructor**
   (`NameplateBuild.lua`, new file, loads between `NameplateLayout.lua` and
   `Nameplates.lua`). `ns.NPLayout` had already unified *where* each element goes, but the

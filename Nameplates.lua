@@ -215,13 +215,13 @@ local function NameplateDefaults()
         -- Nombre: offset relativo al anclaje que YA usa Blizzard (TOP del
         -- nameplate), tamaño de fuente y color.
         nameOffsetX = 0, nameOffsetY = 0,
-        nameFontSize = 16,
+        nameFontSize = 12,
         nameColor = { r = DEFAULT_TEXT_COLOR.r, g = DEFAULT_TEXT_COLOR.g, b = DEFAULT_TEXT_COLOR.b },
         nameAlpha = 1,
         -- Valor de vida (texto propio, debajo de la barra). Pedido del
         -- usuario (2026-07-18): default en 0,0 igual que el nombre, no -2.
         healthValueOffsetX = 0, healthValueOffsetY = 0,
-        healthValueFontSize = 12,
+        healthValueFontSize = 13,
         healthValueColor = { r = DEFAULT_TEXT_COLOR.r, g = DEFAULT_TEXT_COLOR.g, b = DEFAULT_TEXT_COLOR.b },
         healthValueAlpha = 1,
         -- Highlight de seleccion (target/focus).
@@ -235,8 +235,8 @@ local function NameplateDefaults()
         -- de ns.NPLayout (antes el +10 estaba aca, sumado a un gap disperso).
         -- X separa los tres grupos para que al resetear no queden apilados.
         bigDebuffOffsetX = 0, bigDebuffOffsetY = 0,
-        personalDebuffsOffsetX = -100, personalDebuffsOffsetY = 0,
-        enemyBuffsOffsetX = 100, enemyBuffsOffsetY = 0,
+        personalDebuffsOffsetX = 0, personalDebuffsOffsetY = 0,
+        enemyBuffsOffsetX = 0, enemyBuffsOffsetY = 0,
         auraShowBigDebuff = true,
         auraShowPersonalDebuffs = true,
         auraShowEnemyBuffs = true,
@@ -247,30 +247,30 @@ local function NameplateDefaults()
         -- AURA_SLOT_ORDER mas abajo).
         auraPadding = ns.NPLayout.FACTORY.auraPad,
         bigDebuffDirection = "right",
-        personalDebuffsDirection = "right",
-        enemyBuffsDirection = "right",
+        personalDebuffsDirection = "center",
+        enemyBuffsDirection = "left",
         -- Numero de cargas/stacks -- pedido del usuario 2026-07-19: ademas
         -- del color (ya existia), ahora tambien offset y tamaño de fuente
         -- controlables ("debo controlar offset, size y color de eso").
         auraCountOffsetX = 2, auraCountOffsetY = 2,
         auraCountFontSize = 11,
-        auraCountColor = { r = 1, g = 1, b = 1 },
+        auraCountColor = { r = 255/255, g = 239/255, b = 169/255 },
         -- Texto de "tiempo restante" (pedido del usuario 2026-07-19: "los
         -- seconds remaining no estan saliendo, solo las cargas" -- se habia
         -- reemplazado por el swipe rotativo, ahora vuelve ADEMAS del swipe,
         -- no en su lugar). Compartido por los 3 grupos, esquina inferior.
         auraTimeOffsetX = 0, auraTimeOffsetY = -2,
         auraTimeFontSize = 10,
-        auraTimeColor = { r = 1, g = 1, b = 1 },
+        auraTimeColor = { r = 255/255, g = 239/255, b = 169/255 },
         -- Icono de clasificacion (elite/rare/boss) y marca de raid -- pedido
         -- del usuario: controlar offset y tamaño de los dos desde el Designer
         -- (antes eran tamaño fijo, sin posicion configurable).
-        classificationOffsetX = 0, classificationOffsetY = 0, classificationSize = 40,
-        raidMarkOffsetX = 0, raidMarkOffsetY = 0, raidMarkSize = 64,
+        classificationOffsetX = 0, classificationOffsetY = 0, classificationSize = 46,
+        raidMarkOffsetX = 0, raidMarkOffsetY = 0, raidMarkSize = 20,
         -- Cast bar: offset relativo al BOTTOM de la barra de vida, y color
         -- fijo (amarillo/ambar por defecto, en vez del color nativo por
         -- escuela de magia).
-        castOffsetX = 0, castOffsetY = -7,
+        castOffsetX = 0, castOffsetY = 0,
         castColor = { r = DEFAULT_TEXT_COLOR.r, g = DEFAULT_TEXT_COLOR.g, b = DEFAULT_TEXT_COLOR.b },
         -- Pedido del usuario 2026-07-19 ("algo relacionado sobre si interrumpo
         -- un cast?"): la cast bar propia no distinguia casts NO interrumpibles
@@ -280,8 +280,8 @@ local function NameplateDefaults()
         castInterruptFlashColor = { r = 1, g = 0.2, b = 0.2 },
         castWidth = ns.NPLayout.FACTORY.castW, castHeight = ns.NPLayout.FACTORY.castH,
         -- Texto del nombre del hechizo, DENTRO de la cast bar.
-        castTextFontSize = 10,
-        castTextColor = { r = 1, g = 1, b = 1 },
+        castTextFontSize = 12,
+        castTextColor = { r = 255/255, g = 239/255, b = 169/255 },
         castTextAlpha = 1,
         castTextOffsetX = 0, castTextOffsetY = 0,
         -- Tamaño de la barra de vida (pedido del usuario: control de escala, no
@@ -305,8 +305,8 @@ local function NameplateDefaults()
         -- que el usuario mueva el slider.
         alphaMax = 1,
         alphaTarget = 1,
-        alphaNotSelected = tonumber(GetCVar and GetCVar("nameplateNotSelectedAlpha")) or 1,
-        alphaOccluded = tonumber(GetCVar and GetCVar("nameplateOccludedAlphaMult")) or 1,
+        alphaNotSelected = 1,
+        alphaOccluded = 0,
     }
 end
 ns.NameplateDefaults = NameplateDefaults

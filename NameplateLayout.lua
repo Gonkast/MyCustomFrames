@@ -67,19 +67,10 @@ local ADDON, ns = ...
 -- reales -- justo la deriva silenciosa que este archivo existe para impedir,
 -- pero en el archivo mismo. Se corrigio 2026-07-28 al conectar los helpers.
 local HEALTH_W, HEALTH_H = 92, 24
-local CAST_W, CAST_H = 92, 24
-local AURA_ICON = 26
+local CAST_W, CAST_H = 73, 20
+local AURA_ICON = 22
 local AURA_PAD = 4
 local AURA_MAX_PER_CAT = 3
--- Altura base de los grupos de auras sobre el tope del nameplate. Sale de donde
--- quedaban cuando colgaban del nombre (nombre en +16, holder de alto 20, gap de
--- 6+10) -- se fija como constante para que ya no dependa del nombre. Ver
--- L.AuraGroup.
-local AURA_BASE_Y = 52
--- X de fabrica POR GRUPO, para que los tres no queden apilados al resetear.
--- Tienen que seguir siendo los mismos valores que NameplateDefaults (este
--- archivo promete eso en la cabecera y es facil que se desincronice).
-local AURA_BASE_X = { big = 0, personal = -100, enemy = 100 }
 
 -- Punto del holder de auras que queda FIJO en el offset guardado, segun la
 -- direccion en que crece el grupo.
@@ -99,7 +90,6 @@ L.FACTORY = {
     healthW = HEALTH_W, healthH = HEALTH_H,
     castW = CAST_W, castH = CAST_H,
     auraIcon = AURA_ICON, auraPad = AURA_PAD,
-    auraBaseX = AURA_BASE_X, auraBaseY = AURA_BASE_Y,
 }
 
 -- Claves de offset por grupo de auras (mismas 3 categorias que ClassifyAura).
@@ -140,113 +130,117 @@ end
 -- ---- Colocacion ----------------------------------------------------------
 -- Todas devuelven una tabla: { point, relTo, relPoint, x, y, scaleRegime }
 --   relTo -- QUE elemento es el ancla, por nombre logico ("plate", "health",
---            "name"). El consumidor lo traduce a su propio frame: el real usa
---            uf/uf.healthBar/uf.mcfNameHolder, el Designer sus mocks.
+--            "cast"). El consumidor lo traduce a su propio frame.
 --
--- Barra de vida: pegada al tope del nameplate (el -1 es de Blizzard, no del
--- perfil -- no hay opcion de usuario para eso).
+-- POSICIONES NATIVAS (2026-07-28). BASE[k] es la posicion de fabrica de cada
+-- elemento; el perfil guarda solo un DELTA sobre ella, que vale 0 de fabrica.
+--
+-- Antes convivian DOS convenciones y eso era una trampa: el nombre y las auras
+-- hacian `16 + offset` / `52 + offset` (el offset era un delta), mientras que
+-- cast, valor de vida y clasificacion hacian `num(offset, -7)` (el offset ERA
+-- la posicion, y el numero de al lado solo un fallback). Mezclarlas significaba
+-- que "poner el offset en 0" queria decir cosas distintas segun el elemento.
+-- Ahora es una sola: posicion = BASE + delta, delta 0 = fabrica.
+local BASE = {
+    health         = { 0,      -1     },   -- el -1 es de Blizzard, sin opcion de usuario
+    name           = { 0,      -3.46  },
+    healthValue    = { 0,      10.37  },
+    cast           = { 0,      0.41   },
+    castText       = { 0,     -13.99  },
+    classification = { 11.11,  -0.41  },
+    raidMark       = { 64.20,  39.12  },
+}
+-- Posicion nativa de cada grupo de auras (los tres difieren, por eso van aparte).
+local AURA_BASE = {
+    big      = {  50.00, -25.00 },
+    personal = {   0.00,  19.03 },
+    enemy    = { -50.02, -24.85 },
+}
+
+local function off(p, xKey, yKey, base)
+    return base[1] + num(p and p[xKey], 0), base[2] + num(p and p[yKey], 0)
+end
+
+-- Barra de vida: pegada al tope del nameplate. Sin offset de usuario.
 function L.Health(p)
-    return { point = "TOP", relTo = "plate", relPoint = "TOP", x = 0, y = -1, scaleRegime = "plate" }
+    return { point = "TOP", relTo = "plate", relPoint = "TOP",
+             x = BASE.health[1], y = BASE.health[2], scaleRegime = "plate" }
 end
 
--- Nombre: ancla al NAMEPLATE (no a la barra). El 16 es el gap base de fabrica.
--- OJO -- que el ancla sea "plate" y no "health" importa: el Designer lo tenia
--- anclado a la barra, y aunque la diferencia sea de ~1px, es el tipo de
--- divergencia que este archivo existe para impedir.
+-- Nombre: ancla al NAMEPLATE, no a la barra.
+--
+-- Regimen "plate" desde 2026-07-28 (pedido del usuario: "necesito que todo se
+-- escale junto, para ver el verdadero tamaño de todos los elementos"). Era la
+-- ultima pieza en "screen": su letra quedaba a tamaño de pantalla fijo mientras
+-- el resto encogia con la distancia, asi que el editor no podia mostrar su
+-- tamaño real. Cambiar el regimen NO lo mueve -- las dos convenciones dan
+-- l.y * scale; lo unico que cambia es el tamaño fisico de la letra.
+--
+-- COSTO CONOCIDO: la contra-escala evitaba que la fuente se rasterizara a
+-- tamaños fraccionarios (texto borroso a distancia). Vuelve a estar expuesta.
+-- Alternativa si molesta: mantener la contra-escala y escalar nameFontSize por
+-- la escala del plate -- nitido, pero el tamaño cambia en escalones.
 function L.Name(p)
-    -- Regimen "plate" desde 2026-07-28 (pedido del usuario: "necesito que todo
-    -- se escale junto, para ver el verdadero tamaño de todos los elementos").
-    -- El nombre era la ultima pieza en "screen": su letra quedaba a tamaño de
-    -- pantalla fijo mientras el resto encogia con la distancia, asi que el
-    -- editor no podia mostrar su tamaño real -- era lo unico que el slider de
-    -- escala no tocaba.
-    --
-    -- OJO: cambiar el regimen NO mueve el nombre. Las dos convenciones dan la
-    -- misma posicion -- en "screen" el offset se multiplica por la escala y el
-    -- elemento va a escala efectiva 1; en "plate" el offset va crudo y el
-    -- elemento va a la escala del plate. l.y * scale en ambos casos. Lo unico
-    -- que cambia es el tamaño FISICO de la letra, que ahora acompaña.
-    --
-    -- COSTO CONOCIDO: la contra-escala existia para que la fuente no se
-    -- rasterizara a tamaños fraccionarios (texto borroso a distancia, que fue
-    -- un bug reportado en su momento). Vuelve a estar expuesta a eso. Si
-    -- molesta, la alternativa es mantener la contra-escala y escalar el
-    -- nameFontSize por la escala del plate: nitido y proporcionado, pero el
-    -- tamaño cambia en escalones al acercarse en vez de suave.
+    local x, y = off(p, "nameOffsetX", "nameOffsetY", BASE.name)
     return { point = "BOTTOM", relTo = "plate", relPoint = "TOP",
-             x = num(p and p.nameOffsetX, 0), y = 16 + num(p and p.nameOffsetY, 0),
-             scaleRegime = "plate" }
+             x = x, y = y, scaleRegime = "plate" }
 end
 
--- Valor de vida: debajo de la barra.
+-- Valor de vida (% ): respecto de la barra.
 function L.HealthValue(p)
+    local x, y = off(p, "healthValueOffsetX", "healthValueOffsetY", BASE.healthValue)
     return { point = "TOP", relTo = "health", relPoint = "BOTTOM",
-             x = num(p and p.healthValueOffsetX, 0), y = num(p and p.healthValueOffsetY, -2),
-             scaleRegime = "plate" }
+             x = x, y = y, scaleRegime = "plate" }
 end
 
 -- Cast bar: debajo de la barra de vida.
 function L.Cast(p)
+    local x, y = off(p, "castOffsetX", "castOffsetY", BASE.cast)
     return { point = "TOP", relTo = "health", relPoint = "BOTTOM",
-             x = num(p and p.castOffsetX, 0), y = num(p and p.castOffsetY, -7),
-             scaleRegime = "plate" }
+             x = x, y = y, scaleRegime = "plate" }
 end
 
 -- Texto del cast: centrado en la propia cast bar.
 function L.CastText(p)
+    local x, y = off(p, "castTextOffsetX", "castTextOffsetY", BASE.castText)
     return { point = "CENTER", relTo = "cast", relPoint = "CENTER",
-             x = num(p and p.castTextOffsetX, 0), y = num(p and p.castTextOffsetY, 0),
-             scaleRegime = "plate" }
+             x = x, y = y, scaleRegime = "plate" }
 end
 
 -- Icono de clasificacion (elite/rare): al borde derecho de la barra.
 function L.Classification(p)
+    local x, y = off(p, "classificationOffsetX", "classificationOffsetY", BASE.classification)
     return { point = "RIGHT", relTo = "health", relPoint = "RIGHT",
-             x = num(p and p.classificationOffsetX, 20), y = num(p and p.classificationOffsetY, -1),
-             scaleRegime = "plate" }
+             x = x, y = y, scaleRegime = "plate" }
 end
 
--- Marca de raid: centrada en la barra.
+-- Marca de raid: respecto del centro de la barra.
 function L.RaidMark(p)
+    local x, y = off(p, "raidMarkOffsetX", "raidMarkOffsetY", BASE.raidMark)
     return { point = "CENTER", relTo = "health", relPoint = "CENTER",
-             x = num(p and p.raidMarkOffsetX, 0), y = num(p and p.raidMarkOffsetY, 0),
-             scaleRegime = "plate" }
+             x = x, y = y, scaleRegime = "plate" }
 end
 
 -- Grupo de auras: ancla al NAMEPLATE, igual que el nombre -- NO al nombre.
 --
--- Antes colgaba del nombre (relTo = "name") y eso era un error de diseño que
--- costo caro (lo detecto el usuario 2026-07-28: "si escalo o muevo el texto se
--- mueven esas"). Tres problemas, en orden de gravedad:
---   1. Acoplamiento invisible: ajustar el nombre movia los tres grupos de auras,
---      asi que no se podia afinar uno sin desajustar el otro.
+-- Colgaba del nombre y era un error de diseño que costo caro (lo detecto el
+-- usuario: "si escalo o muevo el texto se mueven esas"). Tres problemas:
+--   1. Acoplamiento invisible: ajustar el nombre movia los tres grupos.
 --   2. El ancla real era `uf.mcfNameHolder or uf.name or uf` -- una cadena de
---      fallback. Si el holder propio todavia no existia cuando se colocaba el
---      grupo, quedaba anclado a la FontString de Blizzard (`uf.name`), que esta
---      en otro lado; y como el dedupe de ReassertAuraGroupGeometry compara
---      escala/punto/offsets pero NO el frame de ancla, ese anclaje equivocado
---      no se corregia nunca. El Designer, en cambio, siempre usaba el holder --
---      o sea que los dos lados podian estar anclados a frames distintos.
---   3. La posicion dependia de la ALTURA del holder del nombre (el ancla es su
---      TOP), otro numero mas que tenia que coincidir entre real y mock.
--- Anclando al plate los tres desaparecen de una: cada grupo es independiente,
--- no hay cadena de fallback posible, y no depende del tamaño de nadie.
+--      fallback que podia dejarlos colgados de la FontString de Blizzard de
+--      forma permanente, porque el dedupe no comparaba el frame de ancla.
+--   3. La posicion dependia de la ALTURA del holder del nombre.
 --
--- AURA_BASE_Y reproduce donde quedaban antes (nombre en +16, alto 20, gap 16),
--- asi que el aspecto de fabrica no cambia -- lo que cambia es de QUE cuelgan.
+-- Regimen "plate", no "screen": con contra-escala los iconos quedaban a tamaño
+-- de pantalla fijo mientras la barra encogia, asi que su tamaño relativo se
+-- disparaba con la distancia (1.08 alturas de barra de cerca, 2.41 de lejos).
+-- Son texturas, escalan suave -- no tienen el problema de rasterizado del texto.
 function L.AuraGroup(p, groupKey)
     local keys = L.AURA_GROUP_OFFSET_KEYS[groupKey]
-    if not keys then return nil end
+    local base = AURA_BASE[groupKey]
+    if not (keys and base) then return nil end
     local dir = (p and p[L.AURA_GROUP_DIRECTION_KEYS[groupKey]]) or "right"
-    -- Regimen "plate", NO "screen" (2026-07-28). Con contra-escala los iconos
-    -- quedaban a tamaño de PANTALLA fijo mientras la barra encogia, asi que su
-    -- tamaño relativo se disparaba con la distancia: 1.08 alturas de barra de
-    -- cerca y 2.41 de lejos, contra un valor clavado en el editor. La posicion
-    -- ya se habia hecho invariante; el TAMAÑO no lo era. Como son texturas (no
-    -- texto), escalarlas no tiene el problema de rasterizado que motivo la
-    -- contra-escala del nombre -- se escalan suave y quedan proporcionadas.
+    local x, y = off(p, keys[1], keys[2], base)
     return { point = AURA_ANCHOR_POINT[dir] or "BOTTOMLEFT", relTo = "plate", relPoint = "TOP",
-             x = num(p and p[keys[1]], AURA_BASE_X[groupKey] or 0),
-             y = AURA_BASE_Y + num(p and p[keys[2]], 0),
-             scaleRegime = "plate" }
+             x = x, y = y, scaleRegime = "plate" }
 end
