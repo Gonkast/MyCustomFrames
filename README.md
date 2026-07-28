@@ -150,11 +150,12 @@ A few elements have no menu section yet and are driven from chat instead:
 
 ## Diagnostics
 
-**`/mcfdiag`** lists the diagnostics registered with the router, and `/mcfdiag <name>` runs one —
-start there rather than memorizing the list below. The rest predate the router and are still
-their own commands.
+**`/mcfdiag` is the index for everything below — you don't need this table.** It lists every
+diagnostic and preview grouped by type, plus the commands that aren't run through it, and
+`/mcfdiag <name>` runs one. The table here is a reference for reading on the web.
 
-Each dumps what a subsystem is *actually* seeing right now, which usually beats guessing:
+Diagnostics dump what a subsystem is *actually* seeing right now, which usually beats guessing.
+Previews (`/mcfdiag test…`) are toggles — run them again to turn them off.
 
 | Command | Reports on |
 |---|---|

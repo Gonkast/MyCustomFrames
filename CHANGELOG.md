@@ -80,6 +80,16 @@ worth reading before redoing one of them).
   hostile *players* only (never NPCs — `UnitIsPlayer` gates it before even trying).
 
 ### Changed
+- **All ~40 slash commands are discoverable in-game now.** The `/mcfdiag` router existed but
+  only 4 commands were registered with it; the other 36 could only be found by reading the
+  README. Everything is registered now, and the listing is grouped rather than one flat
+  alphabetical wall: **diagnostics** (read-only state dumps), **previews** (toggles that
+  change what you see — labelled as such, since running one and not knowing it stays on is
+  its own trap), and **other commands** that open windows or change settings, listed for
+  reference but not run through the router. Registration is centralised in
+  `Maintenance.lua` and resolves the handler lazily at call time, so 15 files didn't need
+  their anonymous handlers refactored into named functions, load order doesn't matter, and
+  a command removed later reports itself instead of erroring.
 - **The options panel's section area scrolls now.** It never did: each section was a plain
   frame pinned to the edge of the content area, so anything that didn't fit was clipped —
   no error, no scrollbar, no way to reach the control. It had already forced splitting

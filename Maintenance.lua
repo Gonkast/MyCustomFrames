@@ -207,9 +207,14 @@ end)
 -- `/mcfdiag` sin argumentos lista lo disponible (antes no habia forma de saber
 -- que comandos existian: eran ~20 slashes globales sueltos, sin indice).
 local diags = {}
-function ns.RegisterDiag(name, desc, fn)
+-- `kind` (2026-07-27, opcional, default "diag"): agrupa la salida de /mcfdiag.
+--   "diag" -> vuelca el estado real de un subsistema (solo lee, no cambia nada)
+--   "test" -> togglea una previsualizacion (SI cambia lo que se ve, es un toggle)
+-- Sin agrupar, con ~30 entradas la lista era un muro alfabetico donde no se
+-- distinguia lo que solo informa de lo que modifica la pantalla.
+function ns.RegisterDiag(name, desc, fn, kind)
     if type(name) ~= "string" or type(fn) ~= "function" then return end
-    diags[name:lower()] = { desc = desc or "", fn = fn }
+    diags[name:lower()] = { desc = desc or "", fn = fn, kind = kind or "diag" }
 end
 
 ns.RegisterDiag("skincheck", "Valida que la skin activa traiga todos sus archivos", SkinCheck)
@@ -263,16 +268,101 @@ end
 ns.VerifyInstallation = VerifyInstallation
 ns.RegisterDiag("verify", "Comprueba modulos, DB y cobertura de presets (sin tocar frames)", VerifyInstallation)
 
+-- ==========================================================================
+-- REGISTRO CENTRAL de los comandos sueltos (2026-07-27).
+--
+-- El addon tiene ~40 slash commands y hasta hoy solo 4 estaban en el router:
+-- los otros 36 no habia forma de descubrirlos dentro del juego, habia que leer
+-- el README. Se registran TODOS aca en vez de en sus 15 archivos por dos
+-- razones: (1) un solo lugar para leer que existe, en vez de un grep por el
+-- repo, y (2) no hace falta refactorizar 15 handlers anonimos a funciones con
+-- nombre solo para poder referenciarlos.
+--
+-- La resolucion es DIFERIDA (se busca en SlashCmdList al invocar, no al
+-- registrar): asi no importa el orden de carga del .toc, y si un comando se
+-- elimina en el futuro esto avisa en vez de reventar.
+local function Cmd(handler, arg)
+    return function()
+        local fn = SlashCmdList[handler]
+        if type(fn) ~= "function" then
+            print("|cffff5555[MCF]|r El comando /" .. handler:lower() .. " ya no existe en esta version.")
+            return
+        end
+        fn(arg or "")
+    end
+end
+
+-- Diagnosticos: vuelcan estado, no tocan nada.
+ns.RegisterDiag("scaledump",    "Posicion y escala de cada elemento en la resolucion actual", Cmd("MCFSCALEDUMP"))
+ns.RegisterDiag("bt4",          "Que barras de Bartender4 existen y con que nombre", Cmd("MCFBT4DIAG"))
+ns.RegisterDiag("auras",        "Datos de auras del objetivo actual", Cmd("MCFAURASDIAG"))
+ns.RegisterDiag("aurahover",    "Estado interno de un grupo de auras hover (hover/combate/gate/alpha)", Cmd("MCFAURAHOVERDIAG"))
+ns.RegisterDiag("nameplates",   "Estado general de los nameplates", Cmd("MCFNPDIAG"))
+ns.RegisterDiag("npobjects",    "unit/GUID/tipo por nameplate -- para plates que no deberian estar (objetos)", Cmd("MCFNPOBJDIAG"))
+ns.RegisterDiag("castwatch",    "Togglea el log en vivo de casteos de nameplates", Cmd("MCFCASTWATCH"))
+ns.RegisterDiag("minimap",      "Estado general del minimapa", Cmd("MCFMMDIAG"))
+ns.RegisterDiag("rings",        "Anillos de XP/reputacion/honor/renombre del minimapa", Cmd("MCFRINGDIAG"))
+ns.RegisterDiag("mapicons",     "Iconos y pines del minimapa", Cmd("MCFMAPICONSDIAG"))
+ns.RegisterDiag("minimapbtns",  "Botones de minimapa que recogio el colector", Cmd("MCFMINIMAPBTNSLIST"))
+ns.RegisterDiag("arena",        "Que metodo de deteccion de arena esta devolviendo que", Cmd("MCFARENADIAG"))
+ns.RegisterDiag("classpower",   "Deteccion del recurso de clase para tu clase y spec", Cmd("MCFCLASSPOWERDIAG"))
+ns.RegisterDiag("mirror",       "Temporizadores espejo (respiracion/fatiga)", Cmd("MCFMIRRORDIAG"))
+ns.RegisterDiag("mirrortarget", "Retrato del objetivo espejado", Cmd("MCFMIRRORTARGETDIAG"))
+ns.RegisterDiag("panel",        "Zonas muertas del mouse sobre el panel de opciones", Cmd("MCFPANELDIAG"))
+ns.RegisterDiag("tracker",      "Clasificacion del texto del rastreador de misiones", Cmd("MCFTRACKERDUMP"))
+ns.RegisterDiag("charbutton",   "Boton de \"abrir panel de personaje\" del retrato", Cmd("MCFCHAR"))
+
+-- Previsualizaciones: TOGGLES, cambian lo que se ve hasta volver a ejecutarlos.
+ns.RegisterDiag("testauras",     "Previsualiza las auras hover de party", Cmd("MCFPARTYTEST"), "test")
+ns.RegisterDiag("testarena",     "Previsualiza las auras hover de arena", Cmd("MCFARENAAURATEST"), "test")
+ns.RegisterDiag("testfocus",     "Previsualiza las auras hover de focus", Cmd("MCFFOCUSAURATEST"), "test")
+ns.RegisterDiag("testplayer",    "Previsualiza las auras hover del jugador", Cmd("MCFPLAYERAURATEST"), "test")
+ns.RegisterDiag("testtarget",    "Previsualiza las auras hover del objetivo", Cmd("MCFTARGETAURATEST"), "test")
+ns.RegisterDiag("testindicator", "Fuerza el atenuado por rango y la barra de escudo", Cmd("MCFINDICATORTEST"), "test")
+ns.RegisterDiag("testloc",       "Simula un icono de perdida de control en el retrato", Cmd("MCFLOCTEST"), "test")
+ns.RegisterDiag("testtrinket",   "Simula el cooldown del trinket en los 3 enemigos de arena", Cmd("MCFTRINKETTEST"), "test")
+
+-- Comandos que NO pasan por el router (abren ventanas, cambian config o hacen
+-- una accion): se LISTAN para que /mcfdiag sea el indice unico, pero se ejecutan
+-- directo. Tabla curada a proposito -- son pocos y estables, y meterlos en el
+-- router significaria "ejecutar /mcf desde /mcfdiag", que no tiene sentido.
+local OTHER_COMMANDS = {
+    { "/mcf",            "Modo mover/bloquear (edicion)" },
+    { "/mcfmenu",        "Abre el panel de opciones" },
+    { "/mcfsetup",       "Reabre el asistente de instalacion" },
+    { "/mcfnpdesigner",  "Abre el diseñador de nameplates" },
+    { "/mcfundo",        "Restaura el respaldo previo al ultimo Reset ALL o perfil aplicado" },
+    { "/mcfskincheck",   "Comprueba que la skin activa traiga todos sus archivos" },
+    { "/mcfhud",         "Muestra el codigo del HUD del Edit Mode de Blizzard" },
+    { "/mcfmirror",      "Temporizador espejo: toggle/width/height/offsetx/offsety" },
+    { "/mcftooltip",     "Reskin del tooltip: toggle/scale" },
+    { "/mcfextrabtn",    "Borde del boton de accion extra" },
+    { "/mcfminimapbtnsignore", "Excluye un boton del colector de minimapa" },
+    { "/mcfminimapbtnsreset",  "Reinicia posicion y escala del colector" },
+}
+
 SLASH_MCFDIAG1 = "/mcfdiag"
 SlashCmdList["MCFDIAG"] = function(msg)
     local sub = (msg or ""):match("^%s*(%S*)"):lower()
     if sub == "" or sub == "help" then
-        print("|cffffe19b[MCF]|r Diagnosticos disponibles (|cff00ff00/mcfdiag <nombre>|r):")
-        local names = {}
-        for k in pairs(diags) do names[#names + 1] = k end
-        table.sort(names)
-        for _, k in ipairs(names) do
+        local byKind = { diag = {}, test = {} }
+        for k, d in pairs(diags) do
+            local bucket = byKind[d.kind] or byKind.diag
+            bucket[#bucket + 1] = k
+        end
+        table.sort(byKind.diag); table.sort(byKind.test)
+
+        print("|cffffe19b[MCF]|r Diagnosticos (|cff00ff00/mcfdiag <nombre>|r) -- solo informan:")
+        for _, k in ipairs(byKind.diag) do
             print(("  |cff00ff00%-14s|r %s"):format(k, diags[k].desc))
+        end
+        print("|cffffe19b[MCF]|r Previsualizaciones -- son TOGGLES, volve a ejecutarlas para apagarlas:")
+        for _, k in ipairs(byKind.test) do
+            print(("  |cff00ff00%-14s|r %s"):format(k, diags[k].desc))
+        end
+        print("|cffffe19b[MCF]|r Otros comandos (se ejecutan directo, no por /mcfdiag):")
+        for _, c in ipairs(OTHER_COMMANDS) do
+            print(("  |cffffff00%-22s|r %s"):format(c[1], c[2]))
         end
         return
     end
