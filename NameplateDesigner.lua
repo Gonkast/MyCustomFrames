@@ -277,7 +277,14 @@ local function BindColorButton(btn, label, c)
 end
 
 local designer   -- root frame, creado la 1ra vez que se abre
-local els = {}    -- lista de sub-elementos ARRASTRABLES (ver forma mas abajo) para Reflow()
+-- Tabla de PIEZAS del nameplate de mentira, con los mismos nombres logicos que
+-- consume ns.NPBuild.LayoutPlate. El editor ya no tiene lista de colocacion
+-- propia: entrega sus frames y la MISMA funcion que posiciona el nameplate
+-- real los posiciona a estos (2026-07-28, rehecho desde cero). Antes habia una
+-- lista `els` con el ancla y el layout de cada elemento escritos aca -- o sea
+-- una segunda implementacion, que es lo que hacia aparecer una diferencia
+-- nueva cada vez que se arreglaba la anterior.
+local pieces = { auras = {} }
 -- ns.MakeEditHighlight() crea el borde/etiqueta pero lo deja OCULTO por
 -- defecto (el resto del addon lo muestra/oculta a mano segun el modo
 -- edicion) -- aca se muestran SIEMPRE mientras el designer esta abierto, asi
@@ -1004,6 +1011,7 @@ local function CreateDesigner()
     -- esta la barra original para editar mas preciso". Cuelga de `content`
     -- (pannable/clippeado), no de root directo.
     local stage = CreateFrame("Frame", nil, content)
+    pieces.root = stage
     stage:SetPoint("CENTER", content, "CENTER", 0, 0)
     stage:SetSize(1, 1)
 
@@ -1027,6 +1035,7 @@ local function CreateDesigner()
     -- ---- Barra de vida (mock): SOLO redimensionable, no arrastrable (igual
     -- que la real -- Blizzard siempre la ancla al TOP de la nameplate). ----
     local hp = CreateFrame("StatusBar", nil, stage)
+    pieces.health = hp
     hp:SetPoint("CENTER", stage, "CENTER", 0, 0)
     hp:SetStatusBarTexture(BAR_TEX)
     hp:GetStatusBarTexture():SetTexCoord(unpack(BAR_TEXCOORD))
@@ -1037,6 +1046,7 @@ local function CreateDesigner()
     hpBg:SetPoint("CENTER")
     hpBg:SetTexture(BACKDROP_TEX)
     hp.bg = hpBg
+    pieces.healthBg = hpBg
     TrackHighlight(ns.MakeEditHighlight(hp))
     MakeWheelResize(hp, function(p, dir)
         local w, h = ns.NPLayout.HealthSize(p)
@@ -1053,8 +1063,8 @@ local function CreateDesigner()
     -- ---- Nombre ---- (ZOOM fijo: el nombre real NO escala con la
     -- distancia, asi que aca no sigue al stage -- solo se agranda para
     -- verlo mejor en el panel, pedido del usuario).
-    local nameHolder = CreateFrame("Frame", nil, content)
-    nameHolder:SetScale(ZOOM)
+    local nameHolder = CreateFrame("Frame", nil, stage)
+    pieces.name = nameHolder
     nameHolder:SetSize(ns.NPBuild.NAME_HOLDER_W, ns.NPBuild.NAME_HOLDER_H)
     local nameFS = nameHolder:CreateFontString(nil, "OVERLAY")
     nameFS:SetFont(FONT, 16, "OUTLINE")
@@ -1075,7 +1085,6 @@ local function CreateDesigner()
     -- cuelga del NAMEPLATE (`uf`), no de la barra -- ver ns.NPLayout.Name. El
     -- stage es el equivalente del `uf` aca (el (0,0) del que cuelga todo), asi
     -- que anclando ahi la cadena nombre->auras queda igual que en el juego.
-    els[#els + 1] = { handle = nameHolder, anchor = stage, layout = ns.NPLayout.Name }
     nameHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("name") end end)
     selSpecs.name = { title = "Name", handle = nameHolder,
         xKey = "nameOffsetX", yKey = "nameOffsetY", xyRange = { -150, 150, 1 },
@@ -1086,6 +1095,7 @@ local function CreateDesigner()
     -- ---- Valor de vida (dentro del stage: escala con la barra, igual que
     -- en la nameplate real -- solo el nombre queda fijo). ----
     local hvHolder = CreateFrame("Frame", nil, stage)
+    pieces.healthValue = hvHolder
     hvHolder:SetSize(60, 16)
     local hvFS = hvHolder:CreateFontString(nil, "OVERLAY")
     hvFS:SetFont(FONT, 12, "OUTLINE")
@@ -1100,8 +1110,6 @@ local function CreateDesigner()
     -- base=(0,0): SkinHealthValue en Nameplates.lua usa el offset guardado
     -- DIRECTO, sin sumarle ninguna constante -- sumar -2 aca (bug anterior)
     -- corria el mock -2 unidades de mas respecto de la nameplate real.
-    els[#els + 1] = { handle = hvHolder, anchor = hp,
-        layout = ns.NPLayout.HealthValue }
     hvHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("healthValue") end end)
     selSpecs.healthValue = { title = "Health Value", handle = hvHolder,
         xKey = "healthValueOffsetX", yKey = "healthValueOffsetY", xyRange = { -150, 150, 1 },
@@ -1112,6 +1120,7 @@ local function CreateDesigner()
     -- ---- Cast bar (mock, siempre visible mientras el designer esta abierto;
     -- dentro del stage, escala junto con la vida). ----
     local cb = CreateFrame("StatusBar", nil, stage)
+    pieces.cast = cb
     cb:SetStatusBarTexture(BAR_TEX)
     cb:GetStatusBarTexture():SetTexCoord(unpack(BAR_TEXCOORD))
     cb:SetMinMaxValues(0, 100)
@@ -1120,6 +1129,7 @@ local function CreateDesigner()
     cbBg:SetPoint("CENTER")
     cbBg:SetTexture(BACKDROP_TEX)
     cb.bg = cbBg
+    pieces.castBg = cbBg
     TrackHighlight(ns.MakeEditHighlight(cb))
     MakeDraggable(cb, "castOffsetX", "castOffsetY", StageDivisor)
     MakeWheelResize(cb, function(p, dir)
@@ -1131,8 +1141,6 @@ local function CreateDesigner()
     -- guardado DIRECTO tambien (el -7 es solo el valor DEFAULT del campo,
     -- no una constante sumada aparte) -- sumar -7 aca (bug anterior)
     -- duplicaba el desplazamiento hacia abajo.
-    els[#els + 1] = { handle = cb, anchor = hp,
-        layout = ns.NPLayout.Cast }
     cb:SetScript("OnMouseDown", function() if SelectElement then SelectElement("castBar") end end)
     selSpecs.castBar = { title = "Cast Bar", handle = cb,
         xKey = "castOffsetX", yKey = "castOffsetY", xyRange = { -150, 150, 1 },
@@ -1148,6 +1156,7 @@ local function CreateDesigner()
     -- capturaba la barra de abajo en vez del texto (pedido del usuario:
     -- "es dificil seleccionar el texto del cast").
     local ctHolder = CreateFrame("Frame", nil, stage)
+    pieces.castText = ctHolder
     ctHolder:SetSize(90, 20)
     ctHolder:SetFrameLevel(cb:GetFrameLevel() + 5)
     local ctFS = ctHolder:CreateFontString(nil, "OVERLAY")
@@ -1160,8 +1169,6 @@ local function CreateDesigner()
     MakeWheelResize(ctHolder, function(p, dir)
         p.castTextFontSize = clamp((p.castTextFontSize or 10) + (dir > 0 and 1 or -1), 6, 20)
     end, root, "castText")
-    els[#els + 1] = { handle = ctHolder, anchor = cb,
-        layout = ns.NPLayout.CastText }
     ctHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("castText") end end)
     selSpecs.castText = { title = "Cast Text", handle = ctHolder,
         xKey = "castTextOffsetX", yKey = "castTextOffsetY", xyRange = { -100, 100, 1 },
@@ -1192,23 +1199,17 @@ local function CreateDesigner()
     --
     -- combatGuard=true en TODO lo de auras (drag/rueda/checkbox) -- pedido del
     -- usuario 2026-07-19: "que no pueda alterar las auras en combate".
-    local bigHolder, bigHL, bigShownCB = MakeAuraGroupMock(content, "Big Debuff", "auraShowBigDebuff")
-    bigHolder:SetScale(ZOOM)
+    local bigHolder, bigHL, bigShownCB = MakeAuraGroupMock(stage, "Big Debuff", "auraShowBigDebuff")
+    pieces.auras.big = bigHolder
     MakeDraggable(bigHolder, "bigDebuffOffsetX", "bigDebuffOffsetY", StageDivisor, true)
-    els[#els + 1] = { handle = bigHolder, anchor = stage,
-        layout = function(p) return ns.NPLayout.AuraGroup(p, "big") end }
 
-    local personalHolder, personalHL, personalShownCB = MakeAuraGroupMock(content, "Personal Debuffs", "auraShowPersonalDebuffs")
-    personalHolder:SetScale(ZOOM)
+    local personalHolder, personalHL, personalShownCB = MakeAuraGroupMock(stage, "Personal Debuffs", "auraShowPersonalDebuffs")
+    pieces.auras.personal = personalHolder
     MakeDraggable(personalHolder, "personalDebuffsOffsetX", "personalDebuffsOffsetY", StageDivisor, true)
-    els[#els + 1] = { handle = personalHolder, anchor = stage,
-        layout = function(p) return ns.NPLayout.AuraGroup(p, "personal") end }
 
-    local enemyHolder, enemyHL, enemyShownCB = MakeAuraGroupMock(content, "Enemy Buffs", "auraShowEnemyBuffs")
-    enemyHolder:SetScale(ZOOM)
+    local enemyHolder, enemyHL, enemyShownCB = MakeAuraGroupMock(stage, "Enemy Buffs", "auraShowEnemyBuffs")
+    pieces.auras.enemy = enemyHolder
     MakeDraggable(enemyHolder, "enemyBuffsOffsetX", "enemyBuffsOffsetY", StageDivisor, true)
-    els[#els + 1] = { handle = enemyHolder, anchor = stage,
-        layout = function(p) return ns.NPLayout.AuraGroup(p, "enemy") end }
 
     -- Tamaño de icono COMPARTIDO por las 3 categorias (auraIconSize, igual
     -- que en Nameplates.lua) -- la rueda sobre CUALQUIERA de los 3 grupos
@@ -1242,12 +1243,11 @@ local function CreateDesigner()
     -- offset (20,-1) por defecto, calcado de AzeriteUI. Dentro de `stage`:
     -- es un hijo normal de la barra de vida, escala con la distancia.
     local classHolder = MakeBadgeMock(stage, 40, A .. "icon_classification_elite.tga")
+    pieces.classification = classHolder
     MakeDraggable(classHolder, "classificationOffsetX", "classificationOffsetY", StageDivisor)
     MakeWheelResize(classHolder, function(p, dir)
         p.classificationSize = clamp((p.classificationSize or 40) + (dir > 0 and 2 or -2), 12, 64)
     end, root, "classification")
-    els[#els + 1] = { handle = classHolder, anchor = hp,
-        layout = ns.NPLayout.Classification }
     classHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("classification") end end)
     selSpecs.classification = { title = "Elite/Rare/Boss icon", handle = classHolder,
         xKey = "classificationOffsetX", yKey = "classificationOffsetY", xyRange = { -100, 100, 1 },
@@ -1256,12 +1256,11 @@ local function CreateDesigner()
     -- ---- Marca de raid (native, ver LockRaidMark en Nameplates.lua) --
     -- centrada en la barra por defecto.
     local raidHolder = MakeBadgeMock(stage, 32, "Interface\\TargetingFrame\\UI-RaidTargetingIcons", 8)
+    pieces.raidMark = raidHolder
     MakeDraggable(raidHolder, "raidMarkOffsetX", "raidMarkOffsetY", StageDivisor)
     MakeWheelResize(raidHolder, function(p, dir)
         p.raidMarkSize = clamp((p.raidMarkSize or 64) + (dir > 0 and 4 or -4), 16, 96)
     end, root, "raidMark")
-    els[#els + 1] = { handle = raidHolder, anchor = hp,
-        layout = ns.NPLayout.RaidMark }
     raidHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("raidMark") end end)
     selSpecs.raidMark = { title = "Raid Mark", handle = raidHolder,
         xKey = "raidMarkOffsetX", yKey = "raidMarkOffsetY", xyRange = { -100, 100, 1 },
@@ -1477,47 +1476,26 @@ end
 Reflow = function()
     if not designer or not designer:IsShown() then PushLive(); return end
     local p = P(); if not p then return end
-    local hp = designer.hp
 
     -- Zoom del panel (pedido del usuario, slider propio -- ver zoomSlider):
     -- aplicar aca tambien, no solo en el ticker de escala, para que cambiar
     -- el zoom se sienta INSTANTANEO en vez de esperar hasta 0.2s.
+    -- Solo se escala el PLATE. Las escalas de las piezas las pone LayoutPlate,
+    -- que le aplica 1/scale a las del regimen "screen" -- exactamente la misma
+    -- contra-escala que lleva el nameplate real. Antes se les fijaba ZOOM a mano
+    -- aca, que era una tercera idea de las escalas conviviendo con las otras dos.
     designer.stage:SetScale(stageScale * ZOOM)
-    designer.nameHolder:SetScale(ZOOM)
-    -- Los 3 grupos de auras usan escala FIJA (ZOOM), igual que nameHolder --
-    -- ver comentario en su creacion mas arriba.
-    designer.bigHolder:SetScale(ZOOM)
-    designer.personalHolder:SetScale(ZOOM)
-    designer.enemyHolder:SetScale(ZOOM)
 
-    -- Tamaños desde ns.NPLayout, igual que el nameplate real -- ya no hay
-    -- `or 92`/`or 24` propios que puedan quedar desfasados de los defaults.
-    local hw, hh = ns.NPLayout.HealthSize(p)
-    hp:SetSize(hw, hh)
-    hp.bg:SetSize(hw, hh)
-
-    for _, e in ipairs(els) do
-        -- COLOCACION COMPARTIDA (2026-07-27): el punto, el punto relativo y los
-        -- offsets salen de ns.NPLayout -- el MISMO modulo que usa Nameplates.lua
-        -- para los nameplates de verdad. Antes cada entrada traia su propio
-        -- `base`/`point`/`relPoint` copiados a mano de la otra implementacion, y
-        -- era ahi donde se desincronizaban (el nombre colgaba de la barra en vez
-        -- del nameplate, el gap de auras se escribia dos veces, etc). Ahora una
-        -- sola cuenta alimenta los dos lados: si cambia, cambia en ambos.
-        -- Los offsets del perfil ya vienen sumados por el layout, no se re-suman.
-        local l = e.layout(p)
-        e.handle:ClearAllPoints()
-        -- Los offsets de ns.NPLayout estan en unidades del PLATE, tambien para
-        -- los elementos del regimen "screen" (nombre y auras) -- ver la nota en
-        -- NameplateLayout.lua. Los del regimen "plate" ya cuelgan de `stage`,
-        -- que YA tiene stageScale aplicado, asi que no hay que escalarlos otra
-        -- vez; los "screen" cuelgan de `content` a escala ZOOM pelada, asi que
-        -- se les aplica aca. Con esto la proporcion nombre-barra del panel es
-        -- la misma a cualquier zoom Y a cualquier escala de referencia: los dos
-        -- factores se cancelan en la razon.
-        local k = (l.scaleRegime == "screen") and stageScale or 1
-        e.handle:SetPoint(l.point, e.anchor, l.relPoint, l.x * k, l.y * k)
-    end
+    -- COLOCACION: una sola llamada, la MISMA funcion que posiciona los
+    -- nameplates de verdad (ns.NPBuild.LayoutPlate). Tamaños incluidos. El
+    -- editor no vuelve a tener ni una linea de posicionamiento propia -- que era
+    -- de donde salia una diferencia nueva cada vez que se arreglaba la anterior.
+    --
+    -- `stageScale` entra como la escala del plate, igual que GetEffectiveScale
+    -- del nameplate real. Como los offsets del regimen "screen" se multiplican
+    -- por ella y las piezas se dividen por ella, se cancela en las proporciones:
+    -- el panel muestra lo mismo aunque la referencia este mal muestreada.
+    ns.NPBuild.LayoutPlate(pieces, p, stageScale)
 
     -- TAMAÑO DE LOS HOLDERS DE TEXTO -- tiene que copiar la ESTRUCTURA del real,
     -- no ajustarse al texto (2026-07-28, bug reportado con capturas: el nombre
@@ -1550,9 +1528,6 @@ Reflow = function()
     designer.hvHolder:SetSize(math.max(1, designer.hvHolder.fs:GetStringWidth()),
         math.max(1, designer.hvHolder.fs:GetStringHeight()))
 
-    local cw, ch = ns.NPLayout.CastSize(p)
-    designer.cb:SetSize(cw, ch)
-    designer.cb.bg:SetSize(cw, ch)
 
     designer.ctHolder.fs:SetFont(FONT, p.castTextFontSize or 10, "OUTLINE")
     local ctc = p.castTextColor

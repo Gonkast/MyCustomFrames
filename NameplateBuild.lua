@@ -165,3 +165,92 @@ function B.AuraGroup(parent, p, preview)
     B.LayoutAuraHolder(holder, p)
     return holder
 end
+
+-- ==========================================================================
+-- LAYOUT COMPLETO DE UN NAMEPLATE (2026-07-28)
+--
+-- POR QUE. Hasta ahora "compartir el layout" significaba que los dos lados
+-- llamaban a ns.NPLayout para leer numeros, pero cada uno los APLICABA por su
+-- cuenta, a su propia jerarquia de frames, con su propia idea de que escala
+-- toca a quien. Seis rondas de arreglos encontraron seis diferencias reales y
+-- distintas -- que es lo que pasa cuando hay dos implementaciones: se arregla
+-- una y aparece la siguiente.
+--
+-- Esta funcion aplica el layout ENTERO a partir de una tabla de piezas. Los dos
+-- lados le pasan sus frames y no queda ni una linea de posicionamiento propia.
+--
+-- LAS DOS ESCALAS, en un solo lugar. `scale` es la escala del plate (en el real
+-- GetEffectiveScale del nameplate; en el editor su escala de referencia):
+--   * regimen "plate"  -> hijo normal del root: sus offsets YA estan en
+--                         unidades del plate. Factor 1.
+--   * regimen "screen" -> lleva SetScale(1/scale) para que la FUENTE quede a
+--                         tamaño fisico fijo (texto nitido a cualquier
+--                         distancia). Eso divide sus unidades por `scale`, asi
+--                         que hay que multiplicar el offset por `scale` para
+--                         compensar y que la POSICION siga acompañando a la
+--                         barra. Sin esa compensacion, la separacion
+--                         nombre-barra variaba mas del doble con la distancia
+--                         y ningun panel de escala fija podia predecirla.
+-- ==========================================================================
+
+-- Nombre logico de ancla -> frame de la tabla de piezas.
+local function Resolve(P, relTo)
+    if relTo == "health" then return P.health end
+    if relTo == "cast"   then return P.cast end
+    if relTo == "name"   then return P.name end
+    return P.root
+end
+
+local function Place(P, elem, l, scale)
+    if not (elem and l) then return end
+    local anchor = Resolve(P, l.relTo)
+    if not anchor then return end
+    local k = 1
+    if l.scaleRegime == "screen" then
+        k = scale
+        if scale and scale > 0 then
+            elem:SetScale(math.max(0.3, math.min(3, 1 / scale)))
+        end
+    end
+    elem:ClearAllPoints()
+    elem:SetPoint(l.point, anchor, l.relPoint, l.x * k, l.y * k)
+end
+
+-- P: { root, health, healthBg, healthValue, cast, castText, name,
+--      classification, raidMark, auras = { big=, personal=, enemy= } }
+-- Cualquier pieza puede faltar: se saltea (el real y el editor no tienen
+-- exactamente el mismo juego -- ej. el editor no dibuja fondo de highlight).
+function B.LayoutPlate(P, p, scale)
+    if not (P and P.root) then return end
+    scale = (type(scale) == "number" and scale > 0) and scale or 1
+    local L2 = L
+
+    -- Tamaños primero: varias colocaciones anclan a los bordes de la barra, asi
+    -- que tiene que estar dimensionada antes de colgarle nada.
+    if P.health then
+        local w, h = L2.HealthSize(p)
+        P.health:SetSize(w, h)
+        if P.healthBg then P.healthBg:SetSize(w, h) end
+    end
+    if P.cast then
+        local w, h = L2.CastSize(p)
+        P.cast:SetSize(w, h)
+        if P.castBg then P.castBg:SetSize(w, h) end
+    end
+
+    Place(P, P.health,         L2.Health(p),         scale)
+    Place(P, P.healthValue,    L2.HealthValue(p),    scale)
+    Place(P, P.cast,           L2.Cast(p),           scale)
+    Place(P, P.castText,       L2.CastText(p),       scale)
+    Place(P, P.name,           L2.Name(p),           scale)
+    Place(P, P.classification, L2.Classification(p), scale)
+    Place(P, P.raidMark,       L2.RaidMark(p),       scale)
+
+    for _, key in ipairs({ "big", "personal", "enemy" }) do
+        local holder = P.auras and P.auras[key]
+        if holder then
+            Place(P, holder, L2.AuraGroup(p, key), scale)
+            B.LayoutAuraGroup(holder, p)
+        end
+    end
+end

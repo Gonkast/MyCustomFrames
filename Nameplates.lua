@@ -495,7 +495,12 @@ local function SkinHealthBar(uf)
     if not hp or hp._mcfSkinned then return end
     hp._mcfSkinned = true
 
-    LockBar(hp, uf, "TOP", "TOP", 0, -1, GetHealthSize)
+    -- Punto/offset desde ns.NPLayout, no escritos a mano: el editor dibuja su
+    -- barra con L.Health y esto tiene que ser lo MISMO. Estaban duplicados
+    -- ("TOP","TOP",0,-1 aca; L.Health alla) y coincidian de casualidad --
+    -- justo el tipo de pareja que se desincroniza al primer cambio.
+    local hl0 = ns.NPLayout.Health(P())
+    LockBar(hp, uf, hl0.point, hl0.relPoint, hl0.x, hl0.y, GetHealthSize)
     hp:SetStatusBarTexture(BAR_TEX)
     local tex = hp:GetStatusBarTexture()
     if tex then tex:SetTexCoord(unpack(BAR_TEXCOORD)) end
