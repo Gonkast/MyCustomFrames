@@ -791,14 +791,19 @@ local function ReassertNameGeometry(uf)
     else
         offX, offY = (p and p.nameOffsetX) or 0, (p and p.nameOffsetY) or 0
     end
-    if holder._mcfLastEffScale == effScale and holder._mcfLastOffX == offX and holder._mcfLastOffY == offY then
+    -- El dedupe YA NO mira effScale (2026-07-28). Con el nombre en regimen
+    -- "plate", su posicion no depende de la escala: el offset va crudo y lo
+    -- escala el propio nameplate. Seguir comparando effScale hacia que este
+    -- bloque reubicara el nombre en CADA frame mientras te movias (la escala
+    -- cambia continuamente con la distancia) para dejarlo exactamente donde ya
+    -- estaba. Ahora solo corre cuando cambian los offsets de verdad.
+    if holder._mcfLastOffX == offX and holder._mcfLastOffY == offY then
         return
     end
-    holder._mcfLastEffScale, holder._mcfLastOffX, holder._mcfLastOffY = effScale, offX, offY
-    if effScale and effScale > 0 then
-        holder:SetScale(math.max(0.3, math.min(3, 1 / effScale)))
-    end
-    holder:ClearAllPoints()
+    holder._mcfLastOffX, holder._mcfLastOffY = offX, offY
+    -- (La escala y el ClearAllPoints los hace ns.NPBuild.Place segun el regimen.
+    -- Aca habia un SetScale(1/effScale) suelto: quedo muerto cuando el nombre
+    -- paso al regimen "plate", y Place lo pisaba igual.)
     -- Offset SEPARADO en modo "solo nombre" (uf.mcfNameOnlyMode, seteado por
     -- el ticker segun ShouldHideExceptName) -- pedido del usuario 2026-07-19:
     -- sin la barra visible, la posicion normal del nombre puede no quedar
@@ -1170,14 +1175,17 @@ local function ReassertAuraGroupGeometry(uf, groupKey)
     -- TODO el emplazamiento sale de ns.NPLayout, incluidos los offsets. Antes se
     -- recalculaban aca y del layout solo se tomaba el punto relativo -- o sea
     -- que seguian existiendo dos cuentas, que es exactamente lo que ese archivo
-    -- existe para impedir. El dedupe ahora compara los valores YA resueltos.
+    -- existe para impedir. El dedupe compara los valores YA resueltos, y NO la
+    -- escala: igual que el nombre, los grupos pasaron a regimen "plate", asi que
+    -- su posicion no depende de effScale y compararla solo provocaba un relayout
+    -- por frame mientras te movias, para dejar todo donde ya estaba.
     local al = ns.NPLayout.AuraGroup(P(), groupKey)
     if not al then return end
-    if holder._mcfLastEffScale == effScale and holder._mcfLastAnchor == al.point
+    if holder._mcfLastAnchor == al.point
         and holder._mcfLastOffX == al.x and holder._mcfLastOffY == al.y then
         return
     end
-    holder._mcfLastEffScale, holder._mcfLastAnchor = effScale, al.point
+    holder._mcfLastAnchor = al.point
     holder._mcfLastOffX, holder._mcfLastOffY = al.x, al.y
     -- Ancla al NAMEPLATE, no al nombre (ver la nota larga en L.AuraGroup). Se
     -- acabo la cadena `uf.mcfNameHolder or uf.name or uf`: esa podia dejar el

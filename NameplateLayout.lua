@@ -154,9 +154,28 @@ end
 -- anclado a la barra, y aunque la diferencia sea de ~1px, es el tipo de
 -- divergencia que este archivo existe para impedir.
 function L.Name(p)
+    -- Regimen "plate" desde 2026-07-28 (pedido del usuario: "necesito que todo
+    -- se escale junto, para ver el verdadero tamaño de todos los elementos").
+    -- El nombre era la ultima pieza en "screen": su letra quedaba a tamaño de
+    -- pantalla fijo mientras el resto encogia con la distancia, asi que el
+    -- editor no podia mostrar su tamaño real -- era lo unico que el slider de
+    -- escala no tocaba.
+    --
+    -- OJO: cambiar el regimen NO mueve el nombre. Las dos convenciones dan la
+    -- misma posicion -- en "screen" el offset se multiplica por la escala y el
+    -- elemento va a escala efectiva 1; en "plate" el offset va crudo y el
+    -- elemento va a la escala del plate. l.y * scale en ambos casos. Lo unico
+    -- que cambia es el tamaño FISICO de la letra, que ahora acompaña.
+    --
+    -- COSTO CONOCIDO: la contra-escala existia para que la fuente no se
+    -- rasterizara a tamaños fraccionarios (texto borroso a distancia, que fue
+    -- un bug reportado en su momento). Vuelve a estar expuesta a eso. Si
+    -- molesta, la alternativa es mantener la contra-escala y escalar el
+    -- nameFontSize por la escala del plate: nitido y proporcionado, pero el
+    -- tamaño cambia en escalones al acercarse en vez de suave.
     return { point = "BOTTOM", relTo = "plate", relPoint = "TOP",
              x = num(p and p.nameOffsetX, 0), y = 16 + num(p and p.nameOffsetY, 0),
-             scaleRegime = "screen" }
+             scaleRegime = "plate" }
 end
 
 -- Valor de vida: debajo de la barra.
