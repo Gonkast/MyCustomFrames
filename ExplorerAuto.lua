@@ -258,7 +258,32 @@ end)
 -- (por eso se registran con pcall), y entrar a una casa puede no disparar
 -- ninguno de los de zona. Un ticker lento cubre ese caso sin costar nada
 -- medible -- 1 vez por segundo contra los 10 Hz del tick principal.
+-- VIGIA temporal (2026-07-28): la feature "no funciona" pero no sabemos si
+-- falla la DETECCION (nunca se entera de que la barra 1 cambio) o la APLICACION
+-- (se entera y algo revierte el alpha). Esto avisa por chat en cada TRANSICION,
+-- solo con la opcion encendida, asi el proximo reporte trae el dato en vez de
+-- otra hipotesis. Se quita cuando este resuelto.
+local lastReplaced = nil
+local function WatchReplaced()
+    local db = DB(); if not (db and db.explorerHideBarsOnReplace) then return end
+    local now = Bar1IsReplaced()
+    if now == lastReplaced then return end
+    lastReplaced = now
+    if now then
+        local hidden = {}
+        for _, k in ipairs({ "BT4Bar2","BT4Bar3","BT4Bar4","BT4Bar5","BT4Bar6","BT4Bar7",
+                             "BT4Bar8","BT4Bar9","BT4Bar10","BT4BarPetBar","BT4BarStanceBar","BT4BarBagBar" }) do
+            local f2 = _G[k]
+            if f2 then hidden[#hidden + 1] = ("%s(%.1f)"):format(k, f2:GetAlpha()) end
+        end
+        print("|cffffe19b[MCF bar]|r barra 1 REEMPLAZADA -> ocultando: " .. table.concat(hidden, " "))
+    else
+        print("|cffffe19b[MCF bar]|r barra 1 volvio a la normal -> restaurando")
+    end
+end
+
 C_Timer.NewTicker(1.0, function()
     UpdateHousing()
     ApplyBarHiding()
+    WatchReplaced()
 end)
