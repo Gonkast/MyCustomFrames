@@ -104,19 +104,23 @@ ns.UpdateExplorerHousing = UpdateHousing
 --
 -- Mismas APIs que usa Explorer para su caso, menos IsMounted, y con el mismo
 -- ns.safeBool (pueden devolver secretos en Midnight).
--- Se consultan VARIAS señales porque cada una cubre un caso distinto y ninguna
--- las cubre todas: possess (dominar mente, algunas mecanicas), vehiculo,
--- override generico, y por ultimo el propio frame nativo de Blizzard visible --
--- que es el mas confiable para variantes nuevas como las poses de housing, que
--- no disparan las APIs clasicas.
+-- La condicion la evalua BLIZZARD, no nosotros (2026-07-28). El usuario la
+-- expreso como condicional de macro:
+--
+--     [overridebar][possessbar][bonusbar][vehicleui] hide
+--
+-- Las versiones anteriores intentaban reimplementar eso a mano con
+-- HasOverrideActionBar / HasVehicleActionBar / UnitHasVehicleUI /
+-- IsPossessBarVisible / el frame nativo -- y las CINCO daban falso mientras el
+-- usuario veia la barra cambiada. SecureCmdOptionParse usa el mismo evaluador
+-- que una macro de verdad, asi que cubre los cuatro estados y cualquier
+-- variante nueva sin que haya que adivinar que API la reporta.
+local REPLACE_COND = "[overridebar][possessbar][bonusbar][vehicleui] hide"
+
 local function Bar1IsReplaced()
-    if ns.safeBool(HasOverrideActionBar) then return true end
-    if ns.safeBool(HasVehicleActionBar) then return true end
-    if ns.safeBool(UnitHasVehicleUI, "player") then return true end
-    if ns.safeBool(IsPossessBarVisible) then return true end
-    local oab = _G.OverrideActionBar
-    if oab and oab.IsShown and oab:IsShown() then return true end
-    return false
+    if type(SecureCmdOptionParse) ~= "function" then return false end
+    local ok, r = pcall(SecureCmdOptionParse, REPLACE_COND)
+    return (ok and r == "hide") or false
 end
 ns.Bar1IsReplaced = Bar1IsReplaced
 
@@ -127,15 +131,19 @@ SLASH_MCFBARDIAG1 = "/mcfbardiag"
 SlashCmdList["MCFBARDIAG"] = function()
     local db = DB()
     print("|cffffe19b[MCF bar]|r estado de la barra 1:")
+    print(("   condicion: %s"):format(REPLACE_COND))
+    -- Se muestran las APIs sueltas solo como referencia: NINGUNA sirvio para
+    -- decidir (las cinco daban falso con la barra cambiada). La que manda es la
+    -- linea de arriba, evaluada por Blizzard.
     local checks = {
-        { "HasOverrideActionBar", ns.safeBool(HasOverrideActionBar) },
-        { "HasVehicleActionBar",  ns.safeBool(HasVehicleActionBar) },
-        { "UnitHasVehicleUI",     ns.safeBool(UnitHasVehicleUI, "player") },
-        { "IsPossessBarVisible",  ns.safeBool(IsPossessBarVisible) },
-        { "OverrideActionBar visible", _G.OverrideActionBar and _G.OverrideActionBar:IsShown() or false },
+        { "SecureCmdOptionParse", Bar1IsReplaced() },
+        { "  (ref) HasOverrideActionBar", ns.safeBool(HasOverrideActionBar) },
+        { "  (ref) HasVehicleActionBar",  ns.safeBool(HasVehicleActionBar) },
+        { "  (ref) UnitHasVehicleUI",     ns.safeBool(UnitHasVehicleUI, "player") },
+        { "  (ref) IsPossessBarVisible",  ns.safeBool(IsPossessBarVisible) },
     }
     for _, c in ipairs(checks) do
-        print(("   %-28s %s"):format(c[1], c[2] and "|cff00ff00SI|r" or "no"))
+        print(("   %-30s %s"):format(c[1], c[2] and "|cff00ff00SI|r" or "no"))
     end
     print(("   -> reemplazada: %s"):format(Bar1IsReplaced() and "|cff00ff00SI|r" or "no"))
     print(("   opcion activada: %s   explorer: %s"):format(
