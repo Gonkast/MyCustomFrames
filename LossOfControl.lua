@@ -28,6 +28,11 @@ local function EnsureHolder()
     if not (portrait and portrait.root) then return nil end
 
     local f = CreateFrame("Frame", nil, portrait.root)
+    -- Nivel POR ENCIMA de todo lo del retrato (2026-07-28, reportado: "el Loss
+    -- of Control esta por debajo del portrait"). Sin esto heredaba el nivel del
+    -- root y quedaba tapado: Portraits.lua pone el modelo 3D en root+1 y los
+    -- badges en root+2. +5 deja margen por si mas adelante se agrega otra capa.
+    f:SetFrameLevel(portrait.root:GetFrameLevel() + 5)
     f:SetSize(22, 22)
     f:SetPoint("CENTER", portrait.root, "CENTER", 18, -18)
     f:Hide()
