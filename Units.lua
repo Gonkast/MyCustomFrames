@@ -1307,12 +1307,16 @@ ns.TickUnits = function()
             end
         end
         if UnitExists(u.unit) then
-            UnitUpdateBar(u)
-            UnitUpdateColor(u)
-            UnitTextVisibility(u)
-            UnitUpdateMount(u)
-            UnitUpdateDeadCage(u)
-            UnitUpdateHighlight(u)
+            -- Instrumentadas por separado (2026-07-28): TickUnits resulto ser el
+            -- mayor costo del addon -- 7.08 ms/s, el 77% del tick principal --
+            -- y estas seis corren para CADA unidad, 10 veces por segundo, sin
+            -- ningun dedupe. Antes de tocar nada hay que saber cual pesa.
+            ns.Prof.Time("     . UnitUpdateBar", UnitUpdateBar, u)
+            ns.Prof.Time("     . UnitUpdateColor", UnitUpdateColor, u)
+            ns.Prof.Time("     . UnitTextVisibility", UnitTextVisibility, u)
+            ns.Prof.Time("     . UnitUpdateMount", UnitUpdateMount, u)
+            ns.Prof.Time("     . UnitUpdateDeadCage", UnitUpdateDeadCage, u)
+            ns.Prof.Time("     . UnitUpdateHighlight", UnitUpdateHighlight, u)
             if u.readyCheckIcon then
                 local status = ns.safeVal(GetReadyCheckStatus, u.unit)
                 if status == "ready" then
