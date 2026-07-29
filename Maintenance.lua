@@ -251,6 +251,16 @@ local function CPUReport()
         return
     end
     if not UpdateAddOnCPUUsage then print("|cffff5555[MCF]|r API de profiling no disponible."); return end
+    -- La instrumentacion de /mcfdiag hot se le atribuye a ESTE addon: son dos
+    -- debugprofilestop() y dos escrituras de tabla por cada camino envuelto,
+    -- ~2000 veces por segundo. Medir el consumo del addon con eso encendido
+    -- infla su propio numero y arruina la comparacion contra los otros addons.
+    if ns.Prof and ns.Prof.IsActive() then
+        print("|cffff5555[MCF]|r La instrumentacion de /mcfdiag hot esta ACTIVA.")
+        print("  Su costo se le suma a MyCustomFrames y falsea esta medicion.")
+        print("  Para un numero limpio: |cffffff00/reload|r y medi SIN correr /mcfdiag hot.")
+        return
+    end
     UpdateAddOnCPUUsage()
 
     local n = (C_AddOns and C_AddOns.GetNumAddOns and C_AddOns.GetNumAddOns()) or 0
