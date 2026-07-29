@@ -53,8 +53,25 @@ local function PortraitUpdatePosition(u)
     else
         anchorName, point, relPoint, x, y = p.centerAnchor, p.centerPoint, p.centerRelPoint, p.centerX, p.centerY
     end
-    local parent = _G[anchorName]
-    if type(parent) ~= "table" or type(parent.GetObjectType) ~= "function" then parent = UIParent end
+    -- Resolucion del anchor CACHEADA por nombre: `_G[anchorName]` es un lookup
+    -- con hash de string mas dos type() y corria por retrato en CADA pasada,
+    -- antes del dedupe de mas abajo -- o sea siempre, incluso cuando no habia
+    -- nada que reanclar. El nombre del anchor solo cambia si el usuario lo edita.
+    local parent = u._anchorCache
+    if parent == nil or u._anchorCacheName ~= anchorName then
+        parent = _G[anchorName]
+        if type(parent) ~= "table" or type(parent.GetObjectType) ~= "function" then
+            parent = UIParent
+            -- El fallback NO se cachea. Si el anchor real todavia no existe
+            -- (su addon carga tarde), hay que poder resolverlo en una pasada
+            -- posterior -- cachear UIParent aca dejaria el retrato colgado de
+            -- UIParent para siempre. El comentario del dedupe de abajo ya
+            -- avisaba de esto: "un anchor que aparece tarde re-ancla solo".
+            u._anchorCache, u._anchorCacheName = nil, nil
+        else
+            u._anchorCache, u._anchorCacheName = parent, anchorName
+        end
+    end
     -- Dedupe: re-anclar cada tick con los mismos valores es trabajo inutil. Se compara
     -- contra lo ULTIMO APLICADO (datos propios del addon, nunca secretos); el parent
     -- resuelto entra en la firma (un anchor que aparece tarde re-ancla solo). El
@@ -765,7 +782,7 @@ ns.PortraitShouldShow = PortraitShouldShow
 ns.TickPortraits = function()
     local slowTier = (ns.tickState.n % 3 == 0)
     for _, u in pairs(ns.portraits) do
-        if PortraitShouldShow(u) then
+        if ns.Prof.Time("     . PortraitShouldShow", PortraitShouldShow, u) then
             PortraitSetShown(u, true)
             if u.kind == "icon" then
                 if u.key == "portrait_tot" or slowTier or not u._wasShown then PortraitUpdatePicture(u) end
@@ -782,8 +799,10 @@ ns.TickPortraits = function()
                 PortraitUpdatePicture(u)
             end
             u._wasShown = true
-            PortraitUpdatePosition(u)
-            PortraitUpdateState(u, false, not slowTier)
+            -- Instrumentadas por separado: TickPortraits cuesta 1.47 ms/s y estas
+            -- dos son lo unico que corre para CADA retrato en CADA pasada.
+            ns.Prof.Time("     . PortraitUpdatePosition", PortraitUpdatePosition, u)
+            ns.Prof.Time("     . PortraitUpdateState", PortraitUpdateState, u, false, not slowTier)
         else
             PortraitSetShown(u, false)
             u._wasShown = false

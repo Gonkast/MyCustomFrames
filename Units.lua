@@ -490,12 +490,28 @@ local function UnitUpdateBar(u, doText)
 
     -- Rellena el StatusBar nativo SIEMPRE (secret-safe y para leer geometria).
     ns.Prof.Time("        - SetValue(vida/poder)", function()
-    u.bar:SetReverseFill(false)
-    if u.kind == "power" then
-        u.bar:SetMinMaxValues(0, UnitPowerMax(u.unit)); u.bar:SetValue(UnitPower(u.unit))
-    else
-        u.bar:SetMinMaxValues(0, UnitHealthMax(u.unit)); u.bar:SetValue(UnitHealth(u.unit))
+    -- SetReverseFill y SetMinMaxValues se repetian en cada tick con los MISMOS
+    -- valores: el maximo de vida/poder casi nunca cambia (subir de nivel, buffs
+    -- de vida). SetValue si tiene que correr siempre -- es el valor actual.
+    if u.bar._revApplied ~= false then
+        u.bar._revApplied = false
+        u.bar:SetReverseFill(false)
     end
+    local maxFn = (u.kind == "power") and UnitPowerMax or UnitHealthMax
+    local curFn = (u.kind == "power") and UnitPower or UnitHealth
+    local max = maxFn(u.unit)
+    -- Solo se deduplica si el maximo es un numero PROPIO. Si viene secreto no se
+    -- puede comparar (rompe), asi que se aplica siempre, como antes.
+    if type(max) == "number" and not (issecretvalue and issecretvalue(max)) then
+        if u.bar._maxApplied ~= max then
+            u.bar._maxApplied = max
+            u.bar:SetMinMaxValues(0, max)
+        end
+    else
+        u.bar._maxApplied = nil
+        u.bar:SetMinMaxValues(0, max)
+    end
+    u.bar:SetValue(curFn(u.unit))
     end)
 
     if not (p.texture and p.texture ~= "") then
