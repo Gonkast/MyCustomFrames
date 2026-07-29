@@ -284,7 +284,11 @@ glowEvents:SetScript("OnEvent", function() glowCacheBuilt = false end)
 
 -- Ticker propio (la rotacion cambia constantemente; corre aunque estemos en preview).
 if C_Timer and C_Timer.NewTicker then
-    C_Timer.NewTicker(0.1, ns.Prof.Wrap("Glow: refresco 0.1s", function()
+    -- 0.2s, no 0.1 (2026-07-28): lo caro aca es GetNextCastSpell, que calcula
+    -- la sugerencia de rotacion asistida entera -- medido, 0.15 ms por llamada,
+    -- 1.40 ms/s. Una sugerencia de rotacion no cambia 10 veces por segundo, y
+    -- 0.1s extra de latencia en que aparezca el brillo es imperceptible.
+    C_Timer.NewTicker(0.2, ns.Prof.Wrap("Glow: refresco 0.2s", function()
         local db = ns.GetDB and ns.GetDB()
         if db and db.glow and db.glow.enabled then RefreshGlow(false) end
     end))

@@ -94,7 +94,19 @@ local function SafeInCombat(unit)
     return r and true or false
 end
 -- Regla #3 del usuario: SIEMPRE el propio jugador, nunca la unidad del grupo.
-local function PlayerInCombat() return SafeInCombat("player") end
+-- Lee el estado ya cacheado por el tick principal (core.lua lo resuelve UNA vez
+-- por pasada en ns.tickState.inCombat). Los 14 tickers de este archivo lo
+-- recalculaban cada uno por su cuenta: 46 llamadas/s a la API para responder lo
+-- mismo que ya estaba cacheado a 10 Hz.
+--
+-- Fallback directo si el tick todavia no corrio, o si esta en modo edicion (ahi
+-- el tick sale temprano y el cache se congela -- irrelevante, no se pelea en
+-- modo edicion, y el addon ya bloquea entrar en combate).
+local function PlayerInCombat()
+    local ts = ns.tickState
+    if ts and ts.inCombat ~= nil then return ts.inCombat end
+    return SafeInCombat("player")
+end
 
 local function InDungeon()
     local ok, _, instanceType = pcall(IsInInstance)

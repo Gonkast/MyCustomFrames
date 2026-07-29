@@ -869,13 +869,24 @@ local function CastOnUpdate(self, elapsed)
         mode = self._lastPolledMode
     end
     if mode == nil then
-        self:SetAlpha(0)
+        -- Solo en la TRANSICION a ocioso. Antes esto se repetia POR FRAME sobre
+        -- una barra que ya estaba en alpha 0 con el spark oculto: entre todas las
+        -- barras eran 580 llamadas/s, y el 99% del tiempo nadie castea.
+        if self._idleApplied ~= true then
+            self._idleApplied = true
+            self:SetAlpha(0)
+            if u.castSpark then u.castSpark:Hide() end
+        end
         self._castMode, self._timerActive = nil, false
-        if u.castSpark then u.castSpark:Hide() end
         return
     end
+    self._idleApplied = false
 
-    self:SetAlpha(p.castAlpha)
+    -- Mismo criterio: el alpha de casteo solo se re-aplica si cambio el perfil.
+    if self._alphaApplied ~= p.castAlpha then
+        self._alphaApplied = p.castAlpha
+        self:SetAlpha(p.castAlpha)
+    end
     -- Nuevo cast (cambio de modo o venia de nada): (re)inicia el timer una sola vez.
     if mode ~= self._castMode then
         self._castMode = mode
