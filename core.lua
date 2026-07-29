@@ -2066,6 +2066,20 @@ local function InitDB()
     -- cualquier razon entre piezas -- asi que arrancar en 1 es simplemente ver
     -- los elementos a su tamaño real.
     if db.designerRefScale == nil then db.designerRefScale = 1 end
+    -- Los botones del minimapa venian horneados en strata HIGH, el mismo que
+    -- las bolsas de Blizzard: con strata igual desempata el frame level y
+    -- ganaban los nuestros, tapando la esquina de la bolsa (reportado con
+    -- captura 2026-07-28). El default del codigo siempre fue MEDIUM -- el
+    -- HIGH salia solo de Defaults.lua, ya corregido.
+    --
+    -- Solo se toca si vale exactamente "HIGH": si alguien eligio DIALOG u otro
+    -- a proposito, se respeta.
+    if not db._mbStrataFixV1 then
+        if db.minimapbuttons and db.minimapbuttons.strata == "HIGH" then
+            db.minimapbuttons.strata = "MEDIUM"
+        end
+        db._mbStrataFixV1 = true
+    end
     if not db._npNativeBakeV1 then
         db.nameplates = ns.NameplateDefaults and ns.NameplateDefaults() or {}
         db.nameplateUserDefault = nil

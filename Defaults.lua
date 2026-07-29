@@ -293,7 +293,7 @@ ns.BUILTIN = {
     ["relPoint"]="BOTTOMLEFT",
     ["rowSpacing"]=4,
     ["scale"]=1,
-    ["strata"]="HIGH",
+    ["strata"]="MEDIUM",
     ["triggerSize"]=28,
   },
   ["mirrortimer"]={
