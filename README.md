@@ -6,6 +6,31 @@ quest tracker recoloring, assisted-rotation glow, and a bundled Masque skin. Sec
 (handles this client's stricter Lua sandboxing on other players' unit data). Personal preset of
 **Gonkast** — originally built on top of AzeriteUI, now fully standalone (see Credits).
 
+![The HUD in the world](Images/01-ui-general.jpg)
+
+## Screenshots
+
+**Explorer mode, `minimal` preset** — the HUD fades out of the way when nothing is happening and
+comes back on combat, target, casting or mouseover. Same character and spot as the shot above.
+
+![Explorer mode with the minimal preset](Images/03-explorer-minimal.jpg)
+
+**Edit mode** (`/mcf`) — every element is draggable and scrollable to resize, with sample data so
+frames that need a real unit (boss, arena, party, raid) can still be placed. The panel toggles
+individual pieces out of the way while arranging the rest.
+
+![Edit mode showing every frame with its outline](Images/02-edit-mode.jpg)
+
+**Nameplate Designer** (`/mcfnpdesigner`) — drag each piece of the nameplate to move it, scroll to
+resize. The mock-up is built by the same constructors as the real nameplates, so what you arrange
+is what you get in combat.
+
+![The Nameplate Designer panel](Images/05-nameplate-designer.jpg)
+
+**Game Menu** — reskinned to match, and it follows whichever Skin is active in the options.
+
+![The reskinned Escape menu](Images/04-game-menu.jpg)
+
 ## Requirements
 
 None to load — no other addon is a hard dependency. That said, this preset is designed and tuned to be used alongside **Gonkast's own [Bartender4](https://www.curseforge.com/wow/addons/bartender4) profile** (action bar layout/positions) and **[DynamicCam](https://www.curseforge.com/wow/addons/dynamiccam)** (camera) — the bundled Bartender4 profile (see Setup Wizard) is part of the intended setup, not just an optional pairing.
