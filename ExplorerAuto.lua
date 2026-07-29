@@ -46,49 +46,64 @@ local function InHousing()
     return inside and true or false
 end
 
--- Copia del estado del Explorer, para poder devolverlo tal cual.
-local saved = nil
-local housingActive = false
+-- La copia del estado va en la DB, NO en una variable de archivo (2026-07-28,
+-- reportado: "si me desconecto dentro del housing... sigue estando en minimal").
+--
+-- Con la copia en memoria, desconectarse dentro de la casa la perdia -- pero el
+-- perfil minimal YA estaba escrito en db.explorer y ese si se guardaba a disco.
+-- Al volver no quedaba nada que restaurar y la configuracion original se perdia
+-- para siempre. Persistida, sobrevive al /reload y al logout.
+--
+-- Ademas reemplaza a la bandera `housingActive` que habia antes: la presencia de
+-- la copia ES el estado. Una bandera en memoria habria tenido exactamente el
+-- mismo problema al reconectar.
 
 local function SaveExplorerState()
     local db = DB(); if not db then return end
+    -- NUNCA pisar una copia existente. Si ya hay una, el estado actual es el
+    -- minimal que aplicamos nosotros -- guardarlo encima perderia el original,
+    -- que es justo el bug que esto arregla.
+    if db._explorerHousingSaved then return end
     local copy = {}
     for k, v in pairs(db.explorer or {}) do copy[k] = v end
-    saved = { enabled = db.explorerEnabled, map = copy }
+    db._explorerHousingSaved = { enabled = db.explorerEnabled, map = copy }
 end
 
 local function RestoreExplorerState()
-    local db = DB(); if not (db and saved) then return end
+    local db = DB()
+    local saved = db and db._explorerHousingSaved
+    if not saved then return end
     -- Alpha=1 en todo antes de reescribir el mapa: mismo cuidado que toma
     -- ApplyExplorerQuickProfile, para que nada quede congelado a mitad de un
     -- desvanecido cuando cambia la membresia.
     if ns.ExplorerResetAll then ns.ExplorerResetAll() end
-    -- db.explorer puede no existir todavia (perfil recien creado): wipe(nil)
-    -- tira error duro. SaveExplorerState ya tolera el nil con `or {}`.
     db.explorer = db.explorer or {}
     wipe(db.explorer)
-    for k, v in pairs(saved.map) do db.explorer[k] = v end
+    for k, v in pairs(saved.map or {}) do db.explorer[k] = v end
     db.explorerEnabled = saved.enabled
-    saved = nil
+    db._explorerHousingSaved = nil
     if ns.RefreshAll then ns.RefreshAll() end
 end
 
 local function UpdateHousing()
     local db = DB(); if not db then return end
     if not db.explorerHousingMinimal then
-        -- Si se apago la opcion mientras estaba actuando, se devuelve el estado
-        -- en vez de dejarlo pegado en minimal.
-        if housingActive then housingActive = false; RestoreExplorerState() end
+        -- Se apago la opcion mientras estaba actuando: devolver el estado en vez
+        -- de dejarlo pegado en minimal.
+        RestoreExplorerState()
         return
     end
-    local inside = InHousing()
-    if inside == housingActive then return end
-    housingActive = inside
-    if inside then
-        SaveExplorerState()
-        db.explorerEnabled = true
-        if ns.ApplyExplorerQuickProfile then ns.ApplyExplorerQuickProfile("minimal") end
+    if InHousing() then
+        -- El guard de SaveExplorerState hace esto idempotente: entrar de nuevo
+        -- (o reconectar dentro de la casa) no vuelve a aplicar nada.
+        if not db._explorerHousingSaved then
+            SaveExplorerState()
+            db.explorerEnabled = true
+            if ns.ApplyExplorerQuickProfile then ns.ApplyExplorerQuickProfile("minimal") end
+        end
     else
+        -- Cubre el caso del reporte: reconectar FUERA de la casa con una copia
+        -- pendiente de una sesion anterior la restaura al entrar al mundo.
         RestoreExplorerState()
     end
 end
