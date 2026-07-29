@@ -104,11 +104,50 @@ ns.UpdateExplorerHousing = UpdateHousing
 --
 -- Mismas APIs que usa Explorer para su caso, menos IsMounted, y con el mismo
 -- ns.safeBool (pueden devolver secretos en Midnight).
+-- Se consultan VARIAS señales porque cada una cubre un caso distinto y ninguna
+-- las cubre todas: possess (dominar mente, algunas mecanicas), vehiculo,
+-- override generico, y por ultimo el propio frame nativo de Blizzard visible --
+-- que es el mas confiable para variantes nuevas como las poses de housing, que
+-- no disparan las APIs clasicas.
 local function Bar1IsReplaced()
-    return ns.safeBool(HasOverrideActionBar)
-        or ns.safeBool(HasVehicleActionBar)
-        or ns.safeBool(UnitHasVehicleUI, "player")
-        or false
+    if ns.safeBool(HasOverrideActionBar) then return true end
+    if ns.safeBool(HasVehicleActionBar) then return true end
+    if ns.safeBool(UnitHasVehicleUI, "player") then return true end
+    if ns.safeBool(IsPossessBarVisible) then return true end
+    local oab = _G.OverrideActionBar
+    if oab and oab.IsShown and oab:IsShown() then return true end
+    return false
+end
+ns.Bar1IsReplaced = Bar1IsReplaced
+
+-- Diagnostico: dice QUE señal esta activa y si el force-hide deberia estar
+-- actuando. Existe porque la primera version de esta feature no disparaba y no
+-- habia forma de saber cual de las condiciones fallaba.
+SLASH_MCFBARDIAG1 = "/mcfbardiag"
+SlashCmdList["MCFBARDIAG"] = function()
+    local db = DB()
+    print("|cffffe19b[MCF bar]|r estado de la barra 1:")
+    local checks = {
+        { "HasOverrideActionBar", ns.safeBool(HasOverrideActionBar) },
+        { "HasVehicleActionBar",  ns.safeBool(HasVehicleActionBar) },
+        { "UnitHasVehicleUI",     ns.safeBool(UnitHasVehicleUI, "player") },
+        { "IsPossessBarVisible",  ns.safeBool(IsPossessBarVisible) },
+        { "OverrideActionBar visible", _G.OverrideActionBar and _G.OverrideActionBar:IsShown() or false },
+    }
+    for _, c in ipairs(checks) do
+        print(("   %-28s %s"):format(c[1], c[2] and "|cff00ff00SI|r" or "no"))
+    end
+    print(("   -> reemplazada: %s"):format(Bar1IsReplaced() and "|cff00ff00SI|r" or "no"))
+    print(("   opcion activada: %s   explorer: %s"):format(
+        (db and db.explorerHideBarsOnReplace) and "si" or "|cffff5555NO|r",
+        (db and db.explorerEnabled ~= false) and "on" or "off"))
+    for i = 2, 4 do
+        local key, bar = "BT4Bar" .. i, _G["BT4Bar" .. i]
+        print(("   %-9s alpha=%.2f  gestionada por explorer=%s  force-hide=%s"):format(
+            key, bar and bar:GetAlpha() or -1,
+            (db and db.explorer and db.explorer[key]) and "si" or "no",
+            ns.ExplorerBarForceHidden(key) and "SI" or "no"))
+    end
 end
 
 -- ¿Esta barra tiene que estar forzada a oculta AHORA? Lo consulta tambien el

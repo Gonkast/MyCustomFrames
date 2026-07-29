@@ -354,6 +354,7 @@ ns.RegisterDiag("hot", "Desglosa el CPU del addon por subsistema (correr 2 veces
 
 ns.RegisterDiag("cpu", "CPU por addon durante el JUEGO (correr 2 veces: referencia y medicion)", CPUReport)
 
+ns.RegisterDiag("bar", "Que señal de reemplazo tiene la barra 1 y si el force-hide actua", Cmd("MCFBARDIAG"))
 ns.RegisterDiag("skincheck", "Valida que la skin activa traiga todos sus archivos", SkinCheck)
 ns.RegisterDiag("purge", "Purga claves de features ya eliminadas de la DB", function()
     ns.PurgeDeadKeys(true)
