@@ -160,6 +160,32 @@ SlashCmdList["MCFBARDIAG"] = function()
     for _, n2 in ipairs({ "BT4BarPetBar", "BT4BarStanceBar", "BT4BarBagBar", "BT4BarExtraActionBar" }) do
         if _G[n2] then print(("     %-22s alpha=%.2f"):format(n2, _G[n2]:GetAlpha())) end
     end
+    -- SONDA COMPLETA (2026-07-28): las 5 señales de arriba dan "no" mientras el
+    -- usuario ve la barra reemplazada, asi que hay que ver TODO el estado de
+    -- barras de accion de una vez en vez de ir agregando APIs de a una. La
+    -- hipotesis es que Bartender4 dibuja las acciones de reemplazo DENTRO de
+    -- BT4Bar1, sin que aparezca el frame nativo de Blizzard.
+    print("   estado completo de barras de accion:")
+    local function num(fn, ...)
+        if type(fn) ~= "function" then return "n/d" end
+        local ok, v2 = pcall(fn, ...)
+        return ok and tostring(v2) or "error"
+    end
+    print(("     GetActionBarPage      %s"):format(num(GetActionBarPage)))
+    print(("     GetBonusBarOffset     %s"):format(num(GetBonusBarOffset)))
+    print(("     HasBonusActionBar     %s"):format(num(HasBonusActionBar)))
+    print(("     GetOverrideBarSkin    %s"):format(num(GetOverrideBarSkin)))
+    print(("     GetVehicleBarIndex    %s"):format(num(GetVehicleBarIndex)))
+    print(("     GetOverrideBarIndex   %s"):format(num(GetOverrideBarIndex)))
+    print(("     GetTempShapeshiftBarIndex %s"):format(num(GetTempShapeshiftBarIndex)))
+    print(("     UnitInVehicle         %s"):format(num(UnitInVehicle, "player")))
+    print(("     UnitControllingVehicle %s"):format(num(UnitControllingVehicle, "player")))
+    print(("     UnitOnTaxi            %s"):format(num(UnitOnTaxi, "player")))
+    print(("     GetShapeshiftForm     %s"):format(num(GetShapeshiftForm)))
+    -- Que ACCION tiene el primer boton: si cambia al entrar en el estado, ahi
+    -- esta la señal, aunque ninguna API booleana lo diga.
+    local okA, a = pcall(function() return (_G.BT4Button1 and _G.BT4Button1._state_action) end)
+    print(("     BT4Button1 _state_action %s"):format(okA and tostring(a) or "n/d"))
     print("   barras NATIVAS de Blizzard visibles:")
     local nat = false
     for _, n2 in ipairs({ "MainMenuBar", "MultiBarBottomLeft", "MultiBarBottomRight",
