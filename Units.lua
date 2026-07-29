@@ -124,9 +124,31 @@ local function SetHealthTextWithPercentColor(u, p, hpText, pct, abbreviated, nor
     return pcall(hpText.SetFormattedText, hpText, "%s", coloredPercent)
 end
 
+-- SetText solo si el texto CAMBIO (2026-07-28). Blizzard rehace el layout del
+-- FontString en CADA SetText aunque el string sea identico, y estas rutas corren
+-- 10 veces por segundo por unidad: medido, UnitUpdateBar era 6.51 ms/s, el 71%
+-- de TickUnits y el mayor costo del addon entero.
+--
+-- SOLO para strings PROPIOS. Comparar un valor secreto de Midnight no es seguro,
+-- asi que las rutas que pasan un secreto crudo a SetFormattedText NO usan esto
+-- -- se quedan como estaban, actualizando siempre.
+local function SetTextIfChanged(fs, s)
+    if fs._mcfLastText == s then return end
+    fs._mcfLastText = s
+    fs:SetText(s)
+end
+
 local function UnitUpdateText(u)
     local p, hpText = P(u), u.hpText
-    if not p.showText then hpText:SetText("") return end
+    -- Cache del dedupe de la ruta legible: se LEE aca y se invalida de
+    -- inmediato. Solo esa ruta la vuelve a armar, asi que si la pasada actual
+    -- termina por cualquier otra rama (muerto, showText apagado, porcentaje
+    -- secreto), la proxima pasada legible redibuja igual en vez de quedarse con
+    -- el texto de la otra rama pegado. Correcto por construccion: no hay que
+    -- acordarse de invalidar en cada salida.
+    local lastPct, lastAbbr = u._hpLastPct, u._hpLastAbbr
+    u._hpLastPct, u._hpLastAbbr = nil, nil
+    if not p.showText then SetTextIfChanged(hpText, "") return end
 
     -- (Ruta caliente: pcall(fn, args) directo, SIN closures — ver nota sobre ns.safeBool.
     -- Toda comparacion/aritmetica sobre valores potencialmente secretos va precedida
@@ -152,12 +174,12 @@ local function UnitUpdateText(u)
             hpText:SetFormattedText("%.0f%%", cur / max * 100)
             return
         end
-        hpText:SetText("")
+        SetTextIfChanged(hpText, "")
         return
     end
 
     local dead = ns.safeBool(UnitIsDeadOrGhost, u.unit)
-    if dead then hpText:SetText("") return end
+    if dead then SetTextIfChanged(hpText, "") return end
 
     if UnitHealthPercent then
         local okH, readablePct, readable = pcall(GetHealthPercent, u.unit)
@@ -170,12 +192,34 @@ local function UnitUpdateText(u)
             hpText:SetTextColor(col.r, col.g, col.b, 1)
         end
         if readable then
+            local abbr
             if p.showValue and type(AbbreviateNumbers) == "function" then
-                local okA, abbr = pcall(AbbreviateNumbers, UnitHealth(u.unit))
-                if okA and abbr ~= nil then
-                    if SetHealthTextWithPercentColor(u, p, hpText, readablePct, abbr, col) then return end
-                    if pcall(hpText.SetFormattedText, hpText, "%.0f%% | %s", readablePct, abbr) then return end
-                end
+                local okA, a = pcall(AbbreviateNumbers, UnitHealth(u.unit))
+                if okA then abbr = a end
+            end
+            -- DEDUPE: lo que se muestra es funcion PURA del porcentaje redondeado
+            -- (se formatea con "%.0f") y del valor abreviado. Si ninguno de los
+            -- dos cambio, el SetFormattedText produciria el mismo string exacto
+            -- -- y Blizzard rehace el layout del FontString igual. Medido: esta
+            -- ruta era el 71% de TickUnits y el mayor costo del addon.
+            --
+            -- Solo se deduplica si `abbr` es comparable con seguridad. Si llega
+            -- secreto se saltea el dedupe y se actualiza siempre, como antes:
+            -- comparar un secreto de Midnight no es seguro.
+            if (abbr == nil) or (type(abbr) == "string"
+                                 and not (issecretvalue and issecretvalue(abbr))) then
+                local rounded = math.floor(readablePct + 0.5)
+                -- La cache se restaura TAMBIEN al saltear. Se invalida al entrar
+                -- a la funcion (ver arriba), asi que si al skipear no se volviera
+                -- a armar quedaria en nil y la pasada siguiente redibujaria por
+                -- las dudas -- alternando skip/redibuja y perdiendo la mitad del
+                -- ahorro. Lo detecto una prueba de la logica antes de subirlo.
+                u._hpLastPct, u._hpLastAbbr = rounded, abbr
+                if lastPct == rounded and lastAbbr == abbr then return end
+            end
+            if abbr ~= nil then
+                if SetHealthTextWithPercentColor(u, p, hpText, readablePct, abbr, col) then return end
+                if pcall(hpText.SetFormattedText, hpText, "%.0f%% | %s", readablePct, abbr) then return end
             end
             if SetHealthTextWithPercentColor(u, p, hpText, readablePct, nil, col) then return end
             hpText:SetFormattedText("%.0f%%", readablePct)
@@ -199,7 +243,7 @@ local function UnitUpdateText(u)
         local ok, formatted = pcall(AbbreviateNumbers, UnitHealth(u.unit))
         if ok and formatted ~= nil then hpText:SetText(formatted) return end
     end
-    hpText:SetText("")
+    SetTextIfChanged(hpText, "")
 end
 
 -- Nombre (+nivel) y texto de hechizo (fontstrings independientes).
@@ -273,11 +317,11 @@ local function UnitUpdateName(u)
             elseif lvl <= 60 then col = "|cFFFFFF00"
             else col = "|cFFFFA500" end
             local lvlText = (lvl > 0) and tostring(lvl) or "??"
-            nameFS:SetText(string.format("%s %s%s|r", nameStr, col, lvlText))
+            SetTextIfChanged(nameFS, string.format("%s %s%s|r", nameStr, col, lvlText))
         elseif lvlReadable and lvl > 0 then
-            nameFS:SetText(string.format("%s %d", nameStr, lvl))
+            SetTextIfChanged(nameFS, string.format("%s %d", nameStr, lvl))
         else
-            nameFS:SetText(nameStr)
+            SetTextIfChanged(nameFS, nameStr)
         end
     else
         -- Nombre SECRETO: pasarlo tal cual a SetFormattedText (formatea en C). rawName
