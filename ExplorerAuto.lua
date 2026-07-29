@@ -133,7 +133,14 @@ ns.UpdateExplorerHousing = UpdateHousing
 -- `[bonusbar]` SIN numero no matchea nada: la sintaxis real es [bonusbar:N].
 -- Confirmado en vivo -- SecureCmdOptionParse devolvia falso con
 -- GetBonusBarOffset() = 5. Por eso el default lleva 1/2/3/4/5.
-local DEFAULT_COND = "[overridebar][possessbar][bonusbar:1/2/3/4/5][vehicleui] hide"
+-- bonusbar NO va en el default (2026-07-28). Las formas de druida usan
+-- bonusbar, asi que un feral en forma de gato tendria TODAS las barras
+-- escondidas de forma permanente -- lo mismo cualquier clase con formas. Al
+-- autor le servia porque su bonusbar 5 es de volar, pero como default garantiza
+-- un UI roto para otros. Se ofrece como toggle aparte, apagado, con un tooltip
+-- que explica exactamente esto.
+local BASE_COND = "[overridebar][possessbar][vehicleui]"
+local BONUS_COND = "[bonusbar:1/2/3/4/5]"
 
 -- EDITABLE (db.explorerReplaceCond). Se expone porque cual es la condicion
 -- correcta depende de la clase y de que considere "reemplazada" cada uno --
@@ -141,10 +148,15 @@ local DEFAULT_COND = "[overridebar][possessbar][bonusbar:1/2/3/4/5][vehicleui] h
 -- sacarlo. Cambiarla con /mcfbarcond en vez de tener que tocar el archivo.
 local function Cond()
     local db = DB()
+    -- Una cadena puesta a mano con /mcfbarcond manda sobre todo: quien la escribe
+    -- sabe lo que quiere.
     local c = db and db.explorerReplaceCond
-    return (type(c) == "string" and c ~= "") and c or DEFAULT_COND
+    if type(c) == "string" and c ~= "" then return c end
+    local cond = BASE_COND
+    if db and db.explorerReplaceBonusBar then cond = cond .. BONUS_COND end
+    return cond .. " hide"
 end
-ns.ExplorerReplaceCondDefault = DEFAULT_COND
+ns.ExplorerReplaceCondDefault = BASE_COND .. " hide"
 
 local function Bar1IsReplaced()
     if type(SecureCmdOptionParse) ~= "function" then return false end
@@ -164,7 +176,7 @@ SlashCmdList["MCFBARCOND"] = function(msg)
     end
     if msg == "reset" then
         db.explorerReplaceCond = nil
-        print("|cffffe19b[MCF]|r condicion restaurada: " .. DEFAULT_COND)
+        print("|cffffe19b[MCF]|r condicion restaurada: " .. Cond())
     else
         -- Tiene que terminar resolviendo a "hide" para que Bar1IsReplaced la lea.
         if not msg:find("hide") then msg = msg .. " hide" end

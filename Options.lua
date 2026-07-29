@@ -4516,8 +4516,28 @@ local function BuildPanel()
                 ns.GetDB().explorerHideBarsOnReplace = v
                 if ns.UpdateExplorerBarHiding then ns.UpdateExplorerBarHiding() end
             end)
+        -- Apagado por defecto A PROPOSITO, con el motivo en el tooltip: las
+        -- formas de druida usan bonusbar, asi que encenderlo deja a un feral en
+        -- forma con TODAS las barras escondidas de forma permanente.
+        local bonusBtn = MakeToggle(conditionsGroup, "...also count bonus bars", L, TOP - 180,
+            function() return ns.GetDB().explorerReplaceBonusBar end,
+            function(v)
+                ns.GetDB().explorerReplaceBonusBar = v
+                if ns.UpdateExplorerBarHiding then ns.UpdateExplorerBarHiding() end
+            end)
+        bonusBtn:HookScript("OnEnter", function(self)
+            if GameTooltip:IsForbidden() then return end
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText("Also treat bonus bars as a replacement.", 1, 1, 1, 1, true)
+            GameTooltip:AddLine(" ")
+            GameTooltip:AddLine("|cffff5555Careful:|r druid forms use bonus bars, so with this on a druid in cat or bear form would have every other bar hidden the whole time. Same for any class with a form or stance that swaps the bar.", 1, 0.82, 0, true)
+            GameTooltip:AddLine(" ")
+            GameTooltip:AddLine("Useful if you fly or use a bar-swapping mount and want the rest out of the way.", 0.7, 0.7, 0.7, true)
+            GameTooltip:Show()
+        end)
+        bonusBtn:HookScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
         local autoNote = conditionsGroup:CreateFontString(nil, "ARTWORK"); setFont(autoNote, 10)
-        autoNote:SetPoint("TOPLEFT", L, TOP - 180); autoNote:SetWidth(210); autoNote:SetJustifyH("LEFT")
+        autoNote:SetPoint("TOPLEFT", L, TOP - 204); autoNote:SetWidth(210); autoNote:SetJustifyH("LEFT")
         autoNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         autoNote:SetText("Housing restores your previous setup on the way out. Bar hiding works whether Explorer is on or off, and mouseover still reveals.")
         -- Filtro por TIPO DE CONTENIDO: donde el Explorer esta activo (B1b).
@@ -4554,7 +4574,7 @@ local function BuildPanel()
         -- dos la reacomoda sola.
         local zonesBottom = TOP - 22 - (#ZONES - 1) * 24 - 24
         -- autoNote arranca en TOP-180 y ocupa ~2 lineas a 210 de ancho.
-        local leftBottom = TOP - 180 - 34
+        local leftBottom = TOP - 204 - 34
         zonesBottom = math.min(zonesBottom, leftBottom)
         local condNote = conditionsGroup:CreateFontString(nil, "ARTWORK"); setFont(condNote, 10)
         condNote:SetPoint("TOPLEFT", L, zonesBottom - 10); condNote:SetWidth(430); condNote:SetJustifyH("LEFT")

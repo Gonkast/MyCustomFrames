@@ -1772,6 +1772,7 @@ local GLOBAL_FLAT_KEYS = {
     -- Nameplate Designer, preferencia de la ventana de edicion y no del look del
     -- personaje -- mismo criterio que db.panelScale, ya excluida por lo mismo.
     "explorerHousingMinimal", "explorerHideBarsOnReplace", "explorerReplaceCond",
+    "explorerReplaceBonusBar",
 }
 local GLOBAL_TABLE_KEYS = { "lockHide", "explorer", "explorerZones", "explorerElementAlpha", "nameplateUserDefault", "nameplateProfiles" }
 
@@ -2192,6 +2193,9 @@ local function InitDB()
     -- defecto: no deben cambiarle el UI a nadie sin que lo pida.
     if db.explorerHousingMinimal == nil then db.explorerHousingMinimal = false end
     if db.explorerHideBarsOnReplace == nil then db.explorerHideBarsOnReplace = false end
+    -- bonusbar aparte y APAGADO: las formas de druida lo disparan, ver el
+    -- tooltip de esa opcion en Options.lua.
+    if db.explorerReplaceBonusBar == nil then db.explorerReplaceBonusBar = false end
     if db.fadeIn == nil then db.fadeIn = true end
     if db.fadeDuration == nil then db.fadeDuration = 0.25 end
     FillDefaults()
