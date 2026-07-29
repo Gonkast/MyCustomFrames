@@ -11,6 +11,43 @@
 > Raid/etc, todos archivos propios que exponen `ns.Loquesea` y leen `ns.GetDB()`/`ns.IsUnlocked()`
 > en vez de los locals `db`/`unlocked` de core.
 
+## SESION 2026-07-28 (nameplates: fuente unica de geometria + constructor compartido;
+## profiling y ~50% menos de CPU; escala global de nameplates)
+
+### NameplateLayout.lua (NUEVO) — `ns.NPLayout`, la geometria en numeros puros
+Tabla `BASE` con la posicion NATIVA de cada pieza; el perfil guarda solo un **delta** sobre
+ella (delta 0 = fabrica). Antes convivian DOS convenciones — `16 + offset` para nombre/auras y
+`num(offset, -7)` para el resto — asi que "poner el offset en 0" significaba cosas distintas
+segun el elemento. `L.FACTORY` es la unica fuente de los tamaños y `NameplateDefaults` se
+construye desde ahi.
+
+**OJO: las funciones devuelven una tabla de SCRATCH reusada.** No la guardes ni tengas dos
+vivas a la vez; hay un comentario de advertencia sobre la tabla. Se hizo asi porque alocaban
+~450 tablas/segundo en una raid.
+
+### NameplateBuild.lua (NUEVO) — `ns.NPBuild`, construccion + **`B.Place`**
+`B.Place` es la UNICA funcion que coloca piezas, en los dos lados. El Designer no tiene ni una
+linea de posicionamiento propia: entrega su tabla de piezas y listo. Tambien construye los
+widgets con un flag `preview` (el real lleva Cooldown nativo, el mock no).
+
+**Por que existe:** el nombre fue lo ultimo que quedo fuera de este esquema y fallo SEIS rondas
+seguidas. Cada arreglo era un bug real pero no *el* bug, porque mientras hubiera dos
+implementaciones de la misma geometria aparecia una diferencia nueva. La leccion: cuando un
+arreglo razonado falla dos veces, el problema es estructural, no de detalle.
+
+Todos los elementos estan en regimen `"plate"` — **no hay contra-escala**, todo escala junto.
+La que habia se quito porque mantenia la POSICION en pixeles fijos mientras la barra encogia,
+y eso hacia imposible que un panel de escala fija predijera el juego.
+
+### Profiler.lua (NUEVO) — instrumentacion de los caminos calientes
+`ns.Prof.Wrap` (envuelve) y `ns.Prof.Time` (cronometra una llamada en el sitio sin alocar un
+closure). Apagado por defecto: chequea su flag ANTES de leer el reloj, asi que cuesta una
+comparacion booleana por llamada. Lo reportan `/mcfdiag hot` y `/mcfdiag cpu`.
+
+Detalle completo del trabajo de rendimiento, las tres trampas de medicion y el mapa de costo:
+ver el CHANGELOG de esta sesion.
+
+
 ## SESION 2026-07-24/25 (grande — auto-scale por resolucion, Explorer ampliado + registro
 ## unificado, merge de Mainmenu-Gonkast, limpieza de features, repo re-creado desde cero)
 

@@ -57,8 +57,8 @@ worth reading before redoing one of them).
   built and shipped briefly, but got pulled — no clear way to trigger/test it in
   practice; see git history if it's worth revisiting later.
 - **Loss of Control icon** (`LossOfControl.lua`, new file) — shows on the player portrait
-  (bottom-right corner, the slot `portrait_player` never uses since it has no role/leader
-  badge) whenever you're stunned/silenced/rooted/feared/etc, with a cooldown swipe for how
+  (centred on its top edge; it started bottom-right and was moved later the same day)
+  whenever you're stunned/silenced/rooted/feared/etc, with a cooldown swipe for how
   long is left. Uses `C_LossOfControl.GetActiveLossOfControlData` — always your own data,
   never another unit's, so no secret-value concerns here at all. `/mcfloctest` toggles a
   fake 6-second placeholder to preview it without needing a real CC.
