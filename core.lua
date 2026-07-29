@@ -1763,6 +1763,15 @@ local GLOBAL_FLAT_KEYS = {
     "playerAuraMaxIcons", "playerAuraPadding", "playerAuraSort",
     "targetAuraMaxIcons", "targetAuraPadding", "targetAuraSort",
     "hideChatEditBoxTexture", "raidGhostShowAll",
+    -- Automatismos del Explorer (ExplorerAuto.lua, 2026-07-28): son ajustes de
+    -- comportamiento compartibles, van al export igual que el resto de los
+    -- explorer*. Sin esta linea el export los perdia en silencio -- el mismo
+    -- agujero que el barrido anterior encontro con otros 5 ajustes.
+    --
+    -- db.designerRefScale queda AFUERA a proposito: es la escala del lienzo del
+    -- Nameplate Designer, preferencia de la ventana de edicion y no del look del
+    -- personaje -- mismo criterio que db.panelScale, ya excluida por lo mismo.
+    "explorerHousingMinimal", "explorerHideBarsOnReplace", "explorerReplaceCond",
 }
 local GLOBAL_TABLE_KEYS = { "lockHide", "explorer", "explorerZones", "explorerElementAlpha", "nameplateUserDefault", "nameplateProfiles" }
 
