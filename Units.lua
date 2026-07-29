@@ -480,12 +480,14 @@ local function UnitUpdateBar(u)
     end
 
     -- Rellena el StatusBar nativo SIEMPRE (secret-safe y para leer geometria).
+    ns.Prof.Time("        - SetValue(vida/poder)", function()
     u.bar:SetReverseFill(false)
     if u.kind == "power" then
         u.bar:SetMinMaxValues(0, UnitPowerMax(u.unit)); u.bar:SetValue(UnitPower(u.unit))
     else
         u.bar:SetMinMaxValues(0, UnitHealthMax(u.unit)); u.bar:SetValue(UnitHealth(u.unit))
     end
+    end)
 
     if not (p.texture and p.texture ~= "") then
         -- Sin textura (focus): sin relleno.
@@ -493,7 +495,7 @@ local function UnitUpdateBar(u)
         u.bar:GetStatusBarTexture():SetAlpha(0)
         u.bar._readable = false
     else
-        local frac, readable = GetUnitFraction(u)
+        local frac, readable = ns.Prof.Time("        - GetUnitFraction", GetUnitFraction, u)
         if readable then
             -- Relleno MANUAL (no desliza, orientaciones correctas, permite smooth).
             u.bar:GetStatusBarTexture():SetAlpha(0)
@@ -504,7 +506,7 @@ local function UnitUpdateBar(u)
             -- se vea coherente, (2) ANCLAR el recorte al lado derecho para que se
             -- vacie de izquierda a derecha (si no, solo cambia el arte pero sigue
             -- creciendo/vaciandose igual que LEFT).
-            RenderManualFill(u.fillTex, u.bar, u.bar._cur, p.reverseFill)
+            ns.Prof.Time("        - RenderManualFill", RenderManualFill, u.fillTex, u.bar, u.bar._cur, p.reverseFill)
         else
             -- Secreto e ilegible: StatusBar nativo (unico camino posible). Mismo
             -- combo: archivo espejado + SetReverseFill(true) (anclar a la derecha).
@@ -514,8 +516,8 @@ local function UnitUpdateBar(u)
             u.bar:SetReverseFill(p.reverseFill and true or false)
         end
     end
-    UnitUpdateText(u)
-    UnitUpdateName(u)
+    ns.Prof.Time("        - UnitUpdateText", UnitUpdateText, u)
+    ns.Prof.Time("        - UnitUpdateName", UnitUpdateName, u)
 end
 
 local function UnitUpdateMount(u)
