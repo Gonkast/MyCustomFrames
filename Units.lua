@@ -439,7 +439,16 @@ local function GetUnitFraction(u)
     return 0, false
 end
 
-local function UnitUpdateBar(u)
+-- `doText`: los dos textos (porcentaje y nombre) son el 68% del costo de esta
+-- funcion -- medido: 2.73 + 1.34 de 5.99 ms/s -- y no necesitan los 10 Hz del
+-- tick. TickUnits los pide en pasadas alternas (5 Hz); el resto de llamadores
+-- (UnitApplyAppearance, cambios de config) no pasan nada y los hacen siempre.
+--
+-- 5 Hz y no menos a proposito: PLAYER_TARGET_CHANGED no refresca el nombre --
+-- solo cast bar y retratos, ver core.lua -- asi que el nombre depende SOLO de
+-- este tick. Bajarlo mas dejaria el nombre del target anterior a la vista al
+-- cambiar de objetivo. Para bajarlo habria que refrescarlo por evento primero.
+local function UnitUpdateBar(u, doText)
     local p = P(u)
 
     -- Preview (modo edicion): relleno lleno + textos de muestra.
@@ -516,8 +525,10 @@ local function UnitUpdateBar(u)
             u.bar:SetReverseFill(p.reverseFill and true or false)
         end
     end
-    ns.Prof.Time("        - UnitUpdateText", UnitUpdateText, u)
-    ns.Prof.Time("        - UnitUpdateName", UnitUpdateName, u)
+    if doText ~= false then
+        ns.Prof.Time("        - UnitUpdateText", UnitUpdateText, u)
+        ns.Prof.Time("        - UnitUpdateName", UnitUpdateName, u)
+    end
 end
 
 local function UnitUpdateMount(u)
@@ -1333,8 +1344,16 @@ ns.RefreshAllUnits = function()
 end
 
 -- Tick por-unidad (barras/highlight/badges), llamado desde el ticker principal de core.
+local tickUnitsN = 0
 ns.TickUnits = function()
     local db = ns.GetDB()
+    -- Textos en pasadas alternas: 5 Hz en vez de 10. Un porcentaje que cambia 5
+    -- veces por segundo ya es mas rapido de lo que se puede leer, y la BARRA
+    -- sigue a 10 Hz con su interpolacion suave a 60 fps, asi que no se degrada
+    -- nada visible. Mismo patron que ya usa el tick principal con TickRaid
+    -- (cada 2do ciclo) y MM_ReassertArt (cada 5to).
+    tickUnitsN = tickUnitsN + 1
+    local doText = (tickUnitsN % 2 == 0)
     for _, u in pairs(ns.frames) do
         if u.kind == "power" then u.button:SetShown(PowerShouldShow(u)) end
         if u.key == "pet" then
@@ -1357,7 +1376,7 @@ ns.TickUnits = function()
             -- mayor costo del addon -- 7.08 ms/s, el 77% del tick principal --
             -- y estas seis corren para CADA unidad, 10 veces por segundo, sin
             -- ningun dedupe. Antes de tocar nada hay que saber cual pesa.
-            ns.Prof.Time("     . UnitUpdateBar", UnitUpdateBar, u)
+            ns.Prof.Time("     . UnitUpdateBar", UnitUpdateBar, u, doText)
             ns.Prof.Time("     . UnitUpdateColor", UnitUpdateColor, u)
             ns.Prof.Time("     . UnitTextVisibility", UnitTextVisibility, u)
             ns.Prof.Time("     . UnitUpdateMount", UnitUpdateMount, u)
