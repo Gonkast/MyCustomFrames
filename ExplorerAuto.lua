@@ -141,13 +141,34 @@ SlashCmdList["MCFBARDIAG"] = function()
     print(("   opcion activada: %s   explorer: %s"):format(
         (db and db.explorerHideBarsOnReplace) and "si" or "|cffff5555NO|r",
         (db and db.explorerEnabled ~= false) and "on" or "off"))
-    for i = 2, 4 do
+    -- QUE barras existen de verdad. La primera version asumia BT4Bar1-10 y el
+    -- diagnostico devolvio que ni BT4Bar2 existe: hay que ver los frames reales
+    -- antes de decidir a cuales aplicarles el ocultamiento.
+    print("   barras de Bartender4 que EXISTEN:")
+    local hay = false
+    for i = 1, 10 do
         local key, bar = "BT4Bar" .. i, _G["BT4Bar" .. i]
-        print(("   %-9s alpha=%.2f  gestionada por explorer=%s  force-hide=%s"):format(
-            key, bar and bar:GetAlpha() or -1,
-            (db and db.explorer and db.explorer[key]) and "si" or "no",
-            ns.ExplorerBarForceHidden(key) and "SI" or "no"))
+        if bar then
+            hay = true
+            print(("     %-9s alpha=%.2f  visible=%s  explorer=%s  force-hide=%s"):format(
+                key, bar:GetAlpha(), bar:IsShown() and "si" or "no",
+                (db and db.explorer and db.explorer[key]) and "si" or "no",
+                ns.ExplorerBarForceHidden(key) and "SI" or "no"))
+        end
     end
+    if not hay then print("     |cffff5555ninguna|r -- Bartender4 no cargo o usan otro nombre") end
+    for _, n2 in ipairs({ "BT4BarPetBar", "BT4BarStanceBar", "BT4BarBagBar", "BT4BarExtraActionBar" }) do
+        if _G[n2] then print(("     %-22s alpha=%.2f"):format(n2, _G[n2]:GetAlpha())) end
+    end
+    print("   barras NATIVAS de Blizzard visibles:")
+    local nat = false
+    for _, n2 in ipairs({ "MainMenuBar", "MultiBarBottomLeft", "MultiBarBottomRight",
+                          "MultiBarLeft", "MultiBarRight", "MultiBar5", "MultiBar6", "MultiBar7",
+                          "StanceBar", "PetActionBar", "OverrideActionBar" }) do
+        local fr = _G[n2]
+        if fr and fr.IsShown and fr:IsShown() then nat = true; print("     " .. n2) end
+    end
+    if not nat then print("     ninguna") end
 end
 
 -- ¿Esta barra tiene que estar forzada a oculta AHORA? Lo consulta tambien el
