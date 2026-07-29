@@ -48,6 +48,18 @@ function ns.Prof.Wrap(name, fn)
     end
 end
 
+-- Cronometra UNA llamada ya existente, sin envolverla. Wrap() crea una funcion
+-- nueva, asi que usarlo dentro de un ticker alocaria un closure por pasada --
+-- justo lo que estamos tratando de reducir. Esto se llama en el sitio.
+function ns.Prof.Time(name, fn, ...)
+    if not active then return fn(...) end
+    local t0 = debugprofilestop()
+    local a, b, c, d = fn(...)
+    acc[name] = (acc[name] or 0) + (debugprofilestop() - t0)
+    calls[name] = (calls[name] or 0) + 1
+    return a, b, c, d
+end
+
 function ns.Prof.Start()
     wipe(acc); wipe(calls)
     since = GetTime()

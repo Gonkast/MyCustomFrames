@@ -335,8 +335,10 @@ local function HotReport()
         print(("  %2d. %-32s %6.2f ms/s  (%2.0f%%)  %.0f llamadas/s"):format(
             i, e.name, e.msPerSec, total > 0 and e.msPerSec * 100 / total or 0, e.callsPerSec))
     end
-    print("  Compara este total con lo que dio /mcfdiag cpu: lo que falte esta en")
-    print("  eventos y hooks, no en los tickers -- y eso se busca distinto.")
+    print("  Las lineas con |- son SUB-caminos: su tiempo ya esta contado dentro del")
+    print("  padre, no se suman aparte.")
+    print("  Compara el total con /mcfdiag cpu: lo que falte esta en eventos y hooks,")
+    print("  no en los tickers -- y eso se busca distinto.")
 end
 ns.RegisterDiag("hot", "Desglosa el CPU del addon por subsistema (correr 2 veces)", HotReport)
 

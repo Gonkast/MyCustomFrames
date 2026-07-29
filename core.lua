@@ -2374,13 +2374,13 @@ C_Timer.NewTicker(0.1, ns.Prof.Wrap("core: tick principal 0.1s", function()
     tickState.arenaOK  = ns.ArenaContentAllowed and ns.ArenaContentAllowed() or false
     -- pcall: un error aqui NO debe romper el loop de unidades (frames invisibles).
     -- Tick por-unidad (barras/highlight/badges/pet): extraido a Units.lua.
-    if ns.TickUnits then ns.TickUnits() end
+    if ns.TickUnits then ns.Prof.Time("  |- TickUnits", ns.TickUnits) end
     -- Tick por-portrait (badges/posicion/estado): extraido a Portraits.lua.
-    if ns.TickPortraits then ns.TickPortraits() end
+    if ns.TickPortraits then ns.Prof.Time("  |- TickPortraits", ns.TickPortraits) end
     -- (Tick de auras QUITADO 2026-07-27: ns.TickAuras se fue con el grid de
     -- Auras.lua. AuraHoverPreview.lua tiene su propio ticker.)
     -- Tick de raid (Raid.lua): 40 barras de vida no necesitan 10Hz reales, cada 2do ciclo (~0.2s).
-    if tickState.n % 2 == 0 and ns.TickRaid then ns.TickRaid() end
+    if tickState.n % 2 == 0 and ns.TickRaid then ns.Prof.Time("  |- TickRaid", ns.TickRaid) end
     -- Info bar: refrescar valores ~1/seg.
     if ns.infobar and db.infobar and db.infobar.enabled then
         if GetTime() - (ns.infobar._lastVal or 0) >= 1 then
