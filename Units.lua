@@ -138,6 +138,29 @@ local function SetTextIfChanged(fs, s)
     fs:SetText(s)
 end
 
+-- Contraparte OBLIGATORIA: toda escritura que NO pase por SetTextIfChanged
+-- (SetFormattedText, o un SetText con un valor posiblemente secreto) tiene que
+-- marcar la cache como desconocida (2026-07-29).
+--
+-- El invariante de SetTextIfChanged es "_mcfLastText es lo que se ve". Escribir
+-- por afuera lo rompe, y lo rompe en la direccion peligrosa -- hace que una
+-- llamada POSTERIOR se saltee su escritura:
+--
+--   showText off  -> SetTextIfChanged(hp, "")    cache=""   pantalla=""
+--   showText on   -> SetFormattedText "45%"      cache=""   pantalla="45%"  <- desfase
+--   showText off  -> SetTextIfChanged(hp, "")    cache==""  -> NO escribe
+--                                                pantalla se queda en "45%"
+--
+-- Se invalida ANTES de escribir, no despues: si el pcall del SetFormattedText
+-- falla, "desconocido" sigue siendo la respuesta correcta y la proxima pasada
+-- redibuja. Al reves (invalidar despues) un error se saltearia la invalidacion.
+--
+-- No cuesta rendimiento: la cache solo existe para saltear repeticiones del
+-- MISMO string, y el texto de vida cambia en casi todos los ticks igual. Lo que
+-- protege es el estado estable -- vacio, muerto, texto apagado -- que es donde
+-- el dedupe rendia.
+local function DirtyText(fs) fs._mcfLastText = nil end
+
 local function UnitUpdateText(u)
     local p, hpText = P(u), u.hpText
     -- Cache del dedupe de la ruta legible: se LEE aca y se invalida de
@@ -154,6 +177,11 @@ local function UnitUpdateText(u)
     -- Toda comparacion/aritmetica sobre valores potencialmente secretos va precedida
     -- de issecretvalue, o dentro de un pcall.)
     if u.kind == "power" then
+        -- Esta rama dibuja con SetFormattedText (formatea en C, obligatorio para
+        -- valores secretos), que no puede pasar por SetTextIfChanged. Se marca la
+        -- cache como desconocida UNA vez al entrar, en vez de en cada sitio de
+        -- escritura -- asi no hay forma de olvidarse de uno.
+        DirtyText(hpText)
         -- CENTRALIZADO (2026-07-19, "sigue con eso"): ns.GetPowerPercent
         -- (API.lua) es el unico lugar que sabe la firma real/curva de
         -- UnitPowerPercent -- ver el historial largo de ese bug ahi.
@@ -180,6 +208,11 @@ local function UnitUpdateText(u)
 
     local dead = ns.safeBool(UnitIsDeadOrGhost, u.unit)
     if dead then SetTextIfChanged(hpText, "") return end
+    -- Idem la rama de poder: de aca para abajo se dibuja con SetFormattedText.
+    -- Los dos estados estables que el dedupe protege ("texto apagado" y "muerto")
+    -- retornan ARRIBA de este punto, asi que lo conservan intacto -- son los que
+    -- corrian a 10 Hz sin cambiar nunca, que es donde rendia.
+    DirtyText(hpText)
 
     if UnitHealthPercent then
         local okH, readablePct, readable = pcall(GetHealthPercent, u.unit)
@@ -258,8 +291,12 @@ local function UnitUpdateName(u)
         if ns.safeBool(UnitIsDeadOrGhost, u.unit) then hide = true end
     end
     if hide then
-        nameFS:SetAlpha(0); nameFS:SetText("")
-        if spellFS then spellFS:SetAlpha(0); spellFS:SetText("") end
+        -- Por el helper: este es el estado estable (nombre apagado / unidad
+        -- muerta) y vaciar por afuera dejaba la cache con el nombre viejo, asi
+        -- que al volver a mostrarse UnitUpdateName recalculaba ESE nombre, la
+        -- comparacion daba igual y no reescribia nada -- el nombre no volvia.
+        nameFS:SetAlpha(0); SetTextIfChanged(nameFS, "")
+        if spellFS then spellFS:SetAlpha(0); SetTextIfChanged(spellFS, "") end
         return
     end
 
@@ -283,6 +320,9 @@ local function UnitUpdateName(u)
            and p.spellMaxLength and p.spellMaxLength > 0 and #s > p.spellMaxLength then
             s = s:sub(1, p.spellMaxLength) .. ".."
         end
+        -- SetFormattedText obligatorio (el nombre del hechizo puede ser secreto):
+        -- no pasa por el helper, asi que la cache queda desconocida.
+        DirtyText(spellFS)
         pcall(spellFS.SetFormattedText, spellFS, "%s", s)
         if u._sX ~= p.spellOffsetX or u._sY ~= p.spellOffsetY then
             u._sX, u._sY = p.spellOffsetX, p.spellOffsetY
@@ -327,6 +367,11 @@ local function UnitUpdateName(u)
         -- Nombre SECRETO: pasarlo tal cual a SetFormattedText (formatea en C). rawName
         -- solo se usa si el pcall de UnitName tuvo exito (si fallo, seria el mensaje
         -- de error). Comparar el secreto solo con nil.
+        --
+        -- No hay dedupe posible aca (comparar un secreto no es seguro), asi que
+        -- la cache queda desconocida: es la rama que corre en este cliente para
+        -- casi todas las unidades.
+        DirtyText(nameFS)
         local okF = false
         if okN and rawName ~= nil then
             if lvlReadable and lvl > 0 then
@@ -466,12 +511,24 @@ local function UnitUpdateBar(u, doText)
         -- mouse (rama `ns.IsUnlocked()` vieja ignoraba lockHide por completo, ver fix mas abajo).
         local lh = ns.GetDB().lockHide or {}
         local hideText = lh.text
+        -- OJO: los textos de muestra van por SetTextIfChanged, NO por SetText
+        -- directo (2026-07-29, reportado: "al salir de mcf on el nombre del
+        -- player dice player 60"). SetTextIfChanged cachea en fs._mcfLastText
+        -- lo ULTIMO que escribio; escribir por afuera deja la cache mintiendo.
+        --
+        -- Al salir del preview, UnitUpdateName recalcula el nombre REAL, lo
+        -- compara con la cache -- que todavia guardaba ese mismo nombre real de
+        -- antes de entrar -- y se saltea el SetText. El texto de muestra se
+        -- quedaba en pantalla hasta un /reload.
+        --
+        -- La regla es que _mcfLastText SIEMPRE tiene que ser lo que se ve. Todo
+        -- lo que escriba sobre estas FontStrings pasa por el helper.
         if u.hpText then
-            u.hpText:SetText(u.kind == "power" and "100%" or "100% | 1m")
+            SetTextIfChanged(u.hpText, u.kind == "power" and "100%" or "100% | 1m")
             u.hpText:SetAlpha(hideText and 0 or p.textAlpha)
         end
         if u.nameText then
-            u.nameText:SetText(u.label .. " 60")
+            SetTextIfChanged(u.nameText, u.label .. " 60")
             u.nameText:SetAlpha(hideText and 0 or ((p.showName and p.nameAlpha) or 0))
             u.nameText:ClearAllPoints()
             u.nameText:SetPoint("CENTER", u.bar, "CENTER", p.nameOffsetX, p.nameOffsetY)
@@ -479,7 +536,7 @@ local function UnitUpdateBar(u, doText)
             u._nX, u._nW = nil, nil   -- el preview anclo por su cuenta: invalidar dedupe
         end
         if u.spellText then
-            u.spellText:SetText("Hechizo")
+            SetTextIfChanged(u.spellText, "Hechizo")
             u.spellText:SetAlpha(hideText and 0 or (p.showSpell and p.spellAlpha or 0))
             u.spellText:ClearAllPoints()
             u.spellText:SetPoint("CENTER", u.bar, "CENTER", p.spellOffsetX, p.spellOffsetY)
@@ -863,6 +920,19 @@ local function CastOnUpdate(self, elapsed)
     -- Preview: barra estatica ~60%.
     if ns.IsUnlocked() then
         self:SetAlpha(p.castAlpha)
+        -- SINCRONIZAR las caches del dedupe con lo que el preview acaba de
+        -- aplicar (2026-07-29, reportado: "se ve las castbar estaticas" al
+        -- salir del modo edicion).
+        --
+        -- Sin esto: estando ocioso _idleApplied quedaba en true, el preview
+        -- pintaba la barra al 60% igual, y al salir la rama de ocioso de abajo
+        -- veia _idleApplied == true, daba por hecho que ya estaba apagada y no
+        -- hacia nada. La barra de muestra se quedaba fija hasta un /reload.
+        --
+        -- Los dos valores son literalmente ciertos ahora: NO estamos en estado
+        -- ocioso aplicado, y el ultimo alpha escrito ES castAlpha.
+        self._idleApplied = false
+        self._alphaApplied = p.castAlpha
         self._castMode, self._timerActive = nil, false
         self:SetMinMaxValues(0, 1); self:SetValue(0.6)
         if u.castSpark then u.castSpark:Show() end
@@ -1398,10 +1468,16 @@ ns.TickUnits = function()
                 if u.fillTex then u.fillTex:Hide() end
                 u.bar:GetStatusBarTexture():SetAlpha(0)
             end
+            -- Por SetTextIfChanged, no SetText directo: mismo motivo que la rama
+            -- de preview de UnitUpdateBar (2026-07-29). Vaciar por afuera dejaba
+            -- la cache _mcfLastText con el nombre viejo del pet, asi que al
+            -- volver a invocarlo UnitUpdateName recalculaba ESE MISMO nombre, la
+            -- comparacion daba igual y no se reescribia nada: el frame del pet
+            -- se quedaba con el nombre en blanco.
             if (not hasPet) or ns.safeBool(UnitIsDeadOrGhost, "pet") then
-                if u.hpText then u.hpText:SetText("") end
-                if u.nameText then u.nameText:SetAlpha(0); u.nameText:SetText("") end
-                if u.spellText then u.spellText:SetAlpha(0); u.spellText:SetText("") end
+                if u.hpText then SetTextIfChanged(u.hpText, "") end
+                if u.nameText then u.nameText:SetAlpha(0); SetTextIfChanged(u.nameText, "") end
+                if u.spellText then u.spellText:SetAlpha(0); SetTextIfChanged(u.spellText, "") end
             end
         end
         if UnitExists(u.unit) then

@@ -168,6 +168,28 @@ worth reading before redoing one of them).
   in sync" — a comment that had already failed twice.
 
 ### Fixed
+- **Leaving edit mode left preview content on screen until a `/reload`** — the player name
+  stuck at "player 60", cast bars frozen at their static 60% fill. A regression from this
+  session's own `SetText` dedupe.
+
+  The dedupe stores the last string written in `fs._mcfLastText` and skips the call when the
+  new one matches. Its invariant is *"the cache is what is on screen"* — and the preview
+  branch broke it by writing through raw `SetText`, leaving the cache holding the **real**
+  name from before edit mode was entered. On the way out, the real name was recomputed,
+  compared against a cache that already held it, and the write was skipped. The sample text
+  was never overwritten. The cast bar was the same shape: preview painted the bar without
+  clearing `_idleApplied`, so the idle branch concluded it had already turned the bar off.
+
+  Every write to a deduped FontString now goes through the helper, and the paths that
+  *cannot* (`SetFormattedText`, mandatory for secret values, which formats in C) call
+  `DirtyText` first to mark the cache unknown. Invalidating **before** the write, not after,
+  so a failed `pcall` still leaves a correct "unknown" rather than a lie.
+
+  Three further instances of the same desync were found while auditing, all pre-existing and
+  none reported yet: turning the health text off would not clear a number drawn by
+  `SetFormattedText`; a pet resummoned after dismissal came back with a blank name; and a
+  unit's name did not return after it was dead. The dedupe is preserved exactly where it paid
+  off — the stable states (text off, dead) return before their invalidation point.
 - **The Designer sized its text holders to fit the text; the real nameplate doesn't.** The
   name landed at a different height than the panel showed, and the error *grew with font
   size* — which is why it looked worst in the screenshots that reported it, and why no
