@@ -368,10 +368,19 @@ ns.TickExplorer = function()
         -- arriba). Secret-safe via ns.safeBool (mismo criterio que el resto del
         -- addon para cualquier UnitXxx/HasXxx/IsMounted que pueda devolver un valor
         -- secreto en Midnight 12.0.7).
-        explorerDriver.overrideBar = ns.safeBool(IsMounted)
-            or ns.safeBool(HasOverrideActionBar)
-            or ns.safeBool(HasVehicleActionBar)
-            or ns.safeBool(UnitHasVehicleUI, "player")
+        -- MISMA definicion de "la barra 1 esta reemplazada" que usa el
+        -- ocultamiento de las otras barras: la condicional de macro que evalua
+        -- Blizzard (ver ns.Bar1IsReplaced en ExplorerAuto.lua). Antes esto tenia
+        -- su propia lista de APIs e incluia IsMounted(), asi que una montura
+        -- NORMAL forzaba la barra 1 visible -- reportado 2026-07-28: "si es una
+        -- montura normal, no deberia porque estar activa". Montarse no reemplaza
+        -- la barra; las condicionales overridebar/possessbar/vehicleui si
+        -- describen exactamente cuando pasa.
+        --
+        -- Tener las dos features leyendo la MISMA condicion tambien evita que se
+        -- contradigan: seria absurdo que una considere reemplazada la barra 1 y
+        -- la otra no.
+        explorerDriver.overrideBar = (ns.Bar1IsReplaced and ns.Bar1IsReplaced()) or false
     elseif explorerDriver._wasOn then
         -- Se apago (zona no permitida o master off): restaurar alpha 1 UNA vez.
         if ns.ExplorerResetAll then ns.ExplorerResetAll() end
