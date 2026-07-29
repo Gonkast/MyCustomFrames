@@ -169,6 +169,13 @@ end
 local resetWatcher = CreateFrame("Frame")
 resetWatcher:RegisterEvent("PLAYER_ENTERING_WORLD")
 resetWatcher:SetScript("OnEvent", function()
+    -- La bandera del preview sigue a lo que se VE (2026-07-29). Este handler
+    -- borra ns.ArenaTrinketState, o sea los iconos de muestra, pero antes se
+    -- olvidaba de trinketTestOn: al cambiar de zona con el preview prendido, los
+    -- iconos desaparecian y la bandera quedaba en true. El boton de Options
+    -- seguia marcado como activo sin nada en pantalla, y hacia falta clickearlo
+    -- dos veces para recuperarlo (el primer click solo lo ponia en false).
+    trinketTestOn = false
     for _, unit in ipairs(ENEMY_UNITS) do
         seenInstance[unit] = nil
         ns.ArenaTrinketState[unit] = nil
