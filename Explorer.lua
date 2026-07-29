@@ -170,7 +170,12 @@ explorerDriver:SetScript("OnUpdate", ns.Prof.Wrap("Explorer: driver", function(s
                 -- diferencia de `overrideBar` de arriba, que si lo usa porque su
                 -- proposito es el contrario (mantener la 1 visible al montarte).
                 if ns.ExplorerBarForceHidden and ns.ExplorerBarForceHidden(key) then
-                    target = 0
+                    -- Le gana a combate, target y casteo, pero NO al hover: con
+                    -- la barra escondida el mouseover la sigue revelando, igual
+                    -- que en el modo normal del Explorer (pedido del usuario).
+                    -- Un frame en alpha 0 sigue recibiendo eventos de mouse --
+                    -- es de hecho como funciona todo el Explorer.
+                    target = IsMouseOverElement(f, key) and 1 or 0
                 end
                 local cur = f._exAlpha; if cur == nil then cur = f:GetAlpha() end
                 cur = cur + (target - cur) * (target > cur and kIn or kOut)
