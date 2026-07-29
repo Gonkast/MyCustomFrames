@@ -174,10 +174,31 @@ end
 -- ¿Esta barra tiene que estar forzada a oculta AHORA? Lo consulta tambien el
 -- bucle de Explorer.lua, para que gane sobre sus condiciones de revelado
 -- (combate/target/casteo/hover) en vez de pelearse con ellas.
+-- QUE se esconde. La primera version hacia `for i = 2, 10`, y el diagnostico en
+-- vivo mostro por que estaba mal: en este setup solo existen BT4Bar1 y BT4Bar6.
+-- "Las demas barras" que el usuario ve son sobre todo los modulos CON NOMBRE
+-- (pet, stance, bolsas), que ese bucle no tocaba nunca.
+--
+-- BT4BarExtraActionBar queda AFUERA a proposito: es el boton de accion extra, y
+-- justo en vehiculos y mecanicas de jefe -- que es cuando la barra 1 se
+-- reemplaza -- suele ser el boton de la mecanica. Esconderlo seria peor que no
+-- hacer nada.
+local HIDE_NAMED = {
+    BT4BarPetBar = true, BT4BarStanceBar = true, BT4BarBagBar = true,
+}
+
+local function IsHideable(key)
+    if key == "BT4Bar1" then return false end
+    if HIDE_NAMED[key] then return true end
+    -- BT4Bar2..10 (numeradas): solo las que existan de verdad.
+    local n = key:match("^BT4Bar(%d+)$")
+    return n ~= nil and tonumber(n) >= 2
+end
+
 function ns.ExplorerBarForceHidden(key)
     local db = DB()
     if not (db and db.explorerHideBarsOnReplace) then return false end
-    if key == "BT4Bar1" or key:sub(1, 6) ~= "BT4Bar" then return false end
+    if not IsHideable(key) then return false end
     return Bar1IsReplaced()
 end
 
@@ -190,8 +211,11 @@ local touched = {}
 local function ApplyBarHiding()
     local db = DB(); if not db then return end
     local explorerOwns = (db.explorerEnabled ~= false) and db.explorer or nil
-    for i = 2, 10 do
-        local key = "BT4Bar" .. i
+    -- Numeradas + las de nombre propio, en una sola lista.
+    local keys = {}
+    for i = 2, 10 do keys[#keys + 1] = "BT4Bar" .. i end
+    for k in pairs(HIDE_NAMED) do keys[#keys + 1] = k end
+    for _, key in ipairs(keys) do
         local bar = _G[key]
         if bar and not (explorerOwns and explorerOwns[key]) then
             local hide = ns.ExplorerBarForceHidden(key)
