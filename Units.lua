@@ -1439,6 +1439,56 @@ ns.ReadCastMode = ReadCastMode
 ns.UpdatePetDriver = UpdatePetDriver
 ns.UpdatePartyDrivers = UpdatePartyDrivers
 
+-- Apaga TODOS los cast bars, para llamar al SALIR del preview (2026-07-29,
+-- reportado: "el cast bar del tot aun se muestra, si hago mcf cuando no existe
+-- ningun tot ... pasa con el focus tambien").
+--
+-- Por que hace falta un desmontaje explicito y no alcanza con la rama de ocioso
+-- de CastOnUpdate: esa rama es un OnUpdate, y un OnUpdate NO CORRE mientras su
+-- frame esta oculto. La secuencia para una unidad condicional (tot/focus/boss/
+-- party/arena) que no existe al entrar en preview es:
+--
+--   1. SetUnlocked(true) fuerza u.button:Show() en TODOS los frames, exista o no
+--      la unidad -- para poder posicionarlos.
+--   2. CastOnUpdate empieza a correr y pinta la barra de muestra (60%, alpha,
+--      spark). No esta detras de ningun UnitExists, a diferencia de
+--      UnitUpdateBar, que el tick SI saltea si la unidad no existe -- por eso se
+--      quedaba pintado el cast bar y no el nombre ni el texto de vida.
+--   3. Al salir, RegisterUnitWatch/el state driver vuelven a ocultar el frame
+--      porque la unidad sigue sin existir. El OnUpdate se CONGELA ahi mismo, con
+--      la barra de muestra aplicada.
+--   4. Cuando la unidad aparece de verdad, el frame se muestra ya pintado.
+--
+-- Con un tot/focus presente al entrar en preview no pasaba: el frame seguia
+-- visible al salir, el OnUpdate nunca se congelaba y la rama de ocioso limpiaba.
+-- Esa era justo la diferencia que reporto el usuario.
+--
+-- Resetear en la TRANSICION es correcto pase lo que pase con la visibilidad del
+-- frame, y de paso saca el parpadeo de un frame que quedaba incluso cuando el
+-- OnUpdate si revivia.
+function ns.ResetUnitCastBars()
+    for _, u in pairs(ns.frames) do
+        local cb = u.castBar
+        if cb then
+            cb:SetAlpha(0)
+            cb:SetValue(0)
+            if u.castSpark then u.castSpark:Hide() end
+            -- Las banderas quedan describiendo lo que ACABA de aplicarse, mismo
+            -- criterio que la rama de ocioso: idle aplicado, y el ultimo alpha
+            -- escrito es 0 -- NO castAlpha. Dejar _alphaApplied en castAlpha aca
+            -- haria que el proximo casteo se saltee su SetAlpha y la barra nunca
+            -- reaparezca (ese fue el bug del cast bar del player, 2026-07-28).
+            cb._idleApplied = true
+            cb._alphaApplied = nil
+            cb._castMode, cb._timerActive = nil, false
+            -- El modo cacheado del throttle tambien: si no, al revivir el
+            -- OnUpdate los primeros 50ms se responden con el modo de la unidad
+            -- ANTERIOR que ocupaba este frame.
+            cb._lastPolledMode, cb._castPollAcc = nil, 0
+        end
+    end
+end
+
 ns.RefreshAllUnits = function()
     for _, u in pairs(ns.frames) do
         UnitApplyLayout(u)

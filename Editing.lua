@@ -414,6 +414,12 @@ local function SetUnlocked(state)
         end
     end
     if not state and ns.UpdatePetDriver then ns.UpdatePetDriver() end
+    -- Apagar los cast bars de muestra EN LA TRANSICION, no delegarlo al OnUpdate
+    -- de cada barra: las unidades condicionales que no existen (tot/focus/boss/
+    -- party/arena) vuelven a ocultarse justo aca, y un OnUpdate no corre con su
+    -- frame oculto -- se congelaba con la barra de muestra puesta y reaparecia
+    -- pintada cuando la unidad por fin existia. Ver ns.ResetUnitCastBars.
+    if not state and ns.ResetUnitCastBars then ns.ResetUnitCastBars() end
     -- Al entrar/salir de preview el alpha se fuerza a 1: limpiar la cache del Explorer
     -- (_exAlpha) para que no arranque desde un valor viejo al retomar el fade.
     if ns.ExplorerResetAll then ns.ExplorerResetAll() end

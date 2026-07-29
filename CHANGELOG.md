@@ -168,6 +168,28 @@ worth reading before redoing one of them).
   in sync" — a comment that had already failed twice.
 
 ### Fixed
+- **A conditional unit that did not exist when edit mode was entered came back wearing the
+  sample cast bar.** Enter preview with no target-of-target, leave, then select someone who
+  has one: its cast bar was already painted at the static 60%. Same for focus, and by the
+  same route for boss, party and arena frames. Entering preview *with* a ToT present did not
+  reproduce it — which is the detail that identified the mechanism.
+
+  `SetUnlocked` force-shows every unit frame so they can be positioned, whether or not their
+  unit exists. `CastOnUpdate` is an `OnUpdate` on the bar itself and has no `UnitExists` gate,
+  so it painted the sample bar — while `UnitUpdateBar`, which the tick *does* gate on
+  existence, never ran. That asymmetry is why the cast bar was left behind and the name and
+  health text were not.
+
+  On the way out the unit watch hides the frame again, and **an `OnUpdate` does not run while
+  its frame is hidden**: the script froze mid-preview with the sample bar applied, and the
+  frame surfaced already painted when the unit finally appeared. With the unit present the
+  whole time, the frame stayed visible, the script kept running and its idle branch cleaned up
+  — hence the difference.
+
+  Cast bars are now torn down **explicitly at the transition** (`ns.ResetUnitCastBars`, called
+  from `SetUnlocked`) rather than left to each bar's own polling to notice. Correct regardless
+  of frame visibility, and it removes the one-frame flash that remained even where the script
+  did resume.
 - **Leaving edit mode left preview content on screen until a `/reload`** — the player name
   stuck at "player 60", cast bars frozen at their static 60% fill. A regression from this
   session's own `SetText` dedupe.
