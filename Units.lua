@@ -891,6 +891,12 @@ local function CastOnUpdate(self, elapsed)
         if self._idleApplied ~= true then
             self._idleApplied = true
             self:SetAlpha(0)
+            -- INVALIDAR la cache del alpha de casteo: esta rama acaba de poner el
+            -- alpha en 0, asi que lo "ultimo aplicado" ya no es castAlpha. Sin
+            -- esto, el siguiente cast comparaba _alphaApplied == p.castAlpha, se
+            -- salteaba el SetAlpha y la barra quedaba invisible para siempre --
+            -- el cast bar del player desaparecia tras el primer casteo.
+            self._alphaApplied = nil
             if u.castSpark then u.castSpark:Hide() end
         end
         self._castMode, self._timerActive = nil, false
