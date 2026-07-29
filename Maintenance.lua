@@ -354,7 +354,6 @@ ns.RegisterDiag("hot", "Desglosa el CPU del addon por subsistema (correr 2 veces
 
 ns.RegisterDiag("cpu", "CPU por addon durante el JUEGO (correr 2 veces: referencia y medicion)", CPUReport)
 
-ns.RegisterDiag("bar", "Que señal de reemplazo tiene la barra 1 y si el force-hide actua", Cmd("MCFBARDIAG"))
 ns.RegisterDiag("skincheck", "Valida que la skin activa traiga todos sus archivos", SkinCheck)
 ns.RegisterDiag("purge", "Purga claves de features ya eliminadas de la DB", function()
     ns.PurgeDeadKeys(true)
@@ -431,6 +430,7 @@ local function Cmd(handler, arg)
 end
 
 -- Diagnosticos: vuelcan estado, no tocan nada.
+ns.RegisterDiag("bar", "Que señal de reemplazo tiene la barra 1 y si el force-hide actua", Cmd("MCFBARDIAG"))
 ns.RegisterDiag("scaledump",    "Posicion y escala de cada elemento en la resolucion actual", Cmd("MCFSCALEDUMP"))
 ns.RegisterDiag("bt4",          "Que barras de Bartender4 existen y con que nombre", Cmd("MCFBT4DIAG"))
 ns.RegisterDiag("auras",        "Datos de auras del objetivo actual", Cmd("MCFAURASDIAG"))
