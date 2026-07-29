@@ -301,6 +301,45 @@ local function CPUReport()
         print("  Referencia: <1 ms/s no se siente | 1-5 aceptable | >5 ms/s si se siente.")
     end
 end
+-- ==========================================================================
+-- /mcfdiag hot -- DONDE se van los milisegundos, dentro del addon.
+--
+-- scriptProfile mide por addon: dice que gastamos 13.78 ms/s (medido en vivo
+-- 2026-07-28: el 50% del CPU de todos los addons juntos) pero no en que. Esto
+-- desglosa por camino caliente -- cada ticker y cada OnUpdate permanente estan
+-- envueltos con ns.Prof.Wrap (ver Profiler.lua).
+--
+-- No necesita scriptProfile: usa debugprofilestop(), que siempre esta.
+-- ==========================================================================
+local function HotReport()
+    if not ns.Prof then print("|cffff5555[MCF]|r Profiler.lua no cargo."); return end
+    if not ns.Prof.IsActive() then
+        ns.Prof.Start()
+        print("|cffffe19b[MCF hot]|r Midiendo. Juga 1-2 minutos y volve a correr")
+        print("  |cffffff00/mcfdiag hot|r para ver el desglose por subsistema.")
+        return
+    end
+    local list, elapsed = ns.Prof.Report()
+    if elapsed < 20 then
+        print(("|cffff5555[MCF]|r Solo %.0f s. Juga un poco mas."):format(elapsed))
+        return
+    end
+    if #list == 0 then
+        print("|cffffe19b[MCF hot]|r Ningun camino instrumentado consumio tiempo.")
+        return
+    end
+    local total = 0
+    for _, e in ipairs(list) do total = total + e.msPerSec end
+    print(("|cffffe19b[MCF hot]|r %.0f s medidos -- total instrumentado: %.2f ms/s"):format(elapsed, total))
+    for i, e in ipairs(list) do
+        print(("  %2d. %-32s %6.2f ms/s  (%2.0f%%)  %.0f llamadas/s"):format(
+            i, e.name, e.msPerSec, total > 0 and e.msPerSec * 100 / total or 0, e.callsPerSec))
+    end
+    print("  Compara este total con lo que dio /mcfdiag cpu: lo que falte esta en")
+    print("  eventos y hooks, no en los tickers -- y eso se busca distinto.")
+end
+ns.RegisterDiag("hot", "Desglosa el CPU del addon por subsistema (correr 2 veces)", HotReport)
+
 ns.RegisterDiag("cpu", "CPU por addon durante el JUEGO (correr 2 veces: referencia y medicion)", CPUReport)
 
 ns.RegisterDiag("skincheck", "Valida que la skin activa traiga todos sus archivos", SkinCheck)

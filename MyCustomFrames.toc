@@ -15,6 +15,12 @@ Libs\LibSpinBar-1.0\LibSpinBar-1.0.lua
 Defaults.lua
 core.lua
 
+# Instrumentacion de los caminos calientes (tickers/OnUpdate permanentes).
+# Apagada por defecto: con `active` en false el wrapper solo hace una
+# comparacion booleana. Se enciende con /mcfdiag hot. Carga antes que los
+# modulos que envuelve.
+Profiler.lua
+
 # Puente centralizado a APIs de Blizzard que cambian de comportamiento entre
 # versiones (ej. UnitHealthPercent/UnitPowerPercent + curva) -- un solo lugar
 # para arreglar en vez de N copias sueltas por archivo. Carga temprano para

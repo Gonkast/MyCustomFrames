@@ -179,7 +179,7 @@ f:RegisterEvent("PLAYER_LOGIN")
 f:SetScript("OnEvent", function(self)
     self:UnregisterAllEvents()
     C_Timer.After(1, function()
-        C_Timer.NewTicker(0.3, function()
+        C_Timer.NewTicker(0.3, ns.Prof.Wrap("Indicators: range/shield 0.3s", function()
             for key in pairs(INDICATOR_KEYS) do
                 local u = ns.frames and ns.frames[key]
                 if u then
@@ -187,7 +187,7 @@ f:SetScript("OnEvent", function(self)
                     UpdateShield(u)
                 end
             end
-        end)
+        end))
     end)
 end)
 

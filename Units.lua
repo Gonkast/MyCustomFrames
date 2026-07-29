@@ -930,7 +930,7 @@ local function CreateUnit(def)
     bar:SetStatusBarTexture(isPower and ns.POWER_TEXTURE or ns.TEXTURE_DEFAULT)
     bar:SetOrientation("HORIZONTAL")
     bar._u = u
-    bar:SetScript("OnUpdate", BarOnUpdate)
+    bar:SetScript("OnUpdate", ns.Prof.Wrap("Units: barras (smooth)", BarOnUpdate))
 
     -- Textura de relleno MANUAL (para valores legibles; encima del relleno nativo).
     -- Recorte via SetTexCoord+SetVertexOffset (tecnica WeakAuras), sin mascara.
@@ -957,7 +957,7 @@ local function CreateUnit(def)
         SetSparkTexture(castSpark)
         castSpark:Hide()
         castBar._u = u
-        castBar:SetScript("OnUpdate", CastOnUpdate)
+        castBar:SetScript("OnUpdate", ns.Prof.Wrap("Units: cast bars", CastOnUpdate))
         u.castBar, u.castSpark = castBar, castSpark
     end
 

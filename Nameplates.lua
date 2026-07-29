@@ -1565,7 +1565,7 @@ end
 -- ==========================================================================
 local htAcc = 0
 local healthValueDriver = CreateFrame("Frame")
-healthValueDriver:SetScript("OnUpdate", function(self, elapsed)
+healthValueDriver:SetScript("OnUpdate", ns.Prof.Wrap("Nameplates: valor de vida", function(self, elapsed)
     htAcc = htAcc + elapsed
     if htAcc < 0.2 then return end
     htAcc = 0
@@ -1593,7 +1593,7 @@ healthValueDriver:SetScript("OnUpdate", function(self, elapsed)
             UpdateNameText(uf, frame.namePlateUnitToken or frame.unitToken)
         end
     end
-end)
+end))
 
 -- BUG (reportado por el usuario, 2026-07-19): "el tamaño del nombre cambia
 -- por unos segundos cuando selecciono un target" -- Blizzard anima la
@@ -1640,7 +1640,7 @@ local activeUF = setmetatable({}, { __mode = "k" })
 local NAME_DRIVER_INTERVAL = 0.2
 local nameScaleDriver = CreateFrame("Frame")
 local nameDriverElapsed = 0
-nameScaleDriver:SetScript("OnUpdate", function(_, dt)
+nameScaleDriver:SetScript("OnUpdate", ns.Prof.Wrap("Nameplates: nombre/auras", function(_, dt)
     nameDriverElapsed = nameDriverElapsed + (dt or 0)
     if nameDriverElapsed < NAME_DRIVER_INTERVAL then return end
     nameDriverElapsed = 0
@@ -1648,7 +1648,7 @@ nameScaleDriver:SetScript("OnUpdate", function(_, dt)
         if uf.mcfNameHolder then ReassertNameGeometry(uf) end
         if uf.mcfAuraGroups then ReassertAurasGeometry(uf) end
     end
-end)
+end))
 
 -- ==========================================================================
 -- INICIALIZACION: reskin de cada nameplate cuando aparece + pasada sobre las

@@ -100,7 +100,7 @@ eventFrame:SetScript("OnEvent", function(self)
         -- este sesion): un vencimiento NATURAL sin ningun cambio de estado
         -- puede no disparar el evento de nuevo -- el ticker se asegura de
         -- ocultar el icono poco despues igual.
-        C_Timer.NewTicker(0.3, Refresh)
+        C_Timer.NewTicker(0.3, ns.Prof.Wrap("LossOfControl: 0.3s", Refresh))
         Refresh()
     end)
 end)

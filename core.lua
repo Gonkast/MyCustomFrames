@@ -2363,7 +2363,7 @@ end)
 -- EXPLORER (#11): extraido a Explorer.lua (2026-07-22) -- GetElementFrame/
 -- explorerDriver/ExplorerReset/ExplorerResetAll/ExplorerZoneAllowed/TickExplorer.
 
-C_Timer.NewTicker(0.1, function()
+C_Timer.NewTicker(0.1, ns.Prof.Wrap("core: tick principal 0.1s", function()
     if not db or unlocked then return end
     -- Snapshot de estados seguros del tick (booleanos, jamas secretos): antes se
     -- consultaban decenas de veces por pasada con la misma respuesta.
@@ -2456,7 +2456,7 @@ C_Timer.NewTicker(0.1, function()
     -- Explorer: la ANIMACION corre por frame en explorerDriver (OnUpdate, Explorer.lua);
     -- el ticker solo refresca el estado de combate/target/casteo y enciende/apaga el driver.
     if ns.TickExplorer then ns.TickExplorer() end
-end)
+end))
 
 -- ==========================================================================
 -- MOUSELOOK (global, opcional): clic-derecho + ARRASTRAR rota la camara, incluso

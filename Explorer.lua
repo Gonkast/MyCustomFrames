@@ -130,7 +130,7 @@ end
 -- ticker (secret-safe via pcall); aqui solo se anima. db.explorerEnabled = toggle maestro.
 local explorerDriver = CreateFrame("Frame", nil, UIParent)
 explorerDriver:Hide()
-explorerDriver:SetScript("OnUpdate", function(self, dt)
+explorerDriver:SetScript("OnUpdate", ns.Prof.Wrap("Explorer: driver", function(self, dt)
     local db = ns.GetDB()
     if not (db and db.explorer and db.explorerEnabled ~= false) or ns.IsUnlocked() then return end
     local lo = db.explorerFadeAlpha or 0
@@ -199,7 +199,7 @@ explorerDriver:SetScript("OnUpdate", function(self, dt)
             end
         end
     end
-end)
+end))
 ns.ExplorerReset = function(key)   -- llamar al APAGAR el explorer de un elemento
     local f = GetElementFrame(key)
     if f then f._exAlpha = nil; f:SetAlpha(1) end

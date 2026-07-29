@@ -125,10 +125,10 @@ ns.RefreshChatBubble = RefreshChatBubble
 
 -- Ticker propio (las bubbles aparecen/desaparecen constantemente).
 if C_Timer and C_Timer.NewTicker then
-    C_Timer.NewTicker(0.1, function()
+    C_Timer.NewTicker(0.1, ns.Prof.Wrap("ChatBubble: skin 0.1s", function()
         local db = ns.GetDB()
         if db and db.chatbubble and db.chatbubble.enabled then
             CB_IterateBubbles(CB_SkinBubble, db.chatbubble)
         end
-    end)
+    end))
 end

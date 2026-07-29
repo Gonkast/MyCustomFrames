@@ -284,8 +284,8 @@ glowEvents:SetScript("OnEvent", function() glowCacheBuilt = false end)
 
 -- Ticker propio (la rotacion cambia constantemente; corre aunque estemos en preview).
 if C_Timer and C_Timer.NewTicker then
-    C_Timer.NewTicker(0.1, function()
+    C_Timer.NewTicker(0.1, ns.Prof.Wrap("Glow: refresco 0.1s", function()
         local db = ns.GetDB and ns.GetDB()
         if db and db.glow and db.glow.enabled then RefreshGlow(false) end
-    end)
+    end))
 end

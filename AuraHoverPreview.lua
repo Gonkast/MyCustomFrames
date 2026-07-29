@@ -609,7 +609,7 @@ local function MakeAuraHoverGroup(cfg)
         end
 
         local lastGateOk = nil
-        local refreshTicker = C_Timer.NewTicker(0.3, function()
+        local refreshTicker = C_Timer.NewTicker(0.3, ns.Prof.Wrap("AuraHover: refresco 0.3s", function()
             local gateOk = cfg.gateFn()
             -- Regla #2: togglea EnableMouse segun el gate -- fuera del tipo de
             -- contenido correcto, el hoverZone no intercepta absolutamente nada.
@@ -671,7 +671,7 @@ local function MakeAuraHoverGroup(cfg)
             if target == 1 then
                 RefreshIcons()
             end
-        end)
+        end))
         carrier._refreshTicker = refreshTicker
 
         groupTest[key] = {
