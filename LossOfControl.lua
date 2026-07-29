@@ -34,7 +34,11 @@ local function EnsureHolder()
     -- badges en root+2. +5 deja margen por si mas adelante se agrega otra capa.
     f:SetFrameLevel(portrait.root:GetFrameLevel() + 5)
     f:SetSize(22, 22)
-    f:SetPoint("CENTER", portrait.root, "CENTER", 18, -18)
+    -- Centrado en el borde SUPERIOR del retrato (2026-07-28, pedido con captura:
+    -- estaba abajo a la derecha y se pidio arriba al centro). Se ancla el CENTER
+    -- del icono al TOP del retrato, asi queda montado sobre el borde y sigue
+    -- centrado aunque cambie el tamaño del retrato.
+    f:SetPoint("CENTER", portrait.root, "TOP", 0, 0)
     f:Hide()
 
     local tex = f:CreateTexture(nil, "ARTWORK")
