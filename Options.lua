@@ -2745,8 +2745,28 @@ local function BuildPanel()
             GameTooltip:Show()
         end)
         dcFixCB:HookScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
+        -- INDICADORES (Indicators.lua). Hasta 2026-07-28 eran la unica feature
+        -- del addon sin ningun control de usuario: siempre encendidas y con los
+        -- valores clavados en el codigo.
+        MakeToggle(f, "Dim frames out of range", R, -198,
+            function() return ns.GetDB().indicatorRange ~= false end,
+            function(v)
+                ns.GetDB().indicatorRange = v and true or false
+                if ns.RefreshIndicators then ns.RefreshIndicators() end
+            end)
+        MakeToggle(f, "Absorb / shield overlay", R, -222,
+            function() return ns.GetDB().indicatorShield ~= false end,
+            function(v)
+                ns.GetDB().indicatorShield = v and true or false
+                if ns.RefreshIndicators then ns.RefreshIndicators() end
+            end)
+        local indNote = f:CreateFontString(nil, "ARTWORK"); setFont(indNote, 10)
+        indNote:SetPoint("TOPLEFT", R, -246); indNote:SetWidth(210); indNote:SetJustifyH("LEFT")
+        indNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        indNote:SetText("Applies to player, target, focus, party and arena. /mcfindicatortest previews both.")
+
         local tnote = f:CreateFontString(nil, "ARTWORK"); setFont(tnote, 10)
-        tnote:SetPoint("TOPLEFT", R, -206); tnote:SetWidth(210); tnote:SetJustifyH("LEFT")
+        tnote:SetPoint("TOPLEFT", R, -290); tnote:SetWidth(210); tnote:SetJustifyH("LEFT")
         tnote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         tnote:SetText("Grid, Snap and Preview moved to the EDITING tab (top). Quest tracker options are in the TRACKER tab.")
 

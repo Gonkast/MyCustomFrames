@@ -1773,6 +1773,8 @@ local GLOBAL_FLAT_KEYS = {
     -- personaje -- mismo criterio que db.panelScale, ya excluida por lo mismo.
     "explorerHousingMinimal", "explorerHideBarsOnReplace", "explorerReplaceCond",
     "explorerReplaceBonusBar",
+    -- Indicadores (Indicators.lua): expuestos en el menu 2026-07-28.
+    "indicatorRange", "indicatorShield",
 }
 local GLOBAL_TABLE_KEYS = { "lockHide", "explorer", "explorerZones", "explorerElementAlpha", "nameplateUserDefault", "nameplateProfiles" }
 

@@ -118,6 +118,11 @@ end
 local function UpdateRange(u)
     local dim = u.rangeDim
     if not dim then return end
+    -- Toggle del menu (2026-07-28). `~= false` y no `== true`: la opcion nace
+    -- ausente en perfiles viejos y el comportamiento previo era estar siempre
+    -- encendida, asi que ausente tiene que seguir significando encendida.
+    local db = ns.GetDB and ns.GetDB()
+    if db and db.indicatorRange == false then dim:Hide(); return end
     if u.unit == "player" then dim:Hide(); return end
     if testMode then dim:Show(); return end
     local ok, inRange, checked = pcall(UnitInRange, u.unit)
@@ -151,6 +156,8 @@ end
 local function UpdateShield(u)
     local bar = u.shieldBar
     if not bar then return end
+    local db = ns.GetDB and ns.GetDB()
+    if db and db.indicatorShield == false then bar:Hide(); return end
 
     if testMode then
         ApplyShieldTexture(bar, u)
@@ -202,4 +209,13 @@ SLASH_MCFINDICATORTEST1 = "/mcfindicatortest"
 SlashCmdList["MCFINDICATORTEST"] = function()
     print("|cff00ff00[MCF indicator test]|r " .. (ns.ToggleIndicatorTest() and "ON" or "off") ..
         " -- range/shield forced on every tracked unit that exists right now.")
+end
+
+-- Reaplica los dos indicadores en todas las unidades ahora mismo. Lo llaman los
+-- toggles del menu: sin esto el cambio no se veria hasta el siguiente tick.
+function ns.RefreshIndicators()
+    for _, u in pairs(ns.frames or {}) do
+        UpdateRange(u)
+        UpdateShield(u)
+    end
 end
