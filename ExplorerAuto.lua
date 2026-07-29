@@ -115,12 +115,48 @@ ns.UpdateExplorerHousing = UpdateHousing
 -- usuario veia la barra cambiada. SecureCmdOptionParse usa el mismo evaluador
 -- que una macro de verdad, asi que cubre los cuatro estados y cualquier
 -- variante nueva sin que haya que adivinar que API la reporta.
-local REPLACE_COND = "[overridebar][possessbar][bonusbar][vehicleui] hide"
+-- `[bonusbar]` SIN numero no matchea nada: la sintaxis real es [bonusbar:N].
+-- Confirmado en vivo -- SecureCmdOptionParse devolvia falso con
+-- GetBonusBarOffset() = 5. Por eso el default lleva 1/2/3/4/5.
+local DEFAULT_COND = "[overridebar][possessbar][bonusbar:1/2/3/4/5][vehicleui] hide"
+
+-- EDITABLE (db.explorerReplaceCond). Se expone porque cual es la condicion
+-- correcta depende de la clase y de que considere "reemplazada" cada uno --
+-- este usuario, por ejemplo, tiene bonusbar 5 permanente, asi que quizas quiera
+-- sacarlo. Cambiarla con /mcfbarcond en vez de tener que tocar el archivo.
+local function Cond()
+    local db = DB()
+    local c = db and db.explorerReplaceCond
+    return (type(c) == "string" and c ~= "") and c or DEFAULT_COND
+end
+ns.ExplorerReplaceCondDefault = DEFAULT_COND
 
 local function Bar1IsReplaced()
     if type(SecureCmdOptionParse) ~= "function" then return false end
-    local ok, r = pcall(SecureCmdOptionParse, REPLACE_COND)
+    local ok, r = pcall(SecureCmdOptionParse, Cond())
     return (ok and r == "hide") or false
+end
+
+SLASH_MCFBARCOND1 = "/mcfbarcond"
+SlashCmdList["MCFBARCOND"] = function(msg)
+    local db = DB(); if not db then return end
+    msg = msg and msg:match("^%s*(.-)%s*$") or ""
+    if msg == "" then
+        print("|cffffe19b[MCF]|r condicion actual: |cffffff00" .. Cond() .. "|r")
+        print("   /mcfbarcond <condicion>   -- ej: [overridebar][vehicleui] hide")
+        print("   /mcfbarcond reset         -- vuelve al default")
+        return
+    end
+    if msg == "reset" then
+        db.explorerReplaceCond = nil
+        print("|cffffe19b[MCF]|r condicion restaurada: " .. DEFAULT_COND)
+    else
+        -- Tiene que terminar resolviendo a "hide" para que Bar1IsReplaced la lea.
+        if not msg:find("hide") then msg = msg .. " hide" end
+        db.explorerReplaceCond = msg
+        print("|cffffe19b[MCF]|r condicion: |cffffff00" .. msg ..
+              "|r  -> ahora evalua " .. (Bar1IsReplaced() and "|cff00ff00SI|r" or "no"))
+    end
 end
 ns.Bar1IsReplaced = Bar1IsReplaced
 
@@ -131,7 +167,7 @@ SLASH_MCFBARDIAG1 = "/mcfbardiag"
 SlashCmdList["MCFBARDIAG"] = function()
     local db = DB()
     print("|cffffe19b[MCF bar]|r estado de la barra 1:")
-    print(("   condicion: %s"):format(REPLACE_COND))
+    print(("   condicion: %s"):format(Cond()))
     -- Se muestran las APIs sueltas solo como referencia: NINGUNA sirvio para
     -- decidir (las cinco daban falso con la barra cambiada). La que manda es la
     -- linea de arriba, evaluada por Blizzard.

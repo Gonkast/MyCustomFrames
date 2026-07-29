@@ -431,6 +431,7 @@ end
 
 -- Diagnosticos: vuelcan estado, no tocan nada.
 ns.RegisterDiag("bar", "Que señal de reemplazo tiene la barra 1 y si el force-hide actua", Cmd("MCFBARDIAG"))
+ns.RegisterDiag("barcond", "Ver o cambiar la condicion de macro que decide si la barra 1 esta reemplazada", Cmd("MCFBARCOND"))
 ns.RegisterDiag("scaledump",    "Posicion y escala de cada elemento en la resolucion actual", Cmd("MCFSCALEDUMP"))
 ns.RegisterDiag("bt4",          "Que barras de Bartender4 existen y con que nombre", Cmd("MCFBT4DIAG"))
 ns.RegisterDiag("auras",        "Datos de auras del objetivo actual", Cmd("MCFAURASDIAG"))
