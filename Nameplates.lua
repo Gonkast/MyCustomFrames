@@ -291,6 +291,11 @@ local function NameplateDefaults()
         -- Distancia maxima de renderizado de nameplates (CVar nativo de
         -- Blizzard "nameplateMaxDistance").
         maxDistance = 40,
+        -- Escala GLOBAL de los nameplates (CVar nativo). 1 = tamaño normal.
+        globalScale = 1,
+        -- Escala del nameplate del TARGET, relativa a la normal. 1 = igual que
+        -- el resto; 1.2 = un 20% mas grande.
+        selectedScale = 1,
         -- Fade por distancia: las que NO son tu target se atenuan a
         -- fadeMinAlpha a partir de cierta distancia -- tu target siempre
         -- queda al 100% (nameplateSelectedAlpha).
@@ -404,6 +409,25 @@ ApplyMaxDistanceNow = function()
     pcall(SetCVar, "nameplateSelectedAlpha", tostring(targetAlpha))
     pcall(SetCVar, "nameplateNotSelectedAlpha", tostring(notSelectedAlpha))
     pcall(SetCVar, "nameplateOccludedAlphaMult", tostring(occludedAlpha))
+    -- ESCALA GLOBAL (pedido del usuario 2026-07-28: "aumentar o reducir el
+    -- tamaño de los nameplates globalmente, sin tocar el Designer"). Son CVars
+    -- nativos, misma familia que los de alpha/distancia de arriba, asi que
+    -- escalan el nameplate ENTERO -- barra, nombre, auras, todo junto -- sin
+    -- tocar ni un offset del perfil. El Designer sigue trabajando en sus propias
+    -- unidades y no se entera: esto multiplica por encima.
+    --
+    -- selectedScale es RELATIVO al tamaño normal (1.2 = el target un 20% mas
+    -- grande), que es justo lo que se pidio.
+    local globalScale   = (p and p.globalScale) or 1
+    local selectedScale = (p and p.selectedScale) or 1
+    pcall(SetCVar, "nameplateGlobalScale", tostring(globalScale))
+    pcall(SetCVar, "nameplateSelectedScale", tostring(selectedScale))
+    -- Min/Max de escala por DISTANCIA: si quedaran en su default, acotarian el
+    -- efecto de globalScale (el juego interpola entre estos dos segun lo lejos
+    -- que este la unidad). Se mueven junto con la escala global para que subirla
+    -- realmente se note a cualquier distancia.
+    pcall(SetCVar, "nameplateMinScale", tostring(globalScale))
+    pcall(SetCVar, "nameplateMaxScale", tostring(globalScale))
     -- Pedido del usuario 2026-07-19: "que solo se vea el name en NPCs
     -- aliados de dungeon" -- COMPROBADO EN VIVO por el usuario (via /dump
     -- GetCVar despues de probar manualmente) que la combinacion real -- 3

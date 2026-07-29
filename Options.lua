@@ -2257,7 +2257,7 @@ local function BuildPanel()
     -- porque agrupan bien por tema, no porque haga falta. Una seccion larga
     -- ahora es una decision de diseño, no un limite tecnico.
     local nameplatesSecList = { { key = "np_general", label = "Gen" }, { key = "np_alpha", label = "Alpha" },
-        { key = "np_names", label = "Names" } }
+        { key = "np_scale", label = "Scale" }, { key = "np_names", label = "Names" } }
     BuildTabRow(nameplatesSecList, 40, true)
 
     -- Pestanas de SECCION para Party Auras (singleton, 1 sola pestaña "Gen" — igual patron que
@@ -3771,6 +3771,27 @@ local function BuildPanel()
         occNote:SetPoint("TOPLEFT", L, -312); occNote:SetWidth(430); occNote:SetJustifyH("LEFT")
         occNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         occNote:SetText("Opacity when the plate is behind walls/objects.")
+    end
+
+    -- ESCALA -- seccion PROPIA (2026-07-28, pedido del usuario: "no junto al
+    -- alpha, pueden tener su propia seccion"). Va aca y NO en el Designer a
+    -- proposito: son CVars NATIVOS que escalan el nameplate entero por encima de
+    -- todo, sin tocar un solo offset del perfil. El Designer sigue trabajando en
+    -- sus propias unidades y no se entera de esto.
+    do
+        local f = Section("np_scale")
+        MakeHeader(f, "Scale", L, -6, 430)
+        local intro = f:CreateFontString(nil, "ARTWORK"); setFont(intro, 10)
+        intro:SetPoint("TOPLEFT", L, -30); intro:SetWidth(430); intro:SetJustifyH("LEFT")
+        intro:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        intro:SetText("Native Blizzard nameplate scale CVars. They resize the whole plate -- bar, name and auras together -- and do not touch anything you set in the Nameplate Designer.")
+
+        MakeSlider(f, "Global scale", 0.5, 2, 0.05, "globalScale", L, -80)
+        MakeSlider(f, "Target scale", 0.5, 2, 0.05, "selectedScale", R, -80)
+        local scaleNote = f:CreateFontString(nil, "ARTWORK"); setFont(scaleNote, 10)
+        scaleNote:SetPoint("TOPLEFT", L, -124); scaleNote:SetWidth(430); scaleNote:SetJustifyH("LEFT")
+        scaleNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        scaleNote:SetText("Global size of every nameplate, and how much bigger your current target is than the rest (1.20 = 20% larger).")
     end
 
     -- =========================== SECCION PARTY AURAS (TEST, 2026-07-16) ===========================
