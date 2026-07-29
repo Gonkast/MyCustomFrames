@@ -223,6 +223,67 @@ function ns.RegisterDiag(name, desc, fn, kind)
     diags[name:lower()] = { desc = desc or "", fn = fn, kind = kind or "diag" }
 end
 
+-- Momento de carga, para poder pasar los ms ACUMULADOS del profiler a ms por
+-- segundo. Maintenance.lua carga ultimo en el .toc, asi que esto es
+-- efectivamente el instante en que termino de cargar el addon.
+ns._mcfLoadTime = GetTime()
+
+-- ==========================================================================
+-- /mcfdiag cpu -- cuanto CPU consume ESTE addon, comparado con los demas.
+--
+-- Requiere `scriptProfile 1` + /reload ANTES de medir: el profiling arranca al
+-- cargar, asi que activarlo sin recargar deja todos los contadores en cero.
+-- Y hay que apagarlo despues (`scriptProfile 0` + /reload): el profiling en si
+-- cuesta rendimiento, dejarlo puesto falsea todo lo que midas despues.
+--
+-- Muestra el ranking, no solo nuestro numero: 4000 ms no significa nada suelto.
+-- Lo que importa es la posicion relativa y los ms por segundo de juego.
+-- ==========================================================================
+local function CPUReport()
+    if (C_CVar and C_CVar.GetCVar and C_CVar.GetCVar("scriptProfile")) ~= "1" then
+        print("|cffff5555[MCF]|r El profiling esta APAGADO -- no hay nada que medir.")
+        print("  1) /console scriptProfile 1     2) /reload     3) juga un rato")
+        print("  4) /mcfdiag cpu                 5) /console scriptProfile 0 + /reload")
+        return
+    end
+    if not UpdateAddOnCPUUsage then print("|cffff5555[MCF]|r API de profiling no disponible."); return end
+    UpdateAddOnCPUUsage()
+    local n = (C_AddOns and C_AddOns.GetNumAddOns and C_AddOns.GetNumAddOns()) or 0
+    local list, total = {}, 0
+    for i = 1, n do
+        local name = C_AddOns.GetAddOnInfo(i)
+        local ok, cpu = pcall(GetAddOnCPUUsage, i)
+        if ok and type(cpu) == "number" and cpu > 0 then
+            list[#list + 1] = { name = name, cpu = cpu }
+            total = total + cpu
+        end
+    end
+    if #list == 0 then
+        print("|cffff5555[MCF]|r Sin datos. ¿Recargaste DESPUES de activar scriptProfile?")
+        return
+    end
+    table.sort(list, function(a, b) return a.cpu > b.cpu end)
+    -- Los ms son ACUMULADOS desde el /reload, asi que por si solos no dicen
+    -- nada: se normaliza por el tiempo de sesion para dar ms por segundo.
+    local elapsed = GetTime() - (ns._mcfLoadTime or GetTime())
+    print(("|cffffe19b[MCF cpu]|r acumulado tras %.0f s de sesion:"):format(elapsed))
+    local mine
+    for i, e in ipairs(list) do
+        if e.name == "MyCustomFrames" then mine = i end
+        if i <= 10 or e.name == "MyCustomFrames" then
+            local marca = (e.name == "MyCustomFrames") and "|cff00ff00 <-- este addon|r" or ""
+            print(("  %2d. %-28s %8.0f ms  (%.2f ms/s, %.0f%% del total)%s"):format(
+                i, e.name, e.cpu, elapsed > 0 and e.cpu / elapsed or 0,
+                total > 0 and e.cpu * 100 / total or 0, marca))
+        end
+    end
+    if mine then
+        print(("  -> MyCustomFrames esta %d de %d addons con consumo medible."):format(mine, #list))
+        print("  Referencia: por debajo de ~1 ms/s no se siente; por encima de ~5 ms/s si.")
+    end
+end
+ns.RegisterDiag("cpu", "Ranking de consumo de CPU por addon (necesita scriptProfile 1 + /reload)", CPUReport)
+
 ns.RegisterDiag("skincheck", "Valida que la skin activa traiga todos sus archivos", SkinCheck)
 ns.RegisterDiag("purge", "Purga claves de features ya eliminadas de la DB", function()
     ns.PurgeDeadKeys(true)
