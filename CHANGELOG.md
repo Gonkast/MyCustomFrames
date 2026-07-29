@@ -7,6 +7,37 @@ worth reading before redoing one of them).
 ## Unreleased
 
 ### Added
+- **The addon was profiled and its CPU cost roughly halved.** It measured **13.78 ms/s while
+  playing — 50% of the CPU of every addon installed, and 4.4x the next one**, past the point
+  where input lag is felt. Two tools were built to find where it went, since Blizzard's
+  `scriptProfile` reports per addon and not per function:
+  - **`/mcfdiag hot`** breaks the cost down by subsystem. Every ticker and permanent
+    `OnUpdate` is wrapped through `Profiler.lua`; it is off by default and the wrapper checks
+    its flag *before* reading the clock, so it costs one boolean comparison per call.
+  - **`/mcfdiag cpu`** ranks this addon against the others. Both measure **windows** — first
+    call takes a reference, second reports the interval — because a total since login is
+    dominated by load cost. It refuses to run while `hot` is active, since that instrumentation
+    is attributed to this addon and inflates its own number.
+
+  What the measurements found, in order: the 0.1s tick was 52% of everything, `TickUnits` 77%
+  of that, and `UnitUpdateBar` 71% of *that* — its two text calls being 68% of it. Fixed by
+  running the per-unit texts at 5 Hz instead of 10, deduping `SetText` (it re-lays out a
+  FontString even when handed an identical string), only touching idle cast bars on the
+  transition, halving the glow poll (the expense is `GetNextCastSpell` computing the whole
+  rotation suggestion), having AuraHoverPreview read `ns.tickState.inCombat` instead of
+  fourteen tickers each recomputing it, and deduping `SetMinMaxValues` and the portrait anchor
+  lookup. The main tick went from ~11 to ~8.5 ms/s and `UnitUpdateBar` from 6.5 to 3.95.
+
+  One finding worth keeping: **health arrives *secret* on this client**, so the "readable"
+  branch of `UnitUpdateBar` — and `RenderManualFill` with it — never executes. A dedupe placed
+  there first bought nothing (6.51 → 6.35). Verify a branch runs before optimising it.
+- **Global and target nameplate scale** — new **Scale** tab in the Nameplates menu, using the
+  native `nameplateGlobalScale` and `nameplateSelectedScale` CVars, the same family already
+  driving the alpha and distance settings. They resize the whole plate (bar, name and auras
+  together) above everything else, so no profile offset is touched and the Nameplate Designer
+  keeps working in its own units. `nameplateMinScale`/`MaxScale` move with the global value on
+  purpose: the game interpolates between them by distance, so leaving them at their defaults
+  would cap the effect at range.
 - **`/mcfnpobjdiag`** — dumps unit/GUID-prefix/name/`IsObjectNameplate` result for every
   currently visible nameplate. Built after a report that object nameplates were still
   getting skinned even after the `IsObjectNameplate` fix ("Hall of the High Command", a
@@ -80,6 +111,15 @@ worth reading before redoing one of them).
   hostile *players* only (never NPCs — `UnitIsPlayer` gates it before even trying).
 
 ### Changed
+- **The Blizzard Edit Mode integration was removed.** Opening the game's Edit Mode also
+  unlocked the addon's, and closing it locked it again. It had its own toggle, so the hook,
+  the option, the default and the baked key are all gone; `syncBlizzEditMode` joins
+  `DEAD_GLOBALS` so it gets cleaned out of saved profiles rather than travelling in every
+  export. (`MirrorTimers.lua` also hooks `EditModeManagerFrame`, for something unrelated, and
+  is untouched.)
+- **Loss of Control moved to the top of the player portrait** and now draws above it. It was a
+  child of `portrait.root` that never set a frame level, so it inherited the root's and sat
+  under the pieces that do set one — the 3D model at root+1 and the badges at root+2.
 - **Nameplate factory positions rebaked from the author's live tuning, and the offset
   convention unified.** Read straight out of SavedVariables rather than transcribed by
   hand.
