@@ -4519,7 +4519,7 @@ local function BuildPanel()
         local autoNote = conditionsGroup:CreateFontString(nil, "ARTWORK"); setFont(autoNote, 10)
         autoNote:SetPoint("TOPLEFT", L, TOP - 180); autoNote:SetWidth(210); autoNote:SetJustifyH("LEFT")
         autoNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        autoNote:SetText("Housing switches to the Minimal profile and puts back exactly what you had on the way out. Bar hiding covers vehicle, override and housing pose bars, and works whether Explorer is on or off.")
+        autoNote:SetText("Housing restores your previous setup on the way out. Bar hiding works whether Explorer is on or off, and mouseover still reveals.")
         -- Filtro por TIPO DE CONTENIDO: donde el Explorer esta activo (B1b).
         local zhdr = conditionsGroup:CreateFontString(nil, "ARTWORK"); setFont(zhdr, 12)
         zhdr:SetPoint("TOPLEFT", R, TOP); zhdr:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
@@ -4546,7 +4546,16 @@ local function BuildPanel()
         -- que la nota (ancho 430, cruza las 2 columnas) se montaba sobre Battlegrounds
         -- y Scenarios. Ahora se calcula desde #ZONES: si se agregan/quitan zonas, la
         -- nota se reacomoda sola en vez de volver a superponerse.
+        -- Se calcula contra las DOS columnas, no solo contra las zonas. La
+        -- izquierda crecio al agregarse los toggles de housing/barras y su nota
+        -- (2026-07-28) y volvio a producir la superposicion que este mismo
+        -- bloque ya habia arreglado una vez. Ahora la nota ancha se cuelga de la
+        -- columna mas BAJA de las dos, asi que agregar cosas a cualquiera de las
+        -- dos la reacomoda sola.
         local zonesBottom = TOP - 22 - (#ZONES - 1) * 24 - 24
+        -- autoNote arranca en TOP-180 y ocupa ~2 lineas a 210 de ancho.
+        local leftBottom = TOP - 180 - 34
+        zonesBottom = math.min(zonesBottom, leftBottom)
         local condNote = conditionsGroup:CreateFontString(nil, "ARTWORK"); setFont(condNote, 10)
         condNote:SetPoint("TOPLEFT", L, zonesBottom - 10); condNote:SetWidth(430); condNote:SetJustifyH("LEFT")
         condNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
