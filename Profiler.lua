@@ -21,6 +21,10 @@ local ADDON, ns = ...
 -- reporta. Carga TEMPRANO (antes que los modulos que envuelve).
 -- ==========================================================================
 
+-- Se define ns.Prof lo antes posible y con Wrap tolerante: si algun archivo
+-- envuelto llegara a cargar antes que este (paso: core.lua creaba su ticker
+-- a nivel de archivo y reventaba con 'attempt to index field ?'), lo peor
+-- que puede pasar es quedarse sin medir, no romper el addon.
 local active = false
 local acc, calls = {}, {}
 local since = 0

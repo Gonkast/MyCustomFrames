@@ -13,13 +13,18 @@ Libs\LibStub\LibStub.lua
 Libs\LibSpinBar-1.0\LibSpinBar-1.0.lua
 
 Defaults.lua
-core.lua
 
 # Instrumentacion de los caminos calientes (tickers/OnUpdate permanentes).
 # Apagada por defecto: con `active` en false el wrapper solo hace una
-# comparacion booleana. Se enciende con /mcfdiag hot. Carga antes que los
-# modulos que envuelve.
+# comparacion booleana. Se enciende con /mcfdiag hot.
+#
+# ANTES que core.lua, no despues: core crea su ticker de 0.1s a nivel de
+# ARCHIVO, o sea al cargarse. Con Profiler.lua detras, ns.Prof todavia no
+# existia en ese momento y core.lua:2366 reventaba con "attempt to index field
+# '?' (a nil value)". No depende de nada del addon -- solo define funciones.
 Profiler.lua
+
+core.lua
 
 # Puente centralizado a APIs de Blizzard que cambian de comportamiento entre
 # versiones (ej. UnitHealthPercent/UnitPowerPercent + curva) -- un solo lugar
