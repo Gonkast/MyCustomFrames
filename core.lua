@@ -2165,6 +2165,10 @@ local function InitDB()
         end
     end
     if db.explorerFadeAlpha == nil then db.explorerFadeAlpha = 0 end -- opacidad al ocultarse
+    -- Automatismos opcionales del Explorer (ExplorerAuto.lua), APAGADOS por
+    -- defecto: no deben cambiarle el UI a nadie sin que lo pida.
+    if db.explorerHousingMinimal == nil then db.explorerHousingMinimal = false end
+    if db.explorerHideBarsOnReplace == nil then db.explorerHideBarsOnReplace = false end
     if db.fadeIn == nil then db.fadeIn = true end
     if db.fadeDuration == nil then db.fadeDuration = 0.25 end
     FillDefaults()

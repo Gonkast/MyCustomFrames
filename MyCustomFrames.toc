@@ -64,6 +64,12 @@ InfoBar.lua
 # mismo patron/motivo que Units.lua/Portraits.lua/Auras.lua/InfoBar.lua.
 Explorer.lua
 
+# Automatismos OPCIONALES del Explorer (housing -> Minimal con restauracion
+# del estado previo; esconder BT4Bar2-10 cuando la barra 1 esta reemplazada).
+# Ambos apagados por defecto. Carga DESPUES de Explorer.lua: usa
+# ns.ApplyExplorerQuickProfile y ns.ExplorerResetAll.
+ExplorerAuto.lua
+
 # MODO EDICION/PREVIEW (grid, snap, SetUnlocked, copiar/pegar): extraido de core.lua,
 # mismo patron/motivo que Units.lua/Portraits.lua/Auras.lua/InfoBar.lua.
 Editing.lua

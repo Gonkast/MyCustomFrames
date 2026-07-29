@@ -4500,6 +4500,26 @@ local function BuildPanel()
             function(v) ns.GetDB().explorerCasting = v end)
         MakeSlider(conditionsGroup, "Hidden opacity", 0, 1, 0.05, "explorerFadeAlpha", L, TOP - 90,
             function() return ns.GetDB() end, function() end)
+        -- AUTOMATISMOS (2026-07-28, ExplorerAuto.lua). Los dos apagados por
+        -- defecto. El segundo NO depende del Explorer -- funciona con el
+        -- prendido o apagado -- pero vive aca porque tematicamente es una
+        -- condicion mas de "cuando esconder cosas".
+        MakeToggle(conditionsGroup, "Minimal while in housing", L, TOP - 132,
+            function() return ns.GetDB().explorerHousingMinimal end,
+            function(v)
+                ns.GetDB().explorerHousingMinimal = v
+                if ns.UpdateExplorerHousing then ns.UpdateExplorerHousing() end
+            end)
+        MakeToggle(conditionsGroup, "Hide other bars when bar 1 is replaced", L, TOP - 156,
+            function() return ns.GetDB().explorerHideBarsOnReplace end,
+            function(v)
+                ns.GetDB().explorerHideBarsOnReplace = v
+                if ns.UpdateExplorerBarHiding then ns.UpdateExplorerBarHiding() end
+            end)
+        local autoNote = conditionsGroup:CreateFontString(nil, "ARTWORK"); setFont(autoNote, 10)
+        autoNote:SetPoint("TOPLEFT", L, TOP - 180); autoNote:SetWidth(210); autoNote:SetJustifyH("LEFT")
+        autoNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        autoNote:SetText("Housing switches to the Minimal profile and puts back exactly what you had on the way out. Bar hiding covers vehicle, override and housing pose bars, and works whether Explorer is on or off.")
         -- Filtro por TIPO DE CONTENIDO: donde el Explorer esta activo (B1b).
         local zhdr = conditionsGroup:CreateFontString(nil, "ARTWORK"); setFont(zhdr, 12)
         zhdr:SetPoint("TOPLEFT", R, TOP); zhdr:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
