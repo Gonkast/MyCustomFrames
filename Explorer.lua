@@ -159,6 +159,19 @@ explorerDriver:SetScript("OnUpdate", ns.Prof.Wrap("Explorer: driver", function(s
                 local forceOverride = (key == "BT4Bar1") and self.overrideBar
                 local myLo = (eAlpha and eAlpha[key]) or lo
                 local target = (self.combat or self.showTgt or self.casting or forceOverride or IsMouseOverElement(f, key)) and 1 or myLo
+                -- "Solo ver la barra 1" (2026-07-28, ExplorerAuto.lua): cuando la
+                -- barra 1 esta REEMPLAZADA (vehiculo/override/possess) y la opcion
+                -- esta puesta, las BT4Bar2-10 se ocultan del todo. Va DESPUES de
+                -- calcular `target` y lo pisa a proposito: tiene que ganarle a
+                -- combate, target, casteo y hover, que si no la volverian a
+                -- revelar. Alpha 0 y no `myLo` porque el pedido es no verlas.
+                --
+                -- La condicion vive en ExplorerAuto y NO usa IsMounted -- a
+                -- diferencia de `overrideBar` de arriba, que si lo usa porque su
+                -- proposito es el contrario (mantener la 1 visible al montarte).
+                if ns.ExplorerBarForceHidden and ns.ExplorerBarForceHidden(key) then
+                    target = 0
+                end
                 local cur = f._exAlpha; if cur == nil then cur = f:GetAlpha() end
                 cur = cur + (target - cur) * (target > cur and kIn or kOut)
                 if math.abs(target - cur) < 0.003 then cur = target end

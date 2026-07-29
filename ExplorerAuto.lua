@@ -96,32 +96,55 @@ ns.UpdateExplorerHousing = UpdateHousing
 
 -- ---- 2) Barra 1 con reemplazo -> esconder las demas -----------------------
 
--- Blizzard reemplaza la barra principal por una "override"/"vehicle" bar en
--- vehiculos, en algunas mecanicas de jefe, en overdrive y en las poses de
--- housing. Las tres APIs cubren variantes distintas del mismo estado, asi que
--- se consultan las tres.
+-- OJO: NO se reusa `explorerDriver.overrideBar` de Explorer.lua aunque parezca
+-- lo mismo. Esa incluye `IsMounted()`, porque su proposito es mantener la barra
+-- 1 VISIBLE al montarte. Aca haria que montarse escondiera todas las demas
+-- barras, que no es lo pedido: esto es solo para cuando la barra 1 esta
+-- realmente REEMPLAZADA (vehiculo, override, possess).
+--
+-- Mismas APIs que usa Explorer para su caso, menos IsMounted, y con el mismo
+-- ns.safeBool (pueden devolver secretos en Midnight).
 local function Bar1IsReplaced()
-    local ok, v
-    ok, v = pcall(HasOverrideActionBar);  if ok and v then return true end
-    ok, v = pcall(HasVehicleActionBar);   if ok and v then return true end
-    ok, v = pcall(HasTempShapeshiftActionBar); if ok and v then return true end
-    return false
+    return ns.safeBool(HasOverrideActionBar)
+        or ns.safeBool(HasVehicleActionBar)
+        or ns.safeBool(UnitHasVehicleUI, "player")
+        or false
 end
 
-local barsHidden = false
+-- ¿Esta barra tiene que estar forzada a oculta AHORA? Lo consulta tambien el
+-- bucle de Explorer.lua, para que gane sobre sus condiciones de revelado
+-- (combate/target/casteo/hover) en vez de pelearse con ellas.
+function ns.ExplorerBarForceHidden(key)
+    local db = DB()
+    if not (db and db.explorerHideBarsOnReplace) then return false end
+    if key == "BT4Bar1" or key:sub(1, 6) ~= "BT4Bar" then return false end
+    return Bar1IsReplaced()
+end
+
+-- Aplicacion DIRECTA, solo para las barras que el Explorer no esta gestionando
+-- (apagado, o esa barra sin marcar). Las que si gestiona las resuelve su propio
+-- bucle via ns.ExplorerBarForceHidden -- un solo dueño por barra, nunca los dos
+-- escribiendo alpha sobre el mismo frame.
+local touched = {}
 
 local function ApplyBarHiding()
     local db = DB(); if not db then return end
-    local want = db.explorerHideBarsOnReplace and Bar1IsReplaced() or false
-    if want == barsHidden then return end
-    -- En combate no se tocan: son frames protegidos y seria
-    -- ADDON_ACTION_BLOCKED. Queda pendiente para PLAYER_REGEN_ENABLED.
-    if InCombatLockdown() then return end
-    barsHidden = want
-    -- 2 a 10: la 1 es justamente la que lleva el reemplazo y tiene que quedar.
+    local explorerOwns = (db.explorerEnabled ~= false) and db.explorer or nil
     for i = 2, 10 do
-        local bar = _G["BT4Bar" .. i]
-        if bar then pcall(bar.SetShown, bar, not want) end
+        local key = "BT4Bar" .. i
+        local bar = _G[key]
+        if bar and not (explorerOwns and explorerOwns[key]) then
+            local hide = ns.ExplorerBarForceHidden(key)
+            if hide then
+                touched[key] = true
+                bar:SetAlpha(0)
+            elseif touched[key] then
+                -- Solo se restaura lo que ESTA funcion escondio. Si el alpha lo
+                -- puso otro (Explorer, Bartender4), no se pisa.
+                touched[key] = nil
+                bar:SetAlpha(1)
+            end
+        end
     end
 end
 ns.UpdateExplorerBarHiding = ApplyBarHiding
