@@ -756,7 +756,14 @@ local function LayoutEye()
     if not mm.eyeHolder then
         local holder = CreateFrame("Frame", nil, UIParent)
         holder:SetSize(64, 64)
-        holder:SetFrameStrata("HIGH")
+        -- MEDIUM, no HIGH (2026-07-29, reportado: "el buscador de grupo el icono
+        -- del minimapa tambien esta por encima del bag"). Era el unico satelite
+        -- del minimapa en HIGH -- correo, coordenadas, el hover de los pines y
+        -- el contenedor de MinimapButtons estan todos en MEDIUM, con el mapa en
+        -- LOW. MEDIUM sigue estando por ENCIMA del minimapa, que es lo unico que
+        -- el ojo necesita tapar, pero ya no se pone por delante de las bolsas ni
+        -- del resto del UI. Mismo arreglo que se le hizo a MinimapButtons.
+        holder:SetFrameStrata("MEDIUM")
         mm.eyeHolder = holder
     end
     local holder = mm.eyeHolder

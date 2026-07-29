@@ -168,6 +168,11 @@ worth reading before redoing one of them).
   in sync" — a comment that had already failed twice.
 
 ### Fixed
+- **The group finder eye sat on top of the bags.** Its holder was the one minimap satellite left
+  at `HIGH` strata — mail, coordinates, the map-pin hover cover and the MinimapButtons container
+  are all `MEDIUM`, with the map itself at `LOW`. `MEDIUM` still puts the eye above the minimap,
+  which is the only thing it needs to cover, without placing it in front of the rest of the UI.
+  Same fix the minimap buttons got.
 - **A conditional unit that did not exist when edit mode was entered came back wearing the
   sample cast bar.** Enter preview with no target-of-target, leave, then select someone who
   has one: its cast bar was already painted at the static 60%. Same for focus, and by the
