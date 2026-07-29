@@ -135,6 +135,7 @@ local DEAD_UNIT_FIELDS = {
 local DEAD_GLOBALS = {
     "barReposition",     -- BarReposition.lua borrado 2026-07-24
     "explorerDamage",    -- condicion "recibi daño" revertida 2026-07-24
+    "syncBlizzEditMode", -- integracion con el Edit Mode de Blizzard quitada 2026-07-28
 }
 -- Claves muertas dentro de db.nameplates (2026-07-27). Categoria NUEVA: hasta
 -- ahora solo se purgaba db.units[*] y la raiz de db, asi que una feature

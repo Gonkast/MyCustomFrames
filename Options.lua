@@ -4218,9 +4218,6 @@ local function BuildPanel()
             GameTooltip:Show()
         end)
         snapBtn:HookScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
-        MakeToggle(f, "Open with Blizzard Edit Mode", L, -192,
-            function() return ns.GetDB().syncBlizzEditMode ~= false end,
-            function(v) ns.GetDB().syncBlizzEditMode = v and true or false end)
         -- Accesos directos a las otras secciones globales.
         local exBtn = MakeButton(f, "Explorer Mode", 150, 22)
         exBtn:SetPoint("TOPLEFT", R, -34)
@@ -4229,7 +4226,7 @@ local function BuildPanel()
         prBtn:SetPoint("TOPLEFT", R, -64)
         prBtn:SetScript("OnClick", function() ShowSection("presets") end)
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
-        note:SetPoint("TOPLEFT", L, -222); note:SetWidth(210); note:SetJustifyH("LEFT")
+        note:SetPoint("TOPLEFT", L, -198); note:SetWidth(210); note:SetJustifyH("LEFT")
         note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("Per-unit outline width/height live in each unit's Bar tab. Move/Lock and Copy/Paste stay in the footer. 'Apply addon profiles' sets Bartender4/DynamicCam/Masque/Chattynator profiles.")
         -- B4: ocultar SAMPLE de elementos SOLO en preview (no afecta el juego real).

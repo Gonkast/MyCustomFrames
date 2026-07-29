@@ -486,41 +486,10 @@ SlashCmdList["MCFCHAR"] = function()
     print("  InCombatLockdown=" .. tostring(InCombatLockdown()))
 end
 
--- Integracion con el EDIT MODE de Blizzard (menu del juego → Edit Mode): al ABRIRLO,
--- abre tambien el modo edicion del addon (y al cerrarlo, lo cierra), asi mueves los ns.frames
--- de Blizzard Y los del addon en la misma sesion. Opcional (ns.GetDB().syncBlizzEditMode, default on).
--- Se engancha el OnShow/OnHide del EditModeManagerFrame (existe en Blizzard_EditMode, addon
--- que puede cargar bajo demanda → se reintenta en ADDON_LOADED). No hay taint: SetUnlocked ya
--- no corre en combate (guard propio) y el Edit Mode tampoco se abre en combate.
--- (do-block: sin locals top-level nuevos, para no acercarnos al limite de 200 de core.)
-do
-    local hooked = false
-    local function HookBlizzEditMode()
-        if hooked then return end
-        local emf = _G.EditModeManagerFrame
-        if not emf or not emf.HookScript then return end
-        hooked = true
-        emf:HookScript("OnShow", function()
-            local d = ns.GetDB()
-            if d and d.syncBlizzEditMode ~= false and not ns.IsUnlocked() and not InCombatLockdown() then
-                SetUnlocked(true)
-            end
-        end)
-        emf:HookScript("OnHide", function()
-            local d = ns.GetDB()
-            if d and d.syncBlizzEditMode ~= false and ns.IsUnlocked() and not InCombatLockdown() then
-                SetUnlocked(false)
-            end
-        end)
-    end
-    local f = CreateFrame("Frame")
-    f:RegisterEvent("PLAYER_LOGIN")
-    f:RegisterEvent("ADDON_LOADED")
-    f:SetScript("OnEvent", function(_, event, name)
-        if event == "ADDON_LOADED" and name ~= "Blizzard_EditMode" then return end
-        HookBlizzEditMode()
-    end)
-end
+-- (La integracion con el EDIT MODE de Blizzard se QUITO 2026-07-28, a pedido del
+-- usuario: abrir el Edit Mode del juego abria tambien el modo edicion del addon,
+-- y cerrarlo lo cerraba. Enganchaba OnShow/OnHide de EditModeManagerFrame y
+-- tenia su propio toggle `syncBlizzEditMode`. Esta en el historial de git.)
 
 -- ==========================================================================
 -- COPIAR / PEGAR + PRESETS

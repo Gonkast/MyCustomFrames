@@ -1751,7 +1751,7 @@ end
 -- interno/por-personaje, no "apariencia" para compartir).
 local GLOBAL_FLAT_KEYS = {
     "hideEditOutline", "groupMoveParty", "groupMoveBoss", "mouselook", "hideBlizzard",
-    "dcFix", "gridShow", "gridSnap", "snapElements", "syncBlizzEditMode",
+    "dcFix", "gridShow", "gridSnap", "snapElements",
     "previewSecureButton", "fadeIn", "fadeDuration",
     "explorerEnabled", "explorerCombat", "explorerTarget", "explorerCasting", "explorerFadeAlpha",
     "partyAuraDirection", "partyAuraIconSize", "arenaAuraDirection", "arenaAuraIconSize",
@@ -2002,7 +2002,6 @@ local function InitDB()
     if db.gridShow == nil then db.gridShow = false end   -- grid de alineacion en modo Lock
     if db.gridSnap == nil then db.gridSnap = false end   -- al soltar, ajusta a la grilla
     if db.snapElements == nil then db.snapElements = true end -- B2: alinear con bordes/centros de otros
-    if db.syncBlizzEditMode == nil then db.syncBlizzEditMode = true end -- abrir el lock con el Edit Mode de Blizzard
     -- Bartender4 "usar este perfil para CUALQUIER personaje nuevo de la cuenta" (Setup Wizard
     -- pagina 7). nil/"" = apagado. bartenderAutoApplied = {charKey=true} para no re-forzar el
     -- perfil en personajes que el usuario ya cambio a mano despues del primer auto-apply.

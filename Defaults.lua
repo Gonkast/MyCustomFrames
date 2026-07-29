@@ -1859,7 +1859,6 @@ ns.BUILTIN = {
   ["previewSecureButton"]=false,
   ["raidGhostShowAll"]=true,
   ["snapElements"]=true,
-  ["syncBlizzEditMode"]=true,
   ["targetAuraDirection"]="up",
   ["targetAuraIconSize"]=26,
   ["targetAuraMaxIcons"]=6,
