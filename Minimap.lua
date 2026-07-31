@@ -1399,6 +1399,10 @@ ns.UpdateMinimapRing = UpdateRing
 -- ==========================================================================
 -- REFRESH / APPLY (posicion, escala, visibilidad)
 -- ==========================================================================
+-- true = se piso un intento de refresh por estar en combate; se reintenta en
+-- PLAYER_REGEN_ENABLED. Mismo patron que pendingPinsShown mas abajo en este
+-- archivo.
+local pendingRefresh = false
 local function RefreshMinimap()
     local p = P()
     if not p then return end
@@ -1407,6 +1411,26 @@ local function RefreshMinimap()
     -- Init() de este archivo haya corrido (su frame de eventos se registra
     -- despues del de core.lua, asi que ese ADDON_LOADED le llega segundo).
     if not root then return end
+    -- EN COMBATE NO SE TOCA NADA (2026-07-29, ADDON_ACTION_BLOCKED reportado:
+    -- "MyCustomFrames tried to call the protected function
+    -- 'MyCF_MinimapRoot:SetScale()'", disparado por el ticker de housing de
+    -- ExplorerAuto -> RefreshAll -> aca).
+    --
+    -- `root` NO es un frame propio cualquiera: el Minimap NATIVO de Blizzard,
+    -- que es protegido, cuelga de el (`Minimap:SetParent(root)` mas arriba).
+    -- Eso hace que SetScale/SetPoint/SetShown sobre root queden protegidos
+    -- tambien mientras dure el lockdown. LayoutEye() de mas abajo es igual de
+    -- vulnerable: reparenta el QueueStatusButton, otro frame protegido.
+    --
+    -- Se difiere la funcion ENTERA, no solo el SetScale: es puro layout y
+    -- apariencia (nada que tenga que verse actualizado al instante en medio de
+    -- una pelea), y cortar antes de CompensateScale evita que reescale los
+    -- offsets del perfil en una pasada que despues no va a poder aplicarlos.
+    if InCombatLockdown() then
+        pendingRefresh = true
+        return
+    end
+    pendingRefresh = false
     -- B3 (mismo fix que unidades/portraits/auras, ver CompensateScale en core.lua):
     -- sin esto, cambiar la escala con la rueda "movia" el minimapa porque los
     -- offsets de SetPoint quedaban calculados para la escala VIEJA.
@@ -1460,6 +1484,12 @@ local function RefreshMinimap()
     UpdateRing()
 end
 ns.RefreshMinimap = RefreshMinimap
+
+local minimapRefreshCombatFrame = CreateFrame("Frame")
+minimapRefreshCombatFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+minimapRefreshCombatFrame:SetScript("OnEvent", function()
+    if pendingRefresh then RefreshMinimap() end
+end)
 
 -- ==========================================================================
 -- INICIALIZACION

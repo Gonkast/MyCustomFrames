@@ -168,6 +168,19 @@ worth reading before redoing one of them).
   in sync" — a comment that had already failed twice.
 
 ### Fixed
+- **`ADDON_ACTION_BLOCKED` on `MyCF_MinimapRoot:SetScale()` in combat**, reported live. The
+  Explorer housing automation's 1s safety-net ticker calls `RefreshAll` unconditionally, no
+  combat check — reasonable, since almost everything it refreshes is plain Lua state. The
+  minimap wasn't: its root frame is the *parent* of Blizzard's own protected `Minimap`
+  (`Minimap:SetParent(root)`), which makes `SetScale`/`SetPoint`/`SetShown` on that root
+  protected too for the duration of the lockdown. `RefreshMinimap` had no combat guard, so it
+  called `SetScale` straight into it.
+
+  Deferred the whole function, not just the `SetScale` call — it's pure layout and cosmetics,
+  nothing that needs to update mid-fight, and `LayoutEye()` further down reparents the queue
+  status button, another protected frame with the same exposure. Retries on
+  `PLAYER_REGEN_ENABLED`, same pattern already used a few functions below for the minimap pin
+  visibility.
 - **The group finder eye sat on top of the bags.** Its holder was the one minimap satellite left
   at `HIGH` strata — mail, coordinates, the map-pin hover cover and the MinimapButtons container
   are all `MEDIUM`, with the map itself at `LOW`. `MEDIUM` still puts the eye above the minimap,
