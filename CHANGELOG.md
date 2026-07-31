@@ -168,6 +168,19 @@ worth reading before redoing one of them).
   in sync" — a comment that had already failed twice.
 
 ### Fixed
+- **The minimap's XP ring spark drifted away from the ring itself**, reported live. The ring's
+  entire geometry (frame, button, spark inset/size, textures) scales by `k = Minimap:GetWidth()
+  / 198`, computed **once**, in `CreateRing()`. That runs *before* `RefreshMinimap()`'s first
+  call for the session (see `Init()`'s order) — `Minimap:GetWidth()` at that early point
+  doesn't yet reflect Blizzard's actual configured minimap size, and `k` was never
+  recalculated afterward. The border/backdrop (`LayoutShape`, driven by the same
+  `Minimap:GetWidth()`) *do* re-read it on every refresh, so they tracked the real size while
+  the ring stayed sized for whatever `k` happened to be at that early, wrong moment — drifting
+  further any time the minimap's actual size changed afterward.
+
+  Split into `LayoutRing()` (recomputes `k` and reapplies every size/position that depends on
+  it) and `CreateRing()` (creates the frames once). `LayoutRing` now runs from
+  `RefreshMinimap`, same as the rest of the minimap's pieces.
 - **`ADDON_ACTION_BLOCKED` on `MyCF_MinimapRoot:SetScale()` in combat**, reported live. The
   Explorer housing automation's 1s safety-net ticker calls `RefreshAll` unconditionally, no
   combat check — reasonable, since almost everything it refreshes is plain Lua state. The

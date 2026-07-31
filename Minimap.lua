@@ -984,13 +984,45 @@ end
 -- ==========================================================================
 -- ANILLO DE XP / REPUTACION / HONOR / RENOWN (LibSpinBar)
 -- ==========================================================================
+-- Los numeros originales de AzeriteUI (213/208/410/56/100/etc.) estan pensados
+-- para un Minimap de referencia de 198px; como ya NO forzamos el tamaño del
+-- Minimap (ver LayoutShape), escalamos todo por k = tamaño real / 198.
+--
+-- BUG (2026-07-29, reportado: "el spark de la barra de xp del minimapa esta
+-- muy lejos de la barra en si"): k se calculaba UNA sola vez, en CreateRing(),
+-- que corre ANTES que el primer RefreshMinimap() del login (ver el orden en
+-- Init() mas abajo) -- Minimap:GetWidth() todavia no reflejaba el tamaño real
+-- (CVar/Edit Mode "Minimap Size" de Blizzard, que gobierna el tamaño nativo,
+-- ver el comentario de LayoutShape) sino lo que fuera que el widget midiera en
+-- ese instante temprano. Todo el anillo (incluido el spark, via
+-- SetSparkInset/SetSparkSize) quedaba escalado para ESE k viejo para siempre,
+-- mientras el minimapa real (y el borde/backdrop de LayoutShape, que SI se
+-- recalculan en cada refresh) seguian el tamaño verdadero -- el desfase crece
+-- con cualquier cambio de tamaño de minimapa despues del login.
+--
+-- Separado en LayoutRing() (recalcula k y reaplica todo lo que depende de el)
+-- vs CreateRing() (crea los frames una sola vez). LayoutRing corre desde
+-- RefreshMinimap, igual que el resto de las piezas del minimapa.
+local function LayoutRing()
+    if not (LSB and mm.ringFrame and mm.ringButton and mm.ringBar) then return end
+    local k = (Minimap:GetWidth() or 198) / 198
+    local frame, button, ring = mm.ringFrame, mm.ringButton, mm.ringBar
+    frame:SetSize(213 * k, 213 * k)
+    button:SetSize(56 * k, 56 * k)
+    button:ClearAllPoints()
+    button:SetPoint("CENTER", Minimap, "BOTTOM", 2 * k, -6 * k)
+    if mm.ringButtonTex then mm.ringButtonTex:SetSize(100 * k, 100 * k) end
+    if mm.ringBackdropTex then mm.ringBackdropTex:SetSize(410 * k, 410 * k) end
+    ring:SetSize(208 * k, 208 * k)
+    ring:ClearAllPoints()
+    ring:SetPoint("CENTER", 0, 2 * k)
+    ring:SetSparkInset((24 * 208 / 256) * k)
+    ring:SetSparkSize(34 * 208 / 256 * k, 30 * k)
+end
+mm.LayoutRing = LayoutRing
+
 local function CreateRing()
     if not LSB then return end
-
-    -- Los numeros originales de AzeriteUI (213/208/410/56/100/etc.) estan pensados
-    -- para un Minimap de referencia de 198px; como ya NO forzamos el tamaño del
-    -- Minimap (ver LayoutShape), escalamos todo por k = tamaño real / 198.
-    local k = (Minimap:GetWidth() or 198) / 198
 
     -- "frame" (el anillo/backdrop) va parentado a mm.root con un nivel base propio;
     -- "button" (el icono/toggle) se pone POR ENCIMA sumando, nunca restando del nivel
@@ -1006,19 +1038,16 @@ local function CreateRing()
     -- todo por ORDEN DE CAPAS en vez de depender de alpha.
     frame:SetFrameStrata("MEDIUM")
     frame:SetFrameLevel(mm.root:GetFrameLevel() + 1)
-    frame:SetSize(213 * k, 213 * k)
     frame:SetPoint("CENTER", Minimap, "CENTER", 0, 0)
     frame:Hide()
+    mm.ringFrame = frame
 
     local button = CreateFrame("Frame", "MyCF_MinimapRing", mm.root)
     button:SetFrameStrata("MEDIUM")
     button:SetFrameLevel(frame:GetFrameLevel() + 10)
-    button:SetSize(56 * k, 56 * k)
-    button:SetPoint("CENTER", Minimap, "BOTTOM", 2 * k, -6 * k)
     button:Hide()
 
     local btex = button:CreateTexture(nil, "BACKGROUND")
-    btex:SetSize(100 * k, 100 * k)
     btex:SetPoint("CENTER")
     btex:SetTexture(BUTTON_TEX)
     btex:SetVertexColor(UI_COLOR[1], UI_COLOR[2], UI_COLOR[3])
@@ -1030,7 +1059,6 @@ local function CreateRing()
     button.percent = percent
 
     local bg = frame:CreateTexture(nil, "BACKGROUND")
-    bg:SetSize(410 * k, 410 * k)
     bg:SetPoint("CENTER")
     bg:SetTexture(RING_BACKDROP_TEX)
     bg:SetVertexColor(UI_COLOR[1], UI_COLOR[2], UI_COLOR[3])
@@ -1038,17 +1066,14 @@ local function CreateRing()
 
     local ring = LSB:CreateSpinBar("MyCF_MinimapRingBar", frame)
     ring:SetFrameLevel(frame:GetFrameLevel() + 5)
-    ring:SetSize(208 * k, 208 * k)
-    ring:SetPoint("CENTER", 0, 2 * k)
     ring:SetStatusBarTexture(RING_TEX)
     ring:SetSparkTexture([[Interface\CastingBar\UI-CastingBar-Spark]])
     ring:SetSparkOffset(-1 / 10)
-    ring:SetSparkInset((24 * 208 / 256) * k)
-    ring:SetSparkSize(34 * 208 / 256 * k, 30 * k)
     ring:SetSparkBlendMode("ADD")
     ring:SetClockwise(true)
     ring:SetDegreeOffset(90 * 3 - 14)
     ring:SetDegreeSpan(360 - 14 * 2)
+    mm.ringBar = ring
 
     local bonus = LSB:CreateSpinBar("MyCF_MinimapRingBonusBar", frame)
     bonus:SetFrameLevel(frame:GetFrameLevel() + 2)
@@ -1071,6 +1096,10 @@ local function CreateRing()
 
     button.frame, button.ring, button.bonus, button.value, button.desc = frame, ring, bonus, value, desc
     mm.ringButton = button
+    -- Layout inicial YA con el k correcto: RefreshMinimap todavia no corrio
+    -- (ver el orden en Init), asi que sin esto el anillo se veria un frame en
+    -- su tamaño de creacion (0x0, todos los SetSize movidos a LayoutRing).
+    LayoutRing()
 
     -- Fade in/out del anillo (solo visible con mouse encima del boton). Al mostrarse
     -- debe OCULTAR POR COMPLETO el mapa (no un overlay semitransparente encima):
@@ -1481,6 +1510,7 @@ local function RefreshMinimap()
     if mm.ringButtonTex then
         mm.ringButtonTex:SetTexture((p.ringButtonTexture and p.ringButtonTexture ~= "" and p.ringButtonTexture) or BUTTON_TEX)
     end
+    if mm.LayoutRing then mm.LayoutRing() end
     UpdateRing()
 end
 ns.RefreshMinimap = RefreshMinimap
