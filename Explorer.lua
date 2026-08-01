@@ -1,4 +1,4 @@
---[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Explorer.lua"); local ADDON, ns = ...
+local ADDON, ns = ...
 
 -- EXPLORER (#11): elementos que se auto-ocultan y aparecen con MOUSEOVER (o en combate).
 -- Extraido de core.lua (2026-07-22, "que se puede sacar del core") -- mismo criterio ya
@@ -16,23 +16,23 @@
 -- _mcfCombatHidden y el comentario de HB_HideAlpha en core.lua: SetAlpha
 -- esta probado seguro en frames protegidos, nunca causo taint) -- no hay
 -- riesgo nuevo de ADDON_ACTION_FORBIDDEN por esto.
-local function GetElementFrame(key) Perfy_Trace(Perfy_GetTime(), "Enter", "GetElementFrame MyCustomFrames/Explorer.lua:19:6");
-    if key == "micromenu" then return Perfy_Trace_Passthrough("Leave", "GetElementFrame MyCustomFrames/Explorer.lua:19:6", ns.micromenu) end
-    if key == "infobar" then return Perfy_Trace_Passthrough("Leave", "GetElementFrame MyCustomFrames/Explorer.lua:19:6", ns.infobar and ns.infobar.root) end
-    if key == "tracker" then return Perfy_Trace_Passthrough("Leave", "GetElementFrame MyCustomFrames/Explorer.lua:19:6", _G.ObjectiveTrackerFrame) end
-    if key == "minimap" then return Perfy_Trace_Passthrough("Leave", "GetElementFrame MyCustomFrames/Explorer.lua:19:6", ns.minimap and ns.minimap.root) end
-    if key == "topwidget" then return Perfy_Trace_Passthrough("Leave", "GetElementFrame MyCustomFrames/Explorer.lua:19:6", ns.topWidgetHolder) end
-    if key == "classpower" then return Perfy_Trace_Passthrough("Leave", "GetElementFrame MyCustomFrames/Explorer.lua:19:6", _G.MyCF_ClassPower) end
-    if key == "raid" then return Perfy_Trace_Passthrough("Leave", "GetElementFrame MyCustomFrames/Explorer.lua:19:6", _G.MyCF_RaidHeader) end
+local function GetElementFrame(key)
+    if key == "micromenu" then return ns.micromenu end
+    if key == "infobar" then return ns.infobar and ns.infobar.root end
+    if key == "tracker" then return _G.ObjectiveTrackerFrame end
+    if key == "minimap" then return ns.minimap and ns.minimap.root end
+    if key == "topwidget" then return ns.topWidgetHolder end
+    if key == "classpower" then return _G.MyCF_ClassPower end
+    if key == "raid" then return _G.MyCF_RaidHeader end
     -- Barras de Bartender4 (2026-07-24, pedido del usuario) -- mismos nombres
     -- reales ya usados/confirmados en BartenderScale.lua (BT4Bar1-10 +
     -- BT4BarPetBar/StanceBar/BagBar/ExtraActionBar). SetAlpha nada mas, mismo
     -- criterio que classpower/raid arriba.
-    if key:sub(1, 6) == "BT4Bar" then return Perfy_Trace_Passthrough("Leave", "GetElementFrame MyCustomFrames/Explorer.lua:19:6", _G[key]) end
-    if ns.frames[key] then return Perfy_Trace_Passthrough("Leave", "GetElementFrame MyCustomFrames/Explorer.lua:19:6", ns.frames[key].button) end
-    if ns.portraits[key] then return Perfy_Trace_Passthrough("Leave", "GetElementFrame MyCustomFrames/Explorer.lua:19:6", ns.portraits[key].root) end
-    if ns.auras[key] then return Perfy_Trace_Passthrough("Leave", "GetElementFrame MyCustomFrames/Explorer.lua:19:6", ns.auras[key].root) end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "GetElementFrame MyCustomFrames/Explorer.lua:19:6"); return nil
+    if key:sub(1, 6) == "BT4Bar" then return _G[key] end
+    if ns.frames[key] then return ns.frames[key].button end
+    if ns.portraits[key] then return ns.portraits[key].root end
+    if ns.auras[key] then return ns.auras[key].root end
+    return nil
 end
 ns.GetElementFrame = GetElementFrame
 
@@ -112,15 +112,15 @@ ns.EXPLORER_ELEMENTS = {
 -- no solo el frame contenedor. Acotado a Bartender4 (no a los ~45 elementos
 -- restantes) para no pagar un GetChildren()+loop extra cada frame en todo
 -- lo demas, que ya funciona bien solo con el frame propio.
-local function IsMouseOverElement(f, key) Perfy_Trace(Perfy_GetTime(), "Enter", "IsMouseOverElement MyCustomFrames/Explorer.lua:115:6");
-    if f:IsMouseOver() then Perfy_Trace(Perfy_GetTime(), "Leave", "IsMouseOverElement MyCustomFrames/Explorer.lua:115:6"); return true end
-    if key:sub(1, 6) ~= "BT4Bar" then Perfy_Trace(Perfy_GetTime(), "Leave", "IsMouseOverElement MyCustomFrames/Explorer.lua:115:6"); return false end
-    local ok, children = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Explorer.lua:118:31"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Explorer.lua:118:31", { f:GetChildren() }) end)
-    if not ok then Perfy_Trace(Perfy_GetTime(), "Leave", "IsMouseOverElement MyCustomFrames/Explorer.lua:115:6"); return false end
+local function IsMouseOverElement(f, key)
+    if f:IsMouseOver() then return true end
+    if key:sub(1, 6) ~= "BT4Bar" then return false end
+    local ok, children = pcall(function() return { f:GetChildren() } end)
+    if not ok then return false end
     for _, c in ipairs(children) do
-        if c.IsMouseOver and c:IsMouseOver() then Perfy_Trace(Perfy_GetTime(), "Leave", "IsMouseOverElement MyCustomFrames/Explorer.lua:115:6"); return true end
+        if c.IsMouseOver and c:IsMouseOver() then return true end
     end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "IsMouseOverElement MyCustomFrames/Explorer.lua:115:6"); return false
+    return false
 end
 
 -- Fade por MOUSEOVER (`IsMouseOver` funciona sin EnableMouse = geometrico). El fade corre
@@ -130,9 +130,9 @@ end
 -- ticker (secret-safe via pcall); aqui solo se anima. db.explorerEnabled = toggle maestro.
 local explorerDriver = CreateFrame("Frame", nil, UIParent)
 explorerDriver:Hide()
-explorerDriver:SetScript("OnUpdate", ns.Prof.Wrap("Explorer: driver", function(self, dt) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Explorer.lua:133:70");
+explorerDriver:SetScript("OnUpdate", ns.Prof.Wrap("Explorer: driver", function(self, dt)
     local db = ns.GetDB()
-    if not (db and db.explorer and db.explorerEnabled ~= false) or ns.IsUnlocked() then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Explorer.lua:133:70"); return end
+    if not (db and db.explorer and db.explorerEnabled ~= false) or ns.IsUnlocked() then return end
     local lo = db.explorerFadeAlpha or 0
     -- Factor por half-life: el alpha recorre la mitad de la distancia cada X segundos.
     local kIn  = 1 - 0.5 ^ (dt / 0.06)   -- revelar (half-life ~60ms)
@@ -217,8 +217,8 @@ explorerDriver:SetScript("OnUpdate", ns.Prof.Wrap("Explorer: driver", function(s
             end
         end
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Explorer.lua:133:70"); end))
-ns.ExplorerReset = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ExplorerReset MyCustomFrames/Explorer.lua:221:19");   -- llamar al APAGAR el explorer de un elemento
+end))
+ns.ExplorerReset = function(key)   -- llamar al APAGAR el explorer de un elemento
     local f = GetElementFrame(key)
     if f then f._exAlpha = nil; f:SetAlpha(1) end
     -- Restaurar tambien el alpha manual del modelo 3D (no hereda del padre).
@@ -240,12 +240,12 @@ ns.ExplorerReset = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.Explo
     if key == "BT4BarPetBar" and ns.RefreshPetBarVisibility then
         ns.RefreshPetBarVisibility()
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ExplorerReset MyCustomFrames/Explorer.lua:221:19"); end
-ns.ExplorerResetAll = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ExplorerResetAll MyCustomFrames/Explorer.lua:244:22");   -- llamar al APAGAR el toggle maestro
+end
+ns.ExplorerResetAll = function()   -- llamar al APAGAR el toggle maestro
     local db = ns.GetDB()
-    if not (db and db.explorer) then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ExplorerResetAll MyCustomFrames/Explorer.lua:244:22"); return end
+    if not (db and db.explorer) then return end
     for key in pairs(db.explorer) do ns.ExplorerReset(key) end
-Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ExplorerResetAll MyCustomFrames/Explorer.lua:244:22"); end
+end
 
 -- ==========================================================================
 -- PERFILES RAPIDOS (2026-07-27, pedido del usuario): 3 configuraciones de
@@ -278,7 +278,7 @@ local QUICK_PROFILES = {
         label = "Combat",
         desc = "Only your action bars fade out, revealing automatically when you enter combat. Everything else stays visible.",
         mode = "keys_matching",
-        match = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Explorer.lua:281:16"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Explorer.lua:281:16", key:sub(1, 6) == "BT4Bar") end,
+        match = function(key) return key:sub(1, 6) == "BT4Bar" end,
         forceCombat = true,
     },
     minimal = {
@@ -292,10 +292,10 @@ local QUICK_PROFILES = {
 }
 ns.EXPLORER_QUICK_PROFILES = QUICK_PROFILES
 
-function ns.ApplyExplorerQuickProfile(name) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ApplyExplorerQuickProfile MyCustomFrames/Explorer.lua:295:0");
+function ns.ApplyExplorerQuickProfile(name)
     local prof = QUICK_PROFILES[name]
     local db = ns.GetDB and ns.GetDB()
-    if not prof or not db then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ApplyExplorerQuickProfile MyCustomFrames/Explorer.lua:295:0"); return end
+    if not prof or not db then return end
     db.explorer = db.explorer or {}
     -- Alpha=1 en TODO lo que estaba gestionado antes de pisar el mapa entero --
     -- mismo camino que ya usa el toggle maestro al apagarse (ver arriba), evita
@@ -318,7 +318,7 @@ function ns.ApplyExplorerQuickProfile(name) Perfy_Trace(Perfy_GetTime(), "Enter"
 
     db.explorerEnabled = true
     if prof.forceCombat then db.explorerCombat = true end
-Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ApplyExplorerQuickProfile MyCustomFrames/Explorer.lua:295:0"); end
+end
 
 -- Tipo de contenido actual → clave de db.explorerZones. IsInInstance devuelve:
 -- "none"(mundo)/"party"(mazmorra)/"raid"/"arena"/"pvp"(BG)/"scenario"(escenario/delve).
@@ -326,16 +326,16 @@ local EXPLORER_ZONE_MAP = {
     none = "world", party = "dungeon", raid = "raid",
     arena = "arena", pvp = "battleground", scenario = "scenario",
 }
-local function ExplorerZoneAllowed() Perfy_Trace(Perfy_GetTime(), "Enter", "ExplorerZoneAllowed MyCustomFrames/Explorer.lua:329:6");
+local function ExplorerZoneAllowed()
     local db = ns.GetDB()
     local z = db and db.explorerZones
-    if not z then Perfy_Trace(Perfy_GetTime(), "Leave", "ExplorerZoneAllowed MyCustomFrames/Explorer.lua:329:6"); return true end
+    if not z then return true end
     local key = "world"
     local ok, inInst, it = pcall(IsInInstance)
     if ok and not (issecretvalue and (issecretvalue(inInst) or issecretvalue(it))) then
         if inInst and it then key = EXPLORER_ZONE_MAP[it] or "world" end
     end
-    return Perfy_Trace_Passthrough("Leave", "ExplorerZoneAllowed MyCustomFrames/Explorer.lua:329:6", z[key] ~= false)
+    return z[key] ~= false
 end
 ns.ExplorerZoneAllowed = ExplorerZoneAllowed
 
@@ -352,9 +352,9 @@ ns.ExplorerZoneAllowed = ExplorerZoneAllowed
 -- Llamado desde el ticker central de core.lua (10Hz) -- solo refresca el estado de
 -- combate/target/casteo (del snapshot ns.tickState) y enciende/apaga el driver de
 -- animacion; la animacion en si corre en el OnUpdate de arriba, no aqui.
-ns.TickExplorer = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.TickExplorer MyCustomFrames/Explorer.lua:355:18");
+ns.TickExplorer = function()
     local db = ns.GetDB()
-    if not db then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.TickExplorer MyCustomFrames/Explorer.lua:355:18"); return end
+    if not db then return end
     local exOn = db.explorerEnabled ~= false and db.explorer and next(db.explorer) ~= nil
         and ExplorerZoneAllowed()
     if exOn then
@@ -396,6 +396,4 @@ ns.TickExplorer = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.TickExplo
     end
     explorerDriver._wasOn = exOn and true or false
     explorerDriver:SetShown(exOn and true or false)
-Perfy_Trace(Perfy_GetTime(), "Leave", "ns.TickExplorer MyCustomFrames/Explorer.lua:355:18"); end
-
-Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Explorer.lua");
+end

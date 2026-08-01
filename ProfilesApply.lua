@@ -1,4 +1,4 @@
---[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/ProfilesApply.lua"); -- ==========================================================================
+-- ==========================================================================
 -- ProfilesApply.lua — "Aplicar Perfiles": instala los presets del setup Gonkast en los
 -- addons detectados, reemplazando su SavedVariables con la copia de Profiles\ (capturada de
 -- forma segura por Profiles_Pre/Post) y recargando la UI para que cada addon la relea.
@@ -34,13 +34,13 @@ local INFO = {
     Chattynator= "Chattynator (default)",
 }
 
-local function loaded(addon) Perfy_Trace(Perfy_GetTime(), "Enter", "loaded MyCustomFrames/ProfilesApply.lua:37:6");
-    if C_AddOns and C_AddOns.IsAddOnLoaded then return Perfy_Trace_Passthrough("Leave", "loaded MyCustomFrames/ProfilesApply.lua:37:6", C_AddOns.IsAddOnLoaded(addon)) end
-    return Perfy_Trace_Passthrough("Leave", "loaded MyCustomFrames/ProfilesApply.lua:37:6", IsAddOnLoaded and IsAddOnLoaded(addon))
+local function loaded(addon)
+    if C_AddOns and C_AddOns.IsAddOnLoaded then return C_AddOns.IsAddOnLoaded(addon) end
+    return IsAddOnLoaded and IsAddOnLoaded(addon)
 end
 
 -- Que addons con copia estan instalados/cargados?
-local function DetectAddons() Perfy_Trace(Perfy_GetTime(), "Enter", "DetectAddons MyCustomFrames/ProfilesApply.lua:43:6");
+local function DetectAddons()
     local seen, list = {}, {}
     for g, addon in pairs(OWNER) do
         if ns.Profiles and ns.Profiles[g] ~= nil and loaded(addon) and not seen[addon] then
@@ -48,15 +48,15 @@ local function DetectAddons() Perfy_Trace(Perfy_GetTime(), "Enter", "DetectAddon
             list[#list + 1] = addon
         end
     end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "DetectAddons MyCustomFrames/ProfilesApply.lua:43:6"); return list, seen
+    return list, seen
 end
 
 -- El string exportado del layout HUD de Blizzard ("MCF1:..." no, este es el formato propio de
 -- C_EditMode: un string opaco de Blizzard, NO nuestro Serialize). Solo lectura.
-function ns.GetBlizzardHUDCode() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.GetBlizzardHUDCode MyCustomFrames/ProfilesApply.lua:56:0");
+function ns.GetBlizzardHUDCode()
     local str = ns.ProfExports and ns.ProfExports.blizzard
-    if str and str ~= "" then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.GetBlizzardHUDCode MyCustomFrames/ProfilesApply.lua:56:0"); return str end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "ns.GetBlizzardHUDCode MyCustomFrames/ProfilesApply.lua:56:0"); return nil
+    if str and str ~= "" then return str end
+    return nil
 end
 
 -- Popup simple y AUTOCONTENIDO (no depende de ns.UI/Options.lua: este archivo carga ANTES en
@@ -64,11 +64,11 @@ end
 -- por el importador NATIVO de Blizzard. Reusado por Setup.lua (wizard) y por el boton del menu
 -- principal (grupo "Setup").
 local hudPopup
-function ns.ShowBlizzardHUDCode() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ShowBlizzardHUDCode MyCustomFrames/ProfilesApply.lua:67:0");
+function ns.ShowBlizzardHUDCode()
     local code = ns.GetBlizzardHUDCode()
     if not code then
         print("|cffffcc00[MCF]|r No Blizzard HUD layout bundled.")
-        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ShowBlizzardHUDCode MyCustomFrames/ProfilesApply.lua:67:0"); return
+        return
     end
     if not hudPopup then
         local p = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
@@ -98,15 +98,15 @@ function ns.ShowBlizzardHUDCode() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.Show
         local eb = CreateFrame("EditBox", nil, sf)
         eb:SetMultiLine(true); eb:SetAutoFocus(false); eb:SetFontObject(ChatFontNormal)
         eb:SetMaxLetters(999999); eb:SetWidth(430)
-        eb:SetScript("OnEscapePressed", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ProfilesApply.lua:101:40"); self:ClearFocus() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ProfilesApply.lua:101:40"); end)
+        eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
         sf:SetScrollChild(eb)
         sf:EnableMouseWheel(true)
-        sf:SetScript("OnMouseWheel", function(self, d) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ProfilesApply.lua:104:37");
+        sf:SetScript("OnMouseWheel", function(self, d)
             local mx = math.max((eb:GetHeight() or 0) - (self:GetHeight() or 0), 0)
             self:SetVerticalScroll(math.min(math.max(self:GetVerticalScroll() - d * 30, 0), mx))
-        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ProfilesApply.lua:104:37"); end)
-        box:EnableMouse(true); box:SetScript("OnMouseDown", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ProfilesApply.lua:108:60"); eb:SetFocus() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ProfilesApply.lua:108:60"); end)
-        sf:EnableMouse(true); sf:SetScript("OnMouseDown", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ProfilesApply.lua:109:58"); eb:SetFocus() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ProfilesApply.lua:109:58"); end)
+        end)
+        box:EnableMouse(true); box:SetScript("OnMouseDown", function() eb:SetFocus() end)
+        sf:EnableMouse(true); sf:SetScript("OnMouseDown", function() eb:SetFocus() end)
         p.eb = eb
         p:Hide()
         hudPopup = p
@@ -114,14 +114,14 @@ function ns.ShowBlizzardHUDCode() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.Show
     hudPopup.eb:SetText(code)
     hudPopup:Show()
     hudPopup.eb:SetFocus(); hudPopup.eb:HighlightText()
-Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ShowBlizzardHUDCode MyCustomFrames/ProfilesApply.lua:67:0"); end
+end
 
 -- Variante FILTRADA de DoApply para el wizard de primera instalacion (Setup.lua): solo toca
 -- los addons marcados en `selected` (tabla addon -> true). Sin popup de confirmacion (el wizard
 -- ya es la confirmacion) y sin avisos por chat (el wizard muestra su propio resumen). El HUD de
 -- Blizzard NO se toca aca (ver comentario de cabecera): Setup.lua lo ofrece aparte, a mano, con
 -- ns.ShowBlizzardHUDCode().
-function ns.ApplyProfilesFiltered(selected) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ApplyProfilesFiltered MyCustomFrames/ProfilesApply.lua:124:0");
+function ns.ApplyProfilesFiltered(selected)
     -- Punto de restauracion (2026-07-25, QoL): esto REEMPLAZA los
     -- SavedVariables de otros addons -- lo del propio MyCustomFrames al menos
     -- queda recuperable con /mcfundo. (Los de Bartender4/DynamicCam/etc. NO se
@@ -129,7 +129,7 @@ function ns.ApplyProfilesFiltered(selected) Perfy_Trace(Perfy_GetTime(), "Enter"
     -- su archivo original se pierde en el proximo /reload -- por eso el wizard
     -- avisa antes de aplicar.)
     if ns.SaveAutoBackup then ns.SaveAutoBackup() end
-    local copy = ns.DeepCopy or function(t) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ProfilesApply.lua:132:32"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ProfilesApply.lua:132:32"); return t end
+    local copy = ns.DeepCopy or function(t) return t end
     local applied = {}
     local _, seen = DetectAddons()
     for g, addon in pairs(OWNER) do
@@ -138,15 +138,15 @@ function ns.ApplyProfilesFiltered(selected) Perfy_Trace(Perfy_GetTime(), "Enter"
             applied[addon] = true
         end
     end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ApplyProfilesFiltered MyCustomFrames/ProfilesApply.lua:124:0"); return applied
+    return applied
 end
 
 -- Etiquetas legibles por addon (para el wizard). Solo lectura: no modificar desde afuera.
 ns.ProfilesInfo = INFO
 
 -- Ejecuta el reemplazo (tras confirmar) y recarga.
-local function DoApply() Perfy_Trace(Perfy_GetTime(), "Enter", "DoApply MyCustomFrames/ProfilesApply.lua:148:6");
-    local copy = ns.DeepCopy or function(t) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ProfilesApply.lua:149:32"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ProfilesApply.lua:149:32"); return t end
+local function DoApply()
+    local copy = ns.DeepCopy or function(t) return t end
     local applied = {}
     local _, seen = DetectAddons()
     for g, addon in pairs(OWNER) do
@@ -164,7 +164,7 @@ local function DoApply() Perfy_Trace(Perfy_GetTime(), "Enter", "DoApply MyCustom
     -- fiable es que el usuario recargue a mano. Avisamos claramente (texto + popup sin auto-reload).
     print("|cff00ff00[MCF]|r Profiles queued. Type |cffffff00/reload|r now to apply them.")
     if StaticPopup_Show then StaticPopup_Show("MCF_APPLY_PROFILES_DONE") end
-Perfy_Trace(Perfy_GetTime(), "Leave", "DoApply MyCustomFrames/ProfilesApply.lua:148:6"); end
+end
 
 -- Aviso de "recarga a mano" (no llama a ReloadUI: seria bloqueado por taint).
 -- NO reasignar el global StaticPopupDialogs (= StaticPopupDialogs or {}): reasignar ese global
@@ -191,29 +191,29 @@ StaticPopupDialogs["MCF_APPLY_PROFILES"] = {
         .. "|cffff5555This cannot be undone.|r Their current settings are overwritten for good "
         .. "-- /mcfundo does not cover other addons. Back them up first if you care about them.",
     button1 = ACCEPT or "Accept", button2 = CANCEL or "Cancel",
-    OnAccept = function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ProfilesApply.lua:194:15"); DoApply() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ProfilesApply.lua:194:15"); end,
+    OnAccept = function() DoApply() end,
     timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
 }
 
-function ns.ApplyProfiles() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ApplyProfiles MyCustomFrames/ProfilesApply.lua:198:0");
+function ns.ApplyProfiles()
     local list = DetectAddons()
     if #list == 0 then
         print("|cffffcc00[MCF]|r No supported addons with bundled profiles detected.")
-        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ApplyProfiles MyCustomFrames/ProfilesApply.lua:198:0"); return
+        return
     end
     local lines = {}
     for _, a in ipairs(list) do lines[#lines + 1] = "- " .. (INFO[a] or a) end
     StaticPopup_Show("MCF_APPLY_PROFILES", table.concat(lines, "\n"))
-Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ApplyProfiles MyCustomFrames/ProfilesApply.lua:198:0"); end
+end
 
 -- Estado para el menu: lista de addons detectados con copia.
-function ns.ProfilesStatus() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ProfilesStatus MyCustomFrames/ProfilesApply.lua:210:0");
+function ns.ProfilesStatus()
     local list = DetectAddons()
-    Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ProfilesStatus MyCustomFrames/ProfilesApply.lua:210:0"); return list
+    return list
 end
 
 SLASH_MCFHUD1 = "/mcfhud"
-SlashCmdList["MCFHUD"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFHUD MyCustomFrames/ProfilesApply.lua:216:25"); ns.ShowBlizzardHUDCode() Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFHUD MyCustomFrames/ProfilesApply.lua:216:25"); end
+SlashCmdList["MCFHUD"] = function() ns.ShowBlizzardHUDCode() end
 
 -- ==========================================================================
 -- Bartender4: "usar este perfil para CUALQUIER personaje nuevo de la cuenta" (2026-07-16,
@@ -233,24 +233,24 @@ SlashCmdList["MCFHUD"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "Slash
 -- `AceDBObject:SetProfile(name)` tanto cambia el perfil EN VIVO como escribe
 -- `profileKeys[charKey]` en el SavedVariables para la proxima sesion — mismo efecto que el boton
 -- manual de la pagina 7, pero sin la carrera de timing.
-local function ApplyBartenderAutoProfile() Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyBartenderAutoProfile MyCustomFrames/ProfilesApply.lua:236:6");
+local function ApplyBartenderAutoProfile()
     local d = ns.GetDB and ns.GetDB()
     local wanted = d and d.bartenderAutoProfile
-    if not wanted or wanted == "" then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyBartenderAutoProfile MyCustomFrames/ProfilesApply.lua:236:6"); return end
+    if not wanted or wanted == "" then return end
     local addon = _G.Bartender4
-    if not (addon and addon.db and addon.db.GetCurrentProfile and addon.db.SetProfile) then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyBartenderAutoProfile MyCustomFrames/ProfilesApply.lua:236:6"); return end
+    if not (addon and addon.db and addon.db.GetCurrentProfile and addon.db.SetProfile) then return end
     local charKey = (UnitName("player") or "?") .. " - " .. (GetRealmName() or "?")
     d.bartenderAutoApplied = d.bartenderAutoApplied or {}
     -- Ya se aplico una vez para ESTE personaje: no forzar de nuevo (si el usuario cambio a mano
     -- a otro perfil despues, respetamos su eleccion en vez de pisarla en cada login).
-    if d.bartenderAutoApplied[charKey] then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyBartenderAutoProfile MyCustomFrames/ProfilesApply.lua:236:6"); return end
+    if d.bartenderAutoApplied[charKey] then return end
     local ok, cur = pcall(addon.db.GetCurrentProfile, addon.db)
-    if not ok then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyBartenderAutoProfile MyCustomFrames/ProfilesApply.lua:236:6"); return end
+    if not ok then return end
 
     -- Ya esta en el perfil que queremos: nada que hacer, marcar y salir.
     if cur == wanted then
         d.bartenderAutoApplied[charKey] = true
-        Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyBartenderAutoProfile MyCustomFrames/ProfilesApply.lua:236:6"); return
+        return
     end
 
     -- Solo forzar si el personaje NO tiene perfil propio configurado todavia: AceDB usa el
@@ -271,23 +271,21 @@ local function ApplyBartenderAutoProfile() Perfy_Trace(Perfy_GetTime(), "Enter",
         if okSet and okNow and now == wanted then
             d.bartenderAutoApplied[charKey] = true
         end
-        Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyBartenderAutoProfile MyCustomFrames/ProfilesApply.lua:236:6"); return
+        return
     end
 
     -- `cur` es un perfil que el usuario eligio a mano (ni el fallback de charKey ni el nuestro):
     -- se respeta y se marca, para no volver a pisarlo en cada login.
     d.bartenderAutoApplied[charKey] = true
-Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyBartenderAutoProfile MyCustomFrames/ProfilesApply.lua:236:6"); end
+end
 
 local btAutoFrame = CreateFrame("Frame")
 btAutoFrame:RegisterEvent("PLAYER_LOGIN")
-btAutoFrame:SetScript("OnEvent", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ProfilesApply.lua:284:33");
+btAutoFrame:SetScript("OnEvent", function(self)
     self:UnregisterAllEvents()
     if C_Timer and C_Timer.After then
-        C_Timer.After(2, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ProfilesApply.lua:287:25"); pcall(ApplyBartenderAutoProfile) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ProfilesApply.lua:287:25"); end)
+        C_Timer.After(2, function() pcall(ApplyBartenderAutoProfile) end)
     else
         pcall(ApplyBartenderAutoProfile)
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ProfilesApply.lua:284:33"); end)
-
-Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/ProfilesApply.lua");
+end)

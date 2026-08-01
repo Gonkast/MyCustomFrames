@@ -1,4 +1,4 @@
---[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Profiles_Pre.lua"); -- ==========================================================================
+-- ==========================================================================
 -- Profiles_Pre.lua — parte 1 de la carga SEGURA de perfiles de otros addons.
 -- Las copias de SavedVariables en Profiles\ setean sus globales reales (Bartender4DB, etc.).
 -- Cargarlas via el toc CLOBBEA esos globales vivos → en logout el juego los guardaria y
@@ -22,5 +22,3 @@ ns._profLive = {}
 for _, g in ipairs(ns.ProfGlobals) do
     ns._profLive[g] = _G[g]
 end
-
-Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Profiles_Pre.lua");

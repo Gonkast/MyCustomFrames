@@ -1,4 +1,4 @@
---[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/API.lua"); -- ==========================================================================
+-- ==========================================================================
 -- MyCustomFrames - API.lua
 -- Pedido del usuario 2026-07-19 ("como esta estructurado mi addon, que sean
 -- faciles de actualizar si Blizzard cambia la API"): unico punto que sabe
@@ -24,30 +24,28 @@ local ADDON, ns = ...
 -- SetFormattedText (y las demas APIs "consumidoras" que ya usa este addon)
 -- lo aceptan tal cual -- no hace falta gatear en issecretvalue antes de
 -- pasarlo a mostrar, alcanza con comparar contra nil.
-function ns.GetHealthPercent(unit) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.GetHealthPercent MyCustomFrames/API.lua:27:0");
-    if not (UnitHealthPercent and unit) then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.GetHealthPercent MyCustomFrames/API.lua:27:0"); return nil end
+function ns.GetHealthPercent(unit)
+    if not (UnitHealthPercent and unit) then return nil end
     local ok, pct = pcall(UnitHealthPercent, unit, true, CurveConstants and CurveConstants.ScaleTo100)
-    if not ok then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.GetHealthPercent MyCustomFrames/API.lua:27:0"); return nil end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "ns.GetHealthPercent MyCustomFrames/API.lua:27:0"); return pct
+    if not ok then return nil end
+    return pct
 end
 
 -- Igual que GetHealthPercent, pero ADEMAS informa si el resultado es un
 -- NUMERO LEGIBLE (no secreto) -- para el caso en que el llamador necesita
 -- saber si tambien es seguro pedir el valor ABSOLUTO (UnitHealth) para
 -- mostrarlo abreviado junto al %, no solo el porcentaje.
-function ns.GetHealthPercentReadable(unit) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.GetHealthPercentReadable MyCustomFrames/API.lua:38:0");
+function ns.GetHealthPercentReadable(unit)
     local pct = ns.GetHealthPercent(unit)
     local readable = (type(pct) == "number") and not (issecretvalue and issecretvalue(pct))
-    Perfy_Trace(Perfy_GetTime(), "Leave", "ns.GetHealthPercentReadable MyCustomFrames/API.lua:38:0"); return pct, readable
+    return pct, readable
 end
 
 -- % de poder 0-100 (o nil). Firma real: UnitPowerPercent(unit, powerType
 -- [, usePredicted [, curve]]) -- mismo motivo de la curva que la de arriba.
-function ns.GetPowerPercent(unit, powerType) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.GetPowerPercent MyCustomFrames/API.lua:46:0");
-    if not (UnitPowerPercent and unit) then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.GetPowerPercent MyCustomFrames/API.lua:46:0"); return nil end
+function ns.GetPowerPercent(unit, powerType)
+    if not (UnitPowerPercent and unit) then return nil end
     local ok, pct = pcall(UnitPowerPercent, unit, powerType, true, CurveConstants and CurveConstants.ScaleTo100)
-    if not ok then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.GetPowerPercent MyCustomFrames/API.lua:46:0"); return nil end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "ns.GetPowerPercent MyCustomFrames/API.lua:46:0"); return pct
+    if not ok then return nil end
+    return pct
 end
-
-Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/API.lua");

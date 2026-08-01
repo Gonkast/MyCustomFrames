@@ -1,4 +1,4 @@
---[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Tracker.lua"); -- ==========================================================================
+-- ==========================================================================
 -- MyCustomFrames - Tracker.lua
 -- Colorea titulos/headers del ObjectiveTracker (misiones, mazmorras, escenarios), centra los
 -- titulos en el eje X (offset independiente mision/escenario, ajustable en vivo desde el menu),
@@ -26,9 +26,9 @@ local COLOR_DIARIA     = { r = 0.53, g = 0.81, b = 0.98 }
 local COLOR_RARA       = { r = 0.64, g = 0.21, b = 0.93 }
 local COLOR_LEGENDARIA = { r = 1.0,  g = 0.5,  b = 0 }
 
-local function cfg() Perfy_Trace(Perfy_GetTime(), "Enter", "cfg MyCustomFrames/Tracker.lua:29:6"); local db = ns.GetDB and ns.GetDB(); return Perfy_Trace_Passthrough("Leave", "cfg MyCustomFrames/Tracker.lua:29:6", db and db.tracker) end
-local function TrackerEnabled() Perfy_Trace(Perfy_GetTime(), "Enter", "TrackerEnabled MyCustomFrames/Tracker.lua:30:6"); local c = cfg(); return Perfy_Trace_Passthrough("Leave", "TrackerEnabled MyCustomFrames/Tracker.lua:30:6", c and c.enabled and true or false) end
-local function TitleColor() Perfy_Trace(Perfy_GetTime(), "Enter", "TitleColor MyCustomFrames/Tracker.lua:31:6"); local c = cfg(); return Perfy_Trace_Passthrough("Leave", "TitleColor MyCustomFrames/Tracker.lua:31:6", (c and c.color) or DEFAULT_COLOR) end
+local function cfg() local db = ns.GetDB and ns.GetDB(); return db and db.tracker end
+local function TrackerEnabled() local c = cfg(); return c and c.enabled and true or false end
+local function TitleColor() local c = cfg(); return (c and c.color) or DEFAULT_COLOR end
 
 -- ==========================================================================
 -- ESTADO EXTERNO (anti-taint). LECCION de EllesmereUI: NUNCA escribir claves propias
@@ -55,7 +55,7 @@ local bossHider                                          -- nuestro SecureHandle
 -- PartyDriverString (UpdatePartyDrivers) para su propio caso de "ocultar por zona". Esto mantiene
 -- el driver con AL MENOS un conditional real (nunca "show"/"hide" constante puro), que es lo que
 -- evita la aplicacion sincrona desde codigo inseguro (ver nota abajo).
-local function BuildTrackerHideDriver(c) Perfy_Trace(Perfy_GetTime(), "Enter", "BuildTrackerHideDriver MyCustomFrames/Tracker.lua:58:6");
+local function BuildTrackerHideDriver(c)
     local parts = {}
     if c.hideInCombat then parts[#parts + 1] = "[combat]hide" end
     if c.hideOnHostileTarget then parts[#parts + 1] = "[@target,exists,harm]hide" end
@@ -69,14 +69,14 @@ local function BuildTrackerHideDriver(c) Perfy_Trace(Perfy_GetTime(), "Enter", "
             if instType == "pvp" and c.hideInBG then parts[#parts + 1] = "[@player,exists]hide" end
         end
     end
-    if #parts == 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "BuildTrackerHideDriver MyCustomFrames/Tracker.lua:58:6"); return nil end   -- nada activado: sin driver (mostrado siempre)
+    if #parts == 0 then return nil end   -- nada activado: sin driver (mostrado siempre)
     parts[#parts + 1] = "show"
-    return Perfy_Trace_Passthrough("Leave", "BuildTrackerHideDriver MyCustomFrames/Tracker.lua:58:6", table.concat(parts, ";"))
+    return table.concat(parts, ";")
 end
 
-local function SetupBossHider() Perfy_Trace(Perfy_GetTime(), "Enter", "SetupBossHider MyCustomFrames/Tracker.lua:77:6");
+local function SetupBossHider()
     local otf = _G.ObjectiveTrackerFrame
-    if not otf or InCombatLockdown() then Perfy_Trace(Perfy_GetTime(), "Leave", "SetupBossHider MyCustomFrames/Tracker.lua:77:6"); return end
+    if not otf or InCombatLockdown() then return end
 
     if not bossHider then
         local h = CreateFrame("Frame", nil, otf, "SecureHandlerStateTemplate")
@@ -87,18 +87,18 @@ local function SetupBossHider() Perfy_Trace(Perfy_GetTime(), "Enter", "SetupBoss
         -- arena/BG -- el boss-hider solo toca alpha (Show/Hide reales tainean), asi que
         -- ObjectiveTrackerFrame:IsShown() se queda SIEMPRE true; sin este flag Explorer lo
         -- veria "visible" y lo desvanecería/revelaría por su cuenta, peleando este hide.
-        h:SetScript("OnHide", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Tracker.lua:90:30");
+        h:SetScript("OnHide", function()
             if _G.ObjectiveTrackerFrame then
                 _G.ObjectiveTrackerFrame:SetAlpha(0)
                 _G.ObjectiveTrackerFrame._mcfCombatHidden = true
             end
-        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Tracker.lua:90:30"); end)
-        h:SetScript("OnShow", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Tracker.lua:96:30");
+        end)
+        h:SetScript("OnShow", function()
             if _G.ObjectiveTrackerFrame then
                 _G.ObjectiveTrackerFrame._mcfCombatHidden = false
                 _G.ObjectiveTrackerFrame:SetAlpha(1)
             end
-        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Tracker.lua:96:30"); end)
+        end)
         bossHider = h
     end
 
@@ -126,7 +126,7 @@ local function SetupBossHider() Perfy_Trace(Perfy_GetTime(), "Enter", "SetupBoss
         h:Show()
         otf:SetAlpha(1)
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "SetupBossHider MyCustomFrames/Tracker.lua:77:6"); end
+end
 
 -- ==========================================================================
 -- Funciones de Aplicación de Color y Centrado
@@ -143,13 +143,13 @@ Perfy_Trace(Perfy_GetTime(), "Leave", "SetupBossHider MyCustomFrames/Tracker.lua
 -- asi que solo se distinguen por el TEXTO. Es objetivo (NO colorear) si tiene progreso
 -- "n/m", porcentaje, o empieza con "-" o con un numero. LIMITACION: objetivos SIN numero
 -- ("Habla con X") son indistinguibles del titulo (misma fuente) → se colorean igual.
-local function IsObjectiveLine(text) Perfy_Trace(Perfy_GetTime(), "Enter", "IsObjectiveLine MyCustomFrames/Tracker.lua:146:6");
-    if not text then Perfy_Trace(Perfy_GetTime(), "Leave", "IsObjectiveLine MyCustomFrames/Tracker.lua:146:6"); return false end
-    if text:find("%d+%s*/%s*%d+") then Perfy_Trace(Perfy_GetTime(), "Leave", "IsObjectiveLine MyCustomFrames/Tracker.lua:146:6"); return true end   -- progreso "0/10"
-    if text:find("%d+%s*%%") then Perfy_Trace(Perfy_GetTime(), "Leave", "IsObjectiveLine MyCustomFrames/Tracker.lua:146:6"); return true end         -- porcentaje
-    if text:match("^%s*%-") then Perfy_Trace(Perfy_GetTime(), "Leave", "IsObjectiveLine MyCustomFrames/Tracker.lua:146:6"); return true end          -- empieza con "-"
-    if text:match("^%s*%d") then Perfy_Trace(Perfy_GetTime(), "Leave", "IsObjectiveLine MyCustomFrames/Tracker.lua:146:6"); return true end          -- empieza con numero
-    Perfy_Trace(Perfy_GetTime(), "Leave", "IsObjectiveLine MyCustomFrames/Tracker.lua:146:6"); return false
+local function IsObjectiveLine(text)
+    if not text then return false end
+    if text:find("%d+%s*/%s*%d+") then return true end   -- progreso "0/10"
+    if text:find("%d+%s*%%") then return true end         -- porcentaje
+    if text:match("^%s*%-") then return true end          -- empieza con "-"
+    if text:match("^%s*%d") then return true end          -- empieza con numero
+    return false
 end
 
 -- Epoch de la cache de clasificacion: se incrementa cuando cambia la config de color
@@ -158,64 +158,64 @@ local colorEpoch = 0
 
 -- Clasifica el texto → color destino (r,g,b) o nil si no hay que tocarlo (objetivo).
 -- Es la parte CARA (lower + find = basura de strings); su resultado se cachea.
-local function ClassifyText(text) Perfy_Trace(Perfy_GetTime(), "Enter", "ClassifyText MyCustomFrames/Tracker.lua:161:6");
-    if IsObjectiveLine(text) then Perfy_Trace(Perfy_GetTime(), "Leave", "ClassifyText MyCustomFrames/Tracker.lua:161:6"); return nil end
+local function ClassifyText(text)
+    if IsObjectiveLine(text) then return nil end
     local t = text:lower()
     if t:find("completada") or t:find("complete") or t:find("terminad") then
-        return Perfy_Trace_Passthrough("Leave", "ClassifyText MyCustomFrames/Tracker.lua:161:6", COLOR_COMPLETA.r, COLOR_COMPLETA.g, COLOR_COMPLETA.b)
+        return COLOR_COMPLETA.r, COLOR_COMPLETA.g, COLOR_COMPLETA.b
     elseif t:find("diaria") or t:find("daily") then
-        return Perfy_Trace_Passthrough("Leave", "ClassifyText MyCustomFrames/Tracker.lua:161:6", COLOR_DIARIA.r, COLOR_DIARIA.g, COLOR_DIARIA.b)
+        return COLOR_DIARIA.r, COLOR_DIARIA.g, COLOR_DIARIA.b
     elseif t:find("heroica") or t:find("rare") or t:find("élite") or t:find("elite") then
-        return Perfy_Trace_Passthrough("Leave", "ClassifyText MyCustomFrames/Tracker.lua:161:6", COLOR_RARA.r, COLOR_RARA.g, COLOR_RARA.b)
+        return COLOR_RARA.r, COLOR_RARA.g, COLOR_RARA.b
     elseif t:find("legendaria") or t:find("legendary") then
-        return Perfy_Trace_Passthrough("Leave", "ClassifyText MyCustomFrames/Tracker.lua:161:6", COLOR_LEGENDARIA.r, COLOR_LEGENDARIA.g, COLOR_LEGENDARIA.b)
+        return COLOR_LEGENDARIA.r, COLOR_LEGENDARIA.g, COLOR_LEGENDARIA.b
     else
         local c = TitleColor()
-        return Perfy_Trace_Passthrough("Leave", "ClassifyText MyCustomFrames/Tracker.lua:161:6", c.r, c.g, c.b)
+        return c.r, c.g, c.b
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "ClassifyText MyCustomFrames/Tracker.lua:161:6"); end
+end
 
 -- Distingue si un fontstring pertenece al ScenarioObjectiveTracker (titulo de mazmorra/escenario,
 -- ej. "Windrunner Spire") en vez de a un bloque de mision normal (QuestObjectiveTracker, etc.) —
 -- para poder darles un offset de centrado INDEPENDIENTE. Sube por la cadena de padres (acotado)
 -- comparando contra el frame conocido _G.ScenarioObjectiveTracker.
-local function IsScenarioTitle(fs) Perfy_Trace(Perfy_GetTime(), "Enter", "IsScenarioTitle MyCustomFrames/Tracker.lua:182:6");
+local function IsScenarioTitle(fs)
     local scenario = _G.ScenarioObjectiveTracker
-    if not scenario then Perfy_Trace(Perfy_GetTime(), "Leave", "IsScenarioTitle MyCustomFrames/Tracker.lua:182:6"); return false end
+    if not scenario then return false end
     local ok, parent = pcall(fs.GetParent, fs)
     local depth = 0
     while ok and parent and depth < 8 do
-        if parent == scenario then Perfy_Trace(Perfy_GetTime(), "Leave", "IsScenarioTitle MyCustomFrames/Tracker.lua:182:6"); return true end
+        if parent == scenario then return true end
         depth = depth + 1
         ok, parent = pcall(parent.GetParent, parent)
     end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "IsScenarioTitle MyCustomFrames/Tracker.lua:182:6"); return false
+    return false
 end
 
 -- Distingue un HEADER de categoria ("Quests", "World Quests", "Bonus Objectives"...)
 -- de un titulo de mision individual: usan fuentes distintas (ObjectiveTrackerHeaderFont
 -- vs ObjectiveTrackerLineFont, ver /mcftrackerdump). El centrado (SetJustifyH) ahora
 -- SOLO se aplica a headers - los titulos de mision quedan con su alineacion nativa.
-local function IsHeaderFontString(fs) Perfy_Trace(Perfy_GetTime(), "Enter", "IsHeaderFontString MyCustomFrames/Tracker.lua:199:6");
+local function IsHeaderFontString(fs)
     local ok, fo = pcall(fs.GetFontObject, fs)
-    if not ok or not fo or not fo.GetName then Perfy_Trace(Perfy_GetTime(), "Leave", "IsHeaderFontString MyCustomFrames/Tracker.lua:199:6"); return false end
+    if not ok or not fo or not fo.GetName then return false end
     local okN, name = pcall(fo.GetName, fo)
-    return Perfy_Trace_Passthrough("Leave", "IsHeaderFontString MyCustomFrames/Tracker.lua:199:6", okN and type(name) == "string" and name:find("Header") ~= nil)
+    return okN and type(name) == "string" and name:find("Header") ~= nil
 end
 
 -- Alineacion configurable (LEFT/CENTER/RIGHT), aplicada a TODO texto que el tracker toca
 -- (headers, titulos de mision y lineas de objetivo) via SetJustifyH -- mismo metodo que el
 -- centrado de headers ya usaba, ahora elegible por el usuario en vez de hardcodeado a CENTER.
-local function TextAlign() Perfy_Trace(Perfy_GetTime(), "Enter", "TextAlign MyCustomFrames/Tracker.lua:209:6");
+local function TextAlign()
     local c = cfg()
     local a = c and c.textAlign
-    return Perfy_Trace_Passthrough("Leave", "TextAlign MyCustomFrames/Tracker.lua:209:6", (a == "CENTER" or a == "RIGHT") and a or "LEFT")
+    return (a == "CENTER" or a == "RIGHT") and a or "LEFT"
 end
 
-local function ApplyFontColor(fs) Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyFontColor MyCustomFrames/Tracker.lua:215:6");
-    if not fs or fs:GetObjectType() ~= "FontString" then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyFontColor MyCustomFrames/Tracker.lua:215:6"); return end
+local function ApplyFontColor(fs)
+    if not fs or fs:GetObjectType() ~= "FontString" then return end
     local text = fs:GetText()
-    if not text or text == "" then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyFontColor MyCustomFrames/Tracker.lua:215:6"); return end
+    if not text or text == "" then return end
 
     -- Cache por fontstring (en tabla EXTERNA fsState, NO sobre el fontstring de Blizzard):
     -- si el TEXTO no cambio (y la config tampoco), se reutiliza la clasificacion y solo se
@@ -226,20 +226,20 @@ local function ApplyFontColor(fs) Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyFo
     if st and st.txt == text and st.epoch == colorEpoch then
         if fs.SetJustifyH then pcall(fs.SetJustifyH, fs, TextAlign()) end
         local r = st.r
-        if r == nil then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyFontColor MyCustomFrames/Tracker.lua:215:6"); return end   -- decision cacheada: "objetivo, no tocar" (solo color)
+        if r == nil then return end   -- decision cacheada: "objetivo, no tocar" (solo color)
         local cr, cg, cb, a = fs:GetTextColor()
         if math.abs((cr or 0) - r) > 0.004 or math.abs((cg or 0) - st.g) > 0.004
            or math.abs((cb or 0) - st.b) > 0.004 then
             fs:SetTextColor(r, st.g, st.b, a or 1)
         end
-        Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyFontColor MyCustomFrames/Tracker.lua:215:6"); return
+        return
     end
 
     local r, g, b = ClassifyText(text)
     if not st then st = {}; fsState[fs] = st end
     st.txt, st.epoch, st.r, st.g, st.b = text, colorEpoch, r, g, b
     if fs.SetJustifyH then pcall(fs.SetJustifyH, fs, TextAlign()) end
-    if r == nil then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyFontColor MyCustomFrames/Tracker.lua:215:6"); return end   -- objetivo de mision: mantener su color nativo (alineacion SI se aplica arriba)
+    if r == nil then return end   -- objetivo de mision: mantener su color nativo (alineacion SI se aplica arriba)
     local a = select(4, fs:GetTextColor()) or 1
     fs:SetTextColor(r, g, b, a)
     -- isHeader se sigue clasificando (usado mas abajo para el offset de centrado propio de
@@ -265,17 +265,17 @@ local function ApplyFontColor(fs) Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyFo
         local c = cfg()
         local off = st.isScenario and (c and c.dungeonTitleOffsetX) or (c and c.titleOffsetX)
         local adjX = st.origX + (off or -18)
-        pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Tracker.lua:268:14");
+        pcall(function()
             fs:ClearAllPoints()
             fs:SetPoint(st.origPoint, st.origRelTo, st.origRelPoint, adjX, st.origY)
             fs:SetWidth(230)
-        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Tracker.lua:268:14"); end)
+        end)
         st.widenedEpoch = colorEpoch
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyFontColor MyCustomFrames/Tracker.lua:215:6"); end
+end
 
-local function ApplyTextureColor(tex) Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyTextureColor MyCustomFrames/Tracker.lua:277:6");
-    if not tex or tex:GetObjectType() ~= "Texture" then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyTextureColor MyCustomFrames/Tracker.lua:277:6"); return end
+local function ApplyTextureColor(tex)
+    if not tex or tex:GetObjectType() ~= "Texture" then return end
 
     -- Aplicamos color solo a texturas que parezcan separadores o headers.
     -- La CLASIFICACION (lower+find) se cachea por textura en tabla EXTERNA texState (NO sobre la
@@ -297,7 +297,7 @@ local function ApplyTextureColor(tex) Perfy_Trace(Perfy_GetTime(), "Enter", "App
         if tex.SetDesaturated then tex:SetDesaturated(true) end
         tex:SetVertexColor(c.r, c.g, c.b, 1)
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyTextureColor MyCustomFrames/Tracker.lua:277:6"); end
+end
 
 -- ==========================================================================
 -- Recorrido Recursivo (TraverseFrame)
@@ -332,7 +332,7 @@ local RISKY_CHILD_FIELDS = {
     "poiButton", "rightEdgeFrame",
 }
 
-local function GetRiskyChildren(frame) Perfy_Trace(Perfy_GetTime(), "Enter", "GetRiskyChildren MyCustomFrames/Tracker.lua:335:6");
+local function GetRiskyChildren(frame)
     local set
     for _, field in ipairs(RISKY_CHILD_FIELDS) do
         local child = frame[field]
@@ -341,15 +341,15 @@ local function GetRiskyChildren(frame) Perfy_Trace(Perfy_GetTime(), "Enter", "Ge
             set[child] = true
         end
     end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "GetRiskyChildren MyCustomFrames/Tracker.lua:335:6"); return set
+    return set
 end
 
-local function TraverseFrame(frame) Perfy_Trace(Perfy_GetTime(), "Enter", "TraverseFrame MyCustomFrames/Tracker.lua:347:6");
-    if not frame or visitedFrames[frame] then Perfy_Trace(Perfy_GetTime(), "Leave", "TraverseFrame MyCustomFrames/Tracker.lua:347:6"); return end
+local function TraverseFrame(frame)
+    if not frame or visitedFrames[frame] then return end
     -- Nuestro boss hider (SecureHandlerStateTemplate) cuelga del tracker: tocarlo desde
     -- el walk inseguro contamina su entorno restringido. Saltarlo por completo (marcado en
     -- la tabla externa skipTraverse, no con una clave sobre el frame).
-    if skipTraverse[frame] then Perfy_Trace(Perfy_GetTime(), "Leave", "TraverseFrame MyCustomFrames/Tracker.lua:347:6"); return end
+    if skipTraverse[frame] then return end
     visitedFrames[frame] = true
 
     -- Scenario/UIWidget tracker: SOLO su Header (si lo tiene), nada de regions/children propios.
@@ -359,7 +359,7 @@ local function TraverseFrame(frame) Perfy_Trace(Perfy_GetTime(), "Enter", "Trave
         if header and type(header) == "table" and header.GetObjectType then
             TraverseFrame(header)
         end
-        Perfy_Trace(Perfy_GetTime(), "Leave", "TraverseFrame MyCustomFrames/Tracker.lua:347:6"); return
+        return
     end
 
     -- 1. Buscar en propiedades explícitas (Arquitectura de frames moderna)
@@ -402,38 +402,38 @@ local function TraverseFrame(frame) Perfy_Trace(Perfy_GetTime(), "Enter", "Trave
             end
         end
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "TraverseFrame MyCustomFrames/Tracker.lua:347:6"); end
+end
 
 -- ==========================================================================
 -- Ejecución Principal y Eventos
 -- ==========================================================================
-local function RecolorTracker() Perfy_Trace(Perfy_GetTime(), "Enter", "RecolorTracker MyCustomFrames/Tracker.lua:410:6");
-    if not TrackerEnabled() then Perfy_Trace(Perfy_GetTime(), "Leave", "RecolorTracker MyCustomFrames/Tracker.lua:410:6"); return end
+local function RecolorTracker()
+    if not TrackerEnabled() then return end
     local otf = _G.ObjectiveTrackerFrame
     if otf and (not otf.IsShown or otf:IsShown()) then
         wipe(visitedFrames)
         TraverseFrame(otf)
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "RecolorTracker MyCustomFrames/Tracker.lua:410:6"); end
+end
 
-ns.RefreshTracker = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.RefreshTracker MyCustomFrames/Tracker.lua:419:20");
+ns.RefreshTracker = function()
     colorEpoch = colorEpoch + 1   -- invalida la cache de clasificacion (cambio de config)
     SetupBossHider()
     if TrackerEnabled() then
         RecolorTracker()
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "ns.RefreshTracker MyCustomFrames/Tracker.lua:419:20"); end
+end
 
 -- Debounce simple para evitar ejecuciones múltiples en el mismo frame
 local updatePending = false
-local function ScheduleRecolor() Perfy_Trace(Perfy_GetTime(), "Enter", "ScheduleRecolor MyCustomFrames/Tracker.lua:429:6");
-    if not TrackerEnabled() or updatePending then Perfy_Trace(Perfy_GetTime(), "Leave", "ScheduleRecolor MyCustomFrames/Tracker.lua:429:6"); return end
+local function ScheduleRecolor()
+    if not TrackerEnabled() or updatePending then return end
     updatePending = true
-    C_Timer.After(0.05, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Tracker.lua:432:24"); 
+    C_Timer.After(0.05, function() 
         updatePending = false
         RecolorTracker() 
-    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Tracker.lua:432:24"); end)
-Perfy_Trace(Perfy_GetTime(), "Leave", "ScheduleRecolor MyCustomFrames/Tracker.lua:429:6"); end
+    end)
+end
 
 -- Hook a las actualizaciones nativas (reemplaza el ticker permanente)
 if type(_G.ObjectiveTracker_Update) == "function" then
@@ -458,22 +458,22 @@ local eventsToTrack = {
 }
 
 for _, e in ipairs(eventsToTrack) do 
-    pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Tracker.lua:461:10"); ev:RegisterEvent(e) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Tracker.lua:461:10"); end) 
+    pcall(function() ev:RegisterEvent(e) end) 
 end
 
-ev:SetScript("OnEvent", function(_, event) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Tracker.lua:464:24");
+ev:SetScript("OnEvent", function(_, event)
     -- Arena/BG se resuelven en Lua (IsInInstance) → recalcular el driver al entrar a la
     -- instancia/zona, no solo al login.
     if event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then SetupBossHider() end
     ScheduleRecolor()
-Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Tracker.lua:464:24"); end)
+end)
 
 -- ==========================================================================
 -- DIAGNOSTICO: /mcftrackerdump — vuelca fuente/parent de cada texto del tracker
 -- (solo LECTURA, no colorea) para distinguir titulo vs objetivo. Traquea una
 -- mision antes de correrlo.
 -- ==========================================================================
-local function MCF_ShowCopyBox(text) Perfy_Trace(Perfy_GetTime(), "Enter", "MCF_ShowCopyBox MyCustomFrames/Tracker.lua:476:6");
+local function MCF_ShowCopyBox(text)
     local f = _G.MCFDumpFrame
     if not f then
         f = CreateFrame("Frame", "MCFDumpFrame", UIParent, "BackdropTemplate")
@@ -495,7 +495,7 @@ local function MCF_ShowCopyBox(text) Perfy_Trace(Perfy_GetTime(), "Enter", "MCF_
         local eb = CreateFrame("EditBox", nil, sf)
         eb:SetMultiLine(true); eb:SetFontObject(ChatFontNormal)
         eb:SetWidth(500); eb:SetAutoFocus(false)
-        eb:SetScript("OnEscapePressed", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Tracker.lua:498:40"); f:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Tracker.lua:498:40"); end)
+        eb:SetScript("OnEscapePressed", function() f:Hide() end)
         sf:SetScrollChild(eb)
         f.eb = eb
     end
@@ -503,33 +503,33 @@ local function MCF_ShowCopyBox(text) Perfy_Trace(Perfy_GetTime(), "Enter", "MCF_
     f.eb:HighlightText()
     f:Show()
     f.eb:SetFocus()
-Perfy_Trace(Perfy_GetTime(), "Leave", "MCF_ShowCopyBox MyCustomFrames/Tracker.lua:476:6"); end
+end
 
 SLASH_MCFTRACKERDUMP1 = "/mcftrackerdump"
-SlashCmdList["MCFTRACKERDUMP"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFTRACKERDUMP MyCustomFrames/Tracker.lua:509:33");
+SlashCmdList["MCFTRACKERDUMP"] = function()
     local otf = _G.ObjectiveTrackerFrame
-    if not otf then print("|cffff0000[MCF]|r No ObjectiveTrackerFrame.") Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFTRACKERDUMP MyCustomFrames/Tracker.lua:509:33"); return end
+    if not otf then print("|cffff0000[MCF]|r No ObjectiveTrackerFrame.") return end
     local lines = { "texto | tamaño | fontObject | parent" }
     local seen = {}
-    local function dumpFS(fs) Perfy_Trace(Perfy_GetTime(), "Enter", "dumpFS MyCustomFrames/Tracker.lua:514:10");
-        if not fs or type(fs) ~= "table" or not fs.GetObjectType then Perfy_Trace(Perfy_GetTime(), "Leave", "dumpFS MyCustomFrames/Tracker.lua:514:10"); return end
-        if fs:GetObjectType() ~= "FontString" then Perfy_Trace(Perfy_GetTime(), "Leave", "dumpFS MyCustomFrames/Tracker.lua:514:10"); return end
+    local function dumpFS(fs)
+        if not fs or type(fs) ~= "table" or not fs.GetObjectType then return end
+        if fs:GetObjectType() ~= "FontString" then return end
         local txt = fs:GetText()
-        if not txt or txt == "" then Perfy_Trace(Perfy_GetTime(), "Leave", "dumpFS MyCustomFrames/Tracker.lua:514:10"); return end
+        if not txt or txt == "" then return end
         local size, flags = "?", "?"
-        pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Tracker.lua:520:14"); local _; _, size, flags = fs:GetFont() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Tracker.lua:520:14"); end)
+        pcall(function() local _; _, size, flags = fs:GetFont() end)
         local foName = "?"
-        pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Tracker.lua:522:14"); local fo = fs:GetFontObject(); if fo and fo.GetName then foName = fo:GetName() or "(anon)" end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Tracker.lua:522:14"); end)
+        pcall(function() local fo = fs:GetFontObject(); if fo and fo.GetName then foName = fo:GetName() or "(anon)" end end)
         local parType, parName = "?", "?"
-        pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Tracker.lua:524:14"); local par = fs:GetParent(); if par then
+        pcall(function() local par = fs:GetParent(); if par then
             parType = (par.GetObjectType and par:GetObjectType()) or "?"
             parName = (par.GetName and par:GetName()) or "(anon)"
-        end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Tracker.lua:524:14"); end)
+        end end)
         lines[#lines + 1] = string.format("%s | sz=%s fl=%s | fo=%s | par=%s(%s)",
             tostring(txt):sub(1, 30), tostring(size), tostring(flags), tostring(foName), tostring(parType), tostring(parName))
-    Perfy_Trace(Perfy_GetTime(), "Leave", "dumpFS MyCustomFrames/Tracker.lua:514:10"); end
-    local function walk(frame, depth) Perfy_Trace(Perfy_GetTime(), "Enter", "walk MyCustomFrames/Tracker.lua:531:10");
-        if not frame or seen[frame] or depth > 14 then Perfy_Trace(Perfy_GetTime(), "Leave", "walk MyCustomFrames/Tracker.lua:531:10"); return end
+    end
+    local function walk(frame, depth)
+        if not frame or seen[frame] or depth > 14 then return end
         seen[frame] = true
         for _, pn in ipairs({ "Text", "Title", "Header", "Label", "HeaderText" }) do
             local e = frame[pn]
@@ -541,10 +541,10 @@ SlashCmdList["MCFTRACKERDUMP"] = function() Perfy_Trace(Perfy_GetTime(), "Enter"
         if frame.GetNumChildren then
             for i = 1, frame:GetNumChildren() do walk(select(i, frame:GetChildren()), depth + 1) end
         end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "walk MyCustomFrames/Tracker.lua:531:10"); end
+    end
     walk(otf, 0)
     MCF_ShowCopyBox(table.concat(lines, "\n"))
-Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFTRACKERDUMP MyCustomFrames/Tracker.lua:509:33"); end
+end
 
 -- Red de seguridad LENTA: Blizzard re-colorea el TITULO de la mision tras sus
 -- updates (y en mouseover / tras reload), pisando nuestro color. Este re-aplicado
@@ -566,9 +566,9 @@ Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFTRACKERDUMP MyCustomFrame
 -- SOLO toca el alpha para (a) esconder en preview, o (b) restaurarlo cuando ES este mismo
 -- codigo el que lo habia escondido (previewApplied) — nunca pisa el alpha del boss-hider.
 local previewApplied = false
-local function ApplyPreviewHide() Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyPreviewHide MyCustomFrames/Tracker.lua:569:6");
+local function ApplyPreviewHide()
     local otf = _G.ObjectiveTrackerFrame
-    if not otf then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyPreviewHide MyCustomFrames/Tracker.lua:569:6"); return end
+    if not otf then return end
     local db = ns.GetDB and ns.GetDB()
     local hide = ns.IsUnlocked and ns.IsUnlocked() and db and db.lockHide and db.lockHide.tracker
     if hide then
@@ -578,7 +578,7 @@ local function ApplyPreviewHide() Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyPr
         otf:SetAlpha(1)
         previewApplied = false
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyPreviewHide MyCustomFrames/Tracker.lua:569:6"); end
+end
 ns.ApplyTrackerPreviewHide = ApplyPreviewHide   -- expuesto para reaccionar AL TOQUE (ver Options.lua OnUnlockChanged)
 -- PERF (2026-07-19, "arregla todo"): RecolorTracker hace wipe(visitedFrames)
 -- + un recorrido COMPLETO del arbol del Objective Tracker (GetRegions/
@@ -589,10 +589,10 @@ ns.ApplyTrackerPreviewHide = ApplyPreviewHide   -- expuesto para reaccionar AL T
 -- (no se borra, el titulo quedaria flaky) pero a 1s en vez de 0.4s: sigue
 -- corrigiendo cualquier drift en <=1s, imperceptible para este caso de borde,
 -- y reduce el costo del recorrido completo a menos de la mitad.
-C_Timer.NewTicker(1.0, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Tracker.lua:592:23");
+C_Timer.NewTicker(1.0, function()
     ApplyPreviewHide()
     RecolorTracker()
-Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Tracker.lua:592:23"); end)
+end)
 
 -- ==========================================================================
 -- Auto-scale por resolucion -- REVERTIDO (2026-07-24). Se intento 2 veces
@@ -608,4 +608,3 @@ Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Tracker.lua:59
 -- addon. Sin una solucion confiable sin tocar directamente el sistema de
 -- Edit Mode (mas riesgo del que vale la pena), se deja el tracker 100%
 -- nativo, sin ningun SetScale de este addon.
-Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Tracker.lua");

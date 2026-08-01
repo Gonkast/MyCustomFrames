@@ -1,4 +1,4 @@
---[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/NameplateBuild.lua"); local ADDON, ns = ...
+local ADDON, ns = ...
 
 -- ==========================================================================
 -- MyCustomFrames - NameplateBuild.lua
@@ -58,11 +58,11 @@ B.NAME_HOLDER_W, B.NAME_HOLDER_H = 220, 20
 -- (direccion "center"), el ancho del holder decide donde cae el centro y por lo
 -- tanto TODOS los iconos. Un holder de 2 iconos en el mock contra uno de 3 en
 -- el real fue un bug reportado.
-function B.LayoutAuraHolder(holder, p) Perfy_Trace(Perfy_GetTime(), "Enter", "B.LayoutAuraHolder MyCustomFrames/NameplateBuild.lua:61:0");
+function B.LayoutAuraHolder(holder, p)
     holder:SetSize(L.AuraHolderSize(p))
-Perfy_Trace(Perfy_GetTime(), "Leave", "B.LayoutAuraHolder MyCustomFrames/NameplateBuild.lua:61:0"); end
+end
 
-function B.LayoutAuraIcon(b, slot, p) Perfy_Trace(Perfy_GetTime(), "Enter", "B.LayoutAuraIcon MyCustomFrames/NameplateBuild.lua:65:0");
+function B.LayoutAuraIcon(b, slot, p)
     local sz = L.AuraIconSize(p)
     b:SetSize(sz, sz)
     b:ClearAllPoints()
@@ -71,16 +71,16 @@ function B.LayoutAuraIcon(b, slot, p) Perfy_Trace(Perfy_GetTime(), "Enter", "B.L
     b.border:ClearAllPoints()
     b.border:SetPoint("TOPLEFT", -inset, inset)
     b.border:SetPoint("BOTTOMRIGHT", inset, -inset)
-Perfy_Trace(Perfy_GetTime(), "Leave", "B.LayoutAuraIcon MyCustomFrames/NameplateBuild.lua:65:0"); end
+end
 
 -- Redimensiona holder + sus iconos de una. Es lo que llaman los dos lados
 -- cuando cambia auraIconSize/auraPadding.
-function B.LayoutAuraGroup(holder, p) Perfy_Trace(Perfy_GetTime(), "Enter", "B.LayoutAuraGroup MyCustomFrames/NameplateBuild.lua:78:0");
+function B.LayoutAuraGroup(holder, p)
     B.LayoutAuraHolder(holder, p)
     for slot, b in ipairs(holder.icons or {}) do
         B.LayoutAuraIcon(b, slot, p)
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "B.LayoutAuraGroup MyCustomFrames/NameplateBuild.lua:78:0"); end
+end
 
 -- ---- Construccion de auras -----------------------------------------------
 
@@ -89,7 +89,7 @@ Perfy_Trace(Perfy_GetTime(), "Leave", "B.LayoutAuraGroup MyCustomFrames/Nameplat
 -- unica forma secret-safe de mostrarla (ver la nota larga en Nameplates.lua).
 -- En el panel no hay unidad ni cooldown que mostrar, asi que va un Frame simple
 -- con textura plana y un numero fijo para que se vea algo.
-function B.AuraIcon(holder, slot, p, preview) Perfy_Trace(Perfy_GetTime(), "Enter", "B.AuraIcon MyCustomFrames/NameplateBuild.lua:92:0");
+function B.AuraIcon(holder, slot, p, preview)
     local b = CreateFrame(preview and "Frame" or "Button", nil, holder)
     if not preview then
         -- "los numeros siempre por encima en el strata" (pedido 2026-07-19):
@@ -153,12 +153,12 @@ function B.AuraIcon(holder, slot, p, preview) Perfy_Trace(Perfy_GetTime(), "Ente
 
     B.LayoutAuraIcon(b, slot, p)
     if not preview then b:Hide() end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "B.AuraIcon MyCustomFrames/NameplateBuild.lua:92:0"); return b
+    return b
 end
 
 -- Holder + sus AURA_MAX_PER_CAT iconos. La cantidad sale de ns.NPLayout en los
 -- dos casos -- el mock la tenia escrita a mano como 3.
-function B.AuraGroup(parent, p, preview) Perfy_Trace(Perfy_GetTime(), "Enter", "B.AuraGroup MyCustomFrames/NameplateBuild.lua:161:0");
+function B.AuraGroup(parent, p, preview)
     local holder = CreateFrame("Frame", nil, parent)
     local icons = {}
     for slot = 1, L.AURA_MAX_PER_CAT do
@@ -166,7 +166,7 @@ function B.AuraGroup(parent, p, preview) Perfy_Trace(Perfy_GetTime(), "Enter", "
     end
     holder.icons = icons
     B.LayoutAuraHolder(holder, p)
-    Perfy_Trace(Perfy_GetTime(), "Leave", "B.AuraGroup MyCustomFrames/NameplateBuild.lua:161:0"); return holder
+    return holder
 end
 
 -- ==========================================================================
@@ -197,11 +197,11 @@ end
 -- ==========================================================================
 
 -- Nombre logico de ancla -> frame de la tabla de piezas.
-local function Resolve(P, relTo) Perfy_Trace(Perfy_GetTime(), "Enter", "Resolve MyCustomFrames/NameplateBuild.lua:200:6");
-    if relTo == "health" then return Perfy_Trace_Passthrough("Leave", "Resolve MyCustomFrames/NameplateBuild.lua:200:6", P.health) end
-    if relTo == "cast"   then return Perfy_Trace_Passthrough("Leave", "Resolve MyCustomFrames/NameplateBuild.lua:200:6", P.cast) end
-    if relTo == "name"   then return Perfy_Trace_Passthrough("Leave", "Resolve MyCustomFrames/NameplateBuild.lua:200:6", P.name) end
-    return Perfy_Trace_Passthrough("Leave", "Resolve MyCustomFrames/NameplateBuild.lua:200:6", P.root)
+local function Resolve(P, relTo)
+    if relTo == "health" then return P.health end
+    if relTo == "cast"   then return P.cast end
+    if relTo == "name"   then return P.name end
+    return P.root
 end
 
 -- Redondeo al pixel FISICO. Vivia en Nameplates.lua y solo lo recibian el %% de
@@ -210,19 +210,19 @@ end
 -- blurrea texto y texturas cuando el nameplate esta a escala chica.
 local uiUnitFactor = 1
 local pixelMon = CreateFrame("Frame")
-local function RefreshUnitFactor() Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshUnitFactor MyCustomFrames/NameplateBuild.lua:213:6");
+local function RefreshUnitFactor()
     local _, h = GetPhysicalScreenSize()
     if h and h > 0 then uiUnitFactor = 768.0 / h end
-Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshUnitFactor MyCustomFrames/NameplateBuild.lua:213:6"); end
+end
 pixelMon:RegisterEvent("DISPLAY_SIZE_CHANGED")
 pixelMon:SetScript("OnEvent", RefreshUnitFactor)
 RefreshUnitFactor()
 
-local function Snap(region, v) Perfy_Trace(Perfy_GetTime(), "Enter", "Snap MyCustomFrames/NameplateBuild.lua:221:6");
-    if v == 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "Snap MyCustomFrames/NameplateBuild.lua:221:6"); return 0 end
+local function Snap(region, v)
+    if v == 0 then return 0 end
     local ok, scale = pcall(region.GetEffectiveScale, region)
-    if not (ok and type(scale) == "number" and scale > 0) then Perfy_Trace(Perfy_GetTime(), "Leave", "Snap MyCustomFrames/NameplateBuild.lua:221:6"); return v end
-    return Perfy_Trace_Passthrough("Leave", "Snap MyCustomFrames/NameplateBuild.lua:221:6", math.floor((v * scale) / uiUnitFactor + 0.5) * uiUnitFactor / scale)
+    if not (ok and type(scale) == "number" and scale > 0) then return v end
+    return math.floor((v * scale) / uiUnitFactor + 0.5) * uiUnitFactor / scale
 end
 
 -- Coloca UNA pieza. EXPORTADA: Nameplates.lua la llama para cada elemento real,
@@ -231,8 +231,8 @@ end
 --
 -- `scale` = escala del plate (GetEffectiveScale del nameplate real, o la escala
 -- de referencia del editor). Ver la nota de los regimenes en NameplateLayout.
-function B.Place(elem, anchor, l, scale) Perfy_Trace(Perfy_GetTime(), "Enter", "B.Place MyCustomFrames/NameplateBuild.lua:234:0");
-    if not (elem and anchor and l) then Perfy_Trace(Perfy_GetTime(), "Leave", "B.Place MyCustomFrames/NameplateBuild.lua:234:0"); return end
+function B.Place(elem, anchor, l, scale)
+    if not (elem and anchor and l) then return end
     scale = (type(scale) == "number" and scale > 0) and scale or 1
     local k = 1
     if l.scaleRegime == "screen" then
@@ -249,21 +249,21 @@ function B.Place(elem, anchor, l, scale) Perfy_Trace(Perfy_GetTime(), "Enter", "
     end
     elem:ClearAllPoints()
     elem:SetPoint(l.point, anchor, l.relPoint, Snap(elem, l.x * k), Snap(elem, l.y * k))
-Perfy_Trace(Perfy_GetTime(), "Leave", "B.Place MyCustomFrames/NameplateBuild.lua:234:0"); end
+end
 
-local function Place(P, elem, l, scale) Perfy_Trace(Perfy_GetTime(), "Enter", "Place MyCustomFrames/NameplateBuild.lua:254:6");
-    if not (elem and l) then Perfy_Trace(Perfy_GetTime(), "Leave", "Place MyCustomFrames/NameplateBuild.lua:254:6"); return end
+local function Place(P, elem, l, scale)
+    if not (elem and l) then return end
     local anchor = Resolve(P, l.relTo)
-    if not anchor then Perfy_Trace(Perfy_GetTime(), "Leave", "Place MyCustomFrames/NameplateBuild.lua:254:6"); return end
+    if not anchor then return end
     B.Place(elem, anchor, l, scale)
-Perfy_Trace(Perfy_GetTime(), "Leave", "Place MyCustomFrames/NameplateBuild.lua:254:6"); end
+end
 
 -- P: { root, health, healthBg, healthValue, cast, castText, name,
 --      classification, raidMark, auras = { big=, personal=, enemy= } }
 -- Cualquier pieza puede faltar: se saltea (el real y el editor no tienen
 -- exactamente el mismo juego -- ej. el editor no dibuja fondo de highlight).
-function B.LayoutPlate(P, p, scale) Perfy_Trace(Perfy_GetTime(), "Enter", "B.LayoutPlate MyCustomFrames/NameplateBuild.lua:265:0");
-    if not (P and P.root) then Perfy_Trace(Perfy_GetTime(), "Leave", "B.LayoutPlate MyCustomFrames/NameplateBuild.lua:265:0"); return end
+function B.LayoutPlate(P, p, scale)
+    if not (P and P.root) then return end
     scale = (type(scale) == "number" and scale > 0) and scale or 1
     local L2 = L
 
@@ -295,6 +295,4 @@ function B.LayoutPlate(P, p, scale) Perfy_Trace(Perfy_GetTime(), "Enter", "B.Lay
             B.LayoutAuraGroup(holder, p)
         end
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "B.LayoutPlate MyCustomFrames/NameplateBuild.lua:265:0"); end
-
-Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/NameplateBuild.lua");
+end

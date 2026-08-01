@@ -1,4 +1,4 @@
---[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Profiler.lua"); local ADDON, ns = ...
+local ADDON, ns = ...
 
 -- ==========================================================================
 -- MyCustomFrames - Profiler.lua
@@ -33,10 +33,10 @@ ns.Prof = {}
 
 -- Envuelve `fn` para que sume su tiempo bajo la etiqueta `name`.
 -- Devuelve la funcion envuelta; el llamador la usa en lugar de la original.
-function ns.Prof.Wrap(name, fn) Perfy_Trace(Perfy_GetTime(), "Enter", "Prof.Wrap MyCustomFrames/Profiler.lua:36:0");
-    if type(fn) ~= "function" then Perfy_Trace(Perfy_GetTime(), "Leave", "Prof.Wrap MyCustomFrames/Profiler.lua:36:0"); return fn end
-    return Perfy_Trace_Passthrough("Leave", "Prof.Wrap MyCustomFrames/Profiler.lua:36:0", function(...) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Profiler.lua:38:11");
-        if not active then return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Profiler.lua:38:11", fn(...)) end
+function ns.Prof.Wrap(name, fn)
+    if type(fn) ~= "function" then return fn end
+    return function(...)
+        if not active then return fn(...) end
         local t0 = debugprofilestop()
         -- Se preservan hasta 4 retornos: alcanza para todo lo que envolvemos
         -- (los OnUpdate y los tickers no devuelven nada), y evita el coste de
@@ -44,35 +44,35 @@ function ns.Prof.Wrap(name, fn) Perfy_Trace(Perfy_GetTime(), "Enter", "Prof.Wrap
         local a, b, c, d = fn(...)
         acc[name] = (acc[name] or 0) + (debugprofilestop() - t0)
         calls[name] = (calls[name] or 0) + 1
-        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Profiler.lua:38:11"); return a, b, c, d
-    end)
+        return a, b, c, d
+    end
 end
 
 -- Cronometra UNA llamada ya existente, sin envolverla. Wrap() crea una funcion
 -- nueva, asi que usarlo dentro de un ticker alocaria un closure por pasada --
 -- justo lo que estamos tratando de reducir. Esto se llama en el sitio.
-function ns.Prof.Time(name, fn, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "Prof.Time MyCustomFrames/Profiler.lua:54:0");
-    if not active then return Perfy_Trace_Passthrough("Leave", "Prof.Time MyCustomFrames/Profiler.lua:54:0", fn(...)) end
+function ns.Prof.Time(name, fn, ...)
+    if not active then return fn(...) end
     local t0 = debugprofilestop()
     local a, b, c, d = fn(...)
     acc[name] = (acc[name] or 0) + (debugprofilestop() - t0)
     calls[name] = (calls[name] or 0) + 1
-    Perfy_Trace(Perfy_GetTime(), "Leave", "Prof.Time MyCustomFrames/Profiler.lua:54:0"); return a, b, c, d
+    return a, b, c, d
 end
 
-function ns.Prof.Start() Perfy_Trace(Perfy_GetTime(), "Enter", "Prof.Start MyCustomFrames/Profiler.lua:63:0");
+function ns.Prof.Start()
     wipe(acc); wipe(calls)
     since = GetTime()
     active = true
-Perfy_Trace(Perfy_GetTime(), "Leave", "Prof.Start MyCustomFrames/Profiler.lua:63:0"); end
+end
 
-function ns.Prof.IsActive() Perfy_Trace(Perfy_GetTime(), "Enter", "Prof.IsActive MyCustomFrames/Profiler.lua:69:0"); Perfy_Trace(Perfy_GetTime(), "Leave", "Prof.IsActive MyCustomFrames/Profiler.lua:69:0"); return active end
+function ns.Prof.IsActive() return active end
 
 -- Devuelve una lista ordenada { name, ms, msPerSec, callsPerSec } y los segundos
 -- transcurridos. No apaga la medicion: se puede pedir el reporte varias veces.
-function ns.Prof.Report() Perfy_Trace(Perfy_GetTime(), "Enter", "Prof.Report MyCustomFrames/Profiler.lua:73:0");
+function ns.Prof.Report()
     local elapsed = GetTime() - since
-    if elapsed <= 0 then return Perfy_Trace_Passthrough("Leave", "Prof.Report MyCustomFrames/Profiler.lua:73:0", {}, 0) end
+    if elapsed <= 0 then return {}, 0 end
     local list = {}
     for name, ms in pairs(acc) do
         list[#list + 1] = {
@@ -81,12 +81,10 @@ function ns.Prof.Report() Perfy_Trace(Perfy_GetTime(), "Enter", "Prof.Report MyC
             callsPerSec = (calls[name] or 0) / elapsed,
         }
     end
-    table.sort(list, function(a, b) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Profiler.lua:84:21"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Profiler.lua:84:21", a.ms > b.ms) end)
-    Perfy_Trace(Perfy_GetTime(), "Leave", "Prof.Report MyCustomFrames/Profiler.lua:73:0"); return list, elapsed
+    table.sort(list, function(a, b) return a.ms > b.ms end)
+    return list, elapsed
 end
 
-function ns.Prof.Stop() Perfy_Trace(Perfy_GetTime(), "Enter", "Prof.Stop MyCustomFrames/Profiler.lua:88:0");
+function ns.Prof.Stop()
     active = false
-Perfy_Trace(Perfy_GetTime(), "Leave", "Prof.Stop MyCustomFrames/Profiler.lua:88:0"); end
-
-Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Profiler.lua");
+end

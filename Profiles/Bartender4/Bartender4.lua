@@ -1,4 +1,4 @@
---[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Profiles/Bartender4/Bartender4.lua");
+
 Bartender4DB = {
 ["namespaces"] = {
 ["ActionBars"] = {
@@ -436,5 +436,3 @@ Bartender4DB = {
 },
 },
 }
-
-Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Profiles/Bartender4/Bartender4.lua");

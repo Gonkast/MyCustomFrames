@@ -1,4 +1,4 @@
---[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/BartenderScale.lua"); -- ==========================================================================
+-- ==========================================================================
 -- MyCustomFrames - BartenderScale.lua
 -- Aplica ns.ResScale() (mismo auto-scale por resolucion/tamaño de ventana que
 -- ya usan Units/Portraits/Auras/InfoBar/etc, ver core.lua) a las barras de
@@ -44,36 +44,36 @@ local hooked = {}         -- [barName] = true una vez enganchado el hook
 
 local ApplyBarScale, HookBarScale
 
-HookBarScale = function(name, bar) Perfy_Trace(Perfy_GetTime(), "Enter", "HookBarScale MyCustomFrames/BartenderScale.lua:47:15");
-    if hooked[name] then Perfy_Trace(Perfy_GetTime(), "Leave", "HookBarScale MyCustomFrames/BartenderScale.lua:47:15"); return end
+HookBarScale = function(name, bar)
+    if hooked[name] then return end
     hooked[name] = true
-    hooksecurefunc(bar, "SetScale", function(self, s) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/BartenderScale.lua:50:36");
-        if applying[name] or not s then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/BartenderScale.lua:50:36"); return end
+    hooksecurefunc(bar, "SetScale", function(self, s)
+        if applying[name] or not s then return end
         local rs = ns.ResScale and ns.ResScale() or 1
-        if rs <= 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/BartenderScale.lua:50:36"); return end
+        if rs <= 0 then return end
         local newBase = s / rs
         if not baseScale[name] or math.abs(newBase - baseScale[name]) > 0.001 then
             baseScale[name] = newBase
             ApplyBarScale(name)
         end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/BartenderScale.lua:50:36"); end)
-Perfy_Trace(Perfy_GetTime(), "Leave", "HookBarScale MyCustomFrames/BartenderScale.lua:47:15"); end
+    end)
+end
 
-ApplyBarScale = function(name) Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyBarScale MyCustomFrames/BartenderScale.lua:62:16");
+ApplyBarScale = function(name)
     local bar = _G[name]
-    if not bar or not ns.ResScale then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyBarScale MyCustomFrames/BartenderScale.lua:62:16"); return end
-    if InCombatLockdown() then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyBarScale MyCustomFrames/BartenderScale.lua:62:16"); return end   -- red de seguridad: reintenta en PLAYER_REGEN_ENABLED
+    if not bar or not ns.ResScale then return end
+    if InCombatLockdown() then return end   -- red de seguridad: reintenta en PLAYER_REGEN_ENABLED
     HookBarScale(name, bar)
     if not baseScale[name] then baseScale[name] = bar:GetScale() or 1 end
     applying[name] = true
     pcall(bar.SetScale, bar, baseScale[name] * ns.ResScale())
     applying[name] = false
-Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyBarScale MyCustomFrames/BartenderScale.lua:62:16"); end
+end
 
 local pendingApply = false
 local UpdatePetBarVisibility   -- fwd-declarada (definida mas abajo)
-local function ApplyAllBarScales() Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyAllBarScales MyCustomFrames/BartenderScale.lua:75:6");
-    if InCombatLockdown() then pendingApply = true; Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyAllBarScales MyCustomFrames/BartenderScale.lua:75:6"); return end
+local function ApplyAllBarScales()
+    if InCombatLockdown() then pendingApply = true; return end
     pendingApply = false
     for _, name in ipairs(BT4_BARS) do
         if _G[name] then ApplyBarScale(name) end
@@ -86,7 +86,7 @@ local function ApplyAllBarScales() Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyA
     -- ns.RefreshAll() -> esta funcion, asi que reaplicarlo aca lo corrige en el
     -- mismo tick (y de paso cubre cualquier otro camino que pase por RefreshAll).
     if UpdatePetBarVisibility then UpdatePetBarVisibility() end
-Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyAllBarScales MyCustomFrames/BartenderScale.lua:75:6"); end
+end
 ns.RefreshBartenderScale = ApplyAllBarScales
 
 -- Pedido del usuario (2026-07-24): "la barra de pet, que desaparezca si no
@@ -107,11 +107,11 @@ local pendingPetVisibility = false
 -- script (ver nota en core.lua) -- BugGrabber lo captura igual. Mismo patron
 -- que ApplyBarScale/ApplyAllBarScales: si esta en combate, se difiere a
 -- PLAYER_REGEN_ENABLED en vez de intentar y loguear el bloqueo.
-function UpdatePetBarVisibility() Perfy_Trace(Perfy_GetTime(), "Enter", "UpdatePetBarVisibility MyCustomFrames/BartenderScale.lua:110:0");
-    if InCombatLockdown() then pendingPetVisibility = true; Perfy_Trace(Perfy_GetTime(), "Leave", "UpdatePetBarVisibility MyCustomFrames/BartenderScale.lua:110:0"); return end
+function UpdatePetBarVisibility()
+    if InCombatLockdown() then pendingPetVisibility = true; return end
     pendingPetVisibility = false
     local bar = _G.BT4BarPetBar
-    if not bar then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdatePetBarVisibility MyCustomFrames/BartenderScale.lua:110:0"); return end
+    if not bar then return end
     local hasPet = UnitExists("pet")
     if not hasPet then
         petBarHiddenNoPet = true
@@ -124,23 +124,23 @@ function UpdatePetBarVisibility() Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateP
         bar:SetAlpha(1)
         pcall(bar.EnableMouse, bar, true)
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "UpdatePetBarVisibility MyCustomFrames/BartenderScale.lua:110:0"); end
+end
 ns.RefreshPetBarVisibility = UpdatePetBarVisibility
 
 local evFrame = CreateFrame("Frame")
 evFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 evFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 evFrame:RegisterEvent("UNIT_PET")
-evFrame:SetScript("OnEvent", function(_, event, unit) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/BartenderScale.lua:134:29");
+evFrame:SetScript("OnEvent", function(_, event, unit)
     if event == "PLAYER_REGEN_ENABLED" then
         if pendingApply then ApplyAllBarScales() end
         if pendingPetVisibility then UpdatePetBarVisibility() end
-        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/BartenderScale.lua:134:29"); return
+        return
     end
-    if event == "UNIT_PET" and unit ~= "player" then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/BartenderScale.lua:134:29"); return end
+    if event == "UNIT_PET" and unit ~= "player" then return end
     ApplyAllBarScales()
     UpdatePetBarVisibility()
-Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/BartenderScale.lua:134:29"); end)
+end)
 
 -- DIAGNOSTICO: /mcfbt4diag -- lista los frames CONTENEDOR (barras, no botones
 -- individuales) cuyo nombre empieza con "BT4", en una caja copiable (el chat
@@ -148,7 +148,7 @@ Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/BartenderScale
 -- 2026-07-24 al pegar el resultado de la version con print()). Excluye
 -- cualquier nombre que contenga "Button" (botones individuales y sus
 -- sub-regiones Icon/Name/Cooldown/etc, que son ruido para este diagnostico).
-local function ShowCopyBox(text) Perfy_Trace(Perfy_GetTime(), "Enter", "ShowCopyBox MyCustomFrames/BartenderScale.lua:151:6");
+local function ShowCopyBox(text)
     local f = _G.MCFBT4DiagFrame
     if not f then
         f = CreateFrame("Frame", "MCFBT4DiagFrame", UIParent, "BackdropTemplate")
@@ -170,7 +170,7 @@ local function ShowCopyBox(text) Perfy_Trace(Perfy_GetTime(), "Enter", "ShowCopy
         local eb = CreateFrame("EditBox", nil, sf)
         eb:SetMultiLine(true); eb:SetFontObject(ChatFontNormal)
         eb:SetWidth(360); eb:SetAutoFocus(false)
-        eb:SetScript("OnEscapePressed", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/BartenderScale.lua:173:40"); f:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/BartenderScale.lua:173:40"); end)
+        eb:SetScript("OnEscapePressed", function() f:Hide() end)
         sf:SetScrollChild(eb)
         f.eb = eb
     end
@@ -178,10 +178,10 @@ local function ShowCopyBox(text) Perfy_Trace(Perfy_GetTime(), "Enter", "ShowCopy
     f.eb:HighlightText()
     f:Show()
     f.eb:SetFocus()
-Perfy_Trace(Perfy_GetTime(), "Leave", "ShowCopyBox MyCustomFrames/BartenderScale.lua:151:6"); end
+end
 
 SLASH_MCFBT4DIAG1 = "/mcfbt4diag"
-SlashCmdList["MCFBT4DIAG"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFBT4DIAG MyCustomFrames/BartenderScale.lua:184:29");
+SlashCmdList["MCFBT4DIAG"] = function()
     local names = {}
     for k, v in pairs(_G) do
         if type(k) == "string" and k:sub(1, 3) == "BT4" and not k:find("Button")
@@ -191,6 +191,4 @@ SlashCmdList["MCFBT4DIAG"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "S
     end
     table.sort(names)
     ShowCopyBox(table.concat(names, "\n"))
-Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFBT4DIAG MyCustomFrames/BartenderScale.lua:184:29"); end
-
-Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/BartenderScale.lua");
+end

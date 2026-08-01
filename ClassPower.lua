@@ -1,4 +1,4 @@
---[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/ClassPower.lua"); -- ==========================================================================
+-- ==========================================================================
 -- MyCustomFrames - ClassPower.lua
 -- Pedido del usuario 2026-07-19: "Class power, tal cual como lo tiene
 -- azeriteui, mismas texturas etc" -- combo points / holy power / chi / soul
@@ -57,10 +57,10 @@ local TEX = {
 -- que LAYOUTS.tex/btex quedan fijos en el Default -- resolver el BASENAME
 -- contra la skin activa recien al DIBUJAR cada punto (LayoutPoints) en vez de
 -- guardar el path resuelto, mismo patron que SkinResolve usa en todos lados.
-local function ResolveTex(path) Perfy_Trace(Perfy_GetTime(), "Enter", "ResolveTex MyCustomFrames/ClassPower.lua:60:6");
-    if not ns.SkinResolve then Perfy_Trace(Perfy_GetTime(), "Leave", "ResolveTex MyCustomFrames/ClassPower.lua:60:6"); return path end
+local function ResolveTex(path)
+    if not ns.SkinResolve then return path end
     local base = path:match("([^\\]+)$") or path
-    return Perfy_Trace_Passthrough("Leave", "ResolveTex MyCustomFrames/ClassPower.lua:60:6", ns.SkinResolve(base))
+    return ns.SkinResolve(base)
 end
 
 -- Colores por recurso (los que ya existen en ns.POWER_COLORS se reusan; los
@@ -76,17 +76,17 @@ local POINT_COLOR = setmetatable({
     -- Nuevos (2026-07-20): Demon Hunter / Shaman Enhancement.
     SOUL_FRAGMENTS   = { r = 0.64, g = 0.85, b = 0.42 },   -- verde felido (Vengeance)
     MAELSTROM_WEAPON = { r = 0.20, g = 0.55, b = 0.95 },   -- azul electrico (Maelstrom)
-}, { __index = function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ClassPower.lua:79:15"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/ClassPower.lua:79:15", { r = 1, g = 1, b = 1 }) end })
+}, { __index = function() return { r = 1, g = 1, b = 1 } end })
 
-local function ClassPowerDefaults() Perfy_Trace(Perfy_GetTime(), "Enter", "ClassPowerDefaults MyCustomFrames/ClassPower.lua:81:6");
-    return Perfy_Trace_Passthrough("Leave", "ClassPowerDefaults MyCustomFrames/ClassPower.lua:81:6", {
+local function ClassPowerDefaults()
+    return {
         enabled = true,
         anchorFrame = "", point = "CENTER", relativePoint = "CENTER",
         offsetX = 220, offsetY = -160, scale = 1.0, strata = "MEDIUM",
         caseColor = { r = 211 / 255, g = 200 / 255, b = 169 / 255 },
         useClassColor = true,   -- puntos "prendidos" con el color del recurso; si no, blanco
         dimAlpha = 0.35,        -- opacidad de los puntos "apagados" (aun no ganados)
-    })
+    }
 end
 ns.ClassPowerDefaults = ClassPowerDefaults
 
@@ -97,11 +97,11 @@ ns.ClassPowerDefaults = ClassPowerDefaults
 -- layout se reusa para distintos recursos con la MISMA cantidad de puntos
 -- (comentario original de AzeriteUI, se mantiene el criterio).
 -- ==========================================================================
-local function P(x, y, sz, bsz, tex, btex, rotDeg) Perfy_Trace(Perfy_GetTime(), "Enter", "P MyCustomFrames/ClassPower.lua:100:6");
-    return Perfy_Trace_Passthrough("Leave", "P MyCustomFrames/ClassPower.lua:100:6", {
+local function P(x, y, sz, bsz, tex, btex, rotDeg)
+    return {
         x = x, y = y, w = sz[1], h = sz[2], bw = bsz[1], bh = bsz[2],
         tex = tex, btex = btex, rot = rotDeg and math.rad(rotDeg) or nil,
-    })
+    }
 end
 
 local LAYOUTS = {
@@ -168,21 +168,21 @@ end
 -- powerType, colorKey) o nil si la clase/spec actual no tiene class power
 -- soportado todavia. Runas (DK) se manejan aparte (no son un numero simple).
 -- ==========================================================================
-local function SafeMax(unit, ptype) Perfy_Trace(Perfy_GetTime(), "Enter", "SafeMax MyCustomFrames/ClassPower.lua:171:6");
+local function SafeMax(unit, ptype)
     local ok, v = pcall(UnitPowerMax, unit, ptype)
-    if not ok or type(v) ~= "number" or (issecretvalue and issecretvalue(v)) then Perfy_Trace(Perfy_GetTime(), "Leave", "SafeMax MyCustomFrames/ClassPower.lua:171:6"); return 0 end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "SafeMax MyCustomFrames/ClassPower.lua:171:6"); return v
+    if not ok or type(v) ~= "number" or (issecretvalue and issecretvalue(v)) then return 0 end
+    return v
 end
 
 -- Maelstrom Weapon (Shaman Enhancement): NO es un UnitPower, es el CONTADOR
 -- DE STACKS de un buff propio (spellID 344179) -- se lee via
 -- C_UnitAuras.GetPlayerAuraBySpellID, no UnitPower/UnitPowerMax.
 local MAELSTROM_WEAPON_SPELLID = 344179
-local function GetMaelstromStacks() Perfy_Trace(Perfy_GetTime(), "Enter", "GetMaelstromStacks MyCustomFrames/ClassPower.lua:181:6");
-    if not (C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID) then Perfy_Trace(Perfy_GetTime(), "Leave", "GetMaelstromStacks MyCustomFrames/ClassPower.lua:181:6"); return 0 end
+local function GetMaelstromStacks()
+    if not (C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID) then return 0 end
     local ok, aura = pcall(C_UnitAuras.GetPlayerAuraBySpellID, MAELSTROM_WEAPON_SPELLID)
-    if ok and aura and type(aura.applications) == "number" then return Perfy_Trace_Passthrough("Leave", "GetMaelstromStacks MyCustomFrames/ClassPower.lua:181:6", aura.applications) end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "GetMaelstromStacks MyCustomFrames/ClassPower.lua:181:6"); return 0
+    if ok and aura and type(aura.applications) == "number" then return aura.applications end
+    return 0
 end
 
 -- El buff de Maelstrom Weapon esta ausente tanto si el jugador no es
@@ -191,64 +191,64 @@ end
 -- solo el aura. Se chequea el SPEC directamente (Enhancement = specID 263)
 -- para decidir si mostrar el widget en absoluto.
 local ENHANCEMENT_SPEC_ID = 263
-local function IsEnhancementShaman() Perfy_Trace(Perfy_GetTime(), "Enter", "IsEnhancementShaman MyCustomFrames/ClassPower.lua:194:6");
+local function IsEnhancementShaman()
     local ok1, specIndex = pcall(GetSpecialization)
-    if not (ok1 and specIndex) then Perfy_Trace(Perfy_GetTime(), "Leave", "IsEnhancementShaman MyCustomFrames/ClassPower.lua:194:6"); return false end
+    if not (ok1 and specIndex) then return false end
     local ok2, specID = pcall(GetSpecializationInfo, specIndex)
-    return Perfy_Trace_Passthrough("Leave", "IsEnhancementShaman MyCustomFrames/ClassPower.lua:194:6", ok2 and specID == ENHANCEMENT_SPEC_ID)
+    return ok2 and specID == ENHANCEMENT_SPEC_ID
 end
 
-local function DetectResource() Perfy_Trace(Perfy_GetTime(), "Enter", "DetectResource MyCustomFrames/ClassPower.lua:201:6");
+local function DetectResource()
     local _, class = UnitClass("player")
     if class == "ROGUE" or class == "DRUID" then
         local max = SafeMax("player", Enum.PowerType.ComboPoints)
-        if max <= 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6"); return nil end
-        if max >= 7 then return Perfy_Trace_Passthrough("Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6", "ComboPointsRogue", Enum.PowerType.ComboPoints, "COMBO_POINTS") end
-        if max == 6 then return Perfy_Trace_Passthrough("Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6", "Chi", Enum.PowerType.ComboPoints, "COMBO_POINTS") end
-        return Perfy_Trace_Passthrough("Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6", "ComboPoints", Enum.PowerType.ComboPoints, "COMBO_POINTS")
+        if max <= 0 then return nil end
+        if max >= 7 then return "ComboPointsRogue", Enum.PowerType.ComboPoints, "COMBO_POINTS" end
+        if max == 6 then return "Chi", Enum.PowerType.ComboPoints, "COMBO_POINTS" end
+        return "ComboPoints", Enum.PowerType.ComboPoints, "COMBO_POINTS"
     elseif class == "PALADIN" then
-        if SafeMax("player", Enum.PowerType.HolyPower) <= 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6"); return nil end
-        return Perfy_Trace_Passthrough("Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6", "ComboPoints", Enum.PowerType.HolyPower, "HOLY_POWER")
+        if SafeMax("player", Enum.PowerType.HolyPower) <= 0 then return nil end
+        return "ComboPoints", Enum.PowerType.HolyPower, "HOLY_POWER"
     elseif class == "MONK" then
-        if SafeMax("player", Enum.PowerType.Chi) <= 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6"); return nil end
-        return Perfy_Trace_Passthrough("Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6", "Chi", Enum.PowerType.Chi, "CHI")
+        if SafeMax("player", Enum.PowerType.Chi) <= 0 then return nil end
+        return "Chi", Enum.PowerType.Chi, "CHI"
     elseif class == "WARLOCK" then
-        if SafeMax("player", Enum.PowerType.SoulShards) <= 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6"); return nil end
-        return Perfy_Trace_Passthrough("Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6", "SoulShards", Enum.PowerType.SoulShards, "SOUL_SHARDS")
+        if SafeMax("player", Enum.PowerType.SoulShards) <= 0 then return nil end
+        return "SoulShards", Enum.PowerType.SoulShards, "SOUL_SHARDS"
     elseif class == "MAGE" then
-        if SafeMax("player", Enum.PowerType.ArcaneCharges) <= 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6"); return nil end
-        return Perfy_Trace_Passthrough("Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6", "ArcaneCharges", Enum.PowerType.ArcaneCharges, "ARCANE_CHARGES")
+        if SafeMax("player", Enum.PowerType.ArcaneCharges) <= 0 then return nil end
+        return "ArcaneCharges", Enum.PowerType.ArcaneCharges, "ARCANE_CHARGES"
     elseif class == "EVOKER" then
         local max = SafeMax("player", Enum.PowerType.Essence)
-        if max <= 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6"); return nil end
-        if max == 6 then return Perfy_Trace_Passthrough("Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6", "Chi", Enum.PowerType.Essence, "ESSENCE") end
-        return Perfy_Trace_Passthrough("Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6", "ComboPoints", Enum.PowerType.Essence, "ESSENCE")
+        if max <= 0 then return nil end
+        if max == 6 then return "Chi", Enum.PowerType.Essence, "ESSENCE" end
+        return "ComboPoints", Enum.PowerType.Essence, "ESSENCE"
     elseif class == "DEATHKNIGHT" then
         -- Sin SafeMax: las runas no son un UnitPower simple (6 cooldowns
         -- independientes, ver UpdateRunes). "powerType" se usa aca como
         -- SENTINEL para que Refresh() rutee a UpdateRunes en vez de
         -- UpdateSimplePoints.
-        Perfy_Trace(Perfy_GetTime(), "Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6"); return "Runes", "RUNES", "RUNES"
+        return "Runes", "RUNES", "RUNES"
     elseif class == "DEMONHUNTER" then
         -- Guard extra: si este cliente no tiene Enum.PowerType.SoulFragments
         -- (nil), pasarlo igual a UnitPowerMax NO fallaria -- un powerType nil
         -- devuelve el poder PRIMARIO (fury), un numero > 0 falso positivo.
-        if Enum.PowerType.SoulFragments == nil then Perfy_Trace(Perfy_GetTime(), "Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6"); return nil end
+        if Enum.PowerType.SoulFragments == nil then return nil end
         local max = SafeMax("player", Enum.PowerType.SoulFragments)
-        if max <= 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6"); return nil end
-        if max >= 6 then return Perfy_Trace_Passthrough("Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6", "Chi", Enum.PowerType.SoulFragments, "SOUL_FRAGMENTS") end
-        return Perfy_Trace_Passthrough("Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6", "ComboPoints", Enum.PowerType.SoulFragments, "SOUL_FRAGMENTS")
+        if max <= 0 then return nil end
+        if max >= 6 then return "Chi", Enum.PowerType.SoulFragments, "SOUL_FRAGMENTS" end
+        return "ComboPoints", Enum.PowerType.SoulFragments, "SOUL_FRAGMENTS"
     elseif class == "SHAMAN" then
-        if not IsEnhancementShaman() then Perfy_Trace(Perfy_GetTime(), "Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6"); return nil end
+        if not IsEnhancementShaman() then return nil end
         -- Idem DEATHKNIGHT: sentinel "MAELSTROM_WEAPON" en vez de un
         -- Enum.PowerType real, Refresh() rutea a UpdateMaelstrom.
-        Perfy_Trace(Perfy_GetTime(), "Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6"); return "ComboPoints", "MAELSTROM_WEAPON", "MAELSTROM_WEAPON"
+        return "ComboPoints", "MAELSTROM_WEAPON", "MAELSTROM_WEAPON"
     end
     -- MONK brewmaster (stagger): NO implementado a proposito -- es una barra
     -- continua de daño diferido, no puntos discretos; necesitaria un widget
     -- distinto a este sistema de "arco de puntos" (ver comentario grande
     -- arriba del archivo).
-    Perfy_Trace(Perfy_GetTime(), "Leave", "DetectResource MyCustomFrames/ClassPower.lua:201:6"); return nil
+    return nil
 end
 
 -- ==========================================================================
@@ -265,10 +265,10 @@ end
 local root, content, points
 local currentLayout
 
-local function P_DB() Perfy_Trace(Perfy_GetTime(), "Enter", "P_DB MyCustomFrames/ClassPower.lua:268:6"); return Perfy_Trace_Passthrough("Leave", "P_DB MyCustomFrames/ClassPower.lua:268:6", ns.GetDB() and ns.GetDB().classpower) end
+local function P_DB() return ns.GetDB() and ns.GetDB().classpower end
 
-local function CreateRoot() Perfy_Trace(Perfy_GetTime(), "Enter", "CreateRoot MyCustomFrames/ClassPower.lua:270:6");
-    if root then Perfy_Trace(Perfy_GetTime(), "Leave", "CreateRoot MyCustomFrames/ClassPower.lua:270:6"); return root end
+local function CreateRoot()
+    if root then return root end
     root = CreateFrame("Frame", "MyCF_ClassPower", UIParent)
     root:SetSize(124, 168)
     root:Hide()
@@ -286,10 +286,10 @@ local function CreateRoot() Perfy_Trace(Perfy_GetTime(), "Enter", "CreateRoot My
     local editBG = ns.MakeEditHighlight(root, "Class Power")
     root.editBG = editBG
 
-    root:SetScript("OnDragStart", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ClassPower.lua:289:34");
+    root:SetScript("OnDragStart", function(self)
         if ns.IsUnlocked() and not InCombatLockdown() then self:StartMoving() end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ClassPower.lua:289:34"); end)
-    root:SetScript("OnDragStop", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ClassPower.lua:292:33");
+    end)
+    root:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
         if ns.SnapFrameToGrid then ns.SnapFrameToGrid(self) end
         local p = P_DB()
@@ -311,8 +311,8 @@ local function CreateRoot() Perfy_Trace(Perfy_GetTime(), "Enter", "CreateRoot My
         -- ns.* se resuelve recien al LLAMARSE, sin ese problema de orden.
         if ns.RefreshClassPower then ns.RefreshClassPower() end
         if ns.OnDragStopped then ns.OnDragStopped("classpower") end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ClassPower.lua:292:33"); end)
-    ns.AttachScaleWheel(root, P_DB, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ClassPower.lua:315:36"); if ns.RefreshClassPower then ns.RefreshClassPower() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ClassPower.lua:315:36"); end)
+    end)
+    ns.AttachScaleWheel(root, P_DB, function() if ns.RefreshClassPower then ns.RefreshClassPower() end end)
 
     content = CreateFrame("Frame", nil, root)
     content:SetAllPoints()
@@ -336,7 +336,7 @@ local function CreateRoot() Perfy_Trace(Perfy_GetTime(), "Enter", "CreateRoot My
         b:Hide()
         points[i] = b
     end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "CreateRoot MyCustomFrames/ClassPower.lua:270:6"); return root
+    return root
 end
 
 -- PERF (2026-07-19, "arregla todo"): Refresh() (y por lo tanto ApplyPosition)
@@ -345,8 +345,8 @@ end
 -- SetScale SIEMPRE aunque el anchor/offset/scale de la config no hayan
 -- cambiado un pelo desde la ultima vez. Cachea la ultima config aplicada y
 -- saltea el relayout si es identica.
-local function ApplyPosition() Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyPosition MyCustomFrames/ClassPower.lua:348:6");
-    local p = P_DB(); if not (root and p) then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyPosition MyCustomFrames/ClassPower.lua:348:6"); return end
+local function ApplyPosition()
+    local p = P_DB(); if not (root and p) then return end
     local point, relativePoint = p.point or "CENTER", p.relativePoint or "CENTER"
     local offsetX, offsetY = p.offsetX or 220, p.offsetY or -160
     local strata, scale = p.strata or "MEDIUM", p.scale or 1
@@ -356,7 +356,7 @@ local function ApplyPosition() Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyPosit
         and root._mcfLastOffX == offsetX and root._mcfLastOffY == offsetY
         and root._mcfLastStrata == strata and root._mcfLastScale == scale
         and root._mcfLastAnchorName == anchorName and root._mcfLastResScale == rs then
-        Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyPosition MyCustomFrames/ClassPower.lua:348:6"); return
+        return
     end
     root._mcfLastPoint, root._mcfLastRelPoint = point, relativePoint
     root._mcfLastOffX, root._mcfLastOffY = offsetX, offsetY
@@ -368,12 +368,12 @@ local function ApplyPosition() Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyPosit
     root:SetPoint(point, anchor, relativePoint, offsetX * rs, offsetY * rs)
     root:SetFrameStrata(strata)
     content:SetScale(scale * rs)
-Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyPosition MyCustomFrames/ClassPower.lua:348:6"); end
+end
 
-local function LayoutPoints(layoutName, colorKey) Perfy_Trace(Perfy_GetTime(), "Enter", "LayoutPoints MyCustomFrames/ClassPower.lua:373:6");
-    local p = P_DB(); if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutPoints MyCustomFrames/ClassPower.lua:373:6"); return end
+local function LayoutPoints(layoutName, colorKey)
+    local p = P_DB(); if not p then return end
     local defs = LAYOUTS[layoutName]
-    if not defs then Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutPoints MyCustomFrames/ClassPower.lua:373:6"); return end
+    if not defs then return end
     local lit = (p.useClassColor ~= false) and POINT_COLOR[colorKey] or { r = 1, g = 1, b = 1 }
     local case = p.caseColor or { r = 211 / 255, g = 200 / 255, b = 169 / 255 }
     for i = 1, 7 do
@@ -409,15 +409,15 @@ local function LayoutPoints(layoutName, colorKey) Perfy_Trace(Perfy_GetTime(), "
         end
     end
     currentLayout = layoutName
-Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutPoints MyCustomFrames/ClassPower.lua:373:6"); end
+end
 
 -- ==========================================================================
 -- Update: puntos simples (combo points, holy power, chi, soul shards,
 -- arcane charges, essence, soul fragments) -- prender/apagar segun UnitPower
 -- actual.
 -- ==========================================================================
-local function UpdateSimplePoints(powerType) Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateSimplePoints MyCustomFrames/ClassPower.lua:419:6");
-    local p = P_DB(); if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateSimplePoints MyCustomFrames/ClassPower.lua:419:6"); return end
+local function UpdateSimplePoints(powerType)
+    local p = P_DB(); if not p then return end
     local ok, cur = pcall(UnitPower, "player", powerType)
     if not ok or type(cur) ~= "number" or (issecretvalue and issecretvalue(cur)) then cur = 0 end
     local dim = p.dimAlpha or 0.35
@@ -428,7 +428,7 @@ local function UpdateSimplePoints(powerType) Perfy_Trace(Perfy_GetTime(), "Enter
         end
     end
     root:SetShown(cur > 0 or true) -- el "case"/backdrop queda visible siempre que haya recurso activo
-Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateSimplePoints MyCustomFrames/ClassPower.lua:419:6"); end
+end
 
 -- ==========================================================================
 -- Update: Runas de Death Knight -- 6 cooldowns INDEPENDIENTES (no un simple
@@ -436,8 +436,8 @@ Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateSimplePoints MyCustomFrames/ClassPo
 -- (visible), con un swipe de cooldown oscuro encima mientras recarga -- asi
 -- se ve el PROGRESO de recarga, no solo on/off.
 -- ==========================================================================
-local function UpdateRunes() Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateRunes MyCustomFrames/ClassPower.lua:439:6");
-    local p = P_DB(); if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateRunes MyCustomFrames/ClassPower.lua:439:6"); return end
+local function UpdateRunes()
+    local p = P_DB(); if not p then return end
     for i = 1, 6 do
         local b = points[i]
         if b:IsShown() then
@@ -454,15 +454,15 @@ local function UpdateRunes() Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateRunes 
         end
     end
     root:Show()
-Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateRunes MyCustomFrames/ClassPower.lua:439:6"); end
+end
 
 -- ==========================================================================
 -- Update: Maelstrom Weapon (Shaman Enhancement) -- stacks del buff propio,
 -- NO un UnitPower (ver GetMaelstromStacks). Mismo prendido/apagado binario
 -- que UpdateSimplePoints, pero leyendo el aura en vez de UnitPower.
 -- ==========================================================================
-local function UpdateMaelstrom() Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateMaelstrom MyCustomFrames/ClassPower.lua:464:6");
-    local p = P_DB(); if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateMaelstrom MyCustomFrames/ClassPower.lua:464:6"); return end
+local function UpdateMaelstrom()
+    local p = P_DB(); if not p then return end
     local stacks = GetMaelstromStacks()
     local dim = p.dimAlpha or 0.35
     for i = 1, 7 do
@@ -473,7 +473,7 @@ local function UpdateMaelstrom() Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateMa
         end
     end
     root:Show()
-Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateMaelstrom MyCustomFrames/ClassPower.lua:464:6"); end
+end
 
 -- ==========================================================================
 -- Refresh completo: re-detecta el recurso activo (cambia con spec/forma) y
@@ -481,7 +481,7 @@ Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateMaelstrom MyCustomFrames/ClassPower
 -- PLAYER_SPECIALIZATION_CHANGED, UPDATE_SHAPESHIFT_FORM, cada UNIT_POWER,
 -- RUNE_POWER_UPDATE (Death Knight) y UNIT_AURA (Shaman Enhancement).
 -- ==========================================================================
-local function Refresh() Perfy_Trace(Perfy_GetTime(), "Enter", "Refresh MyCustomFrames/ClassPower.lua:484:6");
+local function Refresh()
     local p = P_DB()
     local unlocked = ns.IsUnlocked()
     -- "Enabled=false" (o sin perfil todavia) solo oculta DEFINITIVO fuera de
@@ -489,9 +489,9 @@ local function Refresh() Perfy_Trace(Perfy_GetTime(), "Enter", "Refresh MyCustom
     -- posicionarlo/escalarlo sin tener que activarlo primero (pedido del
     -- usuario 2026-07-20).
     if not p or p.enabled == false then
-        if not unlocked then if root then root:Hide() end; Perfy_Trace(Perfy_GetTime(), "Leave", "Refresh MyCustomFrames/ClassPower.lua:484:6"); return end
+        if not unlocked then if root then root:Hide() end; return end
         CreateRoot()
-        if not p then root:Hide(); Perfy_Trace(Perfy_GetTime(), "Leave", "Refresh MyCustomFrames/ClassPower.lua:484:6"); return end
+        if not p then root:Hide(); return end
     else
         CreateRoot()
     end
@@ -506,7 +506,7 @@ local function Refresh() Perfy_Trace(Perfy_GetTime(), "Enter", "Refresh MyCustom
     -- 5 puntos) solo para poder ver/mover/escalar el marco, igual criterio
     -- que el preview de otros elementos del addon.
     if not layoutName then
-        if not unlocked then root:Hide(); Perfy_Trace(Perfy_GetTime(), "Leave", "Refresh MyCustomFrames/ClassPower.lua:484:6"); return end
+        if not unlocked then root:Hide(); return end
         layoutName, colorKey = "ComboPoints", "COMBO_POINTS"
     end
     if layoutName ~= currentLayout then LayoutPoints(layoutName, colorKey) end
@@ -521,7 +521,7 @@ local function Refresh() Perfy_Trace(Perfy_GetTime(), "Enter", "Refresh MyCustom
             local b = points[i]
             if b:IsShown() then b:SetAlpha(dim); if b.cd then b.cd:Hide() end end
         end
-        Perfy_Trace(Perfy_GetTime(), "Leave", "Refresh MyCustomFrames/ClassPower.lua:484:6"); return
+        return
     end
     -- "powerType" duplica como SENTINEL para Runas/Maelstrom (no son
     -- Enum.PowerType reales, ver DetectResource) -- rutea a la funcion de
@@ -533,15 +533,15 @@ local function Refresh() Perfy_Trace(Perfy_GetTime(), "Enter", "Refresh MyCustom
     else
         UpdateSimplePoints(powerType)
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "Refresh MyCustomFrames/ClassPower.lua:484:6"); end
+end
 ns.RefreshClassPower = Refresh
 -- Fuerza un re-layout completo aunque el layout detectado no haya cambiado
 -- (usado por el menu cuando cambian color/case, que LayoutPoints aplica pero
 -- Refresh() solo llama si currentLayout cambio).
-ns.ClassPowerForceRelayout = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ClassPowerForceRelayout MyCustomFrames/ClassPower.lua:541:29"); currentLayout = nil; Refresh() Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ClassPowerForceRelayout MyCustomFrames/ClassPower.lua:541:29"); end
+ns.ClassPowerForceRelayout = function() currentLayout = nil; Refresh() end
 -- "classpower" como elemento SINGLETON del menu (como aura_party) -- una
 -- sola entrada, sin edicion por-unidad.
-ns.IsClassPower = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.IsClassPower MyCustomFrames/ClassPower.lua:544:18"); return Perfy_Trace_Passthrough("Leave", "ns.IsClassPower MyCustomFrames/ClassPower.lua:544:18", key == "classpower") end
+ns.IsClassPower = function(key) return key == "classpower" end
 
 local ev = CreateFrame("Frame")
 ev:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -558,17 +558,15 @@ ev:RegisterEvent("RUNE_POWER_UPDATE")
 -- evento UNIT_POWER_* lo dispara -- se necesita UNIT_AURA para enterarse de
 -- cambios de stacks del buff.
 ev:RegisterUnitEvent("UNIT_AURA", "player")
-ev:SetScript("OnEvent", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ClassPower.lua:561:24"); Refresh() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ClassPower.lua:561:24"); end)
+ev:SetScript("OnEvent", function() Refresh() end)
 
 SLASH_MCFCLASSPOWERDIAG1 = "/mcfclasspowerdiag"
-SlashCmdList["MCFCLASSPOWERDIAG"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFCLASSPOWERDIAG MyCustomFrames/ClassPower.lua:564:36");
+SlashCmdList["MCFCLASSPOWERDIAG"] = function()
     local layoutName, powerType, colorKey = DetectResource()
     print(("|cff00ff00[MCF classpower]|r layout=%s powerType=%s colorKey=%s currentLayout=%s"):format(
         tostring(layoutName), tostring(powerType), tostring(colorKey), tostring(currentLayout)))
     if layoutName then
-        local ok, cur, max = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ClassPower.lua:569:35"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/ClassPower.lua:569:35", UnitPower("player", powerType), UnitPowerMax("player", powerType)) end)
+        local ok, cur, max = pcall(function() return UnitPower("player", powerType), UnitPowerMax("player", powerType) end)
         print("  ok=" .. tostring(ok) .. " cur=" .. tostring(cur) .. " max=" .. tostring(max))
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFCLASSPOWERDIAG MyCustomFrames/ClassPower.lua:564:36"); end
-
-Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/ClassPower.lua");
+end

@@ -1,4 +1,4 @@
---[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Maintenance.lua"); -- ==========================================================================
+-- ==========================================================================
 -- MyCustomFrames - Maintenance.lua
 -- Herramientas de mantenimiento / calidad de vida (2026-07-25):
 --   1. `/mcfskincheck` -- valida que la skin ACTIVA traiga todos los archivos
@@ -44,33 +44,33 @@ probeFrame:Hide()
 local probeTex = probeFrame:CreateTexture(nil, "BACKGROUND")
 probeTex:SetAllPoints()
 
-local function FileLoads(path) Perfy_Trace(Perfy_GetTime(), "Enter", "FileLoads MyCustomFrames/Maintenance.lua:47:6");
+local function FileLoads(path)
     probeTex:SetTexture(nil)
     local ok = probeTex:SetTexture(path)
-    if not ok then Perfy_Trace(Perfy_GetTime(), "Leave", "FileLoads MyCustomFrames/Maintenance.lua:47:6"); return false end
+    if not ok then return false end
     -- GetTextureFileID devuelve nil para rutas que el cliente no resolvio a un
     -- archivo real. Es el chequeo mas confiable disponible desde Lua.
     if probeTex.GetTextureFileID then
         local id = probeTex:GetTextureFileID()
-        if id ~= nil then Perfy_Trace(Perfy_GetTime(), "Leave", "FileLoads MyCustomFrames/Maintenance.lua:47:6"); return true end
+        if id ~= nil then return true end
         -- Un .tga suelto de addon no siempre tiene fileID (esos son de los
         -- archivos empaquetados del cliente) -> no se puede concluir que falte.
-        Perfy_Trace(Perfy_GetTime(), "Leave", "FileLoads MyCustomFrames/Maintenance.lua:47:6"); return nil   -- desconocido
+        return nil   -- desconocido
     end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "FileLoads MyCustomFrames/Maintenance.lua:47:6"); return nil
+    return nil
 end
 
-local function ActiveSkin() Perfy_Trace(Perfy_GetTime(), "Enter", "ActiveSkin MyCustomFrames/Maintenance.lua:63:6");
+local function ActiveSkin()
     local db = ns.GetDB and ns.GetDB()
     local label = db and db.activeSkinLabel
-    if not label or label == "Default" then return Perfy_Trace_Passthrough("Leave", "ActiveSkin MyCustomFrames/Maintenance.lua:63:6", nil, label or "Default") end
+    if not label or label == "Default" then return nil, label or "Default" end
     for _, skin in ipairs(ns.TEX_SKINS or {}) do
-        if skin.label == label then Perfy_Trace(Perfy_GetTime(), "Leave", "ActiveSkin MyCustomFrames/Maintenance.lua:63:6"); return skin, label end
+        if skin.label == label then return skin, label end
     end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "ActiveSkin MyCustomFrames/Maintenance.lua:63:6"); return nil, label
+    return nil, label
 end
 
-local function SkinCheck() Perfy_Trace(Perfy_GetTime(), "Enter", "SkinCheck MyCustomFrames/Maintenance.lua:73:6");
+local function SkinCheck()
     local skin, label = ActiveSkin()
     print("|cffffe19b[MCF]|r Skin check -- skin activa: |cff00ff00" .. tostring(label) .. "|r")
     if not skin then
@@ -79,21 +79,21 @@ local function SkinCheck() Perfy_Trace(Perfy_GetTime(), "Enter", "SkinCheck MyCu
         else
             print("  |cffff5555No se encontro esa skin registrada|r (¿el addon-skin esta desactivado?).")
         end
-        Perfy_Trace(Perfy_GetTime(), "Leave", "SkinCheck MyCustomFrames/Maintenance.lua:73:6"); return
+        return
     end
     local base = skin.basePath
     if not base or base == "" then
         print("  Skin interna (subcarpeta de Assets\\), sin basePath propio: no se valida.")
-        Perfy_Trace(Perfy_GetTime(), "Leave", "SkinCheck MyCustomFrames/Maintenance.lua:73:6"); return
+        return
     end
 
     local missing, unknown, okCount = {}, 0, 0
-    local function check(path, name) Perfy_Trace(Perfy_GetTime(), "Enter", "check MyCustomFrames/Maintenance.lua:91:10");
+    local function check(path, name)
         local r = FileLoads(path)
         if r == false then missing[#missing + 1] = name
         elseif r == nil then unknown = unknown + 1
         else okCount = okCount + 1 end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "check MyCustomFrames/Maintenance.lua:91:10"); end
+    end
 
     for file in pairs(ns.SKINNABLE or {}) do check(base .. file, file) end
     for _, file in ipairs(MASQUE_FILES) do check(base .. "MasqueSkin\\" .. file, "MasqueSkin\\" .. file) end
@@ -111,7 +111,7 @@ local function SkinCheck() Perfy_Trace(Perfy_GetTime(), "Enter", "SkinCheck MyCu
             .. "si algo se ve invisible, revisa que el NOMBRE coincida exacto)")
     end
     print(("  Verificados OK: %d | total esperado: %d"):format(okCount, unknown + okCount + #missing))
-Perfy_Trace(Perfy_GetTime(), "Leave", "SkinCheck MyCustomFrames/Maintenance.lua:73:6"); end
+end
 ns.SkinCheck = SkinCheck
 
 -- ==========================================================================
@@ -157,9 +157,9 @@ local DEAD_NAMEPLATE_FIELDS = {
 -- seguian viajando en cada export: ~54 campos por entrada de peso muerto.
 local DEAD_AURA_KEYS = { "aura_player", "aura_target", "aura_focus" }
 
-function ns.PurgeDeadKeys(verbose) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.PurgeDeadKeys MyCustomFrames/Maintenance.lua:160:0");
+function ns.PurgeDeadKeys(verbose)
     local db = ns.GetDB and ns.GetDB()
-    if not db then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.PurgeDeadKeys MyCustomFrames/Maintenance.lua:160:0"); return 0 end
+    if not db then return 0 end
     local n = 0
     for _, t in pairs(db.units or {}) do
         for _, f in ipairs(DEAD_UNIT_FIELDS) do
@@ -195,16 +195,16 @@ function ns.PurgeDeadKeys(verbose) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.Pur
     if verbose then
         print(("|cffffe19b[MCF]|r Claves muertas purgadas: %d"):format(n))
     end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "ns.PurgeDeadKeys MyCustomFrames/Maintenance.lua:160:0"); return n
+    return n
 end
 
 -- Corre UNA vez por sesion, al entrar al mundo (despues de InitDB).
 local purgeFrame = CreateFrame("Frame")
 purgeFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-purgeFrame:SetScript("OnEvent", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Maintenance.lua:204:32");
+purgeFrame:SetScript("OnEvent", function(self)
     self:UnregisterEvent("PLAYER_ENTERING_WORLD")
     if ns.PurgeDeadKeys then ns.PurgeDeadKeys(false) end
-Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Maintenance.lua:204:32"); end)
+end)
 
 -- ==========================================================================
 -- 2) ROUTER DE DIAGNOSTICOS -- `/mcfdiag <sub>`
@@ -218,10 +218,10 @@ local diags = {}
 --   "test" -> togglea una previsualizacion (SI cambia lo que se ve, es un toggle)
 -- Sin agrupar, con ~30 entradas la lista era un muro alfabetico donde no se
 -- distinguia lo que solo informa de lo que modifica la pantalla.
-function ns.RegisterDiag(name, desc, fn, kind) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.RegisterDiag MyCustomFrames/Maintenance.lua:221:0");
-    if type(name) ~= "string" or type(fn) ~= "function" then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.RegisterDiag MyCustomFrames/Maintenance.lua:221:0"); return end
+function ns.RegisterDiag(name, desc, fn, kind)
+    if type(name) ~= "string" or type(fn) ~= "function" then return end
     diags[name:lower()] = { desc = desc or "", fn = fn, kind = kind or "diag" }
-Perfy_Trace(Perfy_GetTime(), "Leave", "ns.RegisterDiag MyCustomFrames/Maintenance.lua:221:0"); end
+end
 
 -- ==========================================================================
 -- /mcfdiag cpu -- cuanto CPU consume ESTE addon, comparado con los demas.
@@ -243,14 +243,14 @@ Perfy_Trace(Perfy_GetTime(), "Leave", "ns.RegisterDiag MyCustomFrames/Maintenanc
 -- lag mientras juego".
 local cpuBase, cpuBaseTime = nil, nil
 
-local function CPUReport() Perfy_Trace(Perfy_GetTime(), "Enter", "CPUReport MyCustomFrames/Maintenance.lua:246:6");
+local function CPUReport()
     if (C_CVar and C_CVar.GetCVar and C_CVar.GetCVar("scriptProfile")) ~= "1" then
         print("|cffff5555[MCF]|r El profiling esta APAGADO -- no hay nada que medir.")
         print("  1) /console scriptProfile 1     2) /reload     3) /mcfdiag cpu")
         print("  4) juga un rato                 5) /mcfdiag cpu  (aca salen los numeros)")
-        Perfy_Trace(Perfy_GetTime(), "Leave", "CPUReport MyCustomFrames/Maintenance.lua:246:6"); return
+        return
     end
-    if not UpdateAddOnCPUUsage then print("|cffff5555[MCF]|r API de profiling no disponible."); Perfy_Trace(Perfy_GetTime(), "Leave", "CPUReport MyCustomFrames/Maintenance.lua:246:6"); return end
+    if not UpdateAddOnCPUUsage then print("|cffff5555[MCF]|r API de profiling no disponible."); return end
     -- La instrumentacion de /mcfdiag hot se le atribuye a ESTE addon: son dos
     -- debugprofilestop() y dos escrituras de tabla por cada camino envuelto,
     -- ~2000 veces por segundo. Medir el consumo del addon con eso encendido
@@ -259,7 +259,7 @@ local function CPUReport() Perfy_Trace(Perfy_GetTime(), "Enter", "CPUReport MyCu
         print("|cffff5555[MCF]|r La instrumentacion de /mcfdiag hot esta ACTIVA.")
         print("  Su costo se le suma a MyCustomFrames y falsea esta medicion.")
         print("  Para un numero limpio: |cffffff00/reload|r y medi SIN correr /mcfdiag hot.")
-        Perfy_Trace(Perfy_GetTime(), "Leave", "CPUReport MyCustomFrames/Maintenance.lua:246:6"); return
+        return
     end
     UpdateAddOnCPUUsage()
 
@@ -277,14 +277,14 @@ local function CPUReport() Perfy_Trace(Perfy_GetTime(), "Enter", "CPUReport MyCu
         print("  Ahora juga unos minutos HACIENDO lo que te da el lag, y volve a")
         print("  correr |cffffff00/mcfdiag cpu|r. Te va a mostrar solo lo gastado en ese rato,")
         print("  sin el coste de carga, que es lo que arruinaba la medicion anterior.")
-        Perfy_Trace(Perfy_GetTime(), "Leave", "CPUReport MyCustomFrames/Maintenance.lua:246:6"); return
+        return
     end
 
     local elapsed = GetTime() - cpuBaseTime
     if elapsed < 30 then
         print(("|cffff5555[MCF]|r Solo pasaron %.0f s. Juga al menos 60 y volve a correrlo"):format(elapsed))
         print("  (ventanas cortas dan numeros ruidosos). La referencia sigue puesta.")
-        Perfy_Trace(Perfy_GetTime(), "Leave", "CPUReport MyCustomFrames/Maintenance.lua:246:6"); return
+        return
     end
 
     local list, total = {}, 0
@@ -294,8 +294,8 @@ local function CPUReport() Perfy_Trace(Perfy_GetTime(), "Enter", "CPUReport MyCu
     end
     cpuBase, cpuBaseTime = snap, GetTime()   -- re-referencia: la proxima mide la ventana siguiente
 
-    if #list == 0 then print("|cffffe19b[MCF cpu]|r Nadie consumio nada medible en la ventana."); Perfy_Trace(Perfy_GetTime(), "Leave", "CPUReport MyCustomFrames/Maintenance.lua:246:6"); return end
-    table.sort(list, function(a2, b2) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Maintenance.lua:298:21"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Maintenance.lua:298:21", a2.cpu > b2.cpu) end)
+    if #list == 0 then print("|cffffe19b[MCF cpu]|r Nadie consumio nada medible en la ventana."); return end
+    table.sort(list, function(a2, b2) return a2.cpu > b2.cpu end)
     print(("|cffffe19b[MCF cpu]|r consumo durante %.0f s de JUEGO (sin coste de carga):"):format(elapsed))
     local mine
     for i, e in ipairs(list) do
@@ -310,7 +310,7 @@ local function CPUReport() Perfy_Trace(Perfy_GetTime(), "Enter", "CPUReport MyCu
         print(("  -> MyCustomFrames: puesto %d de %d."):format(mine, #list))
         print("  Referencia: <1 ms/s no se siente | 1-5 aceptable | >5 ms/s si se siente.")
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "CPUReport MyCustomFrames/Maintenance.lua:246:6"); end
+end
 -- ==========================================================================
 -- /mcfdiag hot -- DONDE se van los milisegundos, dentro del addon.
 --
@@ -321,22 +321,22 @@ Perfy_Trace(Perfy_GetTime(), "Leave", "CPUReport MyCustomFrames/Maintenance.lua:
 --
 -- No necesita scriptProfile: usa debugprofilestop(), que siempre esta.
 -- ==========================================================================
-local function HotReport() Perfy_Trace(Perfy_GetTime(), "Enter", "HotReport MyCustomFrames/Maintenance.lua:324:6");
-    if not ns.Prof then print("|cffff5555[MCF]|r Profiler.lua no cargo."); Perfy_Trace(Perfy_GetTime(), "Leave", "HotReport MyCustomFrames/Maintenance.lua:324:6"); return end
+local function HotReport()
+    if not ns.Prof then print("|cffff5555[MCF]|r Profiler.lua no cargo."); return end
     if not ns.Prof.IsActive() then
         ns.Prof.Start()
         print("|cffffe19b[MCF hot]|r Midiendo. Juga 1-2 minutos y volve a correr")
         print("  |cffffff00/mcfdiag hot|r para ver el desglose por subsistema.")
-        Perfy_Trace(Perfy_GetTime(), "Leave", "HotReport MyCustomFrames/Maintenance.lua:324:6"); return
+        return
     end
     local list, elapsed = ns.Prof.Report()
     if elapsed < 20 then
         print(("|cffff5555[MCF]|r Solo %.0f s. Juga un poco mas."):format(elapsed))
-        Perfy_Trace(Perfy_GetTime(), "Leave", "HotReport MyCustomFrames/Maintenance.lua:324:6"); return
+        return
     end
     if #list == 0 then
         print("|cffffe19b[MCF hot]|r Ningun camino instrumentado consumio tiempo.")
-        Perfy_Trace(Perfy_GetTime(), "Leave", "HotReport MyCustomFrames/Maintenance.lua:324:6"); return
+        return
     end
     local total = 0
     for _, e in ipairs(list) do total = total + e.msPerSec end
@@ -349,31 +349,31 @@ local function HotReport() Perfy_Trace(Perfy_GetTime(), "Enter", "HotReport MyCu
     print("  padre, no se suman aparte.")
     print("  Compara el total con /mcfdiag cpu: lo que falte esta en eventos y hooks,")
     print("  no en los tickers -- y eso se busca distinto.")
-Perfy_Trace(Perfy_GetTime(), "Leave", "HotReport MyCustomFrames/Maintenance.lua:324:6"); end
+end
 ns.RegisterDiag("hot", "Desglosa el CPU del addon por subsistema (correr 2 veces)", HotReport)
 
 ns.RegisterDiag("cpu", "CPU por addon durante el JUEGO (correr 2 veces: referencia y medicion)", CPUReport)
 
 ns.RegisterDiag("skincheck", "Valida que la skin activa traiga todos sus archivos", SkinCheck)
-ns.RegisterDiag("purge", "Purga claves de features ya eliminadas de la DB", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Maintenance.lua:358:76");
+ns.RegisterDiag("purge", "Purga claves de features ya eliminadas de la DB", function()
     ns.PurgeDeadKeys(true)
-Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Maintenance.lua:358:76"); end)
+end)
 
 -- Verificacion pasiva del contrato de modulos. No intenta refrescar nada: en
 -- Midnight llamar SetPoint/Show/SetScale sobre un frame de otro sistema puede
 -- estar protegido durante combate. Solo informa lo que falte para detectar
 -- errores de carga, claves que no entran en presets o APIs renombradas.
-local function VerifyInstallation() Perfy_Trace(Perfy_GetTime(), "Enter", "VerifyInstallation MyCustomFrames/Maintenance.lua:366:6");
+local function VerifyInstallation()
     local db = ns.GetDB and ns.GetDB()
     local registry = ns.GetFeatureRegistry and ns.GetFeatureRegistry()
     local presetKeys = ns.GetPresetTableKeys and ns.GetPresetTableKeys()
     if type(db) ~= "table" then
         print("|cffff5555[MCF]|r verify: la base de datos no esta disponible.")
-        Perfy_Trace(Perfy_GetTime(), "Leave", "VerifyInstallation MyCustomFrames/Maintenance.lua:366:6"); return
+        return
     end
     if type(registry) ~= "table" or type(presetKeys) ~= "table" then
         print("|cffff5555[MCF]|r verify: falta ModuleRegistry o la API de presets.")
-        Perfy_Trace(Perfy_GetTime(), "Leave", "VerifyInstallation MyCustomFrames/Maintenance.lua:366:6"); return
+        return
     end
 
     local inPreset = {}
@@ -401,7 +401,7 @@ local function VerifyInstallation() Perfy_Trace(Perfy_GetTime(), "Enter", "Verif
         print(("|cffff5555[MCF]|r verify: %d problema(s) de %d modulo(s):"):format(#problems, checked))
         for _, issue in ipairs(problems) do print("  - " .. issue) end
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "VerifyInstallation MyCustomFrames/Maintenance.lua:366:6"); end
+end
 ns.VerifyInstallation = VerifyInstallation
 ns.RegisterDiag("verify", "Comprueba modulos, DB y cobertura de presets (sin tocar frames)", VerifyInstallation)
 
@@ -418,15 +418,15 @@ ns.RegisterDiag("verify", "Comprueba modulos, DB y cobertura de presets (sin toc
 -- La resolucion es DIFERIDA (se busca en SlashCmdList al invocar, no al
 -- registrar): asi no importa el orden de carga del .toc, y si un comando se
 -- elimina en el futuro esto avisa en vez de reventar.
-local function Cmd(handler, arg) Perfy_Trace(Perfy_GetTime(), "Enter", "Cmd MyCustomFrames/Maintenance.lua:421:6");
-    return Perfy_Trace_Passthrough("Leave", "Cmd MyCustomFrames/Maintenance.lua:421:6", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Maintenance.lua:422:11");
+local function Cmd(handler, arg)
+    return function()
         local fn = SlashCmdList[handler]
         if type(fn) ~= "function" then
             print("|cffff5555[MCF]|r El comando /" .. handler:lower() .. " ya no existe en esta version.")
-            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Maintenance.lua:422:11"); return
+            return
         end
         fn(arg or "")
-    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Maintenance.lua:422:11"); end)
+    end
 end
 
 -- Diagnosticos: vuelcan estado, no tocan nada.
@@ -481,7 +481,7 @@ local OTHER_COMMANDS = {
 }
 
 SLASH_MCFDIAG1 = "/mcfdiag"
-SlashCmdList["MCFDIAG"] = function(msg) Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFDIAG MyCustomFrames/Maintenance.lua:484:26");
+SlashCmdList["MCFDIAG"] = function(msg)
     local sub = (msg or ""):match("^%s*(%S*)"):lower()
     if sub == "" or sub == "help" then
         local byKind = { diag = {}, test = {} }
@@ -503,18 +503,16 @@ SlashCmdList["MCFDIAG"] = function(msg) Perfy_Trace(Perfy_GetTime(), "Enter", "S
         for _, c in ipairs(OTHER_COMMANDS) do
             print(("  |cffffff00%-22s|r %s"):format(c[1], c[2]))
         end
-        Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFDIAG MyCustomFrames/Maintenance.lua:484:26"); return
+        return
     end
     local d = diags[sub]
     if not d then
         print("|cffff5555[MCF]|r No existe el diagnostico \"" .. sub .. "\". Usa /mcfdiag para ver la lista.")
-        Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFDIAG MyCustomFrames/Maintenance.lua:484:26"); return
+        return
     end
     d.fn()
-Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFDIAG MyCustomFrames/Maintenance.lua:484:26"); end
+end
 
 -- Atajo directo (el mas usado, se deja como slash propio).
 SLASH_MCFSKINCHECK1 = "/mcfskincheck"
 SlashCmdList["MCFSKINCHECK"] = SkinCheck
-
-Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Maintenance.lua");

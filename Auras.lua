@@ -1,4 +1,4 @@
---[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Auras.lua"); -- ==========================================================================
+-- ==========================================================================
 -- MyCustomFrames - Auras.lua
 --
 -- HISTORIAL (2026-07-27): este archivo dibujaba un grid SIEMPRE VISIBLE de
@@ -39,13 +39,11 @@ local DEBUFF_GENERIC_COLOR = { r = 0.80, g = 0.00, b = 0.00 }
 -- secreto en Midnight -- solo se usa como CLAVE de tabla despues de confirmar
 -- type()+issecretvalue(), nunca se compara/concatena directo (comparar un
 -- secreto revienta con taint).
-local function DebuffTypeColor(data) Perfy_Trace(Perfy_GetTime(), "Enter", "DebuffTypeColor MyCustomFrames/Auras.lua:42:6");
+local function DebuffTypeColor(data)
     local dn = data.dispelName
     if type(dn) == "string" and not (issecretvalue and issecretvalue(dn)) and dn ~= "" then
-        return Perfy_Trace_Passthrough("Leave", "DebuffTypeColor MyCustomFrames/Auras.lua:42:6", DEBUFF_TYPE_COLORS[dn] or DEBUFF_GENERIC_COLOR)
+        return DEBUFF_TYPE_COLORS[dn] or DEBUFF_GENERIC_COLOR
     end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "DebuffTypeColor MyCustomFrames/Auras.lua:42:6"); return DEBUFF_GENERIC_COLOR
+    return DEBUFF_GENERIC_COLOR
 end
 ns.DebuffTypeColor = DebuffTypeColor
-
-Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Auras.lua");

@@ -1,4 +1,4 @@
---[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/MasqueSkin.lua"); -- ==========================================================================
+-- ==========================================================================
 -- MasqueSkin.lua — registra el skin de Masque "Azerite HEX" (portado de la skin del usuario
 -- Masque_Azerite_Hex, E:\...\AddOns\Masque_Azerite_Hex\main.lua) DIRECTAMENTE desde
 -- MyCustomFrames, sin necesitar el addon separado. Assets copiados a
@@ -9,41 +9,41 @@
 local ADDON, ns = ...
 
 local A = "Interface\\AddOns\\MyCustomFrames\\Assets\\MasqueSkin\\"
-local function path(name) Perfy_Trace(Perfy_GetTime(), "Enter", "path MyCustomFrames/MasqueSkin.lua:12:6"); return Perfy_Trace_Passthrough("Leave", "path MyCustomFrames/MasqueSkin.lua:12:6", A .. name .. ".tga") end
+local function path(name) return A .. name .. ".tga" end
 
 local SKIN_NAME = "Azerite HEX"
 
 -- Masque espera botones de 36x36 puntos; el mismo helper de escala que traia el addon original.
 local mod = 1.5
-local function scale(contentSize, sourceTextureSize) Perfy_Trace(Perfy_GetTime(), "Enter", "scale MyCustomFrames/MasqueSkin.lua:18:6");
+local function scale(contentSize, sourceTextureSize)
     sourceTextureSize = sourceTextureSize or contentSize
-    return Perfy_Trace_Passthrough("Leave", "scale MyCustomFrames/MasqueSkin.lua:18:6", sourceTextureSize / contentSize * 36 * mod)
+    return sourceTextureSize / contentSize * 36 * mod
 end
 
 local registered = false
 
 -- Registra el skin en Masque. Idempotente (Masque:AddSkin sobre el mismo nombre solo actualiza
 -- los datos, no duplica) — se puede llamar mas de una vez sin problema.
-local function RegisterSkin() Perfy_Trace(Perfy_GetTime(), "Enter", "RegisterSkin MyCustomFrames/MasqueSkin.lua:27:6");
-    if registered then Perfy_Trace(Perfy_GetTime(), "Leave", "RegisterSkin MyCustomFrames/MasqueSkin.lua:27:6"); return true end
+local function RegisterSkin()
+    if registered then return true end
     local MSQ = LibStub and LibStub("Masque", true)
-    if not MSQ then Perfy_Trace(Perfy_GetTime(), "Leave", "RegisterSkin MyCustomFrames/MasqueSkin.lua:27:6"); return false end
+    if not MSQ then return false end
 
     -- Si el addon STANDALONE viejo (Masque_Azerite_Hex) tambien esta cargado, dejalo a EL
     -- registrar el skin (mismo nombre, mismos datos) para no duplicar el hook anti-bling de
     -- abajo dos veces. Con que uno de los dos lo registre alcanza.
     local oldLoaded = (C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("Masque_Azerite_Hex"))
         or (IsAddOnLoaded and IsAddOnLoaded("Masque_Azerite_Hex"))
-    if oldLoaded then registered = true; Perfy_Trace(Perfy_GetTime(), "Leave", "RegisterSkin MyCustomFrames/MasqueSkin.lua:27:6"); return true end
+    if oldLoaded then registered = true; return true end
 
     -- Apaga la animacion "bling" de los cooldowns (igual que el addon original): pcall por si
     -- algun otro addon ya lo desactivo o el metodo no existe en este objeto.
     for _, v in pairs(_G) do
-        pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MasqueSkin.lua:42:14");
+        pcall(function()
             if type(v) == "table" and type(v.SetDrawBling) == "function" then
                 v:SetDrawBling(false)
             end
-        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MasqueSkin.lua:42:14"); end)
+        end)
     end
     -- El pcall de ANTES solo protegia el REGISTRO del hook -- el hook en si
     -- corre SIN pcall cada vez que CUALQUIER Cooldown del juego llama
@@ -64,12 +64,12 @@ local function RegisterSkin() Perfy_Trace(Perfy_GetTime(), "Enter", "RegisterSki
     -- puede declarar UNA sola vez a nivel de modulo y pasarla a pcall junto
     -- con self como argumento -- el indexado sigue pasando DENTRO del cuerpo
     -- protegido (mismo fix de fondo que antes), pero sin alocar closure.
-    local function DisableBling(self) Perfy_Trace(Perfy_GetTime(), "Enter", "DisableBling MyCustomFrames/MasqueSkin.lua:67:10"); self:SetDrawBling(false) Perfy_Trace(Perfy_GetTime(), "Leave", "DisableBling MyCustomFrames/MasqueSkin.lua:67:10"); end
-    pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MasqueSkin.lua:68:10");
-        hooksecurefunc(getmetatable(ActionButton1Cooldown).__index, "SetCooldown", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MasqueSkin.lua:69:83");
+    local function DisableBling(self) self:SetDrawBling(false) end
+    pcall(function()
+        hooksecurefunc(getmetatable(ActionButton1Cooldown).__index, "SetCooldown", function(self)
             pcall(DisableBling, self)
-        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MasqueSkin.lua:69:83"); end)
-    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MasqueSkin.lua:68:10"); end)
+        end)
+    end)
 
     MSQ:AddSkin(SKIN_NAME, {
         API_VERSION    = 110210,
@@ -138,7 +138,7 @@ local function RegisterSkin() Perfy_Trace(Perfy_GetTime(), "Enter", "RegisterSki
     }, true)
 
     registered = true
-    Perfy_Trace(Perfy_GetTime(), "Leave", "RegisterSkin MyCustomFrames/MasqueSkin.lua:27:6"); return true
+    return true
 end
 ns.RegisterMasqueSkin = RegisterSkin
 
@@ -156,27 +156,25 @@ ns.RegisterMasqueSkin = RegisterSkin
 -- `skin` = la entrada de ns.TEX_SKINS recien aplicada. Solo guarda cual skin de Masque
 -- corresponde y le pide al usuario que la seleccione a mano en el panel de Masque (mismo
 -- nombre que la skin visual, ej. "Midnight" -> skin de Masque "Midnight").
-function ns.ApplyMasqueSkinAll(skin) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ApplyMasqueSkinAll MyCustomFrames/MasqueSkin.lua:159:0");
+function ns.ApplyMasqueSkinAll(skin)
     local ok = RegisterSkin()
-    if not ok then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ApplyMasqueSkinAll MyCustomFrames/MasqueSkin.lua:159:0"); return false, "Masque not loaded" end
+    if not ok then return false, "Masque not loaded" end
 
     local db = ns.GetDB and ns.GetDB()
     local target = skin and skin.msqSkin
     if db then db.activeMsqSkin = target end
 
     if not target then
-        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ApplyMasqueSkinAll MyCustomFrames/MasqueSkin.lua:159:0"); return true, "skin registered (this visual skin has no Masque skin declared)"
+        return true, "skin registered (this visual skin has no Masque skin declared)"
     end
 
     print("|cff00ff00[MCF]|r This skin uses the Masque skin \"" .. target ..
         "\" for action bars -- open Masque's panel and select \"" .. target ..
         "\" there (Masque remembers it, so a /reload also picks it up once you've chosen it before).")
-    return Perfy_Trace_Passthrough("Leave", "ns.ApplyMasqueSkinAll MyCustomFrames/MasqueSkin.lua:159:0", true, "skin registered, Masque skin \"" .. target .. "\" noted (pick it manually in Masque's panel)")
+    return true, "skin registered, Masque skin \"" .. target .. "\" noted (pick it manually in Masque's panel)"
 end
 
 -- Registro INMEDIATO en file-load (no diferido a PLAYER_LOGIN): asi el skin esta disponible
 -- ANTES de que Bartender4 (u otro addon de barras) cree sus grupos de Masque, sin importar el
 -- orden relativo de carga entre addons regulares.
 RegisterSkin()
-
-Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/MasqueSkin.lua");

@@ -1,4 +1,4 @@
---[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/AuraHoverPreview.lua"); -- ==========================================================================
+-- ==========================================================================
 -- MyCustomFrames - AuraHoverPreview.lua
 -- Fusion de PartyAuraPreview.lua + ArenaAuraPreview.lua (2026-07-23, pedido
 -- del usuario tras revisar ambos archivos: "son ~95% el mismo codigo
@@ -88,10 +88,10 @@ local DIR_INFO = {
     down  = { carrierPoint = "TOP",    carrierRel = "BOTTOM", axis = "y", sign = -1 },
 }
 
-local function SafeInCombat(unit) Perfy_Trace(Perfy_GetTime(), "Enter", "SafeInCombat MyCustomFrames/AuraHoverPreview.lua:91:6");
+local function SafeInCombat(unit)
     local ok, r = pcall(UnitAffectingCombat, unit)
-    if not ok or (issecretvalue and issecretvalue(r)) then Perfy_Trace(Perfy_GetTime(), "Leave", "SafeInCombat MyCustomFrames/AuraHoverPreview.lua:91:6"); return false end
-    return Perfy_Trace_Passthrough("Leave", "SafeInCombat MyCustomFrames/AuraHoverPreview.lua:91:6", r and true or false)
+    if not ok or (issecretvalue and issecretvalue(r)) then return false end
+    return r and true or false
 end
 -- Regla #3 del usuario: SIEMPRE el propio jugador, nunca la unidad del grupo.
 -- Lee el estado ya cacheado por el tick principal (core.lua lo resuelve UNA vez
@@ -102,28 +102,28 @@ end
 -- Fallback directo si el tick todavia no corrio, o si esta en modo edicion (ahi
 -- el tick sale temprano y el cache se congela -- irrelevante, no se pelea en
 -- modo edicion, y el addon ya bloquea entrar en combate).
-local function PlayerInCombat() Perfy_Trace(Perfy_GetTime(), "Enter", "PlayerInCombat MyCustomFrames/AuraHoverPreview.lua:105:6");
+local function PlayerInCombat()
     local ts = ns.tickState
-    if ts and ts.inCombat ~= nil then return Perfy_Trace_Passthrough("Leave", "PlayerInCombat MyCustomFrames/AuraHoverPreview.lua:105:6", ts.inCombat) end
-    return Perfy_Trace_Passthrough("Leave", "PlayerInCombat MyCustomFrames/AuraHoverPreview.lua:105:6", SafeInCombat("player"))
+    if ts and ts.inCombat ~= nil then return ts.inCombat end
+    return SafeInCombat("player")
 end
 
-local function InDungeon() Perfy_Trace(Perfy_GetTime(), "Enter", "InDungeon MyCustomFrames/AuraHoverPreview.lua:111:6");
+local function InDungeon()
     local ok, _, instanceType = pcall(IsInInstance)
-    return Perfy_Trace_Passthrough("Leave", "InDungeon MyCustomFrames/AuraHoverPreview.lua:111:6", ok and instanceType == "party")
+    return ok and instanceType == "party"
 end
-local function CheckIsArena() Perfy_Trace(Perfy_GetTime(), "Enter", "CheckIsArena MyCustomFrames/AuraHoverPreview.lua:115:6"); return Perfy_Trace_Passthrough("Leave", "CheckIsArena MyCustomFrames/AuraHoverPreview.lua:115:6", C_PvP and C_PvP.IsArena and C_PvP.IsArena()) end
-local function CheckIsRatedArena() Perfy_Trace(Perfy_GetTime(), "Enter", "CheckIsRatedArena MyCustomFrames/AuraHoverPreview.lua:116:6"); return Perfy_Trace_Passthrough("Leave", "CheckIsRatedArena MyCustomFrames/AuraHoverPreview.lua:116:6", C_PvP and C_PvP.IsRatedArena and C_PvP.IsRatedArena()) end
-local function CheckIsSoloShuffle() Perfy_Trace(Perfy_GetTime(), "Enter", "CheckIsSoloShuffle MyCustomFrames/AuraHoverPreview.lua:117:6"); return Perfy_Trace_Passthrough("Leave", "CheckIsSoloShuffle MyCustomFrames/AuraHoverPreview.lua:117:6", C_PvP and C_PvP.IsSoloShuffle and C_PvP.IsSoloShuffle()) end
-local function InArenaNow() Perfy_Trace(Perfy_GetTime(), "Enter", "InArenaNow MyCustomFrames/AuraHoverPreview.lua:118:6");
+local function CheckIsArena() return C_PvP and C_PvP.IsArena and C_PvP.IsArena() end
+local function CheckIsRatedArena() return C_PvP and C_PvP.IsRatedArena and C_PvP.IsRatedArena() end
+local function CheckIsSoloShuffle() return C_PvP and C_PvP.IsSoloShuffle and C_PvP.IsSoloShuffle() end
+local function InArenaNow()
     local ok1, isArena = pcall(CheckIsArena)
-    if ok1 and isArena then Perfy_Trace(Perfy_GetTime(), "Leave", "InArenaNow MyCustomFrames/AuraHoverPreview.lua:118:6"); return true end
+    if ok1 and isArena then return true end
     local ok2, isRated = pcall(CheckIsRatedArena)
-    if ok2 and isRated then Perfy_Trace(Perfy_GetTime(), "Leave", "InArenaNow MyCustomFrames/AuraHoverPreview.lua:118:6"); return true end
+    if ok2 and isRated then return true end
     local ok3, isShuffle = pcall(CheckIsSoloShuffle)
-    if ok3 and isShuffle then Perfy_Trace(Perfy_GetTime(), "Leave", "InArenaNow MyCustomFrames/AuraHoverPreview.lua:118:6"); return true end
+    if ok3 and isShuffle then return true end
     local ok4, inInst, instanceType = pcall(IsInInstance)
-    return Perfy_Trace_Passthrough("Leave", "InArenaNow MyCustomFrames/AuraHoverPreview.lua:118:6", ok4 and inInst and instanceType == "arena")
+    return ok4 and inInst and instanceType == "arena"
 end
 
 -- Tiempo restante para ordenar (2026-07-27, pedido del usuario: "que salgan
@@ -139,21 +139,21 @@ end
 -- de arriesgar una comparacion -- funciona de verdad para Player (datos
 -- propios, nunca secretos) y cae de vuelta al orden nativo de Blizzard para
 -- cualquier unidad donde el juego SI los oculte, sin romper nada.
-local function SafeRemaining(data) Perfy_Trace(Perfy_GetTime(), "Enter", "SafeRemaining MyCustomFrames/AuraHoverPreview.lua:142:6");
+local function SafeRemaining(data)
     local exp, dur = data.expirationTime, data.duration
-    if type(exp) ~= "number" or (issecretvalue and issecretvalue(exp)) then Perfy_Trace(Perfy_GetTime(), "Leave", "SafeRemaining MyCustomFrames/AuraHoverPreview.lua:142:6"); return nil end
-    if type(dur) ~= "number" or (issecretvalue and issecretvalue(dur)) then Perfy_Trace(Perfy_GetTime(), "Leave", "SafeRemaining MyCustomFrames/AuraHoverPreview.lua:142:6"); return nil end
-    if dur <= 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "SafeRemaining MyCustomFrames/AuraHoverPreview.lua:142:6"); return nil end -- sin duracion (permanente) -- nunca "esta por vencer"
-    Perfy_Trace(Perfy_GetTime(), "Leave", "SafeRemaining MyCustomFrames/AuraHoverPreview.lua:142:6"); return exp
+    if type(exp) ~= "number" or (issecretvalue and issecretvalue(exp)) then return nil end
+    if type(dur) ~= "number" or (issecretvalue and issecretvalue(dur)) then return nil end
+    if dur <= 0 then return nil end -- sin duracion (permanente) -- nunca "esta por vencer"
+    return exp
 end
 -- Ordena ascendente por tiempo de vencimiento (el que vence antes, primero).
 -- Auras sin dato legible (secreto o permanente) van al final -- no hay forma
 -- segura de decir que "ya casi vencen".
-local function ByRemaining(a, b) Perfy_Trace(Perfy_GetTime(), "Enter", "ByRemaining MyCustomFrames/AuraHoverPreview.lua:152:6");
+local function ByRemaining(a, b)
     local ra, rb = SafeRemaining(a), SafeRemaining(b)
-    if ra == nil then Perfy_Trace(Perfy_GetTime(), "Leave", "ByRemaining MyCustomFrames/AuraHoverPreview.lua:152:6"); return false end
-    if rb == nil then Perfy_Trace(Perfy_GetTime(), "Leave", "ByRemaining MyCustomFrames/AuraHoverPreview.lua:152:6"); return true end
-    return Perfy_Trace_Passthrough("Leave", "ByRemaining MyCustomFrames/AuraHoverPreview.lua:152:6", ra < rb)
+    if ra == nil then return false end
+    if rb == nil then return true end
+    return ra < rb
 end
 
 -- Sort modes (2026-07-27, pedido del usuario: "que este en el menu option
@@ -176,10 +176,10 @@ ns.AURA_SORT_MODES = { "priority", "time", "index" }
 -- el frame nativo de Blizzard). Se junta TODA la categoria antes de ordenar
 -- y recien ahi recortar al limite -- no se puede cortar mientras se escanea
 -- como antes de tener sort, porque el orden final depende de todas.
-local function CollectAuras(unit, onlyBuffs, maxIcons, sortMode) Perfy_Trace(Perfy_GetTime(), "Enter", "CollectAuras MyCustomFrames/AuraHoverPreview.lua:179:6");
+local function CollectAuras(unit, onlyBuffs, maxIcons, sortMode)
     maxIcons = maxIcons or DEFAULT_MAX_ICONS
     local list = {}
-    if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then Perfy_Trace(Perfy_GetTime(), "Leave", "CollectAuras MyCustomFrames/AuraHoverPreview.lua:179:6"); return list end
+    if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return list end
     local debuffs = {}
     if not onlyBuffs then
         for i = 1, 40 do
@@ -204,7 +204,7 @@ local function CollectAuras(unit, onlyBuffs, maxIcons, sortMode) Perfy_Trace(Per
             list[#list + 1] = data
             if #list >= maxIcons then break end
         end
-        Perfy_Trace(Perfy_GetTime(), "Leave", "CollectAuras MyCustomFrames/AuraHoverPreview.lua:179:6"); return list
+        return list
     end
 
     if sortMode ~= "index" then
@@ -213,22 +213,22 @@ local function CollectAuras(unit, onlyBuffs, maxIcons, sortMode) Perfy_Trace(Per
     end
     for _, data in ipairs(debuffs) do
         list[#list + 1] = data
-        if #list >= maxIcons then Perfy_Trace(Perfy_GetTime(), "Leave", "CollectAuras MyCustomFrames/AuraHoverPreview.lua:179:6"); return list end
+        if #list >= maxIcons then return list end
     end
     for _, data in ipairs(buffs) do
         list[#list + 1] = data
         if #list >= maxIcons then break end
     end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "CollectAuras MyCustomFrames/AuraHoverPreview.lua:179:6"); return list
+    return list
 end
 
-local function ResizeIcon(b, sz) Perfy_Trace(Perfy_GetTime(), "Enter", "ResizeIcon MyCustomFrames/AuraHoverPreview.lua:225:6");
+local function ResizeIcon(b, sz)
     b:SetSize(sz, sz)
     local inset = sz * BORDER_SCALE
     b.border:ClearAllPoints()
     b.border:SetPoint("TOPLEFT", -inset, inset)
     b.border:SetPoint("BOTTOMRIGHT", inset, -inset)
-Perfy_Trace(Perfy_GetTime(), "Leave", "ResizeIcon MyCustomFrames/AuraHoverPreview.lua:225:6"); end
+end
 
 -- Registro de TODOS los iconos creados (party+arena) para poder reasignar su
 -- borde en vivo cuando cambia la skin global -- antes este archivo usaba un
@@ -236,14 +236,14 @@ Perfy_Trace(Perfy_GetTime(), "Leave", "ResizeIcon MyCustomFrames/AuraHoverPrevie
 -- de Skins (ver STRUCTURE.md "Hallazgo pendiente" 2026-07-23; Auras.lua y
 -- Nameplates.lua ya usaban ns.AURA_BORDER dinamico).
 local iconRegistry = {}
-ns.RefreshAuraHoverBorder = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.RefreshAuraHoverBorder MyCustomFrames/AuraHoverPreview.lua:239:28");
+ns.RefreshAuraHoverBorder = function()
     local tex = ns.AURA_BORDER or AURA_BORDER
     for _, b in ipairs(iconRegistry) do
         if b.border then b.border:SetTexture(tex) end
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "ns.RefreshAuraHoverBorder MyCustomFrames/AuraHoverPreview.lua:239:28"); end
+end
 
-local function CreateIcon(parent) Perfy_Trace(Perfy_GetTime(), "Enter", "CreateIcon MyCustomFrames/AuraHoverPreview.lua:246:6");
+local function CreateIcon(parent)
     local b = CreateFrame("Frame", nil, parent)
 
     local tex = b:CreateTexture(nil, "ARTWORK")
@@ -290,14 +290,14 @@ local function CreateIcon(parent) Perfy_Trace(Perfy_GetTime(), "Enter", "CreateI
         else
             local waiter = CreateFrame("Frame")
             waiter:RegisterEvent("PLAYER_REGEN_ENABLED")
-            waiter:SetScript("OnEvent", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:293:40");
+            waiter:SetScript("OnEvent", function(self)
                 self:UnregisterAllEvents()
                 if b.SetPropagateMouseClicks then pcall(b.SetPropagateMouseClicks, b, true) end
-            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:293:40"); end)
+            end)
         end
     end
     b:Hide()
-    Perfy_Trace(Perfy_GetTime(), "Leave", "CreateIcon MyCustomFrames/AuraHoverPreview.lua:246:6"); return b
+    return b
 end
 
 -- ==========================================================================
@@ -306,19 +306,19 @@ end
 --         onlyBuffs(key)->bool, skipIfSolo(key)->bool, maxDBKey, paddingDBKey,
 --         sortDBKey }
 -- ==========================================================================
-local function MakeAuraHoverGroup(cfg) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeAuraHoverGroup MyCustomFrames/AuraHoverPreview.lua:309:6");
+local function MakeAuraHoverGroup(cfg)
     local testMode = false
     local groupTest = {}   -- key -> {Show, Hide, Reanchor}, expuesto tal cual
 
-    local function GetDirection() Perfy_Trace(Perfy_GetTime(), "Enter", "GetDirection MyCustomFrames/AuraHoverPreview.lua:313:10");
+    local function GetDirection()
         local d = ns.GetDB and ns.GetDB()
         local dir = d and d[cfg.dirDBKey]
-        return Perfy_Trace_Passthrough("Leave", "GetDirection MyCustomFrames/AuraHoverPreview.lua:313:10", DIR_INFO[dir] and dir or cfg.defaultDir)
+        return DIR_INFO[dir] and dir or cfg.defaultDir
     end
-    local function GetIconSize() Perfy_Trace(Perfy_GetTime(), "Enter", "GetIconSize MyCustomFrames/AuraHoverPreview.lua:318:10");
+    local function GetIconSize()
         local d = ns.GetDB and ns.GetDB()
         local sz = d and d[cfg.sizeDBKey]
-        return Perfy_Trace_Passthrough("Leave", "GetIconSize MyCustomFrames/AuraHoverPreview.lua:318:10", (type(sz) == "number" and sz >= 12 and sz <= 48) and sz or DEFAULT_ICON_SIZE)
+        return (type(sz) == "number" and sz >= 12 and sz <= 48) and sz or DEFAULT_ICON_SIZE
     end
     -- Mismo patron que GetDirection/GetIconSize arriba (2026-07-27, pedido
     -- del usuario: menu options para limite de auras, padding y sort, los 5
@@ -326,27 +326,27 @@ local function MakeAuraHoverGroup(cfg) Perfy_Trace(Perfy_GetTime(), "Enter", "Ma
     -- tamaño, un cambio en Options.lua se ve solo en el proximo refresh
     -- (ticker cada 0.3s como mucho, o al toque si estas con el mouse
     -- encima), sin necesidad de un callback de refresco dedicado.
-    local function GetMaxIcons() Perfy_Trace(Perfy_GetTime(), "Enter", "GetMaxIcons MyCustomFrames/AuraHoverPreview.lua:329:10");
+    local function GetMaxIcons()
         local d = ns.GetDB and ns.GetDB()
         local v = d and d[cfg.maxDBKey]
         v = (type(v) == "number") and math.floor(v + 0.5) or nil
-        return Perfy_Trace_Passthrough("Leave", "GetMaxIcons MyCustomFrames/AuraHoverPreview.lua:329:10", (v and v >= 1 and v <= HARD_MAX_ICONS) and v or DEFAULT_MAX_ICONS)
+        return (v and v >= 1 and v <= HARD_MAX_ICONS) and v or DEFAULT_MAX_ICONS
     end
-    local function GetPadding() Perfy_Trace(Perfy_GetTime(), "Enter", "GetPadding MyCustomFrames/AuraHoverPreview.lua:335:10");
+    local function GetPadding()
         local d = ns.GetDB and ns.GetDB()
         local v = d and d[cfg.paddingDBKey]
-        return Perfy_Trace_Passthrough("Leave", "GetPadding MyCustomFrames/AuraHoverPreview.lua:335:10", (type(v) == "number" and v >= 0 and v <= 30) and v or DEFAULT_ICON_GAP)
+        return (type(v) == "number" and v >= 0 and v <= 30) and v or DEFAULT_ICON_GAP
     end
-    local function GetSortMode() Perfy_Trace(Perfy_GetTime(), "Enter", "GetSortMode MyCustomFrames/AuraHoverPreview.lua:340:10");
+    local function GetSortMode()
         local d = ns.GetDB and ns.GetDB()
         local v = d and d[cfg.sortDBKey]
-        for _, m in ipairs(ns.AURA_SORT_MODES) do if m == v then Perfy_Trace(Perfy_GetTime(), "Leave", "GetSortMode MyCustomFrames/AuraHoverPreview.lua:340:10"); return v end end
-        Perfy_Trace(Perfy_GetTime(), "Leave", "GetSortMode MyCustomFrames/AuraHoverPreview.lua:340:10"); return "priority"
+        for _, m in ipairs(ns.AURA_SORT_MODES) do if m == v then return v end end
+        return "priority"
     end
 
-    local function Setup(key) Perfy_Trace(Perfy_GetTime(), "Enter", "Setup MyCustomFrames/AuraHoverPreview.lua:347:10");
+    local function Setup(key)
         local u = ns.frames and ns.frames[key]
-        if not u or not u.button then Perfy_Trace(Perfy_GetTime(), "Leave", "Setup MyCustomFrames/AuraHoverPreview.lua:347:10"); return end
+        if not u or not u.button then return end
 
         -- Carrier cuelga de UIParent (no de u.button): si la unidad esta
         -- oculta (sin grupo/partido), los hijos de un frame oculto no se
@@ -382,7 +382,7 @@ local function MakeAuraHoverGroup(cfg) Perfy_Trace(Perfy_GetTime(), "Enter", "Ma
         local onlyBuffs = cfg.onlyBuffs and cfg.onlyBuffs(key) or false
         local gap = cfg.gap or DEFAULT_GAP
 
-        local function ApplyFrac() Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyFrac MyCustomFrames/AuraHoverPreview.lua:385:14");
+        local function ApplyFrac()
             local dir = DIR_INFO[GetDirection()]
             local shift = gap + frac * SLIDE_DIST
             carrier:ClearAllPoints()
@@ -397,9 +397,9 @@ local function MakeAuraHoverGroup(cfg) Perfy_Trace(Perfy_GetTime(), "Enter", "Ma
             -- COMBATE se veia a mitad de opacidad. Como los 3 grupos pasan
             -- por esta misma funcion, un solo cambio los cubre a los 3.
             carrier:SetAlpha(frac)
-        Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyFrac MyCustomFrames/AuraHoverPreview.lua:385:14"); end
+        end
 
-        local function RefreshIcons() Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshIcons MyCustomFrames/AuraHoverPreview.lua:402:14");
+        local function RefreshIcons()
             local maxIcons = GetMaxIcons()
             local list
             if testMode then
@@ -432,13 +432,13 @@ local function MakeAuraHoverGroup(cfg) Perfy_Trace(Perfy_GetTime(), "Enter", "Ma
                     if data.__fake then
                         if b.swipe.Clear then b.swipe:Clear() end
                     else
-                        pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:435:30");
+                        pcall(function()
                             local aid = data.auraInstanceID
                             if aid and C_UnitAuras.GetAuraDuration and b.swipe.SetCooldownFromDurationObject then
                                 local durObj = C_UnitAuras.GetAuraDuration(u.unit, aid)
                                 if durObj then b.swipe:SetCooldownFromDurationObject(durObj) end
                             end
-                        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:435:30"); end)
+                        end)
                     end
                     -- `applications` puede ser un numero SECRETO (auras de otras
                     -- unidades en Midnight): type() primero, issecretvalue()
@@ -477,9 +477,9 @@ local function MakeAuraHoverGroup(cfg) Perfy_Trace(Perfy_GetTime(), "Enter", "Ma
                     b:Hide()
                 end
             end
-        Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshIcons MyCustomFrames/AuraHoverPreview.lua:402:14"); end
+        end
 
-        local function OnUpdateHandler(self, elapsed) Perfy_Trace(Perfy_GetTime(), "Enter", "OnUpdateHandler MyCustomFrames/AuraHoverPreview.lua:482:14");
+        local function OnUpdateHandler(self, elapsed)
             local speed = 1 - 0.5 ^ (elapsed / 0.07)
             frac = frac + (target - frac) * speed
             if math.abs(target - frac) < 0.01 then frac = target end
@@ -488,12 +488,12 @@ local function MakeAuraHoverGroup(cfg) Perfy_Trace(Perfy_GetTime(), "Enter", "Ma
                 self:SetScript("OnUpdate", nil)
                 self._running = false
             end
-        Perfy_Trace(Perfy_GetTime(), "Leave", "OnUpdateHandler MyCustomFrames/AuraHoverPreview.lua:482:14"); end
-        local function StartDriver() Perfy_Trace(Perfy_GetTime(), "Enter", "StartDriver MyCustomFrames/AuraHoverPreview.lua:492:14");
-            if driver._running then Perfy_Trace(Perfy_GetTime(), "Leave", "StartDriver MyCustomFrames/AuraHoverPreview.lua:492:14"); return end
+        end
+        local function StartDriver()
+            if driver._running then return end
             driver._running = true
             driver:SetScript("OnUpdate", OnUpdateHandler)
-        Perfy_Trace(Perfy_GetTime(), "Leave", "StartDriver MyCustomFrames/AuraHoverPreview.lua:492:14"); end
+        end
 
         local hoverZone = CreateFrame("Frame", nil, UIParent)
         hoverZone:SetFrameStrata("LOW")
@@ -509,10 +509,10 @@ local function MakeAuraHoverGroup(cfg) Perfy_Trace(Perfy_GetTime(), "Enter", "Ma
             else
                 local waiter = CreateFrame("Frame")
                 waiter:RegisterEvent("PLAYER_REGEN_ENABLED")
-                waiter:SetScript("OnEvent", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:512:44");
+                waiter:SetScript("OnEvent", function(self)
                     self:UnregisterAllEvents()
                     if hoverZone.SetPropagateMouseClicks then pcall(hoverZone.SetPropagateMouseClicks, hoverZone, true) end
-                Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:512:44"); end)
+                end)
             end
         end
 
@@ -520,18 +520,18 @@ local function MakeAuraHoverGroup(cfg) Perfy_Trace(Perfy_GetTime(), "Enter", "Ma
         -- (u.button:GetWidth/Height), pegada al lado correspondiente segun
         -- direccion -- asi el usuario puede saber su area mirando el outline
         -- de Lock, sin adivinar, y nunca tapa el click al boton real.
-        local function ReanchorZone() Perfy_Trace(Perfy_GetTime(), "Enter", "ReanchorZone MyCustomFrames/AuraHoverPreview.lua:523:14");
+        local function ReanchorZone()
             local dir = DIR_INFO[GetDirection()]
             local bw = u.button:GetWidth() or GetIconSize()
             local bh = u.button:GetHeight() or GetIconSize()
             hoverZone:ClearAllPoints()
             hoverZone:SetSize(bw, bh)
             hoverZone:SetPoint(dir.carrierPoint, u.button, dir.carrierRel, 0, 0)
-        Perfy_Trace(Perfy_GetTime(), "Leave", "ReanchorZone MyCustomFrames/AuraHoverPreview.lua:523:14"); end
+        end
         ReanchorZone()
 
         local hoverActive = false
-        local function Recompute() Perfy_Trace(Perfy_GetTime(), "Enter", "Recompute MyCustomFrames/AuraHoverPreview.lua:534:14");
+        local function Recompute()
             local gateOk = cfg.gateFn() or testMode
             -- combatCastOk: para el 99% de los grupos (sin cfg.combatCastNeedsTarget)
             -- esto es simplemente `true` -- no cambia nada. SOLO Player lo
@@ -563,7 +563,7 @@ local function MakeAuraHoverGroup(cfg) Perfy_Trace(Perfy_GetTime(), "Enter", "Ma
             -- una prueba anterior, eso explica el "sigue activo" tambien.
             target = (gateOk and (testMode or alwaysShow or hoverActive or showByCombat or showByCast)) and 1 or 0
             StartDriver()
-        Perfy_Trace(Perfy_GetTime(), "Leave", "Recompute MyCustomFrames/AuraHoverPreview.lua:534:14"); end
+        end
 
         -- CAMBIADO (2026-07-27, pedido del usuario: "se queda activo mas
         -- tiempo de lo que me gustaria despues de salir del mouse over...
@@ -575,32 +575,32 @@ local function MakeAuraHoverGroup(cfg) Perfy_Trace(Perfy_GetTime(), "Enter", "Ma
         -- visual (frac lerpando hacia target, half-life 0.07s) sigue siendo
         -- suave, pero arranca de inmediato en vez de 0.35s despues, igual
         -- que ya pasaba al terminar el combate.
-        local function EvaluateHover() Perfy_Trace(Perfy_GetTime(), "Enter", "EvaluateHover MyCustomFrames/AuraHoverPreview.lua:578:14");
+        local function EvaluateHover()
             local over = u.button:IsMouseOver() or hoverZone:IsMouseOver()
             hoverActive = over
             Recompute()
-        Perfy_Trace(Perfy_GetTime(), "Leave", "EvaluateHover MyCustomFrames/AuraHoverPreview.lua:578:14"); end
+        end
 
-        u.button:HookScript("OnEnter", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:584:39"); RefreshIcons(); EvaluateHover() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:584:39"); end)
+        u.button:HookScript("OnEnter", function() RefreshIcons(); EvaluateHover() end)
         u.button:HookScript("OnLeave", EvaluateHover)
-        hoverZone:SetScript("OnEnter", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:586:39"); RefreshIcons(); EvaluateHover() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:586:39"); end)
+        hoverZone:SetScript("OnEnter", function() RefreshIcons(); EvaluateHover() end)
         hoverZone:SetScript("OnLeave", EvaluateHover)
 
         for i = 1, HARD_MAX_ICONS do
             local b = icons[i]
-            b:SetScript("OnEnter", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:591:35");
+            b:SetScript("OnEnter", function(self)
                 -- El fade es por ALPHA (carrier:SetAlpha), que NO afecta
                 -- IsVisible()/interactividad: un icono con alpha 0 sigue
                 -- siendo hoverable -- cfg.gateFn() es el chequeo real.
-                if GameTooltip:IsForbidden() or not self:IsVisible() or not cfg.gateFn() then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:591:35"); return end
+                if GameTooltip:IsForbidden() or not self:IsVisible() or not cfg.gateFn() then return end
                 if self._fake then
                     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                     GameTooltip:SetText("Test Aura " .. tostring(i), 1, 1, 1)
                     GameTooltip:AddLine("Placeholder shown by the test toggle.", 0.8, 0.8, 0.8, true)
                     GameTooltip:Show()
-                    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:591:35"); return
+                    return
                 end
-                if not self._auraID then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:591:35"); return end
+                if not self._auraID then return end
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 local ok = false
                 if GameTooltip.SetUnitAuraByAuraInstanceID then
@@ -614,14 +614,14 @@ local function MakeAuraHoverGroup(cfg) Perfy_Trace(Perfy_GetTime(), "Enter", "Ma
                     end
                 end
                 if ok then GameTooltip:Show() else GameTooltip:Hide() end
-            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:591:35"); end)
-            b:SetScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:618:35");
+            end)
+            b:SetScript("OnLeave", function()
                 if not GameTooltip:IsForbidden() then GameTooltip:Hide() end
-            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:618:35"); end)
+            end)
         end
 
         local lastGateOk = nil
-        local refreshTicker = C_Timer.NewTicker(0.3, ns.Prof.Wrap("AuraHover: refresco 0.3s", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:624:94");
+        local refreshTicker = C_Timer.NewTicker(0.3, ns.Prof.Wrap("AuraHover: refresco 0.3s", function()
             local gateOk = cfg.gateFn()
             -- Regla #2: togglea EnableMouse segun el gate -- fuera del tipo de
             -- contenido correcto, el hoverZone no intercepta absolutamente nada.
@@ -683,57 +683,57 @@ local function MakeAuraHoverGroup(cfg) Perfy_Trace(Perfy_GetTime(), "Enter", "Ma
             if target == 1 then
                 RefreshIcons()
             end
-        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:624:94"); end))
+        end))
         carrier._refreshTicker = refreshTicker
 
         groupTest[key] = {
-            Show = function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:690:19"); target = 1; RefreshIcons(); StartDriver() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:690:19"); end,
-            Hide = function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:691:19"); target = 0; StartDriver() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:691:19"); end,
+            Show = function() target = 1; RefreshIcons(); StartDriver() end,
+            Hide = function() target = 0; StartDriver() end,
             Reanchor = ReanchorZone,
             -- Diagnostico (2026-07-27, reportado: "la de player sigue activa
             -- despues de salir del hover" -- 2 revisiones del codigo sin
             -- encontrar la causa). Vuelca el estado INTERNO real en vez de
             -- seguir revisando en teoria.
-            Debug = function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:697:20");
-                return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:697:20", {
+            Debug = function()
+                return {
                     hoverActive = hoverActive, target = target, frac = frac,
                     inCombat = inCombat, isCasting = isCasting, hasTarget = hasTarget,
                     gateOk = cfg.gateFn(), buttonOver = u.button:IsMouseOver() and true or false,
                     zoneOver = hoverZone:IsMouseOver() and true or false,
                     carrierAlpha = carrier:GetAlpha(),
-                })
+                }
             end,
         }
         ApplyFrac()
-    Perfy_Trace(Perfy_GetTime(), "Leave", "Setup MyCustomFrames/AuraHoverPreview.lua:347:10"); end
+    end
 
-    local function RefreshDirection() Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshDirection MyCustomFrames/AuraHoverPreview.lua:710:10");
+    local function RefreshDirection()
         for _, t in pairs(groupTest) do
             if t.Reanchor then pcall(t.Reanchor) end
         end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshDirection MyCustomFrames/AuraHoverPreview.lua:710:10"); end
-    local function SetTestMode(on) Perfy_Trace(Perfy_GetTime(), "Enter", "SetTestMode MyCustomFrames/AuraHoverPreview.lua:715:10");
+    end
+    local function SetTestMode(on)
         testMode = on and true or false
         for _, t in pairs(groupTest) do
             if t then if testMode then t.Show() else t.Hide() end end
         end
-        Perfy_Trace(Perfy_GetTime(), "Leave", "SetTestMode MyCustomFrames/AuraHoverPreview.lua:715:10"); return testMode
+        return testMode
     end
 
     local f = CreateFrame("Frame")
     f:RegisterEvent("PLAYER_LOGIN")
-    f:SetScript("OnEvent", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:725:27");
+    f:SetScript("OnEvent", function(self)
         self:UnregisterAllEvents()
-        C_Timer.After(1, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:727:25");
+        C_Timer.After(1, function()
             for _, key in ipairs(cfg.keys) do pcall(Setup, key) end
-        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:727:25"); end)
-    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:725:27"); end)
+        end)
+    end)
 
-    return Perfy_Trace_Passthrough("Leave", "MakeAuraHoverGroup MyCustomFrames/AuraHoverPreview.lua:309:6", {
+    return {
         test = groupTest,
         RefreshDirection = RefreshDirection,
-        ToggleTestMode = function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:735:25"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:735:25", SetTestMode(not testMode)) end,
-    })
+        ToggleTestMode = function() return SetTestMode(not testMode) end,
+    }
 end
 
 -- ==========================================================================
@@ -746,19 +746,19 @@ local party = MakeAuraHoverGroup({
     dirDBKey = "partyAuraDirection", sizeDBKey = "partyAuraIconSize", defaultDir = "left",
     maxDBKey = "partyAuraMaxIcons", paddingDBKey = "partyAuraPadding", sortDBKey = "partyAuraSort",
     gateFn = InDungeon, autoShowOnCombat = true,
-    onlyBuffs = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:749:16"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:749:16", key == "party5") end,
+    onlyBuffs = function(key) return key == "party5" end,
     -- party5 usa unit="player" (UnitExists("player") siempre true, a
     -- diferencia de party1-4): sin este check, el hoverZone (interactuable
     -- aunque el boton este oculto) mostraria tus propios buffs incluso
     -- jugando solo dentro de una mazmorra.
-    skipIfSolo = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:754:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:754:17", key == "party5") end,
+    skipIfSolo = function(key) return key == "party5" end,
 })
 local arena = MakeAuraHoverGroup({
     id = "arena", keys = { "arena_player", "arena_party1", "arena_party2", "arena_enemy1", "arena_enemy2", "arena_enemy3" },
     dirDBKey = "arenaAuraDirection", sizeDBKey = "arenaAuraIconSize", defaultDir = "down",
     maxDBKey = "arenaAuraMaxIcons", paddingDBKey = "arenaAuraPadding", sortDBKey = "arenaAuraSort",
     gateFn = InArenaNow, autoShowOnCombat = false,
-    onlyBuffs = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:761:16"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:761:16", key == "arena_player") end,
+    onlyBuffs = function(key) return key == "arena_player" end,
 })
 -- Focus (2026-07-27, pedido del usuario): "quita el de Auras.lua, agregale un
 -- sistema similar al de AuraHover" -- Focus paso de ser un grid SIEMPRE
@@ -770,7 +770,7 @@ local focus = MakeAuraHoverGroup({
     id = "focus", keys = { "focus" },
     dirDBKey = "focusAuraDirection", sizeDBKey = "focusAuraIconSize", defaultDir = "down",
     maxDBKey = "focusAuraMaxIcons", paddingDBKey = "focusAuraPadding", sortDBKey = "focusAuraSort",
-    gateFn = function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:773:13"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:773:13", UnitExists("focus")) end,
+    gateFn = function() return UnitExists("focus") end,
     -- autoShowOnCombat=true (como party, no como arena): un focus target se
     -- usa tipicamente para vigilar a alguien puntual DURANTE una pelea (un
     -- healer vigilando al tank, por ejemplo) -- quereer verlo fijo en combate,
@@ -807,10 +807,10 @@ local focus = MakeAuraHoverGroup({
 -- half-life (~0.2s) -- se siente inmediato en vez de rezagado, y en la
 -- direccion contraria (aparecer, kIn mucho mas rapido) sigue siendo
 -- practicamente instantaneo.
-local function PlayerFrameVisible() Perfy_Trace(Perfy_GetTime(), "Enter", "PlayerFrameVisible MyCustomFrames/AuraHoverPreview.lua:810:6");
+local function PlayerFrameVisible()
     local f = ns.GetElementFrame and ns.GetElementFrame("player")
-    if not f then Perfy_Trace(Perfy_GetTime(), "Leave", "PlayerFrameVisible MyCustomFrames/AuraHoverPreview.lua:810:6"); return true end
-    return Perfy_Trace_Passthrough("Leave", "PlayerFrameVisible MyCustomFrames/AuraHoverPreview.lua:810:6", f:GetAlpha() > 0.5)
+    if not f then return true end
+    return f:GetAlpha() > 0.5
 end
 local playerHover = MakeAuraHoverGroup({
     id = "player", keys = { "player" },
@@ -824,7 +824,7 @@ local targetHover = MakeAuraHoverGroup({
     id = "target", keys = { "target" },
     dirDBKey = "targetAuraDirection", sizeDBKey = "targetAuraIconSize", defaultDir = "down",
     maxDBKey = "targetAuraMaxIcons", paddingDBKey = "targetAuraPadding", sortDBKey = "targetAuraSort",
-    gateFn = function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:827:13"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/AuraHoverPreview.lua:827:13", UnitExists("target")) end,
+    gateFn = function() return UnitExists("target") end,
     alwaysShowOnGate = true,
     gap = PLAYER_TARGET_GAP,
 })
@@ -871,42 +871,42 @@ ns.ToggleArenaAuraTest = arena.ToggleTestMode
 ns.ToggleFocusAuraTest = focus.ToggleTestMode
 ns.TogglePlayerAuraTest = playerHover.ToggleTestMode
 ns.ToggleTargetAuraTest = targetHover.ToggleTestMode
-ns.IsPartyAura = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.IsPartyAura MyCustomFrames/AuraHoverPreview.lua:874:17"); return Perfy_Trace_Passthrough("Leave", "ns.IsPartyAura MyCustomFrames/AuraHoverPreview.lua:874:17", key == "aura_party") end
-ns.IsArenaAura = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.IsArenaAura MyCustomFrames/AuraHoverPreview.lua:875:17"); return Perfy_Trace_Passthrough("Leave", "ns.IsArenaAura MyCustomFrames/AuraHoverPreview.lua:875:17", key == "aura_arena") end
-ns.IsFocusAura = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.IsFocusAura MyCustomFrames/AuraHoverPreview.lua:876:17"); return Perfy_Trace_Passthrough("Leave", "ns.IsFocusAura MyCustomFrames/AuraHoverPreview.lua:876:17", key == "aura_focus") end
-ns.IsPlayerAura = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.IsPlayerAura MyCustomFrames/AuraHoverPreview.lua:877:18"); return Perfy_Trace_Passthrough("Leave", "ns.IsPlayerAura MyCustomFrames/AuraHoverPreview.lua:877:18", key == "aura_player") end
-ns.IsTargetAura = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.IsTargetAura MyCustomFrames/AuraHoverPreview.lua:878:18"); return Perfy_Trace_Passthrough("Leave", "ns.IsTargetAura MyCustomFrames/AuraHoverPreview.lua:878:18", key == "aura_target") end
+ns.IsPartyAura = function(key) return key == "aura_party" end
+ns.IsArenaAura = function(key) return key == "aura_arena" end
+ns.IsFocusAura = function(key) return key == "aura_focus" end
+ns.IsPlayerAura = function(key) return key == "aura_player" end
+ns.IsTargetAura = function(key) return key == "aura_target" end
 ns.FOCUS_AURA_DIRECTIONS = DIRECTIONS
 ns.PLAYER_AURA_DIRECTIONS = DIRECTIONS
 ns.TARGET_AURA_DIRECTIONS = DIRECTIONS
 
 SLASH_MCFPARTYTEST1 = "/mcfpartytest"
-SlashCmdList["MCFPARTYTEST"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFPARTYTEST MyCustomFrames/AuraHoverPreview.lua:884:31");
+SlashCmdList["MCFPARTYTEST"] = function()
     print("|cff00ff00[MCF party aura test]|r " .. (ns.TogglePartyAuraTest() and "ON" or "off"))
-Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFPARTYTEST MyCustomFrames/AuraHoverPreview.lua:884:31"); end
+end
 SLASH_MCFARENAAURATEST1 = "/mcfarenaauratest"
-SlashCmdList["MCFARENAAURATEST"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFARENAAURATEST MyCustomFrames/AuraHoverPreview.lua:888:35");
+SlashCmdList["MCFARENAAURATEST"] = function()
     print("|cff00ff00[MCF arena aura test]|r " .. (ns.ToggleArenaAuraTest() and "ON" or "off"))
-Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFARENAAURATEST MyCustomFrames/AuraHoverPreview.lua:888:35"); end
+end
 SLASH_MCFFOCUSAURATEST1 = "/mcffocusauratest"
-SlashCmdList["MCFFOCUSAURATEST"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFFOCUSAURATEST MyCustomFrames/AuraHoverPreview.lua:892:35");
+SlashCmdList["MCFFOCUSAURATEST"] = function()
     print("|cff00ff00[MCF focus aura test]|r " .. (ns.ToggleFocusAuraTest() and "ON" or "off"))
-Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFFOCUSAURATEST MyCustomFrames/AuraHoverPreview.lua:892:35"); end
+end
 SLASH_MCFPLAYERAURATEST1 = "/mcfplayerauratest"
-SlashCmdList["MCFPLAYERAURATEST"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFPLAYERAURATEST MyCustomFrames/AuraHoverPreview.lua:896:36");
+SlashCmdList["MCFPLAYERAURATEST"] = function()
     print("|cff00ff00[MCF player aura test]|r " .. (ns.TogglePlayerAuraTest() and "ON" or "off"))
-Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFPLAYERAURATEST MyCustomFrames/AuraHoverPreview.lua:896:36"); end
+end
 SLASH_MCFTARGETAURATEST1 = "/mcftargetauratest"
-SlashCmdList["MCFTARGETAURATEST"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFTARGETAURATEST MyCustomFrames/AuraHoverPreview.lua:900:36");
+SlashCmdList["MCFTARGETAURATEST"] = function()
     print("|cff00ff00[MCF target aura test]|r " .. (ns.ToggleTargetAuraTest() and "ON" or "off"))
-Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFTARGETAURATEST MyCustomFrames/AuraHoverPreview.lua:900:36"); end
+end
 
 -- Diagnostico (2026-07-27, reportado: "la de player sigue activa despues de
 -- salir del hover"): vuelca el estado interno REAL del grupo (hoverActive/
 -- target/frac/inCombat/isCasting/gateOk/mouse-over) en vez de seguir
 -- revisando la logica en teoria sin poder verla correr en vivo.
 SLASH_MCFAURAHOVERDIAG1 = "/mcfaurahoverdiag"
-SlashCmdList["MCFAURAHOVERDIAG"] = function(msg) Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFAURAHOVERDIAG MyCustomFrames/AuraHoverPreview.lua:909:35");
+SlashCmdList["MCFAURAHOVERDIAG"] = function(msg)
     local key = (msg or ""):match("^%s*(%S*)")
     if key == "" then key = "player" end
     local groups = { player = playerHover, target = targetHover, focus = focus, party = party, arena = arena }
@@ -914,18 +914,18 @@ SlashCmdList["MCFAURAHOVERDIAG"] = function(msg) Perfy_Trace(Perfy_GetTime(), "E
     for _, g in pairs(groups) do if g.test[key] then grp = g.test[key]; break end end
     if not grp or not grp.Debug then
         print("|cffff5555[MCF aurahover diag]|r sin grupo para la key '" .. key .. "' -- probar: player, target, focus, party1-5, arena_player, arena_party1-2, arena_enemy1-3")
-        Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFAURAHOVERDIAG MyCustomFrames/AuraHoverPreview.lua:909:35"); return
+        return
     end
     local d = grp.Debug()
     print(("|cff00ff00[MCF aurahover diag]|r key=%s hoverActive=%s target=%s frac=%.2f inCombat=%s isCasting=%s hasTarget=%s gateOk=%s buttonOver=%s zoneOver=%s carrierAlpha=%.2f"):format(
         key, tostring(d.hoverActive), tostring(d.target), d.frac, tostring(d.inCombat), tostring(d.isCasting),
         tostring(d.hasTarget), tostring(d.gateOk), tostring(d.buttonOver), tostring(d.zoneOver), d.carrierAlpha))
-Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFAURAHOVERDIAG MyCustomFrames/AuraHoverPreview.lua:909:35"); end
+end
 
 -- Diagnostico (ya existia en ArenaAuraPreview.lua): vuelca que metodo de
 -- deteccion de arena esta devolviendo que.
 SLASH_MCFARENADIAG1 = "/mcfarenadiag"
-SlashCmdList["MCFARENADIAG"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFARENADIAG MyCustomFrames/AuraHoverPreview.lua:928:31");
+SlashCmdList["MCFARENADIAG"] = function()
     local ok1, isArena = pcall(CheckIsArena)
     local ok2, isRated = pcall(CheckIsRatedArena)
     local ok3, isShuffle = pcall(CheckIsSoloShuffle)
@@ -934,6 +934,4 @@ SlashCmdList["MCFARENADIAG"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", 
         tostring(ok1), tostring(isArena), tostring(ok2), tostring(isRated), tostring(ok3), tostring(isShuffle)))
     print(("  IsInInstance: ok=%s inInstance=%s instanceType=%s"):format(tostring(ok4), tostring(inInst), tostring(instanceType)))
     print("  InArenaNow() final result = " .. tostring(InArenaNow()))
-Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFARENADIAG MyCustomFrames/AuraHoverPreview.lua:928:31"); end
-
-Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/AuraHoverPreview.lua");
+end

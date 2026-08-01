@@ -1,4 +1,4 @@
---[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/ArenaTrinket.lua"); -- ==========================================================================
+-- ==========================================================================
 -- MyCustomFrames - ArenaTrinket.lua
 -- Pedido del usuario 2026-07-19: icono de trinket de PvP SOLO en Arena Enemy
 -- 1/2/3, replicando el comportamiento de Blizzard con APIs publicas
@@ -42,8 +42,8 @@ ns.ArenaTrinketState = {}
 -- el buff aparece de nuevo (no en cada UNIT_AURA mientras sigue activo).
 local seenInstance = {}
 
-local function ScanUnit(unit) Perfy_Trace(Perfy_GetTime(), "Enter", "ScanUnit MyCustomFrames/ArenaTrinket.lua:45:6");
-    if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then Perfy_Trace(Perfy_GetTime(), "Leave", "ScanUnit MyCustomFrames/ArenaTrinket.lua:45:6"); return end
+local function ScanUnit(unit)
+    if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return end
     local seen = seenInstance[unit] or {}
     local stillThere = {}
     for i = 1, 40 do
@@ -57,7 +57,7 @@ local function ScanUnit(unit) Perfy_Trace(Perfy_GetTime(), "Enter", "ScanUnit My
         local sid = data.spellId
         local dur
         if sid then
-            local ok2, res = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ArenaTrinket.lua:60:35"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/ArenaTrinket.lua:60:35", TRINKET_SPELLS[sid]) end)
+            local ok2, res = pcall(function() return TRINKET_SPELLS[sid] end)
             if ok2 then dur = res end
         end
         if dur and data.auraInstanceID then
@@ -70,7 +70,7 @@ local function ScanUnit(unit) Perfy_Trace(Perfy_GetTime(), "Enter", "ScanUnit My
         end
     end
     seenInstance[unit] = stillThere
-Perfy_Trace(Perfy_GetTime(), "Leave", "ScanUnit MyCustomFrames/ArenaTrinket.lua:45:6"); end
+end
 
 -- Un frame POR unidad (RegisterUnitEvent NO es acumulativo -- llamarlo varias
 -- veces para el MISMO evento en el MISMO frame reemplaza, no suma; leccion ya
@@ -78,7 +78,7 @@ Perfy_Trace(Perfy_GetTime(), "Leave", "ScanUnit MyCustomFrames/ArenaTrinket.lua:
 for _, unit in ipairs(ENEMY_UNITS) do
     local f = CreateFrame("Frame")
     f:RegisterUnitEvent("UNIT_AURA", unit)
-    f:SetScript("OnEvent", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ArenaTrinket.lua:81:27"); ScanUnit(unit) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ArenaTrinket.lua:81:27"); end)
+    f:SetScript("OnEvent", function() ScanUnit(unit) end)
 end
 
 -- Limpia el estado guardado al entrar a un mundo nuevo (nueva instancia de
@@ -108,8 +108,8 @@ end
 -- ==========================================================================
 ns.ArenaPrepSpecState = {}   -- unit -> {icon=textureID, classFile=STRING}
 
-local function ScanPrepSpecs() Perfy_Trace(Perfy_GetTime(), "Enter", "ScanPrepSpecs MyCustomFrames/ArenaTrinket.lua:111:6");
-    if not GetArenaOpponentSpec then Perfy_Trace(Perfy_GetTime(), "Leave", "ScanPrepSpecs MyCustomFrames/ArenaTrinket.lua:111:6"); return end
+local function ScanPrepSpecs()
+    if not GetArenaOpponentSpec then return end
     for i, unit in ipairs(ENEMY_UNITS) do
         local ok, specID = pcall(GetArenaOpponentSpec, i)
         if ok and specID and specID > 0 then
@@ -119,7 +119,7 @@ local function ScanPrepSpecs() Perfy_Trace(Perfy_GetTime(), "Enter", "ScanPrepSp
             end
         end
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "ScanPrepSpecs MyCustomFrames/ArenaTrinket.lua:111:6"); end
+end
 
 local prepWatcher = CreateFrame("Frame")
 prepWatcher:RegisterEvent("ARENA_PREP_OPPONENT_SPECIALIZATIONS")
@@ -128,15 +128,15 @@ prepWatcher:RegisterEvent("PLAYER_ENTERING_WORLD")
 -- barras reales (Units.lua) ya tienen vida/nombre validos, se apaga el icono
 -- de prep para no taparlas.
 prepWatcher:RegisterEvent("PLAYER_REGEN_DISABLED")
-prepWatcher:SetScript("OnEvent", function(self, event) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ArenaTrinket.lua:131:33");
+prepWatcher:SetScript("OnEvent", function(self, event)
     if event == "PLAYER_REGEN_DISABLED" then
         for _, unit in ipairs(ENEMY_UNITS) do
             ns.ArenaPrepSpecState[unit] = nil
         end
-        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ArenaTrinket.lua:131:33"); return
+        return
     end
     ScanPrepSpecs()
-Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ArenaTrinket.lua:131:33"); end)
+end)
 
 -- Test mode (2026-07-27, pedido del usuario: "dejame una forma de testear
 -- los trinkets de arena, que no estoy seguro si estan funcionando"). Ojo con
@@ -151,24 +151,24 @@ local trinketTestOn = false
 -- Options.lua. Devuelve el estado NUEVO -- el boton lo usa para quedar marcado
 -- como activo mientras el preview este prendido (mismo contrato que los
 -- ns.ToggleXxxAuraTest de AuraHoverPreview.lua).
-function ns.ToggleArenaTrinketTest() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ToggleArenaTrinketTest MyCustomFrames/ArenaTrinket.lua:154:0");
+function ns.ToggleArenaTrinketTest()
     trinketTestOn = not trinketTestOn
     for _, unit in ipairs(ENEMY_UNITS) do
         ns.ArenaTrinketState[unit] = trinketTestOn and { start = GetTime(), duration = 120 } or nil
         if ns.RefreshArenaTrinketIcon then ns.RefreshArenaTrinketIcon(unit) end
     end
-    Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ToggleArenaTrinketTest MyCustomFrames/ArenaTrinket.lua:154:0"); return trinketTestOn
+    return trinketTestOn
 end
 
 SLASH_MCFTRINKETTEST1 = "/mcftrinkettest"
-SlashCmdList["MCFTRINKETTEST"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFTRINKETTEST MyCustomFrames/ArenaTrinket.lua:164:33");
+SlashCmdList["MCFTRINKETTEST"] = function()
     print("|cff00ff00[MCF trinket test]|r " .. (ns.ToggleArenaTrinketTest() and "ON" or "off") ..
         " -- tests the icon/cooldown draw path only, not real detection.")
-Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFTRINKETTEST MyCustomFrames/ArenaTrinket.lua:164:33"); end
+end
 
 local resetWatcher = CreateFrame("Frame")
 resetWatcher:RegisterEvent("PLAYER_ENTERING_WORLD")
-resetWatcher:SetScript("OnEvent", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ArenaTrinket.lua:171:34");
+resetWatcher:SetScript("OnEvent", function()
     -- La bandera del preview sigue a lo que se VE (2026-07-29). Este handler
     -- borra ns.ArenaTrinketState, o sea los iconos de muestra, pero antes se
     -- olvidaba de trinketTestOn: al cambiar de zona con el preview prendido, los
@@ -189,6 +189,4 @@ resetWatcher:SetScript("OnEvent", function() Perfy_Trace(Perfy_GetTime(), "Enter
         -- (ver prepWatcher) ya limpia esto cuando el combate real arranca.
         if ns.RefreshArenaTrinketIcon then ns.RefreshArenaTrinketIcon(unit) end
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ArenaTrinket.lua:171:34"); end)
-
-Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/ArenaTrinket.lua");
+end)

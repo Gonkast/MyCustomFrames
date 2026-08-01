@@ -1,4 +1,4 @@
---[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/ExplorerAuto.lua"); local ADDON, ns = ...
+local ADDON, ns = ...
 
 -- ==========================================================================
 -- MyCustomFrames - ExplorerAuto.lua
@@ -28,22 +28,22 @@
 
 local f = CreateFrame("Frame")
 
-local function DB() Perfy_Trace(Perfy_GetTime(), "Enter", "DB MyCustomFrames/ExplorerAuto.lua:31:6"); return Perfy_Trace_Passthrough("Leave", "DB MyCustomFrames/ExplorerAuto.lua:31:6", ns.GetDB and ns.GetDB()) end
+local function DB() return ns.GetDB and ns.GetDB() end
 
 -- ---- 1) Housing ----------------------------------------------------------
 
 -- `C_Housing` no existe en builds sin housing y sus funciones pueden cambiar de
 -- firma, asi que todo va con pcall: si algo falla, se responde "no estoy en
 -- housing" y el automatismo simplemente no actua.
-local function InHousing() Perfy_Trace(Perfy_GetTime(), "Enter", "InHousing MyCustomFrames/ExplorerAuto.lua:38:6");
-    if not C_Housing or not C_Housing.IsInsideHouseOrPlot then Perfy_Trace(Perfy_GetTime(), "Leave", "InHousing MyCustomFrames/ExplorerAuto.lua:38:6"); return false end
+local function InHousing()
+    if not C_Housing or not C_Housing.IsInsideHouseOrPlot then return false end
     local ok, inside = pcall(C_Housing.IsInsideHouseOrPlot)
-    if not ok then Perfy_Trace(Perfy_GetTime(), "Leave", "InHousing MyCustomFrames/ExplorerAuto.lua:38:6"); return false end
+    if not ok then return false end
     -- Se usa SOLO IsInsideHouseOrPlot, no CanEditCharter: el pedido fue "si
     -- estoy en housing", no "si estoy decorando". Para acotarlo al modo edicion,
     -- agregar aca `and pcall(C_Housing.CanEditCharter)` -- es la condicion que
     -- usa DynamicCam.
-    return Perfy_Trace_Passthrough("Leave", "InHousing MyCustomFrames/ExplorerAuto.lua:38:6", inside and true or false)
+    return inside and true or false
 end
 
 -- La copia del estado va en la DB, NO en una variable de archivo (2026-07-28,
@@ -58,21 +58,21 @@ end
 -- la copia ES el estado. Una bandera en memoria habria tenido exactamente el
 -- mismo problema al reconectar.
 
-local function SaveExplorerState() Perfy_Trace(Perfy_GetTime(), "Enter", "SaveExplorerState MyCustomFrames/ExplorerAuto.lua:61:6");
-    local db = DB(); if not db then Perfy_Trace(Perfy_GetTime(), "Leave", "SaveExplorerState MyCustomFrames/ExplorerAuto.lua:61:6"); return end
+local function SaveExplorerState()
+    local db = DB(); if not db then return end
     -- NUNCA pisar una copia existente. Si ya hay una, el estado actual es el
     -- minimal que aplicamos nosotros -- guardarlo encima perderia el original,
     -- que es justo el bug que esto arregla.
-    if db._explorerHousingSaved then Perfy_Trace(Perfy_GetTime(), "Leave", "SaveExplorerState MyCustomFrames/ExplorerAuto.lua:61:6"); return end
+    if db._explorerHousingSaved then return end
     local copy = {}
     for k, v in pairs(db.explorer or {}) do copy[k] = v end
     db._explorerHousingSaved = { enabled = db.explorerEnabled, map = copy }
-Perfy_Trace(Perfy_GetTime(), "Leave", "SaveExplorerState MyCustomFrames/ExplorerAuto.lua:61:6"); end
+end
 
-local function RestoreExplorerState() Perfy_Trace(Perfy_GetTime(), "Enter", "RestoreExplorerState MyCustomFrames/ExplorerAuto.lua:72:6");
+local function RestoreExplorerState()
     local db = DB()
     local saved = db and db._explorerHousingSaved
-    if not saved then Perfy_Trace(Perfy_GetTime(), "Leave", "RestoreExplorerState MyCustomFrames/ExplorerAuto.lua:72:6"); return end
+    if not saved then return end
     -- Alpha=1 en todo antes de reescribir el mapa: mismo cuidado que toma
     -- ApplyExplorerQuickProfile, para que nada quede congelado a mitad de un
     -- desvanecido cuando cambia la membresia.
@@ -83,15 +83,15 @@ local function RestoreExplorerState() Perfy_Trace(Perfy_GetTime(), "Enter", "Res
     db.explorerEnabled = saved.enabled
     db._explorerHousingSaved = nil
     if ns.RefreshAll then ns.RefreshAll() end
-Perfy_Trace(Perfy_GetTime(), "Leave", "RestoreExplorerState MyCustomFrames/ExplorerAuto.lua:72:6"); end
+end
 
-local function UpdateHousing() Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateHousing MyCustomFrames/ExplorerAuto.lua:88:6");
-    local db = DB(); if not db then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateHousing MyCustomFrames/ExplorerAuto.lua:88:6"); return end
+local function UpdateHousing()
+    local db = DB(); if not db then return end
     if not db.explorerHousingMinimal then
         -- Se apago la opcion mientras estaba actuando: devolver el estado en vez
         -- de dejarlo pegado en minimal.
         RestoreExplorerState()
-        Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateHousing MyCustomFrames/ExplorerAuto.lua:88:6"); return
+        return
     end
     if InHousing() then
         -- El guard de SaveExplorerState hace esto idempotente: entrar de nuevo
@@ -106,7 +106,7 @@ local function UpdateHousing() Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateHous
         -- pendiente de una sesion anterior la restaura al entrar al mundo.
         RestoreExplorerState()
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateHousing MyCustomFrames/ExplorerAuto.lua:88:6"); end
+end
 ns.UpdateExplorerHousing = UpdateHousing
 
 -- ---- 2) Barra 1 con reemplazo -> esconder las demas -----------------------
@@ -146,33 +146,33 @@ local BONUS_COND = "[bonusbar:1/2/3/4/5]"
 -- correcta depende de la clase y de que considere "reemplazada" cada uno --
 -- este usuario, por ejemplo, tiene bonusbar 5 permanente, asi que quizas quiera
 -- sacarlo. Cambiarla con /mcfbarcond en vez de tener que tocar el archivo.
-local function Cond() Perfy_Trace(Perfy_GetTime(), "Enter", "Cond MyCustomFrames/ExplorerAuto.lua:149:6");
+local function Cond()
     local db = DB()
     -- Una cadena puesta a mano con /mcfbarcond manda sobre todo: quien la escribe
     -- sabe lo que quiere.
     local c = db and db.explorerReplaceCond
-    if type(c) == "string" and c ~= "" then Perfy_Trace(Perfy_GetTime(), "Leave", "Cond MyCustomFrames/ExplorerAuto.lua:149:6"); return c end
+    if type(c) == "string" and c ~= "" then return c end
     local cond = BASE_COND
     if db and db.explorerReplaceBonusBar then cond = cond .. BONUS_COND end
-    return Perfy_Trace_Passthrough("Leave", "Cond MyCustomFrames/ExplorerAuto.lua:149:6", cond .. " hide")
+    return cond .. " hide"
 end
 ns.ExplorerReplaceCondDefault = BASE_COND .. " hide"
 
-local function Bar1IsReplaced() Perfy_Trace(Perfy_GetTime(), "Enter", "Bar1IsReplaced MyCustomFrames/ExplorerAuto.lua:161:6");
-    if type(SecureCmdOptionParse) ~= "function" then Perfy_Trace(Perfy_GetTime(), "Leave", "Bar1IsReplaced MyCustomFrames/ExplorerAuto.lua:161:6"); return false end
+local function Bar1IsReplaced()
+    if type(SecureCmdOptionParse) ~= "function" then return false end
     local ok, r = pcall(SecureCmdOptionParse, Cond())
-    return Perfy_Trace_Passthrough("Leave", "Bar1IsReplaced MyCustomFrames/ExplorerAuto.lua:161:6", (ok and r == "hide") or false)
+    return (ok and r == "hide") or false
 end
 
 SLASH_MCFBARCOND1 = "/mcfbarcond"
-SlashCmdList["MCFBARCOND"] = function(msg) Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFBARCOND MyCustomFrames/ExplorerAuto.lua:168:29");
-    local db = DB(); if not db then Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFBARCOND MyCustomFrames/ExplorerAuto.lua:168:29"); return end
+SlashCmdList["MCFBARCOND"] = function(msg)
+    local db = DB(); if not db then return end
     msg = msg and msg:match("^%s*(.-)%s*$") or ""
     if msg == "" then
         print("|cffffe19b[MCF]|r condicion actual: |cffffff00" .. Cond() .. "|r")
         print("   /mcfbarcond <condicion>   -- ej: [overridebar][vehicleui] hide")
         print("   /mcfbarcond reset         -- vuelve al default")
-        Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFBARCOND MyCustomFrames/ExplorerAuto.lua:168:29"); return
+        return
     end
     if msg == "reset" then
         db.explorerReplaceCond = nil
@@ -184,14 +184,14 @@ SlashCmdList["MCFBARCOND"] = function(msg) Perfy_Trace(Perfy_GetTime(), "Enter",
         print("|cffffe19b[MCF]|r condicion: |cffffff00" .. msg ..
               "|r  -> ahora evalua " .. (Bar1IsReplaced() and "|cff00ff00SI|r" or "no"))
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFBARCOND MyCustomFrames/ExplorerAuto.lua:168:29"); end
+end
 ns.Bar1IsReplaced = Bar1IsReplaced
 
 -- Diagnostico: dice QUE señal esta activa y si el force-hide deberia estar
 -- actuando. Existe porque la primera version de esta feature no disparaba y no
 -- habia forma de saber cual de las condiciones fallaba.
 SLASH_MCFBARDIAG1 = "/mcfbardiag"
-SlashCmdList["MCFBARDIAG"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFBARDIAG MyCustomFrames/ExplorerAuto.lua:194:29");
+SlashCmdList["MCFBARDIAG"] = function()
     local db = DB()
     print("|cffffe19b[MCF bar]|r estado de la barra 1:")
     print(("   condicion: %s"):format(Cond()))
@@ -240,7 +240,7 @@ SlashCmdList["MCFBARDIAG"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "S
         if fr and fr.IsShown and fr:IsShown() then nat = true; print("     " .. n2) end
     end
     if not nat then print("     ninguna") end
-Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFBARDIAG MyCustomFrames/ExplorerAuto.lua:194:29"); end
+end
 
 -- ¿Esta barra tiene que estar forzada a oculta AHORA? Lo consulta tambien el
 -- bucle de Explorer.lua, para que gane sobre sus condiciones de revelado
@@ -258,19 +258,19 @@ local HIDE_NAMED = {
     BT4BarPetBar = true, BT4BarStanceBar = true, BT4BarBagBar = true,
 }
 
-local function IsHideable(key) Perfy_Trace(Perfy_GetTime(), "Enter", "IsHideable MyCustomFrames/ExplorerAuto.lua:261:6");
-    if key == "BT4Bar1" then Perfy_Trace(Perfy_GetTime(), "Leave", "IsHideable MyCustomFrames/ExplorerAuto.lua:261:6"); return false end
-    if HIDE_NAMED[key] then Perfy_Trace(Perfy_GetTime(), "Leave", "IsHideable MyCustomFrames/ExplorerAuto.lua:261:6"); return true end
+local function IsHideable(key)
+    if key == "BT4Bar1" then return false end
+    if HIDE_NAMED[key] then return true end
     -- BT4Bar2..10 (numeradas): solo las que existan de verdad.
     local n = key:match("^BT4Bar(%d+)$")
-    return Perfy_Trace_Passthrough("Leave", "IsHideable MyCustomFrames/ExplorerAuto.lua:261:6", n ~= nil and tonumber(n) >= 2)
+    return n ~= nil and tonumber(n) >= 2
 end
 
-function ns.ExplorerBarForceHidden(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ExplorerBarForceHidden MyCustomFrames/ExplorerAuto.lua:269:0");
+function ns.ExplorerBarForceHidden(key)
     local db = DB()
-    if not (db and db.explorerHideBarsOnReplace) then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ExplorerBarForceHidden MyCustomFrames/ExplorerAuto.lua:269:0"); return false end
-    if not IsHideable(key) then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ExplorerBarForceHidden MyCustomFrames/ExplorerAuto.lua:269:0"); return false end
-    return Perfy_Trace_Passthrough("Leave", "ns.ExplorerBarForceHidden MyCustomFrames/ExplorerAuto.lua:269:0", Bar1IsReplaced())
+    if not (db and db.explorerHideBarsOnReplace) then return false end
+    if not IsHideable(key) then return false end
+    return Bar1IsReplaced()
 end
 
 -- Aplicacion DIRECTA, solo para las barras que el Explorer no esta gestionando
@@ -279,8 +279,8 @@ end
 -- escribiendo alpha sobre el mismo frame.
 local touched = {}
 
-local function ApplyBarHiding() Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyBarHiding MyCustomFrames/ExplorerAuto.lua:282:6");
-    local db = DB(); if not db then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyBarHiding MyCustomFrames/ExplorerAuto.lua:282:6"); return end
+local function ApplyBarHiding()
+    local db = DB(); if not db then return end
     local explorerOwns = (db.explorerEnabled ~= false) and db.explorer or nil
     -- Numeradas + las de nombre propio, en una sola lista.
     local keys = {}
@@ -301,7 +301,7 @@ local function ApplyBarHiding() Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyBarH
             end
         end
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyBarHiding MyCustomFrames/ExplorerAuto.lua:282:6"); end
+end
 ns.UpdateExplorerBarHiding = ApplyBarHiding
 
 -- ---- Eventos -------------------------------------------------------------
@@ -320,18 +320,16 @@ for _, ev in ipairs({ "HOUSE_ENTERED", "HOUSE_EXITED", "HOUSING_MODE_CHANGED" })
     pcall(f.RegisterEvent, f, ev)
 end
 
-f:SetScript("OnEvent", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ExplorerAuto.lua:323:23");
+f:SetScript("OnEvent", function()
     UpdateHousing()
     ApplyBarHiding()
-Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ExplorerAuto.lua:323:23"); end)
+end)
 
 -- Red de seguridad: los eventos de housing no estan garantizados en este build
 -- (por eso se registran con pcall), y entrar a una casa puede no disparar
 -- ninguno de los de zona. Un ticker lento cubre ese caso sin costar nada
 -- medible -- 1 vez por segundo contra los 10 Hz del tick principal.
-C_Timer.NewTicker(1.0, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ExplorerAuto.lua:332:23");
+C_Timer.NewTicker(1.0, function()
     UpdateHousing()
     ApplyBarHiding()
-Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ExplorerAuto.lua:332:23"); end)
-
-Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/ExplorerAuto.lua");
+end)

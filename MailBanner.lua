@@ -1,4 +1,4 @@
---[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/MailBanner.lua"); -- ==========================================================================
+-- ==========================================================================
 -- MyCustomFrames - MailBanner.lua
 -- Header de correo nuevo (pedido del usuario 2026-07-21): "un header que salga
 -- cuando tengo un mail, que se deslice suavemente hacia abajo". 3 fases estilo
@@ -42,7 +42,7 @@ local HEADER_SCALE = 1.4
 -- con el mismo color del texto, pero no el icono") -- se tiñe SOLO "bg" via
 -- SetVertexColor, el icono ("icon") queda sin tocar/con sus colores nativos.
 local TEXT_COLOR = { 1, 0.882, 0.608 }
-local function ApplyFactionTexture() Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyFactionTexture MyCustomFrames/MailBanner.lua:45:6");
+local function ApplyFactionTexture()
     local faction = UnitFactionGroup and UnitFactionGroup("player")
     local atlas = (faction == "Horde") and "Objective-Header-CampaignHorde" or "Objective-Header-CampaignAlliance"
     bg:SetAtlas(atlas, true)
@@ -52,7 +52,7 @@ local function ApplyFactionTexture() Perfy_Trace(Perfy_GetTime(), "Enter", "Appl
         bg:SetSize(w * HEADER_SCALE, h * HEADER_SCALE)
         banner:SetSize(w * HEADER_SCALE, h * HEADER_SCALE)
     end
-Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyFactionTexture MyCustomFrames/MailBanner.lua:45:6"); end
+end
 
 -- Icono en el borde DERECHO (pedido del usuario, ronda 2 -- antes iba a la
 -- izquierda, corregido segun captura de referencia). Tamaño propio mas chico
@@ -114,22 +114,22 @@ finishSlide:SetDuration(0.4); finishSlide:SetSmoothing("IN")
 -- header desaparecio" -- Minimap.lua consulta esto (ns.IsMailBannerShown) para
 -- decidir si mostrar su propio icono, y se le avisa (ns.RefreshMailIndicator)
 -- en cada transicion de mostrado/ocultado de este banner.
-ns.IsMailBannerShown = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.IsMailBannerShown MyCustomFrames/MailBanner.lua:117:23"); return Perfy_Trace_Passthrough("Leave", "ns.IsMailBannerShown MyCustomFrames/MailBanner.lua:117:23", banner:IsShown()) end
-local function NotifyMinimapIcon() Perfy_Trace(Perfy_GetTime(), "Enter", "NotifyMinimapIcon MyCustomFrames/MailBanner.lua:118:6");
+ns.IsMailBannerShown = function() return banner:IsShown() end
+local function NotifyMinimapIcon()
     if ns.RefreshMailIndicator then ns.RefreshMailIndicator() end
-Perfy_Trace(Perfy_GetTime(), "Leave", "NotifyMinimapIcon MyCustomFrames/MailBanner.lua:118:6"); end
+end
 
-startAnim:SetScript("OnFinished", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MailBanner.lua:122:34");
+startAnim:SetScript("OnFinished", function()
     banner:SetPoint("TOP", UIParent, "TOP", 0, REST_Y)
     banner:SetAlpha(1)
     pulseAnim:Play()
-Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MailBanner.lua:122:34"); end)
-finishAnim:SetScript("OnFinished", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MailBanner.lua:127:35");
+end)
+finishAnim:SetScript("OnFinished", function()
     pulseAnim:Stop()
     banner:SetAlpha(0)
     banner:Hide()
     NotifyMinimapIcon()
-Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MailBanner.lua:127:35"); end)
+end)
 
 -- Supresion por contenido (pedido del usuario 2026-07-21: "que no aparezca si
 -- estoy en combate, dungeon, raid o pvp"). instanceType: "party"=dungeon,
@@ -137,16 +137,16 @@ Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MailBanner.lua
 -- (ns.IsMailNotificationSuppressed) para que Minimap.lua aplique la MISMA regla
 -- a su propio icono.
 local SUPPRESSED_INSTANCE_TYPES = { party = true, raid = true, pvp = true, arena = true }
-local function IsSuppressed() Perfy_Trace(Perfy_GetTime(), "Enter", "IsSuppressed MyCustomFrames/MailBanner.lua:140:6");
-    if InCombatLockdown() then Perfy_Trace(Perfy_GetTime(), "Leave", "IsSuppressed MyCustomFrames/MailBanner.lua:140:6"); return true end
+local function IsSuppressed()
+    if InCombatLockdown() then return true end
     local inInstance, instanceType = IsInInstance()
-    return Perfy_Trace_Passthrough("Leave", "IsSuppressed MyCustomFrames/MailBanner.lua:140:6", inInstance and SUPPRESSED_INSTANCE_TYPES[instanceType] and true or false)
+    return inInstance and SUPPRESSED_INSTANCE_TYPES[instanceType] and true or false
 end
 ns.IsMailNotificationSuppressed = IsSuppressed
 
-local function ShowBanner() Perfy_Trace(Perfy_GetTime(), "Enter", "ShowBanner MyCustomFrames/MailBanner.lua:147:6");
-    if not (bg.SetAtlas and icon.SetAtlas) then Perfy_Trace(Perfy_GetTime(), "Leave", "ShowBanner MyCustomFrames/MailBanner.lua:147:6"); return end
-    if IsSuppressed() then Perfy_Trace(Perfy_GetTime(), "Leave", "ShowBanner MyCustomFrames/MailBanner.lua:147:6"); return end
+local function ShowBanner()
+    if not (bg.SetAtlas and icon.SetAtlas) then return end
+    if IsSuppressed() then return end
     ApplyFactionTexture()
     banner:SetPoint("TOP", UIParent, "TOP", 0, REST_Y + SLIDE_DIST)
     banner:SetAlpha(0)
@@ -155,20 +155,20 @@ local function ShowBanner() Perfy_Trace(Perfy_GetTime(), "Enter", "ShowBanner My
     pulseAnim:Stop()
     startAnim:Play()
     NotifyMinimapIcon()
-Perfy_Trace(Perfy_GetTime(), "Leave", "ShowBanner MyCustomFrames/MailBanner.lua:147:6"); end
+end
 ns.ShowMailBanner = ShowBanner
 
-local function HideBanner() Perfy_Trace(Perfy_GetTime(), "Enter", "HideBanner MyCustomFrames/MailBanner.lua:161:6");
-    if not banner:IsShown() then Perfy_Trace(Perfy_GetTime(), "Leave", "HideBanner MyCustomFrames/MailBanner.lua:161:6"); return end
+local function HideBanner()
+    if not banner:IsShown() then return end
     startAnim:Stop()
     finishAnim:Play()
-Perfy_Trace(Perfy_GetTime(), "Leave", "HideBanner MyCustomFrames/MailBanner.lua:161:6"); end
+end
 
 -- Ocultar al pasar el mouse (pedido del usuario 2026-07-21: "si paso el mouse
 -- sobre el, que se oculte con un fade/slide to top suave") -- reusa el MISMO
 -- FINISH (fade-out + slide arriba) que ya usa el cierre normal al leer el correo.
 banner:EnableMouse(true)
-banner:SetScript("OnEnter", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MailBanner.lua:171:28"); HideBanner() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MailBanner.lua:171:28"); end)
+banner:SetScript("OnEnter", function() HideBanner() end)
 
 -- FIX (2026-07-21, reportado por el usuario: "sale un milisegundo y se esconde,
 -- debe quedarse mientras tenga un mail pendiente"): antes se cerraba solo con un
@@ -189,10 +189,10 @@ ev:RegisterEvent("PLAYER_ENTERING_WORLD")
 -- que aparezca de nuevo, tambien lo saca si ya estaba en pantalla.
 ev:RegisterEvent("PLAYER_REGEN_DISABLED")
 ev:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-ev:SetScript("OnEvent", function(_, event) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MailBanner.lua:192:24");
+ev:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_REGEN_DISABLED" or event == "ZONE_CHANGED_NEW_AREA" then
         if IsSuppressed() then HideBanner() end
-        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MailBanner.lua:192:24"); return
+        return
     end
     local has = HasNewMail and HasNewMail() and true or false
     if has and not hadMail then
@@ -201,6 +201,4 @@ ev:SetScript("OnEvent", function(_, event) Perfy_Trace(Perfy_GetTime(), "Enter",
         HideBanner()
     end
     hadMail = has
-Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MailBanner.lua:192:24"); end)
-
-Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/MailBanner.lua");
+end)
