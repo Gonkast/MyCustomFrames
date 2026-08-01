@@ -1,4 +1,4 @@
--- ==========================================================================
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/TopWidget.lua"); -- ==========================================================================
 -- MyCustomFrames - TopWidget.lua
 -- Reposiciona/escala el widget TOP-CENTER nativo de Blizzard
 -- (UIWidgetTopCenterContainerFrame -- barras de progreso de eventos de zona,
@@ -12,8 +12,8 @@ local ADDON, ns = ...
 local TOPWIDGET_KEY = "topwidget"
 ns.TOPWIDGET_KEY = TOPWIDGET_KEY
 
-local function TopWidgetDefaults()
-    return {
+local function TopWidgetDefaults() Perfy_Trace(Perfy_GetTime(), "Enter", "TopWidgetDefaults MyCustomFrames/TopWidget.lua:15:6");
+    return Perfy_Trace_Passthrough("Leave", "TopWidgetDefaults MyCustomFrames/TopWidget.lua:15:6", {
         enabled = true,
         -- Mismo anclaje que usa Blizzard nativamente (confirmado contra
         -- Blizzard_UIWidgetTopCenterFrame.xml, fuente real via wow-ui-source):
@@ -21,22 +21,22 @@ local function TopWidgetDefaults()
         -- Blizzard lo pone, sin ningun offset artistico nuestro.
         point = "TOP", relPoint = "TOP", offsetX = 0, offsetY = -15,
         anchor = "", scale = 0.70, strata = "MEDIUM",
-    }
+    })
 end
 ns.TopWidgetDefaults = TopWidgetDefaults
 
-local function P()
+local function P() Perfy_Trace(Perfy_GetTime(), "Enter", "P MyCustomFrames/TopWidget.lua:28:6");
     local db = ns.GetDB and ns.GetDB()
-    return db and db.topwidget
+    return Perfy_Trace_Passthrough("Leave", "P MyCustomFrames/TopWidget.lua:28:6", db and db.topwidget)
 end
 
 local holder
 
-local function Layout()
+local function Layout() Perfy_Trace(Perfy_GetTime(), "Enter", "Layout MyCustomFrames/TopWidget.lua:35:6");
     local p = P()
-    if not p then return end
+    if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "Layout MyCustomFrames/TopWidget.lua:35:6"); return end
     local w = _G.UIWidgetTopCenterContainerFrame
-    if not w then return end
+    if not w then Perfy_Trace(Perfy_GetTime(), "Leave", "Layout MyCustomFrames/TopWidget.lua:35:6"); return end
 
     if not holder then
         holder = CreateFrame("Frame", nil, UIParent)
@@ -46,10 +46,10 @@ local function Layout()
         holder:SetMovable(true)
         holder:RegisterForDrag("LeftButton")
         holder:EnableMouse(ns.IsUnlocked() and true or false)
-        holder:SetScript("OnDragStart", function(self)
+        holder:SetScript("OnDragStart", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/TopWidget.lua:49:40");
             if ns.IsUnlocked() and not InCombatLockdown() then self:StartMoving() end
-        end)
-        holder:SetScript("OnDragStop", function(self)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/TopWidget.lua:49:40"); end)
+        holder:SetScript("OnDragStop", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/TopWidget.lua:52:39");
             self:StopMovingOrSizing()
             if ns.SnapFrameToGrid then ns.SnapFrameToGrid(self) end
             local pp = P()
@@ -59,13 +59,13 @@ local function Layout()
             end
             Layout()
             if ns.OnDragStopped then ns.OnDragStopped(TOPWIDGET_KEY) end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/TopWidget.lua:52:39"); end)
         ns.AttachScaleWheel(holder, P, Layout)
     end
 
     if not p.enabled then
         holder:Hide()
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "Layout MyCustomFrames/TopWidget.lua:35:6"); return
     end
     holder:Show()
     holder:SetFrameStrata(p.strata or "MEDIUM")
@@ -81,12 +81,12 @@ local function Layout()
     holder:ClearAllPoints()
     holder:SetPoint(p.point or "TOP", parent, p.relPoint or "TOP", p.offsetX or 0, p.offsetY or -12)
 
-    local ok = pcall(function()
+    local ok = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/TopWidget.lua:84:21");
         w:SetParent(holder)
         w:ClearAllPoints()
         w:SetPoint("TOP", holder, "TOP", 0, 0)
-    end)
-    if not ok then return end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/TopWidget.lua:84:21"); end)
+    if not ok then Perfy_Trace(Perfy_GetTime(), "Leave", "Layout MyCustomFrames/TopWidget.lua:35:6"); return end
 
     if not ns._topWidgetHooked then
         ns._topWidgetHooked = true
@@ -94,14 +94,14 @@ local function Layout()
         -- widget (UIWidgetManager) -- reafirmar cuando eso pasa, mismo patron y
         -- guard anti-recursion que LayoutBelowMinimapWidget (Minimap.lua).
         local reasserting = false
-        pcall(hooksecurefunc, w, "SetPoint", function()
-            if reasserting or not holder then return end
+        pcall(hooksecurefunc, w, "SetPoint", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/TopWidget.lua:97:45");
+            if reasserting or not holder then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/TopWidget.lua:97:45"); return end
             reasserting = true
             Layout()
             reasserting = false
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/TopWidget.lua:97:45"); end)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "Layout MyCustomFrames/TopWidget.lua:35:6"); end
 ns.RefreshTopWidget = Layout
 
 local f = CreateFrame("Frame")
@@ -111,10 +111,12 @@ f:RegisterEvent("PLAYER_LOGIN")
 -- de zona, delves) -- ADDON_LOADED de Blizzard_UIWidgets cubre el caso de
 -- carga diferida, igual que ExtraButton.lua con Blizzard_ZoneAbility.
 f:RegisterEvent("ADDON_LOADED")
-f:SetScript("OnEvent", function(_, event, addon)
-    if event == "ADDON_LOADED" and addon ~= "Blizzard_UIWidgets" then return end
+f:SetScript("OnEvent", function(_, event, addon) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/TopWidget.lua:114:23");
+    if event == "ADDON_LOADED" and addon ~= "Blizzard_UIWidgets" then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/TopWidget.lua:114:23"); return end
     Layout()
-end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/TopWidget.lua:114:23"); end)
 if _G.UIWidgetTopCenterContainerFrame then
     hooksecurefunc(_G.UIWidgetTopCenterContainerFrame, "Show", Layout)
 end
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/TopWidget.lua");

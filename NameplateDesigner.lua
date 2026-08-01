@@ -1,4 +1,4 @@
--- ==========================================================================
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/NameplateDesigner.lua"); -- ==========================================================================
 -- MyCustomFrames - NameplateDesigner.lua
 -- Canvas de diseño para Nameplates.lua (pedido del usuario, calcado del tab
 -- "Designer" de Platynator pero adaptado a los elementos reales de este
@@ -31,7 +31,7 @@ local BACKDROP_TEX = A .. "nameplate_backdrop.tga"
 local BAR_TEXCOORD = { 14/256, 242/256, 14/64, 50/64 }
 local FONT = "Fonts\\FRIZQT__.TTF"
 
-local function P() return ns.GetDB() and ns.GetDB().nameplates end
+local function P() Perfy_Trace(Perfy_GetTime(), "Enter", "P MyCustomFrames/NameplateDesigner.lua:34:6"); return Perfy_Trace_Passthrough("Leave", "P MyCustomFrames/NameplateDesigner.lua:34:6", ns.GetDB() and ns.GetDB().nameplates) end
 
 -- La escala de referencia del lienzo vive en la RAIZ de la DB, NO en
 -- db.nameplates (2026-07-27). Dos motivos, el primero es un bug real que costo
@@ -49,26 +49,26 @@ local function P() return ns.GetDB() and ns.GetDB().nameplates end
 -- No hace falta migrar el valor viejo: si falta, se vuelve a muestrear solo en
 -- medio segundo (ver el reintento en ToggleNameplateDesigner). La copia vieja se
 -- limpia de perfiles/presets via DEAD_NAMEPLATE_FIELDS en Maintenance.lua.
-local function GetRefScale()
+local function GetRefScale() Perfy_Trace(Perfy_GetTime(), "Enter", "GetRefScale MyCustomFrames/NameplateDesigner.lua:52:6");
     local d = ns.GetDB()
-    return d and d.designerRefScale
+    return Perfy_Trace_Passthrough("Leave", "GetRefScale MyCustomFrames/NameplateDesigner.lua:52:6", d and d.designerRefScale)
 end
-local function SetRefScale(v)
+local function SetRefScale(v) Perfy_Trace(Perfy_GetTime(), "Enter", "SetRefScale MyCustomFrames/NameplateDesigner.lua:56:6");
     local d = ns.GetDB()
     if d then d.designerRefScale = v end
-end
-local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SetRefScale MyCustomFrames/NameplateDesigner.lua:56:6"); end
+local function clamp(v, lo, hi) Perfy_Trace(Perfy_GetTime(), "Enter", "clamp MyCustomFrames/NameplateDesigner.lua:60:6"); return Perfy_Trace_Passthrough("Leave", "clamp MyCustomFrames/NameplateDesigner.lua:60:6", math.max(lo, math.min(hi, v))) end
 
 -- Dropdown estilo Setup Wizard paso 7 (pedido del usuario) -- MISMO asset
 -- 3-slice ("Setup_Dropdown.png") y patron boton+lista que DropdownButton en
 -- Setup.lua, copiado aca en vez de expuesto porque Setup.lua depende de
 -- locals propios (SF/COLOR_OPTION) que no estan en ns.
 local DROPDOWN_TEX = "Interface\\AddOns\\MyCustomFrames\\Assets\\Setup_Dropdown.png"
-local function MakeDropdownButton(parent, w, h, text)
+local function MakeDropdownButton(parent, w, h, text) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeDropdownButton MyCustomFrames/NameplateDesigner.lua:67:6");
     local b = CreateFrame("Button", nil, parent)
     b:SetSize(w, h)
     local capW = 16
-    local function slice(layer, top, bottom)
+    local function slice(layer, top, bottom) Perfy_Trace(Perfy_GetTime(), "Enter", "slice MyCustomFrames/NameplateDesigner.lua:71:10");
         local left = b:CreateTexture(nil, layer)
         left:SetTexture(DROPDOWN_TEX)
         left:SetPoint("TOPLEFT"); left:SetPoint("BOTTOMLEFT"); left:SetWidth(capW)
@@ -81,7 +81,7 @@ local function MakeDropdownButton(parent, w, h, text)
         mid:SetTexture(DROPDOWN_TEX)
         mid:SetPoint("TOPLEFT", left, "TOPRIGHT"); mid:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
         mid:SetTexCoord(32 / 256, 176 / 256, top, bottom)
-        return { left, mid, right }
+        return Perfy_Trace_Passthrough("Leave", "slice MyCustomFrames/NameplateDesigner.lua:71:10", { left, mid, right })
     end
     slice("BACKGROUND", 0, 80 / 256)
     local hl = slice("HIGHLIGHT", 160 / 256, 240 / 256)
@@ -100,7 +100,7 @@ local function MakeDropdownButton(parent, w, h, text)
     arrow:SetPoint("RIGHT", -8, 0)
     arrow:SetTextColor(0.58, 0.49, 0.4)
     arrow:SetText("v")
-    return b
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeDropdownButton MyCustomFrames/NameplateDesigner.lua:67:6"); return b
 end
 
 -- Orden de aparicion en el dropdown de seleccion (pedido del usuario).
@@ -123,17 +123,17 @@ local Reflow
 -- `:SetLabel(text)` uniforme porque ns.MakeButton no tiene :SetText nativo
 -- (solo btn.text:SetText), a diferencia de UIPanelButtonTemplate. Declarado
 -- ANTES de MakeMiniSlider porque este lo usa para los botones -/+.
-local function MakeStyledButton(parent, text, w, h)
+local function MakeStyledButton(parent, text, w, h) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeStyledButton MyCustomFrames/NameplateDesigner.lua:126:6");
     if ns.MakeButton then
         local b = ns.MakeButton(parent, text, w, h)
-        b.SetLabel = function(self, t) self.text:SetText(t) end
-        return b
+        b.SetLabel = function(self, t) Perfy_Trace(Perfy_GetTime(), "Enter", "b.SetLabel MyCustomFrames/NameplateDesigner.lua:129:21"); self.text:SetText(t) Perfy_Trace(Perfy_GetTime(), "Leave", "b.SetLabel MyCustomFrames/NameplateDesigner.lua:129:21"); end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "MakeStyledButton MyCustomFrames/NameplateDesigner.lua:126:6"); return b
     end
     local b = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     b:SetSize(w, h)
     b:SetText(text)
-    b.SetLabel = function(self, t) self:SetText(t) end
-    return b
+    b.SetLabel = function(self, t) Perfy_Trace(Perfy_GetTime(), "Enter", "b.SetLabel MyCustomFrames/NameplateDesigner.lua:135:17"); self:SetText(t) Perfy_Trace(Perfy_GetTime(), "Leave", "b.SetLabel MyCustomFrames/NameplateDesigner.lua:135:17"); end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeStyledButton MyCustomFrames/NameplateDesigner.lua:126:6"); return b
 end
 
 -- ==========================================================================
@@ -147,7 +147,7 @@ end
 -- Pedido del usuario: "necesito que los sliders sean como los de mi menu,
 -- con opciones para poner el manualmente el numero" -- mismo layout que
 -- MakeSlider en Options.lua: label arriba, -/+ y editbox abajo.
-local function MakeMiniSlider(parent)
+local function MakeMiniSlider(parent) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeMiniSlider MyCustomFrames/NameplateDesigner.lua:150:6");
     local s = CreateFrame("Slider", nil, parent)
     s:SetOrientation("HORIZONTAL")
     s:SetSize(110, 14)
@@ -186,12 +186,12 @@ local function MakeMiniSlider(parent)
     plus:SetPoint("LEFT", box, "RIGHT", 2, 0)
     s.minus, s.box, s.plus = minus, box, plus
     s:Hide()
-    return s
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeMiniSlider MyCustomFrames/NameplateDesigner.lua:150:6"); return s
 end
 
 -- (re)liga el slider a un campo del perfil especifico -- se llama cada vez
 -- que cambia la seleccion, reusando los mismos widgets (ver ControlPanel).
-local function BindSlider(slider, label, minV, maxV, step, getV, setV)
+local function BindSlider(slider, label, minV, maxV, step, getV, setV) Perfy_Trace(Perfy_GetTime(), "Enter", "BindSlider MyCustomFrames/NameplateDesigner.lua:194:6");
     slider:SetScript("OnValueChanged", nil)   -- evita que el SetValue de abajo dispare el handler VIEJO
     slider:SetMinMaxValues(minV, maxV)
     slider:SetValueStep(step)
@@ -199,43 +199,43 @@ local function BindSlider(slider, label, minV, maxV, step, getV, setV)
 
     local decimals = (step < 1) and 2 or 0
     local fmt = "%." .. decimals .. "f"
-    local function roundStep(v) return math.floor(v / step + 0.5) * step end
-    local function fmtVal(v) return string.format(fmt, v) end
+    local function roundStep(v) Perfy_Trace(Perfy_GetTime(), "Enter", "roundStep MyCustomFrames/NameplateDesigner.lua:202:10"); return Perfy_Trace_Passthrough("Leave", "roundStep MyCustomFrames/NameplateDesigner.lua:202:10", math.floor(v / step + 0.5) * step) end
+    local function fmtVal(v) Perfy_Trace(Perfy_GetTime(), "Enter", "fmtVal MyCustomFrames/NameplateDesigner.lua:203:10"); return Perfy_Trace_Passthrough("Leave", "fmtVal MyCustomFrames/NameplateDesigner.lua:203:10", string.format(fmt, v)) end
 
     local syncing = false
-    local function applyValue(nv)
+    local function applyValue(nv) Perfy_Trace(Perfy_GetTime(), "Enter", "applyValue MyCustomFrames/NameplateDesigner.lua:206:10");
         nv = clamp(roundStep(nv), minV, maxV)
         setV(nv)
         syncing = true; slider:SetValue(nv); syncing = false
         slider.box:SetText(fmtVal(nv))
         Reflow()
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "applyValue MyCustomFrames/NameplateDesigner.lua:206:10"); end
 
     local v = getV() or minV
     slider:SetValue(v)
     slider.box:SetText(fmtVal(v))
 
-    slider:SetScript("OnValueChanged", function(self, nv)
+    slider:SetScript("OnValueChanged", function(self, nv) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:218:39");
         nv = roundStep(nv)
         setV(nv)
         if not syncing then slider.box:SetText(fmtVal(nv)) end
         Reflow()
-    end)
-    slider.minus:SetScript("OnClick", function() applyValue((getV() or minV) - step) end)
-    slider.plus:SetScript("OnClick", function() applyValue((getV() or minV) + step) end)
-    slider.box:SetScript("OnEnterPressed", function(self)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:218:39"); end)
+    slider.minus:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:224:38"); applyValue((getV() or minV) - step) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:224:38"); end)
+    slider.plus:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:225:37"); applyValue((getV() or minV) + step) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:225:37"); end)
+    slider.box:SetScript("OnEnterPressed", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:226:43");
         local nv = tonumber(self:GetText())
         if nv then applyValue(nv) else self:SetText(fmtVal(getV() or minV)) end
         self:ClearFocus()
-    end)
-    slider.box:SetScript("OnEscapePressed", function(self)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:226:43"); end)
+    slider.box:SetScript("OnEscapePressed", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:231:44");
         self:SetText(fmtVal(getV() or minV))
         self:ClearFocus()
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:231:44"); end)
     slider:Show()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "BindSlider MyCustomFrames/NameplateDesigner.lua:194:6"); end
 
-local function MakeMiniColorButton(parent)
+local function MakeMiniColorButton(parent) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeMiniColorButton MyCustomFrames/NameplateDesigner.lua:238:6");
     local b = CreateFrame("Button", nil, parent)
     b:SetSize(22, 22)
     local border = b:CreateTexture(nil, "BACKGROUND")
@@ -249,32 +249,32 @@ local function MakeMiniColorButton(parent)
     lbl:SetPoint("BOTTOM", b, "TOP", 0, 2)
     b.lbl = lbl
     b:Hide()
-    return b
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeMiniColorButton MyCustomFrames/NameplateDesigner.lua:238:6"); return b
 end
 
 -- Mismo patron que MakeColorButton en Options.lua (ColorPickerFrame API).
-local function BindColorButton(btn, label, c)
+local function BindColorButton(btn, label, c) Perfy_Trace(Perfy_GetTime(), "Enter", "BindColorButton MyCustomFrames/NameplateDesigner.lua:256:6");
     btn.lbl:SetText(label)
     btn.sw:SetColorTexture(c.r, c.g, c.b)
     local r0, g0, b0 = c.r, c.g, c.b
-    btn:SetScript("OnClick", function()
+    btn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:260:29");
         ColorPickerFrame:SetupColorPickerAndShow({
             r = c.r, g = c.g, b = c.b, hasOpacity = false,
-            swatchFunc = function()
+            swatchFunc = function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:263:25");
                 local nr, ng, nb = ColorPickerFrame:GetColorRGB()
                 c.r, c.g, c.b = nr, ng, nb
                 btn.sw:SetColorTexture(nr, ng, nb)
                 Reflow()
-            end,
-            cancelFunc = function()
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:263:25"); end,
+            cancelFunc = function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:269:25");
                 c.r, c.g, c.b = r0, g0, b0
                 btn.sw:SetColorTexture(r0, g0, b0)
                 Reflow()
-            end,
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:269:25"); end,
         })
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:260:29"); end)
     btn:Show()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "BindColorButton MyCustomFrames/NameplateDesigner.lua:256:6"); end
 
 local designer   -- root frame, creado la 1ra vez que se abre
 -- Tabla de PIEZAS del nameplate de mentira, con los mismos nombres logicos que
@@ -291,16 +291,16 @@ local pieces = { auras = {} }
 -- se ve que es arrastrable cada pieza. Se juntan todos aca para Show()/Hide()
 -- de una sola vez.
 local highlights = {}
-local function TrackHighlight(hl) highlights[#highlights + 1] = hl; return hl end
+local function TrackHighlight(hl) Perfy_Trace(Perfy_GetTime(), "Enter", "TrackHighlight MyCustomFrames/NameplateDesigner.lua:294:6"); highlights[#highlights + 1] = hl; Perfy_Trace(Perfy_GetTime(), "Leave", "TrackHighlight MyCustomFrames/NameplateDesigner.lua:294:6"); return hl end
 -- Toggle de outlines (pedido del usuario): controla si los bordes de
 -- highlight se muestran mientras el panel esta abierto -- por defecto ON.
 local outlinesVisible = true
 
 -- Empuja el cambio a las nameplates REALES visibles ahora mismo (la misma
 -- funcion que ya usa Options.lua al mover un slider del menu).
-local function PushLive()
+local function PushLive() Perfy_Trace(Perfy_GetTime(), "Enter", "PushLive MyCustomFrames/NameplateDesigner.lua:301:6");
     if ns.RefreshNameplateStyle then ns.RefreshNameplateStyle() end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "PushLive MyCustomFrames/NameplateDesigner.lua:301:6"); end
 
 -- Escala actual del "stage" (ver CreateDesigner/UpdateStageScale mas abajo) --
 -- pedido del usuario (2026-07-18): que la barra del Designer se vea del
@@ -349,7 +349,7 @@ local stageScale = 1
 -- guardar el delta del drag (ver divisor mas abajo) para que arrastrar Npx
 -- en pantalla siga guardando el mismo offset de siempre, zoom aparte.
 local ZOOM = 1.6
-local function StageDivisor() return stageScale * ZOOM end
+local function StageDivisor() Perfy_Trace(Perfy_GetTime(), "Enter", "StageDivisor MyCustomFrames/NameplateDesigner.lua:352:6"); return Perfy_Trace_Passthrough("Leave", "StageDivisor MyCustomFrames/NameplateDesigner.lua:352:6", stageScale * ZOOM) end
 
 -- (`anyDragActive` eliminado 2026-07-27: existia solo para congelar el ticker
 -- de escala del stage a mitad de un arrastre. Ese ticker ya no existe -- el
@@ -383,10 +383,10 @@ local function StageDivisor() return stageScale * ZOOM end
 -- una restriccion real de Blizzard sobre estos datos -- son solo tablas Lua
 -- nuestras -- es una eleccion del usuario para no arruinar el layout sin
 -- querer en medio de un pull).
-local function CombatBlocked()
-    if not InCombatLockdown or not InCombatLockdown() then return false end
+local function CombatBlocked() Perfy_Trace(Perfy_GetTime(), "Enter", "CombatBlocked MyCustomFrames/NameplateDesigner.lua:386:6");
+    if not InCombatLockdown or not InCombatLockdown() then Perfy_Trace(Perfy_GetTime(), "Leave", "CombatBlocked MyCustomFrames/NameplateDesigner.lua:386:6"); return false end
     UIErrorsFrame:AddMessage("No podés editar las auras en combate.", 1, 0.2, 0.2)
-    return true
+    Perfy_Trace(Perfy_GetTime(), "Leave", "CombatBlocked MyCustomFrames/NameplateDesigner.lua:386:6"); return true
 end
 
 -- 2026-07-19: reescrito de raiz -- la version anterior usaba
@@ -403,30 +403,30 @@ end
 -- SIEMPRE se dibuja por el mismo camino (SetPoint anclado), sin una fase
 -- "libre" que despues haya que reconciliar. Elimina la clase de bug entera,
 -- sin importar cual haya sido la causa exacta.
-local function MakeDraggable(handle, xKey, yKey, getDivisor, combatGuard)
+local function MakeDraggable(handle, xKey, yKey, getDivisor, combatGuard) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeDraggable MyCustomFrames/NameplateDesigner.lua:406:6");
     handle:EnableMouse(true)
     handle:RegisterForDrag("LeftButton")
-    handle:SetScript("OnDragStart", function(self)
-        if combatGuard and CombatBlocked() then return end
-        local p = P(); if not p then return end
+    handle:SetScript("OnDragStart", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:409:36");
+        if combatGuard and CombatBlocked() then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:409:36"); return end
+        local p = P(); if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:409:36"); return end
         local startCursorX, startCursorY = GetCursorPosition()
         local startValX, startValY = p[xKey] or 0, p[yKey] or 0
-        self:SetScript("OnUpdate", function()
-            local p2 = P(); if not p2 then return end
+        self:SetScript("OnUpdate", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:414:35");
+            local p2 = P(); if not p2 then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:414:35"); return end
             local div = (getDivisor and getDivisor() or 1) * UIParent:GetEffectiveScale()
             if not (div and div > 0) then div = 1 end
             local cx, cy = GetCursorPosition()
             p2[xKey] = startValX + (cx - startCursorX) / div
             p2[yKey] = startValY + (cy - startCursorY) / div
             Reflow()
-        end)
-    end)
-    handle:SetScript("OnDragStop", function(self)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:414:35"); end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:409:36"); end)
+    handle:SetScript("OnDragStop", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:424:35");
         self:SetScript("OnUpdate", nil)
-        if combatGuard and CombatBlocked() then return end
+        if combatGuard and CombatBlocked() then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:424:35"); return end
         Reflow()
-    end)
-end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:424:35"); end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "MakeDraggable MyCustomFrames/NameplateDesigner.lua:406:6"); end
 
 -- `root`/`key`: pedido del usuario 2026-07-19 ("que los elementos solo los
 -- pueda escalar con el scroll si los tengo seleccionado") -- antes la rueda
@@ -434,16 +434,16 @@ end
 -- seleccionado, lo que hacia facil des-escalar sin querer al mover el mouse
 -- sobre el panel. `key` es nil para handles que no participan del sistema
 -- de seleccion (no deberia pasar, pero por las dudas deja pasar la rueda).
-local function MakeWheelResize(handle, onWheel, root, key, combatGuard)
+local function MakeWheelResize(handle, onWheel, root, key, combatGuard) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeWheelResize MyCustomFrames/NameplateDesigner.lua:437:6");
     handle:EnableMouseWheel(true)
-    handle:SetScript("OnMouseWheel", function(self, dir)
-        if key and (not root or root.selectedKey ~= key) then return end
-        if combatGuard and CombatBlocked() then return end
-        local p = P(); if not p then return end
+    handle:SetScript("OnMouseWheel", function(self, dir) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:439:37");
+        if key and (not root or root.selectedKey ~= key) then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:439:37"); return end
+        if combatGuard and CombatBlocked() then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:439:37"); return end
+        local p = P(); if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:439:37"); return end
         onWheel(p, dir)
         Reflow()
-    end)
-end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:439:37"); end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "MakeWheelResize MyCustomFrames/NameplateDesigner.lua:437:6"); end
 
 -- 2026-07-19, pedido del usuario: "volvamos al metodo de controlar
 -- posicion, escala y apariencia de mis auras... separadas como habia dicho
@@ -457,7 +457,7 @@ end
 -- centro -- y por lo tanto TODOS los iconos -- a un X distinto. Con 2 en vez
 -- de 3 el mock quedaba desalineado del real incluso con el mismo offsetX
 -- guardado (bug reportado 2026-07-19, "no concuerda con la ubicacion real").
-local function MakeAuraGroupMock(root, label)
+local function MakeAuraGroupMock(root, label) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeAuraGroupMock MyCustomFrames/NameplateDesigner.lua:460:6");
     -- Holder + iconos vienen de ns.NPBuild con preview=true: EL MISMO codigo
     -- que arma los reales en Nameplates.lua, con la misma cuenta de iconos y la
     -- misma formula de tamaño/inset. Lo unico que cambia es lo que no puede
@@ -470,7 +470,7 @@ local function MakeAuraGroupMock(root, label)
     -- superior"). Colgaba del recuadro de edicion del propio grupo, asi que los
     -- tres quedaban sueltos FLOTANDO dentro del lienzo, moviendose con la pieza
     -- y tapando el preview. Ahora viven juntos en la barra de arriba.
-    return holder, hl
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeAuraGroupMock MyCustomFrames/NameplateDesigner.lua:460:6"); return holder, hl
 end
 
 -- (AURA_ANCHOR_POINT local ELIMINADO 2026-07-27: era una tercera copia del
@@ -489,7 +489,7 @@ end
 -- CreateCustomClassification/LockRaidMark en Nameplates.lua (strata TOOLTIP
 -- alla; aca alcanza con un nivel alto ya que todo el panel vive en su propia
 -- strata "HIGH").
-local function MakeBadgeMock(root, size, previewTex, raidIndex)
+local function MakeBadgeMock(root, size, previewTex, raidIndex) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeBadgeMock MyCustomFrames/NameplateDesigner.lua:492:6");
     local holder = CreateFrame("Frame", nil, root)
     holder:SetSize(size, size)
     holder:SetFrameLevel(100)
@@ -503,13 +503,13 @@ local function MakeBadgeMock(root, size, previewTex, raidIndex)
     end
     holder.icon = icon
     local hl = TrackHighlight(ns.MakeEditHighlight(holder))
-    return holder, hl
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeBadgeMock MyCustomFrames/NameplateDesigner.lua:492:6"); return holder, hl
 end
 
 -- ==========================================================================
 -- Construccion (una sola vez, perezosa -- se llama desde ToggleNameplateDesigner).
 -- ==========================================================================
-local function CreateDesigner()
+local function CreateDesigner() Perfy_Trace(Perfy_GetTime(), "Enter", "CreateDesigner MyCustomFrames/NameplateDesigner.lua:512:6");
     local root = CreateFrame("Frame", "MyCF_NameplateDesigner", UIParent)
     -- 620 (antes 580, +40 pedido del usuario 2026-07-19: la fila de
     -- padding/direccion quedaba fuera de la ventana) -- el margen inferior
@@ -542,8 +542,8 @@ local function CreateDesigner()
     root:SetMovable(true)
     root:EnableMouse(true)
     root:RegisterForDrag("LeftButton")
-    root:SetScript("OnDragStart", function(self) self:StartMoving() end)
-    root:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+    root:SetScript("OnDragStart", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:545:34"); self:StartMoving() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:545:34"); end)
+    root:SetScript("OnDragStop", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:546:33"); self:StopMovingOrSizing() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:546:33"); end)
 
     -- Forward-declare (pedido del usuario: "que siempre este centrado" al
     -- zoomear) -- se asigna mas abajo, junto con el viewport/content, pero
@@ -584,7 +584,7 @@ local function CreateDesigner()
 
     local closeBtn = CreateFrame("Button", nil, root, "UIPanelCloseButton")
     closeBtn:SetPoint("TOPRIGHT", root, "TOPRIGHT", 2, 2)
-    closeBtn:SetScript("OnClick", function() root:Hide() end)
+    closeBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:587:34"); root:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:587:34"); end)
 
     -- Reset (pedido del usuario): mismo reset que el boton "Reset nameplates"
     -- de Options.lua (np_general) -- vuelve TODO el perfil de nameplates
@@ -611,21 +611,21 @@ local function CreateDesigner()
     local ROW1, ROW2, ROW3, ROW4 = -28, -52, -76, -112
 
     resetBtn:SetPoint("TOPLEFT", root, "TOPLEFT", 8, ROW1)
-    resetBtn:SetScript("OnClick", function()
+    resetBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:614:34");
         if ns.ResetUnit then ns.ResetUnit(ns.NAMEPLATES_KEY) end
         Reflow()
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:614:34"); end)
 
     -- Toggle de outlines/regiones: apaga/prende los bordes verdes de edicion de
     -- TODOS los elementos sin cerrar el panel -- util para ver como queda
     -- "limpio" sin las guias encima.
     local outlineBtn = MakeStyledButton(root, "Outlines: On", 90, 20)
     outlineBtn:SetPoint("LEFT", resetBtn, "RIGHT", 6, 0)
-    outlineBtn:SetScript("OnClick", function(self)
+    outlineBtn:SetScript("OnClick", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:624:36");
         outlinesVisible = not outlinesVisible
         self:SetLabel(outlinesVisible and "Outlines: On" or "Outlines: Off")
         for _, hl in ipairs(highlights) do hl:SetShown(outlinesVisible) end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:624:36"); end)
 
     -- ---- Fila 3: mostrar/ocultar cada grupo de auras -------------------
     -- Estos tres colgaban del recuadro de edicion de su propio grupo, o sea
@@ -637,7 +637,7 @@ local function CreateDesigner()
     showLbl:SetText("Show:")
     showLbl:SetPoint("TOPLEFT", root, "TOPLEFT", 10, ROW3 - 4)
 
-    local function MakeShowToggle(label, showKey, anchorTo, gap)
+    local function MakeShowToggle(label, showKey, anchorTo, gap) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeShowToggle MyCustomFrames/NameplateDesigner.lua:640:10");
         local cb = CreateFrame("CheckButton", nil, root, "UICheckButtonTemplate")
         cb:SetSize(16, 16)
         cb:SetPoint("LEFT", anchorTo, "RIGHT", gap, 0)
@@ -647,18 +647,18 @@ local function CreateDesigner()
         t:SetText(label)
         t:SetPoint("LEFT", cb, "RIGHT", 1, 0)
         cb.labelText = t
-        cb:SetScript("OnClick", function(self)
+        cb:SetScript("OnClick", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:650:32");
             if CombatBlocked() then
                 -- Revierte el check visual: el click ya cambio GetChecked()
                 -- antes de que corra este script.
                 self:SetChecked(not self:GetChecked())
-                return
+                Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:650:32"); return
             end
-            local pr = P(); if not pr then return end
+            local pr = P(); if not pr then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:650:32"); return end
             pr[showKey] = self:GetChecked() and true or false
             Reflow()
-        end)
-        return cb
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:650:32"); end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "MakeShowToggle MyCustomFrames/NameplateDesigner.lua:640:10"); return cb
     end
     local bigShownCB      = MakeShowToggle("Big",      "auraShowBigDebuff",       showLbl, 2)
     local personalShownCB = MakeShowToggle("Personal", "auraShowPersonalDebuffs", bigShownCB.labelText, 6)
@@ -679,13 +679,13 @@ local function CreateDesigner()
     local zoomSlider = MakeMiniSlider(root)
     zoomSlider:SetPoint("TOP", root, "TOP", -112, ROW4)
     BindSlider(zoomSlider, "Panel zoom", 1, 3, 0.1,
-        function() return ZOOM end,
-        function(v)
+        function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:682:8"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:682:8"); return ZOOM end,
+        function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:683:8");
             ZOOM = v
             -- "Que siempre este centrado" -- recentra al cambiar el zoom, asi
             -- nunca se pierde de vista por quedar paneado a un costado.
             if RecenterContent then RecenterContent() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:683:8"); end)
 
     -- Escala del plate: multiplica el lienzo entero. Ya NO cambia proporciones
     -- (todos los elementos estan en regimen "plate", asi que se cancela en
@@ -694,13 +694,13 @@ local function CreateDesigner()
     local refSlider = MakeMiniSlider(root)
     refSlider:SetPoint("TOP", root, "TOP", 112, ROW4)
     BindSlider(refSlider, "Plate scale", 0.3, 2, 0.01,
-        function() return stageScale end,
-        function(v)
+        function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:697:8"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:697:8"); return stageScale end,
+        function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:698:8");
             stageScale = v
             SetRefScale(v)
             designer.stage:SetScale(stageScale * ZOOM)
             Reflow()
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:698:8"); end)
 
     -- ---- Columna derecha: perfiles -------------------------------------
     local profileBox = CreateFrame("EditBox", nil, root, "InputBoxTemplate")
@@ -711,16 +711,16 @@ local function CreateDesigner()
 
     local saveProfileBtn = MakeStyledButton(root, "Save As", 70, 20)
     saveProfileBtn:SetPoint("RIGHT", profileBox, "LEFT", -4, 0)
-    saveProfileBtn:SetScript("OnClick", function()
+    saveProfileBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:714:40");
         local name = profileBox:GetText()
         if name and name ~= "" and ns.SaveNameplateProfile then ns.SaveNameplateProfile(name) end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:714:40"); end)
 
     local defaultBtn = MakeStyledButton(root, "Set as Default", 174, 20)
     defaultBtn:SetPoint("TOPRIGHT", root, "TOPRIGHT", -8, ROW2)
-    defaultBtn:SetScript("OnClick", function()
+    defaultBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:721:36");
         if ns.SetNameplateUserDefault then ns.SetNameplateUserDefault() end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:721:36"); end)
 
     -- Dropdown para CARGAR un perfil guardado (mismo estilo Setup Wizard).
     local profileDropdown = MakeDropdownButton(root, 174, 20, "Load profile...")
@@ -733,7 +733,7 @@ local function CreateDesigner()
     profileListBg:SetAllPoints()
     profileListBg:SetColorTexture(0, 0, 0, 0.75)
     local profileRows = {}
-    local function RebuildProfileList()
+    local function RebuildProfileList() Perfy_Trace(Perfy_GetTime(), "Enter", "RebuildProfileList MyCustomFrames/NameplateDesigner.lua:736:10");
         for _, r in ipairs(profileRows) do r:Hide() end
         wipe(profileRows)
         local names = ns.ListNameplateProfiles and ns.ListNameplateProfiles() or {}
@@ -746,47 +746,47 @@ local function CreateDesigner()
             -- funcionando igual, como atajo.
             local rb = MakeDropdownButton(profileList, 154, 22, name)
             rb:SetPoint("TOPLEFT", 0, -(i - 1) * 22)
-            rb:SetScript("OnClick", function()
+            rb:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:749:36");
                 if ns.LoadNameplateProfile then ns.LoadNameplateProfile(name) end
                 profileBox:SetText(name)
                 profileList:Hide()
                 Reflow()
-            end)
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:749:36"); end)
             rb:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-            rb:HookScript("OnClick", function(_, button)
+            rb:HookScript("OnClick", function(_, button) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:756:37");
                 if button == "RightButton" and ns.DeleteNameplateProfile then
                     ns.DeleteNameplateProfile(name)
                     RebuildProfileList()
                     profileList:Show()
                 end
-            end)
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:756:37"); end)
             profileRows[#profileRows + 1] = rb
 
             -- Boton "x" visible -- pide confirmacion con un StaticPopup nativo
             -- (borrar es irreversible) antes de llamar DeleteNameplateProfile.
             local delBtn = MakeStyledButton(profileList, "x", 20, 22)
             delBtn:SetPoint("TOPRIGHT", 0, -(i - 1) * 22)
-            delBtn:SetScript("OnClick", function()
+            delBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:769:40");
                 StaticPopupDialogs["MCF_DELETE_NP_PROFILE"] = StaticPopupDialogs["MCF_DELETE_NP_PROFILE"] or {
                     text = "Delete nameplate profile '%s'?",
                     button1 = YES or "Yes",
                     button2 = NO or "No",
-                    OnAccept = function(self)
+                    OnAccept = function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:774:31");
                         if ns.DeleteNameplateProfile then ns.DeleteNameplateProfile(self.data) end
                         RebuildProfileList()
                         profileList:Show()
-                    end,
+                    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:774:31"); end,
                     timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
                 }
                 local dlg = StaticPopup_Show("MCF_DELETE_NP_PROFILE", name)
                 if dlg then dlg.data = name end
-            end)
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:769:40"); end)
             profileRows[#profileRows + 1] = delBtn
         end
-    end
-    profileDropdown:SetScript("OnClick", function()
+    Perfy_Trace(Perfy_GetTime(), "Leave", "RebuildProfileList MyCustomFrames/NameplateDesigner.lua:736:10"); end
+    profileDropdown:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:787:41");
         if profileList:IsShown() then profileList:Hide() else RebuildProfileList(); profileList:Show() end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:787:41"); end)
 
     -- ---- Panel de control (pedido del usuario): click en cualquier pieza de
     -- arriba selecciona su anillo verde y muestra aca abajo X/Y + width/
@@ -817,7 +817,7 @@ local function CreateDesigner()
     listBg:SetColorTexture(0, 0, 0, 0.75)
 
     local elementRows = {}
-    local function RebuildElementList()
+    local function RebuildElementList() Perfy_Trace(Perfy_GetTime(), "Enter", "RebuildElementList MyCustomFrames/NameplateDesigner.lua:820:10");
         for _, r in ipairs(elementRows) do r:Hide() end
         wipe(elementRows)
         -- La lista se ABRE hacia arriba desde el boton -- pedido del
@@ -834,19 +834,19 @@ local function CreateDesigner()
             if spec then
                 local rb = MakeDropdownButton(elementList, 200, 22, spec.title)
                 rb:SetPoint("TOPLEFT", 0, -i * 24)
-                rb:SetScript("OnClick", function()
+                rb:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:837:40");
                     elementDropdown.text:SetText(spec.title)
                     elementList:Hide()
                     if SelectElement then SelectElement(key) end
-                end)
+                Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:837:40"); end)
                 elementRows[#elementRows + 1] = rb
                 i = i + 1
             end
         end
-    end
-    elementDropdown:SetScript("OnClick", function()
+    Perfy_Trace(Perfy_GetTime(), "Leave", "RebuildElementList MyCustomFrames/NameplateDesigner.lua:820:10"); end
+    elementDropdown:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:847:41");
         if elementList:IsShown() then elementList:Hide() else RebuildElementList(); elementList:Show() end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:847:41"); end)
 
     -- Franja de controles reorganizada 2026-07-19 (pedido del usuario:
     -- "reorganiza el panel... algunos sliders de las auras aun estan muy al
@@ -884,17 +884,17 @@ local function CreateDesigner()
     local directionBtn = MakeStyledButton(root, "Direction: Right", 140, 20)
     directionBtn:SetPoint("BOTTOM", root, "BOTTOM", 60, 54)
     local AURA_DIRECTIONS = { "right", "left", "center" }
-    directionBtn:SetScript("OnClick", function(self)
-        if CombatBlocked() then return end
+    directionBtn:SetScript("OnClick", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:887:38");
+        if CombatBlocked() then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:887:38"); return end
         local key = self._dirKey
-        local p = P(); if not p or not key then return end
+        local p = P(); if not p or not key then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:887:38"); return end
         local cur, idx = p[key] or "right", 1
         for i, v in ipairs(AURA_DIRECTIONS) do if v == cur then idx = i break end end
         local nxt = AURA_DIRECTIONS[(idx % #AURA_DIRECTIONS) + 1]
         p[key] = nxt
         self:SetLabel("Direction: " .. nxt:sub(1, 1):upper() .. nxt:sub(2))
         Reflow()
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:887:38"); end)
 
     -- Fila extra (SOLO grupos de auras): boton que cicla entre editar el
     -- tamaño/color del ICONO (comportamiento de siempre) y editar el
@@ -912,7 +912,7 @@ local function CreateDesigner()
     -- Divisores (pedido del usuario: "organiceme el panel un poquito") --
     -- mismo asset que separa secciones en Options.lua, marca donde termina
     -- cada bloque de controles sin tocar el viewport en si.
-    local function Divider(y)
+    local function Divider(y) Perfy_Trace(Perfy_GetTime(), "Enter", "Divider MyCustomFrames/NameplateDesigner.lua:915:10");
         local d = root:CreateTexture(nil, "ARTWORK")
         if ns.PL and ns.PL.DIV_H then
             d:SetTexture(ns.PL.DIV_H)
@@ -922,7 +922,7 @@ local function CreateDesigner()
         d:SetPoint("TOPLEFT", root, "TOPLEFT", 8, y)
         d:SetPoint("TOPRIGHT", root, "TOPRIGHT", -8, y)
         d:SetHeight(2)
-        return d
+        Perfy_Trace(Perfy_GetTime(), "Leave", "Divider MyCustomFrames/NameplateDesigner.lua:915:10"); return d
     end
     -- Posiciones DERIVADAS del alto real, no numeros sueltos: el comentario que
     -- habia aca decia "root es 580 de alto" cuando ya iba por 630, y de ahi que
@@ -969,13 +969,13 @@ local function CreateDesigner()
     content:SetMovable(true)
     content:EnableMouse(true)
     content:RegisterForDrag("LeftButton")
-    content:SetScript("OnDragStart", function(self) self:StartMoving() end)
-    content:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+    content:SetScript("OnDragStart", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:972:37"); self:StartMoving() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:972:37"); end)
+    content:SetScript("OnDragStop", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:973:36"); self:StopMovingOrSizing() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:973:36"); end)
     -- Pedido del usuario 2026-07-19: click en "vacio" del viewport
     -- deselecciona el elemento actual -- los elementos individuales capturan
     -- el mouse primero (frames hijos mas chicos), asi que esto solo dispara
     -- cuando el click cae afuera de todos ellos.
-    content:SetScript("OnMouseDown", function() if DeselectElement then DeselectElement() end end)
+    content:SetScript("OnMouseDown", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:978:37"); if DeselectElement then DeselectElement() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:978:37"); end)
     -- Zoom con la RUEDA sobre "vacio" (pedido del usuario) -- los elementos
     -- individuales (hp, nombre, etc) ya usan la rueda para SU tamaño; esto
     -- solo agarra el scroll cuando NO estas sobre ninguno de ellos (los
@@ -983,7 +983,7 @@ local function CreateDesigner()
     -- Mismo campo ZOOM que el slider de arriba, asi que se mantienen
     -- sincronizados sin importar cual de los dos uses.
     content:EnableMouseWheel(true)
-    content:SetScript("OnMouseWheel", function(self, dir)
+    content:SetScript("OnMouseWheel", function(self, dir) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:986:38");
         ZOOM = clamp(ZOOM + (dir > 0 and 0.1 or -0.1), 1, 3)
         if zoomSlider then
             zoomSlider:SetValue(ZOOM)
@@ -991,12 +991,12 @@ local function CreateDesigner()
         end
         if RecenterContent then RecenterContent() end
         Reflow()
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:986:38"); end)
 
-    RecenterContent = function()
+    RecenterContent = function() Perfy_Trace(Perfy_GetTime(), "Enter", "RecenterContent MyCustomFrames/NameplateDesigner.lua:996:22");
         content:ClearAllPoints()
         content:SetPoint("CENTER", viewport, "CENTER", 0, 0)
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "RecenterContent MyCustomFrames/NameplateDesigner.lua:996:22"); end
 
     local centerBtn = MakeStyledButton(viewport, "Center", 56, 18)
     centerBtn:SetFrameLevel(viewport:GetFrameLevel() + 20)
@@ -1059,13 +1059,13 @@ local function CreateDesigner()
     hp.bg = hpBg
     pieces.healthBg = hpBg
     TrackHighlight(ns.MakeEditHighlight(hp))
-    MakeWheelResize(hp, function(p, dir)
+    MakeWheelResize(hp, function(p, dir) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1062:24");
         local w, h = ns.NPLayout.HealthSize(p)
         p.healthWidth  = clamp(w + (dir > 0 and 4 or -4), 40, 200)
         p.healthHeight = clamp(h + (dir > 0 and 1 or -1), 12, 48)
-    end, root, "healthBar")
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1062:24"); end, root, "healthBar")
     hp:EnableMouse(true)
-    hp:SetScript("OnMouseDown", function() if SelectElement then SelectElement("healthBar") end end)
+    hp:SetScript("OnMouseDown", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1068:32"); if SelectElement then SelectElement("healthBar") end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1068:32"); end)
     selSpecs.healthBar = { title = "Health Bar", handle = hp,
         widthKey = "healthWidth", widthRange = { 40, 200, 1 },
         heightKey = "healthHeight", heightRange = { 12, 48, 1 },
@@ -1084,9 +1084,9 @@ local function CreateDesigner()
     nameHolder.fs = nameFS
     TrackHighlight(ns.MakeEditHighlight(nameHolder))
     MakeDraggable(nameHolder, "nameOffsetX", "nameOffsetY", StageDivisor)
-    MakeWheelResize(nameHolder, function(p, dir)
+    MakeWheelResize(nameHolder, function(p, dir) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1087:32");
         p.nameFontSize = clamp((p.nameFontSize or 16) + (dir > 0 and 1 or -1), 8, 28)
-    end, root, "name")
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1087:32"); end, root, "name")
     -- point="BOTTOM" (NO "TOP"): la real ancla el BOTTOM del holder al TOP
     -- de la plate, asi el texto se extiende hacia ARRIBA con el hueco de 16
     -- unidades -- con "TOP" el texto colgaba hacia ABAJO, casi tocando la
@@ -1096,7 +1096,7 @@ local function CreateDesigner()
     -- cuelga del NAMEPLATE (`uf`), no de la barra -- ver ns.NPLayout.Name. El
     -- stage es el equivalente del `uf` aca (el (0,0) del que cuelga todo), asi
     -- que anclando ahi la cadena nombre->auras queda igual que en el juego.
-    nameHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("name") end end)
+    nameHolder:SetScript("OnMouseDown", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1099:40"); if SelectElement then SelectElement("name") end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1099:40"); end)
     selSpecs.name = { title = "Name", handle = nameHolder,
         xKey = "nameOffsetX", yKey = "nameOffsetY", xyRange = { -150, 150, 1 },
         fontKey = "nameFontSize", fontRange = { 8, 28, 1 },
@@ -1115,13 +1115,13 @@ local function CreateDesigner()
     hvHolder.fs = hvFS
     TrackHighlight(ns.MakeEditHighlight(hvHolder))
     MakeDraggable(hvHolder, "healthValueOffsetX", "healthValueOffsetY", StageDivisor)
-    MakeWheelResize(hvHolder, function(p, dir)
+    MakeWheelResize(hvHolder, function(p, dir) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1118:30");
         p.healthValueFontSize = clamp((p.healthValueFontSize or 12) + (dir > 0 and 1 or -1), 8, 28)
-    end, root, "healthValue")
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1118:30"); end, root, "healthValue")
     -- base=(0,0): SkinHealthValue en Nameplates.lua usa el offset guardado
     -- DIRECTO, sin sumarle ninguna constante -- sumar -2 aca (bug anterior)
     -- corria el mock -2 unidades de mas respecto de la nameplate real.
-    hvHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("healthValue") end end)
+    hvHolder:SetScript("OnMouseDown", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1124:38"); if SelectElement then SelectElement("healthValue") end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1124:38"); end)
     selSpecs.healthValue = { title = "Health Value", handle = hvHolder,
         xKey = "healthValueOffsetX", yKey = "healthValueOffsetY", xyRange = { -150, 150, 1 },
         fontKey = "healthValueFontSize", fontRange = { 8, 28, 1 },
@@ -1143,16 +1143,16 @@ local function CreateDesigner()
     pieces.castBg = cbBg
     TrackHighlight(ns.MakeEditHighlight(cb))
     MakeDraggable(cb, "castOffsetX", "castOffsetY", StageDivisor)
-    MakeWheelResize(cb, function(p, dir)
+    MakeWheelResize(cb, function(p, dir) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1146:24");
         local w, h = ns.NPLayout.CastSize(p)
         p.castWidth  = clamp(w + (dir > 0 and 4 or -4), 40, 200)
         p.castHeight = clamp(h + (dir > 0 and 1 or -1), 12, 48)
-    end, root, "castBar")
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1146:24"); end, root, "castBar")
     -- base=(0,0): ReassertCastGeometry en Nameplates.lua usa el offset
     -- guardado DIRECTO tambien (el -7 es solo el valor DEFAULT del campo,
     -- no una constante sumada aparte) -- sumar -7 aca (bug anterior)
     -- duplicaba el desplazamiento hacia abajo.
-    cb:SetScript("OnMouseDown", function() if SelectElement then SelectElement("castBar") end end)
+    cb:SetScript("OnMouseDown", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1155:32"); if SelectElement then SelectElement("castBar") end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1155:32"); end)
     selSpecs.castBar = { title = "Cast Bar", handle = cb,
         xKey = "castOffsetX", yKey = "castOffsetY", xyRange = { -150, 150, 1 },
         widthKey = "castWidth", widthRange = { 40, 200, 1 },
@@ -1177,10 +1177,10 @@ local function CreateDesigner()
     ctHolder.fs = ctFS
     TrackHighlight(ns.MakeEditHighlight(ctHolder))
     MakeDraggable(ctHolder, "castTextOffsetX", "castTextOffsetY", StageDivisor)
-    MakeWheelResize(ctHolder, function(p, dir)
+    MakeWheelResize(ctHolder, function(p, dir) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1180:30");
         p.castTextFontSize = clamp((p.castTextFontSize or 10) + (dir > 0 and 1 or -1), 6, 20)
-    end, root, "castText")
-    ctHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("castText") end end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1180:30"); end, root, "castText")
+    ctHolder:SetScript("OnMouseDown", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1183:38"); if SelectElement then SelectElement("castText") end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1183:38"); end)
     selSpecs.castText = { title = "Cast Text", handle = ctHolder,
         xKey = "castTextOffsetX", yKey = "castTextOffsetY", xyRange = { -100, 100, 1 },
         fontKey = "castTextFontSize", fontRange = { 6, 20, 1 },
@@ -1226,23 +1226,23 @@ local function CreateDesigner()
     -- que en Nameplates.lua) -- la rueda sobre CUALQUIERA de los 3 grupos
     -- ajusta el mismo campo.
     for holder, auraKey in pairs({ [bigHolder] = "bigDebuff", [personalHolder] = "personalDebuffs", [enemyHolder] = "enemyBuffs" }) do
-        MakeWheelResize(holder, function(p, dir)
+        MakeWheelResize(holder, function(p, dir) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1229:32");
             p.auraIconSize = clamp(ns.NPLayout.AuraIconSize(p) + (dir > 0 and 2 or -2), 8, 40)
-        end, root, auraKey, true)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1229:32"); end, root, auraKey, true)
     end
-    bigHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("bigDebuff") end end)
+    bigHolder:SetScript("OnMouseDown", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1233:39"); if SelectElement then SelectElement("bigDebuff") end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1233:39"); end)
     selSpecs.bigDebuff = { title = "Big Debuff", handle = bigHolder,
         xKey = "bigDebuffOffsetX", yKey = "bigDebuffOffsetY", xyRange = { -150, 150, 1 },
         sizeKey = "auraIconSize", sizeRange = { 8, 40, 2 },
         paddingKey = "auraPadding", paddingRange = { 0, 20, 1 }, directionKey = "bigDebuffDirection",
         colorKey = "auraCountColor", colorLabel = "Count/swipe color", hasAuraText = true }
-    personalHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("personalDebuffs") end end)
+    personalHolder:SetScript("OnMouseDown", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1239:44"); if SelectElement then SelectElement("personalDebuffs") end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1239:44"); end)
     selSpecs.personalDebuffs = { title = "Personal Debuffs", handle = personalHolder,
         xKey = "personalDebuffsOffsetX", yKey = "personalDebuffsOffsetY", xyRange = { -150, 150, 1 },
         sizeKey = "auraIconSize", sizeRange = { 8, 40, 2 },
         paddingKey = "auraPadding", paddingRange = { 0, 20, 1 }, directionKey = "personalDebuffsDirection",
         colorKey = "auraCountColor", colorLabel = "Count/swipe color", hasAuraText = true }
-    enemyHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("enemyBuffs") end end)
+    enemyHolder:SetScript("OnMouseDown", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1245:41"); if SelectElement then SelectElement("enemyBuffs") end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1245:41"); end)
     selSpecs.enemyBuffs = { title = "Enemy Buffs", handle = enemyHolder,
         xKey = "enemyBuffsOffsetX", yKey = "enemyBuffsOffsetY", xyRange = { -150, 150, 1 },
         sizeKey = "auraIconSize", sizeRange = { 8, 40, 2 },
@@ -1256,10 +1256,10 @@ local function CreateDesigner()
     local classHolder = MakeBadgeMock(stage, 40, A .. "icon_classification_elite.tga")
     pieces.classification = classHolder
     MakeDraggable(classHolder, "classificationOffsetX", "classificationOffsetY", StageDivisor)
-    MakeWheelResize(classHolder, function(p, dir)
+    MakeWheelResize(classHolder, function(p, dir) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1259:33");
         p.classificationSize = clamp((p.classificationSize or 40) + (dir > 0 and 2 or -2), 12, 64)
-    end, root, "classification")
-    classHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("classification") end end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1259:33"); end, root, "classification")
+    classHolder:SetScript("OnMouseDown", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1262:41"); if SelectElement then SelectElement("classification") end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1262:41"); end)
     selSpecs.classification = { title = "Elite/Rare/Boss icon", handle = classHolder,
         xKey = "classificationOffsetX", yKey = "classificationOffsetY", xyRange = { -100, 100, 1 },
         sizeKey = "classificationSize", sizeRange = { 12, 64, 2 } }
@@ -1269,10 +1269,10 @@ local function CreateDesigner()
     local raidHolder = MakeBadgeMock(stage, 32, "Interface\\TargetingFrame\\UI-RaidTargetingIcons", 8)
     pieces.raidMark = raidHolder
     MakeDraggable(raidHolder, "raidMarkOffsetX", "raidMarkOffsetY", StageDivisor)
-    MakeWheelResize(raidHolder, function(p, dir)
+    MakeWheelResize(raidHolder, function(p, dir) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1272:32");
         p.raidMarkSize = clamp((p.raidMarkSize or 64) + (dir > 0 and 4 or -4), 16, 96)
-    end, root, "raidMark")
-    raidHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("raidMark") end end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1272:32"); end, root, "raidMark")
+    raidHolder:SetScript("OnMouseDown", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1275:40"); if SelectElement then SelectElement("raidMark") end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1275:40"); end)
     selSpecs.raidMark = { title = "Raid Mark", handle = raidHolder,
         xKey = "raidMarkOffsetX", yKey = "raidMarkOffsetY", xyRange = { -100, 100, 1 },
         sizeKey = "raidMarkSize", sizeRange = { 16, 96, 4 } }
@@ -1306,8 +1306,8 @@ local function CreateDesigner()
     -- oculta el anillo verde y los sliders/color de la fila de control, y
     -- limpia selectedKey (asi MakeWheelResize vuelve a bloquear el scroll de
     -- TODOS los elementos hasta que se seleccione uno de nuevo).
-    DeselectElement = function()
-        if not selectedKey then return end
+    DeselectElement = function() Perfy_Trace(Perfy_GetTime(), "Enter", "DeselectElement MyCustomFrames/NameplateDesigner.lua:1309:22");
+        if not selectedKey then Perfy_Trace(Perfy_GetTime(), "Leave", "DeselectElement MyCustomFrames/NameplateDesigner.lua:1309:22"); return end
         selectedKey = nil
         root.selectedKey = nil
         selRing:Hide()
@@ -1315,14 +1315,14 @@ local function CreateDesigner()
         elementDropdown.text:SetText("Select element...")
         sliderX:Hide(); sliderY:Hide(); sliderW:Hide(); sliderH:Hide(); colorBtn:Hide()
         paddingSlider:Hide(); directionBtn:Hide(); textModeBtn:Hide()
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "DeselectElement MyCustomFrames/NameplateDesigner.lua:1309:22"); end
 
     -- Selecciona el elemento `key` de selSpecs: mueve el anillo verde encima,
     -- y (re)liga sliderW/sliderH/colorBtn a sus campos del perfil segun el
     -- spec (width+height O font size O icon size; color si aplica).
-    SelectElement = function(key)
+    SelectElement = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "SelectElement MyCustomFrames/NameplateDesigner.lua:1323:20");
         local spec = selSpecs[key]
-        if not spec then return end
+        if not spec then Perfy_Trace(Perfy_GetTime(), "Leave", "SelectElement MyCustomFrames/NameplateDesigner.lua:1323:20"); return end
         selectedKey = key
         root.selectedKey = key
         ctrlTitle:SetText(spec.title)
@@ -1336,18 +1336,18 @@ local function CreateDesigner()
         sliderX:Hide(); sliderY:Hide(); sliderW:Hide(); sliderH:Hide(); colorBtn:Hide()
         paddingSlider:Hide(); directionBtn:Hide(); textModeBtn:Hide()
         local p = P()
-        if not p then return end
+        if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "SelectElement MyCustomFrames/NameplateDesigner.lua:1323:20"); return end
 
         -- Fila 1: X/Y -- mismos campos que mueve el drag, para ajuste fino
         -- con numeros (pedido del usuario). No todas las piezas tienen
         -- offset propio en la nameplate real (la barra de vida no).
         if spec.xKey then
             BindSlider(sliderX, "Offset X", spec.xyRange[1], spec.xyRange[2], spec.xyRange[3],
-                function() return p[spec.xKey] end, function(v) p[spec.xKey] = v end)
+                function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1346:16"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1346:16", p[spec.xKey]) end, function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1346:52"); p[spec.xKey] = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1346:52"); end)
         end
         if spec.yKey then
             BindSlider(sliderY, "Offset Y", spec.xyRange[1], spec.xyRange[2], spec.xyRange[3],
-                function() return p[spec.yKey] end, function(v) p[spec.yKey] = v end)
+                function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1350:16"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1350:16", p[spec.yKey]) end, function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1350:52"); p[spec.yKey] = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1350:52"); end)
         end
 
         if spec.hasAuraText then textModeBtn:Show() end
@@ -1362,9 +1362,9 @@ local function CreateDesigner()
             if isCount then
                 -- Cargas: SI tiene offset propio (es un FontString nuestro).
                 BindSlider(sliderW, "Offset X", -50, 50, 1,
-                    function() return p.auraCountOffsetX end, function(v) p.auraCountOffsetX = v end)
+                    function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1365:20"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1365:20", p.auraCountOffsetX) end, function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1365:62"); p.auraCountOffsetX = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1365:62"); end)
                 BindSlider(sliderH, "Offset Y", -50, 50, 1,
-                    function() return p.auraCountOffsetY end, function(v) p.auraCountOffsetY = v end)
+                    function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1367:20"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1367:20", p.auraCountOffsetY) end, function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1367:62"); p.auraCountOffsetY = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1367:62"); end)
             else
                 -- Tiempo: NO tiene offset propio -- lo dibuja el widget
                 -- Cooldown nativo de Blizzard, siempre centrado en el icono.
@@ -1372,34 +1372,34 @@ local function CreateDesigner()
             end
             paddingSlider:Show()
             BindSlider(paddingSlider, "Font Size", 6, 24, 1,
-                function() return p[fsKey] end, function(v) p[fsKey] = v end)
+                function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1375:16"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1375:16", p[fsKey]) end, function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1375:48"); p[fsKey] = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1375:48"); end)
             directionBtn:Hide(); directionBtn._dirKey = nil
             if p[clrKey] then BindColorButton(colorBtn, isCount and "Count Color" or "Time Color", p[clrKey]) end
             textModeBtn:SetLabel(TEXT_MODE_LABEL[textMode])
-            return
+            Perfy_Trace(Perfy_GetTime(), "Leave", "SelectElement MyCustomFrames/NameplateDesigner.lua:1323:20"); return
         end
         if spec.hasAuraText then textModeBtn:SetLabel(TEXT_MODE_LABEL[textMode]) end
 
         -- Fila 2, slot izquierdo: width O font size O icon size (segun tipo).
         if spec.widthKey then
             BindSlider(sliderW, "Width", spec.widthRange[1], spec.widthRange[2], spec.widthRange[3],
-                function() return p[spec.widthKey] end, function(v) p[spec.widthKey] = v end)
+                function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1386:16"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1386:16", p[spec.widthKey]) end, function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1386:56"); p[spec.widthKey] = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1386:56"); end)
         elseif spec.fontKey then
             BindSlider(sliderW, "Font size", spec.fontRange[1], spec.fontRange[2], spec.fontRange[3],
-                function() return p[spec.fontKey] end, function(v) p[spec.fontKey] = v end)
+                function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1389:16"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1389:16", p[spec.fontKey]) end, function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1389:55"); p[spec.fontKey] = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1389:55"); end)
         elseif spec.sizeKey then
             BindSlider(sliderW, "Icon size (shared)", spec.sizeRange[1], spec.sizeRange[2], spec.sizeRange[3],
-                function() return p[spec.sizeKey] end, function(v) p[spec.sizeKey] = v end)
+                function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1392:16"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1392:16", p[spec.sizeKey]) end, function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1392:55"); p[spec.sizeKey] = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1392:55"); end)
         end
         -- Fila 2, slot derecho: height (barras) O opacidad (texto, pedido
         -- del usuario) -- las barras no tienen alpha configurable, y el
         -- texto no tiene height, asi que comparten el mismo slot sin pisarse.
         if spec.heightKey then
             BindSlider(sliderH, "Height", spec.heightRange[1], spec.heightRange[2], spec.heightRange[3],
-                function() return p[spec.heightKey] end, function(v) p[spec.heightKey] = v end)
+                function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1399:16"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1399:16", p[spec.heightKey]) end, function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1399:57"); p[spec.heightKey] = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1399:57"); end)
         elseif spec.alphaKey then
             BindSlider(sliderH, "Opacity", spec.alphaRange[1], spec.alphaRange[2], spec.alphaRange[3],
-                function() return p[spec.alphaKey] end, function(v) p[spec.alphaKey] = v end)
+                function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1402:16"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1402:16", p[spec.alphaKey]) end, function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1402:56"); p[spec.alphaKey] = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1402:56"); end)
         end
         if spec.colorKey and p[spec.colorKey] then
             BindColorButton(colorBtn, spec.colorLabel or "Color", p[spec.colorKey])
@@ -1409,7 +1409,7 @@ local function CreateDesigner()
         if spec.paddingKey then
             paddingSlider:Show()
             BindSlider(paddingSlider, "Padding", spec.paddingRange[1], spec.paddingRange[2], spec.paddingRange[3],
-                function() return p[spec.paddingKey] end, function(v) p[spec.paddingKey] = v end)
+                function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1412:16"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1412:16", p[spec.paddingKey]) end, function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1412:58"); p[spec.paddingKey] = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1412:58"); end)
         else
             paddingSlider:Hide()
         end
@@ -1422,14 +1422,14 @@ local function CreateDesigner()
             directionBtn:Hide()
             directionBtn._dirKey = nil
         end
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "SelectElement MyCustomFrames/NameplateDesigner.lua:1323:20"); end
 
-    textModeBtn:SetScript("OnClick", function(self)
+    textModeBtn:SetScript("OnClick", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1427:37");
         local idx = 1
         for i, v in ipairs(TEXT_MODES) do if v == textMode then idx = i break end end
         textMode = TEXT_MODES[(idx % #TEXT_MODES) + 1]
         if selectedKey then SelectElement(selectedKey) end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1427:37"); end)
 
     root.stage, root.scaleLabel = stage, scaleLabel
     root.bigShownCB, root.personalShownCB, root.enemyShownCB = bigShownCB, personalShownCB, enemyShownCB
@@ -1445,7 +1445,7 @@ local function CreateDesigner()
     -- login (ver mas abajo), sin este Hide() se abria solo con cada /reload
     -- en vez de quedarse oculto hasta el primer /mcfnpdesigner.
     root:Hide()
-    return root
+    Perfy_Trace(Perfy_GetTime(), "Leave", "CreateDesigner MyCustomFrames/NameplateDesigner.lua:512:6"); return root
 end
 
 -- QUITADO el espejado de escala del target (2026-07-27, pedido del usuario:
@@ -1484,9 +1484,9 @@ end
 -- cada pieza queda RE-ANCLADA a su anchor de verdad (fix del bug de
 -- "elementos que se quedan atras al mover la ventana", ver MakeDraggable).
 -- ==========================================================================
-Reflow = function()
-    if not designer or not designer:IsShown() then PushLive(); return end
-    local p = P(); if not p then return end
+Reflow = function() Perfy_Trace(Perfy_GetTime(), "Enter", "Reflow MyCustomFrames/NameplateDesigner.lua:1487:9");
+    if not designer or not designer:IsShown() then PushLive(); Perfy_Trace(Perfy_GetTime(), "Leave", "Reflow MyCustomFrames/NameplateDesigner.lua:1487:9"); return end
+    local p = P(); if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "Reflow MyCustomFrames/NameplateDesigner.lua:1487:9"); return end
 
     -- Zoom del panel (pedido del usuario, slider propio -- ver zoomSlider):
     -- aplicar aca tambien, no solo en el ticker de escala, para que cambiar
@@ -1603,12 +1603,12 @@ Reflow = function()
     end
 
     PushLive()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "Reflow MyCustomFrames/NameplateDesigner.lua:1487:9"); end
 
 -- ==========================================================================
 -- Toggle publico (menu/slash command).
 -- ==========================================================================
-ns.ToggleNameplateDesigner = function()
+ns.ToggleNameplateDesigner = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ToggleNameplateDesigner MyCustomFrames/NameplateDesigner.lua:1611:29");
     if not designer then designer = CreateDesigner() end
     if designer:IsShown() then
         designer:Hide()
@@ -1633,7 +1633,7 @@ ns.ToggleNameplateDesigner = function()
         for _, hl in ipairs(highlights) do hl:SetShown(outlinesVisible) end
         Reflow()
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ToggleNameplateDesigner MyCustomFrames/NameplateDesigner.lua:1611:29"); end
 
 -- Pre-construye el panel (oculto) al login en vez de la primera vez que se
 -- llama /mcfnpdesigner -- pedido del usuario ("se demora un poco en abrir"):
@@ -1645,16 +1645,16 @@ end
 do
     local f = CreateFrame("Frame")
     f:RegisterEvent("PLAYER_LOGIN")
-    f:SetScript("OnEvent", function(self)
+    f:SetScript("OnEvent", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1648:27");
         self:UnregisterAllEvents()
-        C_Timer.After(2, function()
+        C_Timer.After(2, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1650:25");
             if not designer then designer = CreateDesigner() end
-        end)
-    end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1650:25"); end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateDesigner.lua:1648:27"); end)
 end
 
 SLASH_MCFNPDESIGNER1 = "/mcfnpdesigner"
-SlashCmdList["MCFNPDESIGNER"] = function() ns.ToggleNameplateDesigner() end
+SlashCmdList["MCFNPDESIGNER"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFNPDESIGNER MyCustomFrames/NameplateDesigner.lua:1657:32"); ns.ToggleNameplateDesigner() Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFNPDESIGNER MyCustomFrames/NameplateDesigner.lua:1657:32"); end
 
 -- ==========================================================================
 -- Los diagnosticos /mcfnplayoutdiag y /mcfnpanchordiag se ELIMINARON el
@@ -1673,3 +1673,5 @@ SlashCmdList["MCFNPDESIGNER"] = function() ns.ToggleNameplateDesigner() end
 -- distancia. Un diagnostico que da falsas alarmas es peor que no tenerlo:
 -- manda a perseguir un problema que no existe.
 -- ==========================================================================
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/NameplateDesigner.lua");

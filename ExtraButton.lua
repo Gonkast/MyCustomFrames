@@ -1,4 +1,4 @@
--- ==========================================================================
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/ExtraButton.lua"); -- ==========================================================================
 -- MyCustomFrames - ExtraButton.lua
 -- Reskin del boton NATIVO de "Extra Action" (ExtraActionButton1 -- el boton
 -- grande que aparece durante mecanicas de boss/quests) estilo AzeriteUI:
@@ -16,25 +16,25 @@ local A = ns.ASSETS
 local MASK_TEX = A .. "actionbutton-mask-circular.tga"
 local BORDER_TEX = A .. "actionbutton-border.tga"
 
-local function ExtraButtonDefaults()
-    return {
+local function ExtraButtonDefaults() Perfy_Trace(Perfy_GetTime(), "Enter", "ExtraButtonDefaults MyCustomFrames/ExtraButton.lua:19:6");
+    return Perfy_Trace_Passthrough("Leave", "ExtraButtonDefaults MyCustomFrames/ExtraButton.lua:19:6", {
         enabled = true,
         size = 64,
         borderScale = 1.25,
         borderColor = { r = 192 / 255, g = 192 / 255, b = 192 / 255, a = 1 },
-    }
+    })
 end
 ns.ExtraButtonDefaults = ExtraButtonDefaults
 
-local function P()
+local function P() Perfy_Trace(Perfy_GetTime(), "Enter", "P MyCustomFrames/ExtraButton.lua:29:6");
     local db = ns.GetDB and ns.GetDB()
-    return db and db.extrabutton
+    return Perfy_Trace_Passthrough("Leave", "P MyCustomFrames/ExtraButton.lua:29:6", db and db.extrabutton)
 end
 
 local styledButtons = setmetatable({}, { __mode = "k" })
 
-local function StyleButton(button)
-    if not button or button.mcfStyled then return end
+local function StyleButton(button) Perfy_Trace(Perfy_GetTime(), "Enter", "StyleButton MyCustomFrames/ExtraButton.lua:36:6");
+    if not button or button.mcfStyled then Perfy_Trace(Perfy_GetTime(), "Leave", "StyleButton MyCustomFrames/ExtraButton.lua:36:6"); return end
     button.mcfStyled = true
     styledButtons[button] = true
 
@@ -50,14 +50,14 @@ local function StyleButton(button)
 
     if button.SetNormalTexture then
         if button:GetNormalTexture() then button:GetNormalTexture():SetTexture(nil) end
-        hooksecurefunc(button, "SetNormalTexture", function(b, tex) if tex ~= "" then b:SetNormalTexture("") end end)
+        hooksecurefunc(button, "SetNormalTexture", function(b, tex) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ExtraButton.lua:53:51"); if tex ~= "" then b:SetNormalTexture("") end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ExtraButton.lua:53:51"); end)
     end
     if button.SetHighlightTexture then
         if button:GetHighlightTexture() then button:GetHighlightTexture():SetTexture(nil) end
     end
     if button.SetPushedTexture then
         if button:GetPushedTexture() then button:GetPushedTexture():SetTexture(nil) end
-        hooksecurefunc(button, "SetPushedTexture", function(b, tex) if tex ~= "" then b:SetPushedTexture("") end end)
+        hooksecurefunc(button, "SetPushedTexture", function(b, tex) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ExtraButton.lua:60:51"); if tex ~= "" then b:SetPushedTexture("") end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ExtraButton.lua:60:51"); end)
     end
 
     local p = P() or ExtraButtonDefaults()
@@ -78,7 +78,7 @@ local function StyleButton(button)
     if newIcon.SetMask then newIcon:SetMask(MASK_TEX) end
     button.mcfIcon = newIcon
     if icon then
-        local function SyncIcon() pcall(newIcon.SetTexture, newIcon, icon:GetTexture()) end
+        local function SyncIcon() Perfy_Trace(Perfy_GetTime(), "Enter", "SyncIcon MyCustomFrames/ExtraButton.lua:81:14"); pcall(newIcon.SetTexture, newIcon, icon:GetTexture()) Perfy_Trace(Perfy_GetTime(), "Leave", "SyncIcon MyCustomFrames/ExtraButton.lua:81:14"); end
         SyncIcon()
         hooksecurefunc(icon, "SetTexture", SyncIcon)
         hooksecurefunc(icon, "Show", SyncIcon)
@@ -125,7 +125,7 @@ local function StyleButton(button)
         button.Count:ClearAllPoints()
         button.Count:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -3, 3)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "StyleButton MyCustomFrames/ExtraButton.lua:36:6"); end
 
 -- ZoneAbilityFrame = el mismo tipo de boton grande, pero para habilidades de
 -- ZONA (escenarios/questlines con "Restless Heart" etc, ver el Frame Stack
@@ -133,33 +133,33 @@ end
 -- estos botones de forma DINAMICA (EnumerateActive), a diferencia de
 -- ExtraActionButton1 que siempre existe -- hay que hookear
 -- UpdateDisplayedZoneAbilities para agarrar los nuevos a medida que aparecen.
-local function StyleZoneButtons()
+local function StyleZoneButtons() Perfy_Trace(Perfy_GetTime(), "Enter", "StyleZoneButtons MyCustomFrames/ExtraButton.lua:136:6");
     local p = P()
-    if not p or not p.enabled then return end
+    if not p or not p.enabled then Perfy_Trace(Perfy_GetTime(), "Leave", "StyleZoneButtons MyCustomFrames/ExtraButton.lua:136:6"); return end
     local frame = _G.ZoneAbilityFrame
-    if not frame then return end
+    if not frame then Perfy_Trace(Perfy_GetTime(), "Leave", "StyleZoneButtons MyCustomFrames/ExtraButton.lua:136:6"); return end
     if frame.Style then frame.Style:SetAlpha(0) end
     if frame.SpellButtonContainer and frame.SpellButtonContainer.EnumerateActive then
         for button in frame.SpellButtonContainer:EnumerateActive() do
             if button then StyleButton(button) end
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "StyleZoneButtons MyCustomFrames/ExtraButton.lua:136:6"); end
 
-local function StyleAll()
+local function StyleAll() Perfy_Trace(Perfy_GetTime(), "Enter", "StyleAll MyCustomFrames/ExtraButton.lua:149:6");
     local p = P()
-    if not p or not p.enabled then return end
+    if not p or not p.enabled then Perfy_Trace(Perfy_GetTime(), "Leave", "StyleAll MyCustomFrames/ExtraButton.lua:149:6"); return end
     StyleButton(_G.ExtraActionButton1)
     StyleZoneButtons()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "StyleAll MyCustomFrames/ExtraButton.lua:149:6"); end
 
 local zoneHooked = false
-local function HookZoneAbilityFrame()
-    if zoneHooked or not _G.ZoneAbilityFrame then return end
+local function HookZoneAbilityFrame() Perfy_Trace(Perfy_GetTime(), "Enter", "HookZoneAbilityFrame MyCustomFrames/ExtraButton.lua:157:6");
+    if zoneHooked or not _G.ZoneAbilityFrame then Perfy_Trace(Perfy_GetTime(), "Leave", "HookZoneAbilityFrame MyCustomFrames/ExtraButton.lua:157:6"); return end
     zoneHooked = true
     hooksecurefunc(_G.ZoneAbilityFrame, "UpdateDisplayedZoneAbilities", StyleZoneButtons)
     StyleZoneButtons()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "HookZoneAbilityFrame MyCustomFrames/ExtraButton.lua:157:6"); end
 
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_LOGIN")
@@ -169,23 +169,23 @@ f:RegisterEvent("PLAYER_ENTERING_WORLD")
 -- podemos asumir que ZoneAbilityFrame ya existe al login, hay que escuchar
 -- ADDON_LOADED y engancharlo apenas aparezca.
 f:RegisterEvent("ADDON_LOADED")
-f:SetScript("OnEvent", function(_, event, addon)
+f:SetScript("OnEvent", function(_, event, addon) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ExtraButton.lua:172:23");
     if event == "ADDON_LOADED" then
         if addon == "Blizzard_ZoneAbility" then HookZoneAbilityFrame() end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ExtraButton.lua:172:23"); return
     end
     StyleAll()
     HookZoneAbilityFrame()
-end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ExtraButton.lua:172:23"); end)
 if _G.ExtraActionBarFrame then
     hooksecurefunc(_G.ExtraActionBarFrame, "Show", StyleAll)
 end
 
 -- Reaplica tamaño/color de borde en vivo (slash command) a los botones ya
 -- estilizados, sin esperar a que vuelvan a aparecer.
-ns.RefreshExtraButtonSkin = function()
+ns.RefreshExtraButtonSkin = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.RefreshExtraButtonSkin MyCustomFrames/ExtraButton.lua:186:28");
     local p = P()
-    if not p then return end
+    if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.RefreshExtraButtonSkin MyCustomFrames/ExtraButton.lua:186:28"); return end
     for button in pairs(styledButtons) do
         if button.mcfBorder then
             local bs = p.borderScale or 1.25
@@ -194,12 +194,12 @@ ns.RefreshExtraButtonSkin = function()
             button.mcfBorder:SetVertexColor(bc.r, bc.g, bc.b, bc.a)
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.RefreshExtraButtonSkin MyCustomFrames/ExtraButton.lua:186:28"); end
 
 SLASH_MCFEXTRABTN1 = "/mcfextrabtn"
-SlashCmdList["MCFEXTRABTN"] = function(msg)
+SlashCmdList["MCFEXTRABTN"] = function(msg) Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFEXTRABTN MyCustomFrames/ExtraButton.lua:200:30");
     local p = P()
-    if not p then return end
+    if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFEXTRABTN MyCustomFrames/ExtraButton.lua:200:30"); return end
     local cmd, arg = msg:match("^(%S*)%s*(.-)$")
     cmd = (cmd or ""):lower()
     if cmd == "border" and tonumber(arg) then
@@ -209,5 +209,7 @@ SlashCmdList["MCFEXTRABTN"] = function(msg)
     else
         print("|cffffe19bMyCustomFrames|r: /mcfextrabtn border <0.5-3> (actual: " .. (p.borderScale or 1.25) .. ")")
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFEXTRABTN MyCustomFrames/ExtraButton.lua:200:30"); end
 HookZoneAbilityFrame()
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/ExtraButton.lua");

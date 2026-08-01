@@ -1,4 +1,4 @@
-local ADDON, ns = ...
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Defaults.lua"); local ADDON, ns = ...
 
 ns.BUILTIN = {
   ["arenaAuraDirection"]="down",
@@ -5231,3 +5231,5 @@ ns.BUILTIN = {
     },
   },
 }
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Defaults.lua");

@@ -1,4 +1,4 @@
--- ===========================================================================
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/ModuleRegistry.lua"); -- ===========================================================================
 -- MyCustomFrames - ModuleRegistry.lua
 -- Registro declarativo de los subsistemas persistentes.
 --
@@ -35,6 +35,8 @@ local FEATURES = {
 
 ns.FEATURE_REGISTRY = FEATURES
 
-function ns.GetFeatureRegistry()
-    return FEATURES
+function ns.GetFeatureRegistry() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.GetFeatureRegistry MyCustomFrames/ModuleRegistry.lua:38:0");
+    Perfy_Trace(Perfy_GetTime(), "Leave", "ns.GetFeatureRegistry MyCustomFrames/ModuleRegistry.lua:38:0"); return FEATURES
 end
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/ModuleRegistry.lua");

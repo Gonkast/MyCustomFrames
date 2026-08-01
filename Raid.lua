@@ -1,4 +1,4 @@
--- ==========================================================================
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Raid.lua"); -- ==========================================================================
 -- MyCustomFrames - Raid.lua
 -- RAID FRAMES (hasta 40 jugadores), estilo AzeriteUI. A diferencia de party1-5
 -- (Units.lua: 5 SecureUnitButtonTemplate creados/posicionados a mano) esto usa
@@ -22,18 +22,18 @@ local A = "Interface\\AddOns\\MyCustomFrames\\Assets\\"
 -- entrada mas de db.units, ver core.lua) -- pero el icono/plate de ROL
 -- (tank/heal) no viven en la DB (son fijos, sin picker), asi que se resuelven
 -- aca a mano contra la skin activa, mismo patron que ClassPower.lua.
-local function ResolveTex(filename)
-    if ns.SkinResolve then return ns.SkinResolve(filename) end
-    return A .. filename
+local function ResolveTex(filename) Perfy_Trace(Perfy_GetTime(), "Enter", "ResolveTex MyCustomFrames/Raid.lua:25:6");
+    if ns.SkinResolve then return Perfy_Trace_Passthrough("Leave", "ResolveTex MyCustomFrames/Raid.lua:25:6", ns.SkinResolve(filename)) end
+    return Perfy_Trace_Passthrough("Leave", "ResolveTex MyCustomFrames/Raid.lua:25:6", A .. filename)
 end
 -- roleBackdrop se texturea UNA sola vez por member al crearse (no en cada
 -- refresh como roleIcon) -- se registran aca para poder reasignarles la
 -- textura cuando cambia la skin (ns.RefreshRaid llama RefreshRoleBackdrops).
 local roleBackdrops = {}
-local function RefreshRoleBackdrops()
+local function RefreshRoleBackdrops() Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshRoleBackdrops MyCustomFrames/Raid.lua:33:6");
     local tex = ResolveTex("point_plate.tga")
     for _, t in ipairs(roleBackdrops) do t:SetTexture(tex) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshRoleBackdrops MyCustomFrames/Raid.lua:33:6"); end
 
 -- ==========================================================================
 -- ESTADO
@@ -58,13 +58,13 @@ local ghostPowerUnits -- [i] = pu (power, idem)
 -- depender de eso, CADA member/ghost ahora tiene su PROPIO drag que mueve
 -- DIRECTAMENTE al header (mismo resultado, sin depender de pass-through).
 -- ==========================================================================
-local function StartRaidHeaderDrag()
+local function StartRaidHeaderDrag() Perfy_Trace(Perfy_GetTime(), "Enter", "StartRaidHeaderDrag MyCustomFrames/Raid.lua:61:6");
     if raidHeader and ns.IsUnlocked() and not InCombatLockdown() then
         raidHeader:StartMoving()
     end
-end
-local function StopRaidHeaderDrag()
-    if not raidHeader then return end
+Perfy_Trace(Perfy_GetTime(), "Leave", "StartRaidHeaderDrag MyCustomFrames/Raid.lua:61:6"); end
+local function StopRaidHeaderDrag() Perfy_Trace(Perfy_GetTime(), "Enter", "StopRaidHeaderDrag MyCustomFrames/Raid.lua:66:6");
+    if not raidHeader then Perfy_Trace(Perfy_GetTime(), "Leave", "StopRaidHeaderDrag MyCustomFrames/Raid.lua:66:6"); return end
     raidHeader:StopMovingOrSizing()
     if ns.SnapFrameToGrid then ns.SnapFrameToGrid(raidHeader) end
     local cfg = ns.GetDB().units.raid
@@ -80,7 +80,7 @@ local function StopRaidHeaderDrag()
     end
     ns.RefreshRaid()
     if ns.OnDragStopped then ns.OnDragStopped("raid") end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "StopRaidHeaderDrag MyCustomFrames/Raid.lua:66:6"); end
 
 -- ==========================================================================
 -- DEFAULTS
@@ -92,7 +92,7 @@ end
 -- anchorFrame/scale de la base ya sirven tal cual para la POSICION DEL
 -- CONTENEDOR (igual convencion que cualquier unitframe).
 -- ==========================================================================
-function ns.RaidUnitDefaults()
+function ns.RaidUnitDefaults() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.RaidUnitDefaults MyCustomFrames/Raid.lua:95:0");
     local d = ns.DefaultsFor("raid")
 
     -- Tamaño del member: EXACTO al UnitSize de AzeriteUI (103x56). Las barras
@@ -194,7 +194,7 @@ function ns.RaidUnitDefaults()
     d.healthBarWidth, d.healthBarHeight = 75, 13
     d.raidTargetIconSize = 14
 
-    return d
+    Perfy_Trace(Perfy_GetTime(), "Leave", "ns.RaidUnitDefaults MyCustomFrames/Raid.lua:95:0"); return d
 end
 
 -- ==========================================================================
@@ -221,21 +221,21 @@ local APPEARANCE_KEYS = {
     "useBarColor", "barColor", "colorHostile", "colorNeutral", "colorFriendly",
 }
 
-function ns.ForceRaidStyle()
+function ns.ForceRaidStyle() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ForceRaidStyle MyCustomFrames/Raid.lua:224:0");
     local db = ns.GetDB()
-    if not db then return end
+    if not db then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ForceRaidStyle MyCustomFrames/Raid.lua:224:0"); return end
     db.units = db.units or {}
     db.units.raid = db.units.raid or {}
     local defaults = ns.RaidUnitDefaults()
     for _, k in ipairs(APPEARANCE_KEYS) do
         db.units.raid[k] = defaults[k]
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ForceRaidStyle MyCustomFrames/Raid.lua:224:0"); end
 
 -- ==========================================================================
 -- SINGLETON KEY (patron identico a ns.IsMinimap/ns.IsNameplates/ns.IsClassPower)
 -- ==========================================================================
-ns.IsRaid = function(key) return key == "raid" end
+ns.IsRaid = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.IsRaid MyCustomFrames/Raid.lua:238:12"); return Perfy_Trace_Passthrough("Leave", "ns.IsRaid MyCustomFrames/Raid.lua:238:12", key == "raid") end
 
 -- ==========================================================================
 -- CONSTRUCCION VISUAL (compartida entre members REALES -- creados via el
@@ -256,9 +256,9 @@ ns.IsRaid = function(key) return key == "raid" end
 -- uno distinto del resto (a proposito, ver ns.ForceRaidStyle: la apariencia
 -- es 100% uniforme). Llamada en la creacion (BuildMemberVisual) y de nuevo
 -- en cada ns.RefreshRaid() para que los sliders del menu se vean en vivo.
-local function PositionRaidIcons(u)
+local function PositionRaidIcons(u) Perfy_Trace(Perfy_GetTime(), "Enter", "PositionRaidIcons MyCustomFrames/Raid.lua:259:6");
     local p = ns.GetDB() and ns.GetDB().units and ns.GetDB().units.raid
-    if not p then return end
+    if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "PositionRaidIcons MyCustomFrames/Raid.lua:259:6"); return end
     -- FIX (2026-07-20, "el icono esta super alejado del boton"): antes se
     -- anclaba a nameText "LEFT" -- pero nameText tiene un ANCHO INVISIBLE de
     -- 1000px (SetWidth fijo, ver UnitUpdateBar/Units.lua) para poder centrar
@@ -281,7 +281,7 @@ local function PositionRaidIcons(u)
         u.roleBackdrop:ClearAllPoints()
         u.roleBackdrop:SetPoint("RIGHT", u.button, "RIGHT", p.roleOffsetX or 25, p.roleOffsetY or 0)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "PositionRaidIcons MyCustomFrames/Raid.lua:259:6"); end
 ns.PositionRaidIcons = PositionRaidIcons
 
 local RAID_BAR_W, RAID_BAR_H = 75, 13
@@ -296,9 +296,9 @@ local RAID_POWER_TEX = [[Interface\ChatFrame\ChatFrameBackground]]
 -- alineadas), su alto se mantiene fijo (es solo una tira de 1px). Llamada en
 -- la creacion y de nuevo en cada ns.RefreshRaid() para que los sliders se
 -- vean en vivo.
-local function ApplySizeToMember(u, pu)
+local function ApplySizeToMember(u, pu) Perfy_Trace(Perfy_GetTime(), "Enter", "ApplySizeToMember MyCustomFrames/Raid.lua:299:6");
     local p = ns.GetDB() and ns.GetDB().units and ns.GetDB().units.raid
-    if not p then return end
+    if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplySizeToMember MyCustomFrames/Raid.lua:299:6"); return end
     local bw = p.healthBarWidth or RAID_BAR_W
     local bh = p.healthBarHeight or RAID_BAR_H
     if u.bar then
@@ -315,10 +315,10 @@ local function ApplySizeToMember(u, pu)
         pu.bar:ClearAllPoints()
         pu.bar:SetPoint("BOTTOM", pu.button, "BOTTOM", 0, RAID_POWER_Y)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ApplySizeToMember MyCustomFrames/Raid.lua:299:6"); end
 ns.ApplySizeToMember = ApplySizeToMember
 
-local function BuildMemberVisual(self)
+local function BuildMemberVisual(self) Perfy_Trace(Perfy_GetTime(), "Enter", "BuildMemberVisual MyCustomFrames/Raid.lua:321:6");
     -- FIX (2026-07-25, error real reportado: "tried to call the protected function
     -- 'MyCF_RaidHeaderUnitButton7:SetSize()'"): los members REALES los crea
     -- SecureGroupHeader_Update (entorno restringido de Blizzard) y son frames
@@ -483,25 +483,25 @@ local function BuildMemberVisual(self)
     PositionRaidIcons(u)
     ApplySizeToMember(u, pu)
 
-    self:SetScript("OnEnter", function()
+    self:SetScript("OnEnter", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Raid.lua:486:30");
         u.isMouseOver = true
         if UnitExists(u.unit) then
             GameTooltip_SetDefaultAnchor(GameTooltip, UIParent)
             GameTooltip:SetUnit(u.unit)
             GameTooltip:Show()
         end
-    end)
-    self:SetScript("OnLeave", function()
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Raid.lua:486:30"); end)
+    self:SetScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Raid.lua:494:30");
         u.isMouseOver = false
         GameTooltip:Hide()
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Raid.lua:494:30"); end)
 
-    return u, pu
+    Perfy_Trace(Perfy_GetTime(), "Leave", "BuildMemberVisual MyCustomFrames/Raid.lua:321:6"); return u, pu
 end
 
 -- Member REAL (llamado UNA vez por frame fisico, desde el OnLoad del
 -- template XML -- ver Raid.xml).
-function ns.BuildRaidMember(self)
+function ns.BuildRaidMember(self) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.BuildRaidMember MyCustomFrames/Raid.lua:504:0");
     local u, pu = BuildMemberVisual(self)
     ns.raidFrames[self] = u
     ns.raidPowerFrames[self] = pu
@@ -521,34 +521,34 @@ function ns.BuildRaidMember(self)
     -- mientras tanto el click funciona igual por la propagacion de
     -- "*type1"/"*type2" del header.
     ns.ApplyMemberClickAttributes(self)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.BuildRaidMember MyCustomFrames/Raid.lua:504:0"); end
 
 -- Cola de members cuyos atributos de click quedaron pendientes por combate
 -- (ver el comentario de arriba). Tabla WEAK: si Blizzard descarta un member,
 -- no lo retenemos.
 local pendingClickAttrs = setmetatable({}, { __mode = "k" })
-function ns.ApplyMemberClickAttributes(button)
+function ns.ApplyMemberClickAttributes(button) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ApplyMemberClickAttributes MyCustomFrames/Raid.lua:530:0");
     if InCombatLockdown() and button.IsProtected and button:IsProtected() then
         pendingClickAttrs[button] = true
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ApplyMemberClickAttributes MyCustomFrames/Raid.lua:530:0"); return
     end
     pendingClickAttrs[button] = nil
     button:SetAttribute("type1", "target")
     button:SetAttribute("type2", "togglemenu")
-end
-function ns.FlushPendingMemberClickAttributes()
-    if InCombatLockdown() then return end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ApplyMemberClickAttributes MyCustomFrames/Raid.lua:530:0"); end
+function ns.FlushPendingMemberClickAttributes() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.FlushPendingMemberClickAttributes MyCustomFrames/Raid.lua:539:0");
+    if InCombatLockdown() then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.FlushPendingMemberClickAttributes MyCustomFrames/Raid.lua:539:0"); return end
     for button in pairs(pendingClickAttrs) do
         ns.ApplyMemberClickAttributes(button)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.FlushPendingMemberClickAttributes MyCustomFrames/Raid.lua:539:0"); end
 
 -- Puente global: el OnLoad del template XML no ve el upvalue `ns` (esta fuera
 -- del vararg de este chunk), asi que se expone UNA funcion global minima que
 -- delega en la de arriba (que si es un closure sobre `ns`).
-function MyCF_BuildRaidMember(self)
+function MyCF_BuildRaidMember(self) Perfy_Trace(Perfy_GetTime(), "Enter", "MyCF_BuildRaidMember MyCustomFrames/Raid.lua:549:0");
     ns.BuildRaidMember(self)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "MyCF_BuildRaidMember MyCustomFrames/Raid.lua:549:0"); end
 
 -- ==========================================================================
 -- VISIBILIDAD AUTOMATICA
@@ -574,36 +574,36 @@ end
 -- Se recalcula en cada llamada a ns.UpdateRaidDrivers (PLAYER_ENTERING_WORLD/
 -- GROUP_ROSTER_UPDATE/ZONE_CHANGED_NEW_AREA, ver mas abajo), asi que el driver
 -- se re-registra con el string correcto al entrar/salir de una arena real.
-local function IsRealArena()
-    local ok, isArena = pcall(function() return C_PvP and C_PvP.IsArena and C_PvP.IsArena() end)
-    return ok and isArena and true or false
+local function IsRealArena() Perfy_Trace(Perfy_GetTime(), "Enter", "IsRealArena MyCustomFrames/Raid.lua:577:6");
+    local ok, isArena = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Raid.lua:578:30"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Raid.lua:578:30", C_PvP and C_PvP.IsArena and C_PvP.IsArena()) end)
+    return Perfy_Trace_Passthrough("Leave", "IsRealArena MyCustomFrames/Raid.lua:577:6", ok and isArena and true or false)
 end
-local function RaidDriverString()
+local function RaidDriverString() Perfy_Trace(Perfy_GetTime(), "Enter", "RaidDriverString MyCustomFrames/Raid.lua:581:6");
     local cfg = ns.GetDB() and ns.GetDB().units and ns.GetDB().units.raid
-    if not (cfg and cfg.enabled) then return "hide" end
-    if IsRealArena() then return "hide" end
-    return "[group:raid] show; hide"
+    if not (cfg and cfg.enabled) then Perfy_Trace(Perfy_GetTime(), "Leave", "RaidDriverString MyCustomFrames/Raid.lua:581:6"); return "hide" end
+    if IsRealArena() then Perfy_Trace(Perfy_GetTime(), "Leave", "RaidDriverString MyCustomFrames/Raid.lua:581:6"); return "hide" end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "RaidDriverString MyCustomFrames/Raid.lua:581:6"); return "[group:raid] show; hide"
 end
 
 local raidNeedsDriver = false
-function ns.UpdateRaidDrivers()
-    if not raidHeader then return end
+function ns.UpdateRaidDrivers() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.UpdateRaidDrivers MyCustomFrames/Raid.lua:589:0");
+    if not raidHeader then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.UpdateRaidDrivers MyCustomFrames/Raid.lua:589:0"); return end
     -- En preview NO se toca el driver (Editing.lua ya lo desregistra + fuerza
     -- Show() a mano); re-registrarlo aca lo evaluaria al instante y, si no hay
     -- raid real, lo ocultaria de nuevo pisando el forced-show. Se aplica recien
     -- al SALIR del lock (mismo patron que UpdatePartyDrivers en Units.lua).
-    if ns.IsUnlocked() then return end
-    if InCombatLockdown() then raidNeedsDriver = true; return end
+    if ns.IsUnlocked() then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.UpdateRaidDrivers MyCustomFrames/Raid.lua:589:0"); return end
+    if InCombatLockdown() then raidNeedsDriver = true; Perfy_Trace(Perfy_GetTime(), "Leave", "ns.UpdateRaidDrivers MyCustomFrames/Raid.lua:589:0"); return end
     raidNeedsDriver = false
     UnregisterStateDriver(raidHeader, "visibility")
     RegisterStateDriver(raidHeader, "visibility", RaidDriverString())
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.UpdateRaidDrivers MyCustomFrames/Raid.lua:589:0"); end
 
 -- ==========================================================================
 -- TICK (llamado desde el ticker central de core.lua, mas lento que el de
 -- party/portraits/auras -- 40 barras de vida no necesitan 10Hz reales).
 -- ==========================================================================
-function ns.TickRaid()
+function ns.TickRaid() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.TickRaid MyCustomFrames/Raid.lua:606:0");
     for button, u in pairs(ns.raidFrames) do
         if button:IsShown() then
             local unit = button:GetAttribute("unit")
@@ -662,7 +662,7 @@ function ns.TickRaid()
             end
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.TickRaid MyCustomFrames/Raid.lua:606:0"); end
 
 -- Tamaño MAXIMO que puede ocupar el grid (unitsPerColumn x maxColumns,
 -- topeado a 40) -- se usa para dimensionar el header (asi el outline verde
@@ -672,7 +672,7 @@ end
 -- dentro de la fila) + columnAnchorPoint TOP/BOTTOM (las filas se apilan
 -- verticalmente) -- pedido del usuario: "que control de layout sea mas
 -- simple, que crezcan de la izquierda o derecha".
-local function ComputeGridSize(cfg)
+local function ComputeGridSize(cfg) Perfy_Trace(Perfy_GetTime(), "Enter", "ComputeGridSize MyCustomFrames/Raid.lua:675:6");
     local perRow = math.max(1, cfg.unitsPerColumn or 5)
     local maxRows = math.max(1, cfg.maxColumns or 8)
     local total = math.min(40, perRow * maxRows)
@@ -680,7 +680,7 @@ local function ComputeGridSize(cfg)
     local cols = math.min(perRow, total)
     local w = cols * cfg.width + math.max(0, cols - 1) * (cfg.growXOffset or 0)
     local h = rows * cfg.height + math.max(0, rows - 1) * (cfg.columnSpacing or 0)
-    return math.max(w, cfg.width), math.max(h, cfg.height)
+    return Perfy_Trace_Passthrough("Leave", "ComputeGridSize MyCustomFrames/Raid.lua:675:6", math.max(w, cfg.width), math.max(h, cfg.height))
 end
 ns.ComputeGridSize = ComputeGridSize
 
@@ -706,14 +706,14 @@ ns.ComputeGridSize = ComputeGridSize
 -- posicion aplicada y se compara antes de tocar nada.
 -- ==========================================================================
 local lastPos = {}
-local function RepositionRaidHeaderIfChanged(cfg)
+local function RepositionRaidHeaderIfChanged(cfg) Perfy_Trace(Perfy_GetTime(), "Enter", "RepositionRaidHeaderIfChanged MyCustomFrames/Raid.lua:709:6");
     if ns.CompensateScale then ns.CompensateScale(cfg) end
     local rs = ns.ResScale()
     if lastPos.relativePoint == cfg.relativePoint
        and lastPos.offsetX == cfg.offsetX and lastPos.offsetY == cfg.offsetY
        and lastPos.anchorFrame == cfg.anchorFrame and lastPos.scale == cfg.scale
        and lastPos.resScale == rs then
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "RepositionRaidHeaderIfChanged MyCustomFrames/Raid.lua:709:6"); return
     end
     lastPos.relativePoint = cfg.relativePoint
     lastPos.offsetX, lastPos.offsetY = cfg.offsetX, cfg.offsetY
@@ -725,7 +725,7 @@ local function RepositionRaidHeaderIfChanged(cfg)
     raidHeader:ClearAllPoints()
     raidHeader:SetPoint("CENTER", parent, cfg.relativePoint, cfg.offsetX, cfg.offsetY)
     raidHeader:SetScale((cfg.scale or 1) * rs)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RepositionRaidHeaderIfChanged MyCustomFrames/Raid.lua:709:6"); end
 
 -- ==========================================================================
 -- REFRESH (reconstruye atributos del header desde db.units.raid + reposiciona
@@ -733,9 +733,9 @@ end
 -- ns.RefreshAll y al tocar cualquier slider del menu RAID.
 -- ==========================================================================
 local raidNeedsRefresh = false
-function ns.RefreshRaid()
-    if not raidHeader then return end
-    if InCombatLockdown() then raidNeedsRefresh = true; return end
+function ns.RefreshRaid() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.RefreshRaid MyCustomFrames/Raid.lua:736:0");
+    if not raidHeader then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.RefreshRaid MyCustomFrames/Raid.lua:736:0"); return end
+    if InCombatLockdown() then raidNeedsRefresh = true; Perfy_Trace(Perfy_GetTime(), "Leave", "ns.RefreshRaid MyCustomFrames/Raid.lua:736:0"); return end
     raidNeedsRefresh = false
 
     RefreshRoleBackdrops()
@@ -819,18 +819,18 @@ function ns.RefreshRaid()
     if ns.RefreshOutlineNames then ns.RefreshOutlineNames() end
     ns.ApplyRaidPreviewHide()
     if ns.UpdateRaidGhosts then ns.UpdateRaidGhosts() end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.RefreshRaid MyCustomFrames/Raid.lua:736:0"); end
 
 -- ==========================================================================
 -- RESET (llamado desde ns.ResetUnit -- ver el branch agregado en core.lua).
 -- ==========================================================================
-function ns.ResetRaid()
+function ns.ResetRaid() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ResetRaid MyCustomFrames/Raid.lua:827:0");
     local db = ns.GetDB()
-    if not db then return end
+    if not db then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetRaid MyCustomFrames/Raid.lua:827:0"); return end
     db.units = db.units or {}
     db.units.raid = ns.RaidUnitDefaults()
     ns.RefreshRaid()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetRaid MyCustomFrames/Raid.lua:827:0"); end
 
 -- ==========================================================================
 -- GHOSTS: preview visual en Lock cuando NO hay raid real. Un secure group
@@ -846,16 +846,16 @@ end
 -- ==========================================================================
 local GHOST_MAX = 40
 
-local function GetRelPoint(point)
-    if point == "TOP" then return "BOTTOM", 0, -1
-    elseif point == "BOTTOM" then return "TOP", 0, 1
-    elseif point == "LEFT" then return "RIGHT", 1, 0
-    elseif point == "RIGHT" then return "LEFT", -1, 0 end
-    return "CENTER", 0, 0
+local function GetRelPoint(point) Perfy_Trace(Perfy_GetTime(), "Enter", "GetRelPoint MyCustomFrames/Raid.lua:849:6");
+    if point == "TOP" then Perfy_Trace(Perfy_GetTime(), "Leave", "GetRelPoint MyCustomFrames/Raid.lua:849:6"); return "BOTTOM", 0, -1
+    elseif point == "BOTTOM" then Perfy_Trace(Perfy_GetTime(), "Leave", "GetRelPoint MyCustomFrames/Raid.lua:849:6"); return "TOP", 0, 1
+    elseif point == "LEFT" then Perfy_Trace(Perfy_GetTime(), "Leave", "GetRelPoint MyCustomFrames/Raid.lua:849:6"); return "RIGHT", 1, 0
+    elseif point == "RIGHT" then Perfy_Trace(Perfy_GetTime(), "Leave", "GetRelPoint MyCustomFrames/Raid.lua:849:6"); return "LEFT", -1, 0 end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "GetRelPoint MyCustomFrames/Raid.lua:849:6"); return "CENTER", 0, 0
 end
 
-local function EnsureGhosts()
-    if ghosts then return end
+local function EnsureGhosts() Perfy_Trace(Perfy_GetTime(), "Enter", "EnsureGhosts MyCustomFrames/Raid.lua:857:6");
+    if ghosts then Perfy_Trace(Perfy_GetTime(), "Leave", "EnsureGhosts MyCustomFrames/Raid.lua:857:6"); return end
     ghosts, ghostUnits, ghostPowerUnits = {}, {}, {}
     for i = 1, GHOST_MAX do
         local g = CreateFrame("Frame", nil, raidHeader)
@@ -890,10 +890,10 @@ local function EnsureGhosts()
         ghostUnits[i] = u
         ghostPowerUnits[i] = pu
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "EnsureGhosts MyCustomFrames/Raid.lua:857:6"); end
 
-local function LayoutGhosts()
-    if not ghosts then return end
+local function LayoutGhosts() Perfy_Trace(Perfy_GetTime(), "Enter", "LayoutGhosts MyCustomFrames/Raid.lua:895:6");
+    if not ghosts then Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutGhosts MyCustomFrames/Raid.lua:895:6"); return end
     local cfg = ns.GetDB().units.raid
     local point = cfg.growPoint or "LEFT"
     -- FIX (2026-07-24, "algo raro con el outline al cambiar growth direction
@@ -946,24 +946,24 @@ local function LayoutGhosts()
             g:Show()
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutGhosts MyCustomFrames/Raid.lua:895:6"); end
 
 -- Habilita/deshabilita el mouse de los members REALES -- llamado desde
 -- Editing.lua al entrar/salir de Lock (para no perder tooltip/target en
 -- juego normal). Los ghosts SIEMPRE tienen mouse habilitado (ver
 -- BuildMemberVisual) -- solo existen/se muestran durante Lock de todos
 -- modos, no hace falta tocarlos aca.
-function ns.SetRaidMembersMouseEnabled(enabled)
+function ns.SetRaidMembersMouseEnabled(enabled) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.SetRaidMembersMouseEnabled MyCustomFrames/Raid.lua:956:0");
     for button in pairs(ns.raidFrames) do button:EnableMouse(enabled) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.SetRaidMembersMouseEnabled MyCustomFrames/Raid.lua:956:0"); end
 
 -- Mostrar ghosts SOLO si estamos en Lock Y no hay members reales visibles
 -- (si hay un raid real activo, se ve el grid real -- no hace falta el ghost).
-function ns.UpdateRaidGhosts()
-    if not raidHeader then return end
+function ns.UpdateRaidGhosts() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.UpdateRaidGhosts MyCustomFrames/Raid.lua:962:0");
+    if not raidHeader then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.UpdateRaidGhosts MyCustomFrames/Raid.lua:962:0"); return end
     if not ns.IsUnlocked() then
         if ghosts then for _, g in ipairs(ghosts) do g:Hide() end end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.UpdateRaidGhosts MyCustomFrames/Raid.lua:962:0"); return
     end
     -- OJO: los members reales NUNCA se destruyen al vaciarse el roster
     -- (Blizzard los recicla ocultos) -> ns.raidFrames sigue teniendo entradas
@@ -974,11 +974,11 @@ function ns.UpdateRaidGhosts()
     end
     if hasRealMembers then
         if ghosts then for _, g in ipairs(ghosts) do g:Hide() end end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.UpdateRaidGhosts MyCustomFrames/Raid.lua:962:0"); return
     end
     EnsureGhosts()
     LayoutGhosts()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.UpdateRaidGhosts MyCustomFrames/Raid.lua:962:0"); end
 
 -- FIX (2026-07-20, "ya no tiene outline"): el borde FINO de 1px de
 -- ns.MakeEditHighlight (el mismo que usa CADA elemento del addon) queda
@@ -988,31 +988,31 @@ end
 -- del rectangulo real del header (offset -10/+10, no cambia tamaño/anclaje
 -- de nada) y a un frame level bien alto -- siempre visible arriba de
 -- cualquier cage por mas que se solape.
-local function CreateThickBorder(parent)
+local function CreateThickBorder(parent) Perfy_Trace(Perfy_GetTime(), "Enter", "CreateThickBorder MyCustomFrames/Raid.lua:991:6");
     local f = CreateFrame("Frame", nil, parent)
     f:SetPoint("TOPLEFT", parent, "TOPLEFT", -10, 10)
     f:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", 10, -10)
     f:SetFrameLevel(parent:GetFrameLevel() + 20)
-    local function edge(rp1, x1, y1, rp2, x2, y2)
+    local function edge(rp1, x1, y1, rp2, x2, y2) Perfy_Trace(Perfy_GetTime(), "Enter", "edge MyCustomFrames/Raid.lua:996:10");
         local b = f:CreateTexture(nil, "OVERLAY")
         b:SetColorTexture(0.35, 0.78, 1.0, 0.95)   -- mismo celeste que ns.MakeEditHighlight
         b:SetPoint("TOPLEFT", f, rp1, x1, y1); b:SetPoint("BOTTOMRIGHT", f, rp2, x2, y2)
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "edge MyCustomFrames/Raid.lua:996:10"); end
     local t = 3
     edge("TOPLEFT", 0, 0, "TOPRIGHT", 0, -t)
     edge("BOTTOMLEFT", 0, t, "BOTTOMRIGHT", 0, 0)
     edge("TOPLEFT", 0, 0, "BOTTOMLEFT", t, 0)
     edge("TOPRIGHT", -t, 0, "BOTTOMRIGHT", 0, 0)
     f:Hide()
-    return f
+    Perfy_Trace(Perfy_GetTime(), "Leave", "CreateThickBorder MyCustomFrames/Raid.lua:991:6"); return f
 end
 
 -- ==========================================================================
 -- CREACION DEL HEADER (una sola vez, en OnEnable-equivalente de core.lua --
 -- ver el hook agregado al PLAYER_LOGIN/ADDON_LOADED existente).
 -- ==========================================================================
-local function CreateRaidHeader()
-    if raidHeader then return end
+local function CreateRaidHeader() Perfy_Trace(Perfy_GetTime(), "Enter", "CreateRaidHeader MyCustomFrames/Raid.lua:1014:6");
+    if raidHeader then Perfy_Trace(Perfy_GetTime(), "Leave", "CreateRaidHeader MyCustomFrames/Raid.lua:1014:6"); return end
 
     raidHeader = CreateFrame("Frame", "MyCF_RaidHeader", UIParent, "SecureGroupHeaderTemplate")
     raidHeader:SetSize(200, 200)
@@ -1050,17 +1050,17 @@ local function CreateRaidHeader()
     raidHeader:SetScript("OnDragStart", StartRaidHeaderDrag)
     raidHeader:SetScript("OnDragStop", StopRaidHeaderDrag)
 
-    ns.AttachScaleWheel(raidHeader, function() return ns.GetDB().units.raid end, function() ns.RefreshRaid() end)
+    ns.AttachScaleWheel(raidHeader, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Raid.lua:1053:36"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Raid.lua:1053:36", ns.GetDB().units.raid) end, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Raid.lua:1053:81"); ns.RefreshRaid() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Raid.lua:1053:81"); end)
 
     ns.RefreshRaid()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "CreateRaidHeader MyCustomFrames/Raid.lua:1014:6"); end
 
 -- "Hide in preview (Lock only)" (lockHide.raidframes): oculta el grid entero
 -- SOLO mientras se edita (Editing.lua ya fuerza rh:Show() en preview -- esto
 -- lo pisa despues, sin tocar la visibilidad normal fuera de Lock).
-function ns.ApplyRaidPreviewHide()
-    if not raidHeader then return end
-    if not ns.IsUnlocked() then return end
+function ns.ApplyRaidPreviewHide() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ApplyRaidPreviewHide MyCustomFrames/Raid.lua:1061:0");
+    if not raidHeader then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ApplyRaidPreviewHide MyCustomFrames/Raid.lua:1061:0"); return end
+    if not ns.IsUnlocked() then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ApplyRaidPreviewHide MyCustomFrames/Raid.lua:1061:0"); return end
     -- BUG FIX (2026-07-20, "se desposiciona y se daña el outline" al
     -- apagar/prender): Hide()/Show() sobre un SecureGroupHeaderTemplate
     -- fuerza a Blizzard a reevaluar/reconfigurar sus children internamente
@@ -1082,7 +1082,7 @@ function ns.ApplyRaidPreviewHide()
     if raidHeader.thickBorder then
         raidHeader.thickBorder:SetShown((not hide) and not (ns.GetDB().hideEditOutline))
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ApplyRaidPreviewHide MyCustomFrames/Raid.lua:1061:0"); end
 
 -- ==========================================================================
 -- EVENTOS
@@ -1093,23 +1093,23 @@ raidEvents:RegisterEvent("PLAYER_ENTERING_WORLD")
 raidEvents:RegisterEvent("GROUP_ROSTER_UPDATE")
 raidEvents:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 raidEvents:RegisterEvent("PLAYER_REGEN_ENABLED")
-raidEvents:SetScript("OnEvent", function(self, event, arg1)
+raidEvents:SetScript("OnEvent", function(self, event, arg1) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Raid.lua:1096:32");
     if event == "ADDON_LOADED" then
-        if arg1 ~= ADDON then return end
+        if arg1 ~= ADDON then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Raid.lua:1096:32"); return end
         -- core.lua registra su propio ADDON_LOADED ANTES (carga primero en el
         -- toc) -> InitDB()/FillDefaults() ya corrieron cuando este handler
         -- se dispara, asi que db.units.raid ya existe.
         CreateRaidHeader()
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Raid.lua:1096:32"); return
     end
-    if not raidHeader then return end
+    if not raidHeader then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Raid.lua:1096:32"); return end
     if event == "PLAYER_REGEN_ENABLED" then
         if raidNeedsDriver then ns.UpdateRaidDrivers() end
         if raidNeedsRefresh then ns.RefreshRaid() end
         -- Members creados EN COMBATE: sus atributos de click quedaron pendientes
         -- (ver ns.ApplyMemberClickAttributes) -- recien ahora se pueden setear.
         ns.FlushPendingMemberClickAttributes()
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Raid.lua:1096:32"); return
     end
     ns.UpdateRaidDrivers()
     -- FIX (2026-07-24, "cuando exista raid frames de verdad, aun se muestren
@@ -1120,4 +1120,6 @@ raidEvents:SetScript("OnEvent", function(self, event, arg1)
     -- nada (retorna temprano si ns.IsUnlocked()), asi que el ghost se quedaba
     -- mostrado tapando/superpuesto con los members reales.
     if ns.UpdateRaidGhosts then ns.UpdateRaidGhosts() end
-end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Raid.lua:1096:32"); end)
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Raid.lua");

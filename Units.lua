@@ -1,4 +1,4 @@
-﻿-- ==========================================================================
+﻿--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Units.lua"); --[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Units.lua"); -- ==========================================================================
 -- MyCustomFrames - Units.lua
 -- UNIDADES (barras de vida/poder/cast): definiciones de logica, textos, cage,
 -- relleno secret-safe, cast bar, drivers pet/party. Extraido de core.lua
@@ -12,12 +12,12 @@ local ADDON, ns = ...
 -- ==========================================================================
 -- LOGICA POR UNIDAD
 -- ==========================================================================
-local function P(u) return ns.GetDB().units[u.key] end
+local function P(u) Perfy_Trace(Perfy_GetTime(), "Enter", "P MyCustomFrames/Units.lua:15:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "P MyCustomFrames/Units.lua:15:6"); return Perfy_Trace_Passthrough("Leave", "P MyCustomFrames/Units.lua:15:6", Perfy_Trace_Passthrough("Leave", "P MyCustomFrames/Units.lua:15:6", ns.GetDB().units[u.key])) end
 
-local function UnitColor(u)
+local function UnitColor(u) Perfy_Trace(Perfy_GetTime(), "Enter", "UnitColor MyCustomFrames/Units.lua:17:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "UnitColor MyCustomFrames/Units.lua:17:6");
     local p = P(u)
     if p.useBarColor and p.barColor then
-        return p.barColor.r, p.barColor.g, p.barColor.b
+        return Perfy_Trace_Passthrough("Leave", "UnitColor MyCustomFrames/Units.lua:17:6", Perfy_Trace_Passthrough("Leave", "UnitColor MyCustomFrames/Units.lua:17:6", p.barColor.r, p.barColor.g, p.barColor.b))
     end
     -- (Ruta caliente — se llama por unidad por tick via UnitUpdateColor: pcall directo
     -- sin closures; issecretvalue ANTES de testear/indexar con valores de la API.)
@@ -26,17 +26,17 @@ local function UnitColor(u)
         if okP and not (issecretvalue and (issecretvalue(pType) or issecretvalue(token))) then
             local col = (token and ns.POWER_COLORS[token]) or (token and PowerBarColor[token])
                 or (pType and PowerBarColor[pType])
-            if col then return col.r, col.g, col.b end
+            if col then return Perfy_Trace_Passthrough("Leave", "UnitColor MyCustomFrames/Units.lua:17:6", Perfy_Trace_Passthrough("Leave", "UnitColor MyCustomFrames/Units.lua:17:6", col.r, col.g, col.b)) end
         end
-        return 0.18, 0.34, 0.98
+        Perfy_Trace(Perfy_GetTime(), "Leave", "UnitColor MyCustomFrames/Units.lua:17:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitColor MyCustomFrames/Units.lua:17:6"); return 0.18, 0.34, 0.98
     end
-    if u.fixedColor then return u.fixedColor.r, u.fixedColor.g, u.fixedColor.b end
+    if u.fixedColor then return Perfy_Trace_Passthrough("Leave", "UnitColor MyCustomFrames/Units.lua:17:6", Perfy_Trace_Passthrough("Leave", "UnitColor MyCustomFrames/Units.lua:17:6", u.fixedColor.r, u.fixedColor.g, u.fixedColor.b)) end
     -- Color de clase si la unidad tiene una clase valida (jugador o NPC con clase).
     do
         local okC, _, class = pcall(UnitClass, u.unit)
         if okC and type(class) == "string" and not (issecretvalue and issecretvalue(class)) then
             local c = RAID_CLASS_COLORS[class]
-            if c then return c.r, c.g, c.b end
+            if c then return Perfy_Trace_Passthrough("Leave", "UnitColor MyCustomFrames/Units.lua:17:6", Perfy_Trace_Passthrough("Leave", "UnitColor MyCustomFrames/Units.lua:17:6", c.r, c.g, c.b)) end
         end
     end
     local reaction = ns.safeVal(UnitReaction, u.unit, "player")
@@ -46,7 +46,7 @@ local function UnitColor(u)
         elseif reaction == 4 then col = p.colorNeutral
         else col = p.colorFriendly end
     end
-    return col.r, col.g, col.b
+    return Perfy_Trace_Passthrough("Leave", "UnitColor MyCustomFrames/Units.lua:17:6", Perfy_Trace_Passthrough("Leave", "UnitColor MyCustomFrames/Units.lua:17:6", col.r, col.g, col.b))
 end
 
 -- CENTRALIZADO (2026-07-19, "sigue con eso"): la logica real (curva,
@@ -54,8 +54,8 @@ end
 -- lugar que sabe leer esta API, para no repetir el mismo bug potencial en
 -- cada archivo que necesita el % de vida. Este local queda como alias fino
 -- para no tocar los 3 call sites de abajo.
-local function GetHealthPercent(unit)
-    return ns.GetHealthPercentReadable(unit)
+local function GetHealthPercent(unit) Perfy_Trace(Perfy_GetTime(), "Enter", "GetHealthPercent MyCustomFrames/Units.lua:57:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "GetHealthPercent MyCustomFrames/Units.lua:57:6");
+    return Perfy_Trace_Passthrough("Leave", "GetHealthPercent MyCustomFrames/Units.lua:57:6", Perfy_Trace_Passthrough("Leave", "GetHealthPercent MyCustomFrames/Units.lua:57:6", ns.GetHealthPercentReadable(unit)))
 end
 
 -- Color secreto del porcentaje de vida. Midnight no permite evaluar
@@ -67,11 +67,11 @@ end
 -- C_ColorUtil. El " | 105K" conserva el SetTextColor normal del FontString.
 -- Si alguna API cambia o rechaza un secreto, devolvemos nil y el caller usa
 -- exactamente el formato anterior; nunca se bloquea el texto de vida.
-local function GetPercentLowHealthCurve(u, p, normalColor)
+local function GetPercentLowHealthCurve(u, p, normalColor) Perfy_Trace(Perfy_GetTime(), "Enter", "GetPercentLowHealthCurve MyCustomFrames/Units.lua:70:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "GetPercentLowHealthCurve MyCustomFrames/Units.lua:70:6");
     if not (p.percentLowHealthColor and C_CurveUtil and C_CurveUtil.CreateColorCurve
         and C_ColorUtil and C_ColorUtil.WrapTextInColor and CreateColor
         and Enum and Enum.LuaCurveType and Enum.LuaCurveType.Step) then
-        return nil
+        Perfy_Trace(Perfy_GetTime(), "Leave", "GetPercentLowHealthCurve MyCustomFrames/Units.lua:70:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "GetPercentLowHealthCurve MyCustomFrames/Units.lua:70:6"); return nil
     end
 
     local threshold = ns.clamp(tonumber(p.percentLowHealthThreshold) or 40, 1, 99) / 100
@@ -80,48 +80,48 @@ local function GetPercentLowHealthCurve(u, p, normalColor)
        and u._mcfPctCurveR == normalColor.r
        and u._mcfPctCurveG == normalColor.g
        and u._mcfPctCurveB == normalColor.b then
-        return u._mcfPctCurve
+        return Perfy_Trace_Passthrough("Leave", "GetPercentLowHealthCurve MyCustomFrames/Units.lua:70:6", Perfy_Trace_Passthrough("Leave", "GetPercentLowHealthCurve MyCustomFrames/Units.lua:70:6", u._mcfPctCurve))
     end
 
     local ok, curve = pcall(C_CurveUtil.CreateColorCurve)
-    if not ok or not curve then return nil end
+    if not ok or not curve then Perfy_Trace(Perfy_GetTime(), "Leave", "GetPercentLowHealthCurve MyCustomFrames/Units.lua:70:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "GetPercentLowHealthCurve MyCustomFrames/Units.lua:70:6"); return nil end
     local red = CreateColor(1, 0.10, 0.10, 1)
     local normal = CreateColor(normalColor.r, normalColor.g, normalColor.b, 1)
     -- Step + un punto apenas despues del umbral: <= umbral rojo, por encima
     -- vuelve directamente al color configurado, sin degradado amarillo.
-    ok = pcall(function()
+    ok = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:92:15"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:92:15");
         curve:SetType(Enum.LuaCurveType.Step)
         curve:AddPoint(0, red)
         curve:AddPoint(threshold, red)
         curve:AddPoint(threshold + 0.0001, normal)
         curve:AddPoint(1, normal)
-    end)
-    if not ok then return nil end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:92:15"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:92:15"); end)
+    if not ok then Perfy_Trace(Perfy_GetTime(), "Leave", "GetPercentLowHealthCurve MyCustomFrames/Units.lua:70:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "GetPercentLowHealthCurve MyCustomFrames/Units.lua:70:6"); return nil end
 
     u._mcfPctCurve = curve
     u._mcfPctCurveThreshold = threshold
     u._mcfPctCurveR, u._mcfPctCurveG, u._mcfPctCurveB = normalColor.r, normalColor.g, normalColor.b
-    return curve
+    Perfy_Trace(Perfy_GetTime(), "Leave", "GetPercentLowHealthCurve MyCustomFrames/Units.lua:70:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "GetPercentLowHealthCurve MyCustomFrames/Units.lua:70:6"); return curve
 end
 
-local function SetHealthTextWithPercentColor(u, p, hpText, pct, abbreviated, normalColor)
+local function SetHealthTextWithPercentColor(u, p, hpText, pct, abbreviated, normalColor) Perfy_Trace(Perfy_GetTime(), "Enter", "SetHealthTextWithPercentColor MyCustomFrames/Units.lua:107:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "SetHealthTextWithPercentColor MyCustomFrames/Units.lua:107:6");
     local curve = GetPercentLowHealthCurve(u, p, normalColor)
-    if not curve then return false end
+    if not curve then Perfy_Trace(Perfy_GetTime(), "Leave", "SetHealthTextWithPercentColor MyCustomFrames/Units.lua:107:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "SetHealthTextWithPercentColor MyCustomFrames/Units.lua:107:6"); return false end
 
     -- Se consulta de nuevo con la curva, no con ScaleTo100: las ColorCurve
     -- reciben el porcentaje interno 0..1. Tanto el color como el texto pueden
     -- ser secretos; las APIs C usadas abajo los aceptan sin inspeccionarlos.
     local okColor, secretColor = pcall(UnitHealthPercent, u.unit, true, curve)
-    if not okColor then return false end
+    if not okColor then Perfy_Trace(Perfy_GetTime(), "Leave", "SetHealthTextWithPercentColor MyCustomFrames/Units.lua:107:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "SetHealthTextWithPercentColor MyCustomFrames/Units.lua:107:6"); return false end
     local okPct, percentText = pcall(string.format, "%.0f%%", pct)
-    if not okPct then return false end
+    if not okPct then Perfy_Trace(Perfy_GetTime(), "Leave", "SetHealthTextWithPercentColor MyCustomFrames/Units.lua:107:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "SetHealthTextWithPercentColor MyCustomFrames/Units.lua:107:6"); return false end
     local okWrap, coloredPercent = pcall(C_ColorUtil.WrapTextInColor, percentText, secretColor)
-    if not okWrap then return false end
+    if not okWrap then Perfy_Trace(Perfy_GetTime(), "Leave", "SetHealthTextWithPercentColor MyCustomFrames/Units.lua:107:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "SetHealthTextWithPercentColor MyCustomFrames/Units.lua:107:6"); return false end
 
     if abbreviated then
-        return pcall(hpText.SetFormattedText, hpText, "%s | %s", coloredPercent, abbreviated)
+        return Perfy_Trace_Passthrough("Leave", "SetHealthTextWithPercentColor MyCustomFrames/Units.lua:107:6", Perfy_Trace_Passthrough("Leave", "SetHealthTextWithPercentColor MyCustomFrames/Units.lua:107:6", pcall(hpText.SetFormattedText, hpText, "%s | %s", coloredPercent, abbreviated)))
     end
-    return pcall(hpText.SetFormattedText, hpText, "%s", coloredPercent)
+    return Perfy_Trace_Passthrough("Leave", "SetHealthTextWithPercentColor MyCustomFrames/Units.lua:107:6", Perfy_Trace_Passthrough("Leave", "SetHealthTextWithPercentColor MyCustomFrames/Units.lua:107:6", pcall(hpText.SetFormattedText, hpText, "%s", coloredPercent)))
 end
 
 -- SetText solo si el texto CAMBIO (2026-07-28). Blizzard rehace el layout del
@@ -132,11 +132,11 @@ end
 -- SOLO para strings PROPIOS. Comparar un valor secreto de Midnight no es seguro,
 -- asi que las rutas que pasan un secreto crudo a SetFormattedText NO usan esto
 -- -- se quedan como estaban, actualizando siempre.
-local function SetTextIfChanged(fs, s)
-    if fs._mcfLastText == s then return end
+local function SetTextIfChanged(fs, s) Perfy_Trace(Perfy_GetTime(), "Enter", "SetTextIfChanged MyCustomFrames/Units.lua:135:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "SetTextIfChanged MyCustomFrames/Units.lua:135:6");
+    if fs._mcfLastText == s then Perfy_Trace(Perfy_GetTime(), "Leave", "SetTextIfChanged MyCustomFrames/Units.lua:135:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "SetTextIfChanged MyCustomFrames/Units.lua:135:6"); return end
     fs._mcfLastText = s
     fs:SetText(s)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SetTextIfChanged MyCustomFrames/Units.lua:135:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "SetTextIfChanged MyCustomFrames/Units.lua:135:6"); end
 
 -- Contraparte OBLIGATORIA: toda escritura que NO pase por SetTextIfChanged
 -- (SetFormattedText, o un SetText con un valor posiblemente secreto) tiene que
@@ -159,9 +159,9 @@ end
 -- MISMO string, y el texto de vida cambia en casi todos los ticks igual. Lo que
 -- protege es el estado estable -- vacio, muerto, texto apagado -- que es donde
 -- el dedupe rendia.
-local function DirtyText(fs) fs._mcfLastText = nil end
+local function DirtyText(fs) Perfy_Trace(Perfy_GetTime(), "Enter", "DirtyText MyCustomFrames/Units.lua:162:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "DirtyText MyCustomFrames/Units.lua:162:6"); fs._mcfLastText = nil Perfy_Trace(Perfy_GetTime(), "Leave", "DirtyText MyCustomFrames/Units.lua:162:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "DirtyText MyCustomFrames/Units.lua:162:6"); end
 
-local function UnitUpdateText(u)
+local function UnitUpdateText(u) Perfy_Trace(Perfy_GetTime(), "Enter", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "UnitUpdateText MyCustomFrames/Units.lua:164:6");
     local p, hpText = P(u), u.hpText
     -- Cache del dedupe de la ruta legible: se LEE aca y se invalida de
     -- inmediato. Solo esa ruta la vuelve a armar, asi que si la pasada actual
@@ -171,7 +171,7 @@ local function UnitUpdateText(u)
     -- acordarse de invalidar en cada salida.
     local lastPct, lastAbbr = u._hpLastPct, u._hpLastAbbr
     u._hpLastPct, u._hpLastAbbr = nil, nil
-    if not p.showText then SetTextIfChanged(hpText, "") return end
+    if not p.showText then SetTextIfChanged(hpText, "") Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); return end
 
     -- (Ruta caliente: pcall(fn, args) directo, SIN closures — ver nota sobre ns.safeBool.
     -- Toda comparacion/aritmetica sobre valores potencialmente secretos va precedida
@@ -190,7 +190,7 @@ local function UnitUpdateText(u)
             if okT then
                 local pct = ns.GetPowerPercent(u.unit, pType)
                 if pct ~= nil then
-                    if pcall(hpText.SetFormattedText, hpText, "%.0f%%", pct) then return end
+                    if pcall(hpText.SetFormattedText, hpText, "%.0f%%", pct) then Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); return end
                 end
             end
         end
@@ -200,14 +200,14 @@ local function UnitUpdateText(u)
            and not (issecretvalue and (issecretvalue(cur) or issecretvalue(max)))
            and max > 0 then
             hpText:SetFormattedText("%.0f%%", cur / max * 100)
-            return
+            Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); return
         end
         SetTextIfChanged(hpText, "")
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); return
     end
 
     local dead = ns.safeBool(UnitIsDeadOrGhost, u.unit)
-    if dead then SetTextIfChanged(hpText, "") return end
+    if dead then SetTextIfChanged(hpText, "") Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); return end
     -- Idem la rama de poder: de aca para abajo se dibuja con SetFormattedText.
     -- Los dos estados estables que el dedupe protege ("texto apagado" y "muerto")
     -- retornan ARRIBA de este punto, asi que lo conservan intacto -- son los que
@@ -248,15 +248,15 @@ local function UnitUpdateText(u)
                 -- las dudas -- alternando skip/redibuja y perdiendo la mitad del
                 -- ahorro. Lo detecto una prueba de la logica antes de subirlo.
                 u._hpLastPct, u._hpLastAbbr = rounded, abbr
-                if lastPct == rounded and lastAbbr == abbr then return end
+                if lastPct == rounded and lastAbbr == abbr then Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); return end
             end
             if abbr ~= nil then
-                if SetHealthTextWithPercentColor(u, p, hpText, readablePct, abbr, col) then return end
-                if pcall(hpText.SetFormattedText, hpText, "%.0f%% | %s", readablePct, abbr) then return end
+                if SetHealthTextWithPercentColor(u, p, hpText, readablePct, abbr, col) then Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); return end
+                if pcall(hpText.SetFormattedText, hpText, "%.0f%% | %s", readablePct, abbr) then Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); return end
             end
-            if SetHealthTextWithPercentColor(u, p, hpText, readablePct, nil, col) then return end
+            if SetHealthTextWithPercentColor(u, p, hpText, readablePct, nil, col) then Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); return end
             hpText:SetFormattedText("%.0f%%", readablePct)
-            return
+            Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); return
         end
         -- pct secreto: mostrable via SetFormattedText (formatea en C), nunca operar con el.
         local okP, pct = pcall(GetHealthPercent, u.unit)
@@ -264,24 +264,24 @@ local function UnitUpdateText(u)
             if p.showValue and type(AbbreviateNumbers) == "function" then
                 local okA, abbr = pcall(AbbreviateNumbers, UnitHealth(u.unit))
                 if okA and abbr ~= nil then
-                    if SetHealthTextWithPercentColor(u, p, hpText, pct, abbr, col) then return end
-                    if pcall(hpText.SetFormattedText, hpText, "%.0f%% | %s", pct, abbr) then return end
+                    if SetHealthTextWithPercentColor(u, p, hpText, pct, abbr, col) then Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); return end
+                    if pcall(hpText.SetFormattedText, hpText, "%.0f%% | %s", pct, abbr) then Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); return end
                 end
             end
-            if SetHealthTextWithPercentColor(u, p, hpText, pct, nil, col) then return end
-            if pcall(hpText.SetFormattedText, hpText, "%.0f%%", pct) then return end
+            if SetHealthTextWithPercentColor(u, p, hpText, pct, nil, col) then Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); return end
+            if pcall(hpText.SetFormattedText, hpText, "%.0f%%", pct) then Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); return end
         end
     end
     if type(AbbreviateNumbers) == "function" then
         local ok, formatted = pcall(AbbreviateNumbers, UnitHealth(u.unit))
-        if ok and formatted ~= nil then hpText:SetText(formatted) return end
+        if ok and formatted ~= nil then hpText:SetText(formatted) Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); return end
     end
     SetTextIfChanged(hpText, "")
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateText MyCustomFrames/Units.lua:164:6"); end
 
 -- Nombre (+nivel) y texto de hechizo (fontstrings independientes).
-local function UnitUpdateName(u)
-    if not u.nameText then return end
+local function UnitUpdateName(u) Perfy_Trace(Perfy_GetTime(), "Enter", "UnitUpdateName MyCustomFrames/Units.lua:283:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "UnitUpdateName MyCustomFrames/Units.lua:283:6");
+    if not u.nameText then Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateName MyCustomFrames/Units.lua:283:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateName MyCustomFrames/Units.lua:283:6"); return end
     local p = P(u)
     local nameFS, spellFS = u.nameText, u.spellText
 
@@ -297,7 +297,7 @@ local function UnitUpdateName(u)
         -- comparacion daba igual y no reescribia nada -- el nombre no volvia.
         nameFS:SetAlpha(0); SetTextIfChanged(nameFS, "")
         if spellFS then spellFS:SetAlpha(0); SetTextIfChanged(spellFS, "") end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateName MyCustomFrames/Units.lua:283:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateName MyCustomFrames/Units.lua:283:6"); return
     end
 
     -- Casteo? (pcall directo, sin closures; el nombre puede ser SECRETO: solo
@@ -330,7 +330,7 @@ local function UnitUpdateName(u)
             spellFS:SetPoint("CENTER", u.bar, "CENTER", p.spellOffsetX, p.spellOffsetY)
         end
         spellFS:SetAlpha(p.spellAlpha)
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateName MyCustomFrames/Units.lua:283:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateName MyCustomFrames/Units.lua:283:6"); return
     end
     if spellFS then spellFS:SetAlpha(0) end
 
@@ -397,9 +397,9 @@ local function UnitUpdateName(u)
 
     local w = p.nameDynamicWidth and (atk and 111 or 200) or 1000
     if u._nW ~= w then u._nW = w; nameFS:SetWidth(w) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateName MyCustomFrames/Units.lua:283:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateName MyCustomFrames/Units.lua:283:6"); end
 
-local function UnitTextVisibility(u)
+local function UnitTextVisibility(u) Perfy_Trace(Perfy_GetTime(), "Enter", "UnitTextVisibility MyCustomFrames/Units.lua:402:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "UnitTextVisibility MyCustomFrames/Units.lua:402:6");
     local p, hpText = P(u), u.hpText
     -- BUG FIX (2026-07-15): esta rama ignoraba "Hide text" (ns.GetDB().lockHide.text) por completo y
     -- SIEMPRE reponia el alpha visible — como el OnEnter/OnLeave de hover llaman esta funcion
@@ -408,10 +408,10 @@ local function UnitTextVisibility(u)
     if ns.IsUnlocked() then
         local lh = ns.GetDB() and ns.GetDB().lockHide
         hpText:SetAlpha((lh and lh.text) and 0 or p.textAlpha)
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "UnitTextVisibility MyCustomFrames/Units.lua:402:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitTextVisibility MyCustomFrames/Units.lua:402:6"); return
     end
-    if not p.showText then hpText:SetAlpha(0) return end
-    if not p.textAutoHide then hpText:SetAlpha(p.textAlpha) return end
+    if not p.showText then hpText:SetAlpha(0) Perfy_Trace(Perfy_GetTime(), "Leave", "UnitTextVisibility MyCustomFrames/Units.lua:402:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitTextVisibility MyCustomFrames/Units.lua:402:6"); return end
+    if not p.textAutoHide then hpText:SetAlpha(p.textAlpha) Perfy_Trace(Perfy_GetTime(), "Leave", "UnitTextVisibility MyCustomFrames/Units.lua:402:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitTextVisibility MyCustomFrames/Units.lua:402:6"); return end
     -- Hostil: la unidad del PROPIO frame es atacable (target/boss/etc) O hay un TARGET
     -- hostil seleccionado en general (para que el frame del player tambien revele su texto
     -- cuando estas encarando un enemigo, no solo en combate real; antes solo miraba u.unit,
@@ -422,7 +422,7 @@ local function UnitTextVisibility(u)
     local frac = u.bar._readable and u.bar._target
     local lowHP = p.textLowHealthShow and frac and frac < ((p.textLowHealthThreshold or 60) / 100)
     hpText:SetAlpha((ns.tickState.inCombat or hostile or hostileTarget or u.isMouseOver or lowHP) and p.textAlpha or 0)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UnitTextVisibility MyCustomFrames/Units.lua:402:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitTextVisibility MyCustomFrames/Units.lua:402:6"); end
 
 -- Relleno MANUAL, LEFT o RIGHT (unicas 2 direcciones soportadas: con casi todos
 -- los valores de vida/poder secretos en Midnight 12.0.7 no hay fraccion legible
@@ -435,12 +435,12 @@ end
 -- del mismo camino de TickUnits que dejo de actualizar texto/valores) -- se
 -- vuelve a la version simple que SIEMPRE reaplica, sin intentar adivinar de
 -- nuevo que optimizar aca hasta poder probarlo en vivo con calma.
-local function RenderManualFill(tex, container, frac, reverse)
+local function RenderManualFill(tex, container, frac, reverse) Perfy_Trace(Perfy_GetTime(), "Enter", "RenderManualFill MyCustomFrames/Units.lua:438:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "RenderManualFill MyCustomFrames/Units.lua:438:6");
     frac = ns.clamp(frac or 0, 0, 1)
     tex:ClearAllPoints()
     tex:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
     tex:SetPoint("BOTTOMRIGHT", container, "BOTTOMRIGHT", 0, 0)
-    if frac <= 0 then tex:Hide() return end
+    if frac <= 0 then tex:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "RenderManualFill MyCustomFrames/Units.lua:438:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "RenderManualFill MyCustomFrames/Units.lua:438:6"); return end
     tex:Show()
 
     local W = container:GetWidth() or 0
@@ -452,11 +452,11 @@ local function RenderManualFill(tex, container, frac, reverse)
     tex:SetVertexOffset(LOWER_LEFT_VERTEX, startP * W, 0)
     tex:SetVertexOffset(UPPER_RIGHT_VERTEX, (endP - 1) * W, 0)
     tex:SetVertexOffset(LOWER_RIGHT_VERTEX, (endP - 1) * W, 0)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RenderManualFill MyCustomFrames/Units.lua:438:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "RenderManualFill MyCustomFrames/Units.lua:438:6"); end
 
 -- Fraccion 0..1 de la unidad + si es LEGIBLE (no secreta).
 -- 1) % de la API. 2) geometria renderizada del StatusBar (frame anterior).
-local function GetUnitFraction(u)
+local function GetUnitFraction(u) Perfy_Trace(Perfy_GetTime(), "Enter", "GetUnitFraction MyCustomFrames/Units.lua:459:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "GetUnitFraction MyCustomFrames/Units.lua:459:6");
     -- (Ruta caliente: pcall directo sin closures; issecretvalue ANTES de comparar/operar.)
     if u.kind == "power" then
         local okC, cur = pcall(UnitPower, u.unit)
@@ -464,11 +464,11 @@ local function GetUnitFraction(u)
         if okC and okM and type(cur) == "number" and type(max) == "number"
            and not (issecretvalue and (issecretvalue(cur) or issecretvalue(max)))
            and max > 0 then
-            return cur / max, true
+            return Perfy_Trace_Passthrough("Leave", "GetUnitFraction MyCustomFrames/Units.lua:459:6", Perfy_Trace_Passthrough("Leave", "GetUnitFraction MyCustomFrames/Units.lua:459:6", cur / max, true))
         end
     else
         local pct, r = GetHealthPercent(u.unit)
-        if r then return pct / 100, true end
+        if r then return Perfy_Trace_Passthrough("Leave", "GetUnitFraction MyCustomFrames/Units.lua:459:6", Perfy_Trace_Passthrough("Leave", "GetUnitFraction MyCustomFrames/Units.lua:459:6", pct / 100, true)) end
     end
     -- Fallback: ancho renderizado del relleno nativo / ancho de la barra.
     local tex = u.bar:GetStatusBarTexture()
@@ -478,10 +478,10 @@ local function GetUnitFraction(u)
         if okF and okB and type(fw) == "number" and type(bw) == "number"
            and not (issecretvalue and (issecretvalue(fw) or issecretvalue(bw)))
            and bw > 0 then
-            return ns.clamp(fw / bw, 0, 1), true
+            return Perfy_Trace_Passthrough("Leave", "GetUnitFraction MyCustomFrames/Units.lua:459:6", Perfy_Trace_Passthrough("Leave", "GetUnitFraction MyCustomFrames/Units.lua:459:6", ns.clamp(fw / bw, 0, 1), true))
         end
     end
-    return 0, false
+    Perfy_Trace(Perfy_GetTime(), "Leave", "GetUnitFraction MyCustomFrames/Units.lua:459:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "GetUnitFraction MyCustomFrames/Units.lua:459:6"); return 0, false
 end
 
 -- `doText`: los dos textos (porcentaje y nombre) son el 68% del costo de esta
@@ -493,7 +493,7 @@ end
 -- solo cast bar y retratos, ver core.lua -- asi que el nombre depende SOLO de
 -- este tick. Bajarlo mas dejaria el nombre del target anterior a la vista al
 -- cambiar de objetivo. Para bajarlo habria que refrescarlo por evento primero.
-local function UnitUpdateBar(u, doText)
+local function UnitUpdateBar(u, doText) Perfy_Trace(Perfy_GetTime(), "Enter", "UnitUpdateBar MyCustomFrames/Units.lua:496:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "UnitUpdateBar MyCustomFrames/Units.lua:496:6");
     local p = P(u)
 
     -- Preview (modo edicion): relleno lleno + textos de muestra.
@@ -542,11 +542,11 @@ local function UnitUpdateBar(u, doText)
             u.spellText:SetPoint("CENTER", u.bar, "CENTER", p.spellOffsetX, p.spellOffsetY)
             u._sX = nil               -- idem
         end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateBar MyCustomFrames/Units.lua:496:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateBar MyCustomFrames/Units.lua:496:6"); return
     end
 
     -- Rellena el StatusBar nativo SIEMPRE (secret-safe y para leer geometria).
-    ns.Prof.Time("        - SetValue(vida/poder)", function()
+    ns.Prof.Time("        - SetValue(vida/poder)", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:549:51"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:549:51");
     -- SetReverseFill y SetMinMaxValues se repetian en cada tick con los MISMOS
     -- valores: el maximo de vida/poder casi nunca cambia (subir de nivel, buffs
     -- de vida). SetValue si tiene que correr siempre -- es el valor actual.
@@ -569,7 +569,7 @@ local function UnitUpdateBar(u, doText)
         u.bar:SetMinMaxValues(0, max)
     end
     u.bar:SetValue(curFn(u.unit))
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:549:51"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:549:51"); end)
 
     if not (p.texture and p.texture ~= "") then
         -- Sin textura (focus): sin relleno.
@@ -602,36 +602,36 @@ local function UnitUpdateBar(u, doText)
         ns.Prof.Time("        - UnitUpdateText", UnitUpdateText, u)
         ns.Prof.Time("        - UnitUpdateName", UnitUpdateName, u)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateBar MyCustomFrames/Units.lua:496:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateBar MyCustomFrames/Units.lua:496:6"); end
 
-local function UnitUpdateMount(u)
-    if ns.IsUnlocked() then u.button:SetAlpha(1) return end
+local function UnitUpdateMount(u) Perfy_Trace(Perfy_GetTime(), "Enter", "UnitUpdateMount MyCustomFrames/Units.lua:607:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "UnitUpdateMount MyCustomFrames/Units.lua:607:6");
+    if ns.IsUnlocked() then u.button:SetAlpha(1) Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateMount MyCustomFrames/Units.lua:607:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateMount MyCustomFrames/Units.lua:607:6"); return end
     -- Si el Explorer gestiona este elemento, el alpha es suyo (fade por frame):
     -- resetearlo a 1 aqui cada tick produce un parpadeo visible.
-    if ns.GetDB().explorerEnabled ~= false and ns.GetDB().explorer and ns.GetDB().explorer[u.key] then return end
+    if ns.GetDB().explorerEnabled ~= false and ns.GetDB().explorer and ns.GetDB().explorer[u.key] then Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateMount MyCustomFrames/Units.lua:607:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateMount MyCustomFrames/Units.lua:607:6"); return end
     u.button:SetAlpha(1)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateMount MyCustomFrames/Units.lua:607:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateMount MyCustomFrames/Units.lua:607:6"); end
 
 -- Oculta el cage del unitframe si la unidad esta muerta (opcion cageHideDead).
-local function UnitUpdateDeadCage(u)
-    if not u.cage then return end
+local function UnitUpdateDeadCage(u) Perfy_Trace(Perfy_GetTime(), "Enter", "UnitUpdateDeadCage MyCustomFrames/Units.lua:616:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "UnitUpdateDeadCage MyCustomFrames/Units.lua:616:6");
+    if not u.cage then Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateDeadCage MyCustomFrames/Units.lua:616:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateDeadCage MyCustomFrames/Units.lua:616:6"); return end
     local p = P(u)
-    if not (p.cageHideDead and p.cageTexture and p.cageTexture ~= "") then return end
+    if not (p.cageHideDead and p.cageTexture and p.cageTexture ~= "") then Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateDeadCage MyCustomFrames/Units.lua:616:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateDeadCage MyCustomFrames/Units.lua:616:6"); return end
     local dead = ns.safeBool(UnitExists, u.unit) and ns.safeBool(UnitIsDeadOrGhost, u.unit)
     u.cage:SetShown(not dead)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateDeadCage MyCustomFrames/Units.lua:616:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateDeadCage MyCustomFrames/Units.lua:616:6"); end
 
 -- Highlight de "unidad seleccionada": muestra el borde-highlight si la unidad de este
 -- frame es tu TARGET actual. En preview (ns.IsUnlocked()) siempre visible para poder editarlo.
 -- UnitIsUnit devuelve booleano (no secreto) -> seguro. Latido opcional (highlightGlow).
-local function UnitUpdateHighlight(u)
+local function UnitUpdateHighlight(u) Perfy_Trace(Perfy_GetTime(), "Enter", "UnitUpdateHighlight MyCustomFrames/Units.lua:627:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "UnitUpdateHighlight MyCustomFrames/Units.lua:627:6");
     local hl = u.highlight
-    if not hl then return end
+    if not hl then Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateHighlight MyCustomFrames/Units.lua:627:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateHighlight MyCustomFrames/Units.lua:627:6"); return end
     local p = P(u)
     if not p.showHighlight then
         hl:Hide()
         if u.highlightAnim then u.highlightAnim:Stop() end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateHighlight MyCustomFrames/Units.lua:627:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateHighlight MyCustomFrames/Units.lua:627:6"); return
     end
     local isTarget
     if ns.IsUnlocked() then
@@ -651,7 +651,7 @@ local function UnitUpdateHighlight(u)
         hl:Hide()
         if u.highlightAnim then u.highlightAnim:Stop() end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateHighlight MyCustomFrames/Units.lua:627:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateHighlight MyCustomFrames/Units.lua:627:6"); end
 
 -- Pedido del usuario (2026-07-24, "que siempre aparezcan si existen y en el
 -- explorer que esten -- que desaparezcan junto a su unitframe"): playerpower/
@@ -660,30 +660,32 @@ end
 -- power bar (mostrar si la unidad existe). Quien quiera ocultarlas segun
 -- contexto ahora usa el Explorer (agrupadas junto a "Player"/"Target" en
 -- EXPLORER_LIST, Options.lua -- se ocultan/reaparecen JUNTO a su unitframe).
--- EXCEPCION (2026-07-24, "el power target solo no salga si el objetivo esta
--- muerto" / "el power bar del player tambien desaparezca si estoy muerto"):
--- playerpower/targetpower conservan SOLO este chequeo -- una unidad muerta
--- no tiene power real que mostrar.
-local function PowerShouldShow(u)
-    if u.key == "targetpower" and ns.safeBool(UnitIsDeadOrGhost, "target") then return false end
-    if u.key == "playerpower" and ns.safeBool(UnitIsDeadOrGhost, "player") then return false end
-    return UnitExists(u.unit)
+-- EXCEPCION (target unicamente): "el power target solo no salga si el
+-- objetivo esta muerto" -- se mantiene, una unidad muerta no tiene power real.
+--
+-- REVERTIDO para playerpower (2026-07-29, "quita lo de hide on death en bar
+-- y cage del player, que siempre se muestren en death"): el pedido original
+-- del 07-24 ("que el power bar del player tambien desaparezca si estoy
+-- muerto") queda sin efecto -- playerpower vuelve a la regla generica.
+local function PowerShouldShow(u) Perfy_Trace(Perfy_GetTime(), "Enter", "PowerShouldShow MyCustomFrames/Units.lua:667:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "PowerShouldShow MyCustomFrames/Units.lua:667:6");
+    if u.key == "targetpower" and ns.safeBool(UnitIsDeadOrGhost, "target") then Perfy_Trace(Perfy_GetTime(), "Leave", "PowerShouldShow MyCustomFrames/Units.lua:667:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PowerShouldShow MyCustomFrames/Units.lua:667:6"); return false end
+    return Perfy_Trace_Passthrough("Leave", "PowerShouldShow MyCustomFrames/Units.lua:667:6", Perfy_Trace_Passthrough("Leave", "PowerShouldShow MyCustomFrames/Units.lua:667:6", UnitExists(u.unit)))
 end
 
 -- (Re)aplica el color de la barra (clase/reaccion/poder/override manual). Se llama
 -- tambien en el ticker: el color de clase de party llega DESPUES de crear el frame,
 -- asi que si solo se aplicara en el refresh completo, el color quedaria desactualizado.
-local function UnitUpdateColor(u)
+local function UnitUpdateColor(u) Perfy_Trace(Perfy_GetTime(), "Enter", "UnitUpdateColor MyCustomFrames/Units.lua:676:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "UnitUpdateColor MyCustomFrames/Units.lua:676:6");
     local p = P(u)
     local hasTex = (p.texture and p.texture ~= "") and true or false
     local r, g, b = UnitColor(u)
     u.bar:SetStatusBarColor(r, g, b, hasTex and p.barAlpha or 0)
     u.fillTex:SetVertexColor(r, g, b, hasTex and p.barAlpha or 0)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateColor MyCustomFrames/Units.lua:676:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitUpdateColor MyCustomFrames/Units.lua:676:6"); end
 
-local function UnitApplyLayout(u)
+local function UnitApplyLayout(u) Perfy_Trace(Perfy_GetTime(), "Enter", "UnitApplyLayout MyCustomFrames/Units.lua:684:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "UnitApplyLayout MyCustomFrames/Units.lua:684:6");
     local p = P(u)
-    if u.kind ~= "power" and InCombatLockdown() then u.needsLayout = true return end
+    if u.kind ~= "power" and InCombatLockdown() then u.needsLayout = true Perfy_Trace(Perfy_GetTime(), "Leave", "UnitApplyLayout MyCustomFrames/Units.lua:684:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitApplyLayout MyCustomFrames/Units.lua:684:6"); return end
     ns.CompensateScale(p, "unit")   -- B3: reancla offsets si la escala cambio (sin desplazar)
     local button = u.button
     button:SetSize(p.width, p.height)
@@ -722,22 +724,22 @@ local function UnitApplyLayout(u)
             p.outlineHideName or (ns.GetDB().lockHide and ns.GetDB().lockHide.names))
     end
     u.needsLayout = nil
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UnitApplyLayout MyCustomFrames/Units.lua:684:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitApplyLayout MyCustomFrames/Units.lua:684:6"); end
 
 -- Con reverseFill activo, el StatusBar nativo (unico camino con vida secreta)
 -- no puede recortar la textura sin distorsionarla si el arte es asimetrico
 -- (ver conversacion). La solucion real es usar el archivo YA pre-espejado
 -- ("nombre mirror.tga" <-> "nombre.tga") en vez de intentar espejar en runtime.
-local function MirrorTexPath(path)
-    if not path or path == "" then return path end
+local function MirrorTexPath(path) Perfy_Trace(Perfy_GetTime(), "Enter", "MirrorTexPath MyCustomFrames/Units.lua:731:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "MirrorTexPath MyCustomFrames/Units.lua:731:6");
+    if not path or path == "" then Perfy_Trace(Perfy_GetTime(), "Leave", "MirrorTexPath MyCustomFrames/Units.lua:731:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "MirrorTexPath MyCustomFrames/Units.lua:731:6"); return path end
     local base, ext = path:match("^(.-)%s+[Mm][Ii][Rr][Rr][Oo][Rr]%.(%a+)$")
-    if base then return base .. "." .. ext end
+    if base then return Perfy_Trace_Passthrough("Leave", "MirrorTexPath MyCustomFrames/Units.lua:731:6", Perfy_Trace_Passthrough("Leave", "MirrorTexPath MyCustomFrames/Units.lua:731:6", base .. "." .. ext)) end
     base, ext = path:match("^(.-)%.(%a+)$")
-    if base then return base .. " mirror." .. ext end
-    return path
+    if base then return Perfy_Trace_Passthrough("Leave", "MirrorTexPath MyCustomFrames/Units.lua:731:6", Perfy_Trace_Passthrough("Leave", "MirrorTexPath MyCustomFrames/Units.lua:731:6", base .. " mirror." .. ext)) end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MirrorTexPath MyCustomFrames/Units.lua:731:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "MirrorTexPath MyCustomFrames/Units.lua:731:6"); return path
 end
 
-local function UnitApplyAppearance(u)
+local function UnitApplyAppearance(u) Perfy_Trace(Perfy_GetTime(), "Enter", "UnitApplyAppearance MyCustomFrames/Units.lua:740:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "UnitApplyAppearance MyCustomFrames/Units.lua:740:6");
     local p = P(u)
     local hasTex = (p.texture and p.texture ~= "") and true or false
     local barTex = hasTex and p.texture or ns.BLANK_TEXTURE
@@ -834,32 +836,32 @@ local function UnitApplyAppearance(u)
     -- Trinket de arena (solo arena_enemy1/2/3, ver CreateUnit) -- reaplica
     -- show/tamaño/offset EN VIVO al tocar el menu.
     if u.trinketReassert then u.trinketReassert() end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UnitApplyAppearance MyCustomFrames/Units.lua:740:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitApplyAppearance MyCustomFrames/Units.lua:740:6"); end
 
-local function RefreshUnit(key)
+local function RefreshUnit(key) Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshUnit MyCustomFrames/Units.lua:839:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshUnit MyCustomFrames/Units.lua:839:6");
     local u = ns.frames[key]
-    if not u then return end
+    if not u then Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshUnit MyCustomFrames/Units.lua:839:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshUnit MyCustomFrames/Units.lua:839:6"); return end
     UnitApplyLayout(u)
     UnitApplyAppearance(u)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshUnit MyCustomFrames/Units.lua:839:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshUnit MyCustomFrames/Units.lua:839:6"); end
 ns.RefreshUnit = RefreshUnit
 
 -- ==========================================================================
 -- CAST BAR
 -- ==========================================================================
-local function SetSparkTexture(spark)
+local function SetSparkTexture(spark) Perfy_Trace(Perfy_GetTime(), "Enter", "SetSparkTexture MyCustomFrames/Units.lua:850:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "SetSparkTexture MyCustomFrames/Units.lua:850:6");
     local ok = false
     if C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("Legionfall_BarSpark") then
-        ok = pcall(function() spark:SetAtlas("Legionfall_BarSpark") end)
+        ok = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:853:19"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:853:19"); spark:SetAtlas("Legionfall_BarSpark") Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:853:19"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:853:19"); end)
     end
     if not ok then
         spark:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SetSparkTexture MyCustomFrames/Units.lua:850:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "SetSparkTexture MyCustomFrames/Units.lua:850:6"); end
 
-local function GetCastProgress(unit)
+local function GetCastProgress(unit) Perfy_Trace(Perfy_GetTime(), "Enter", "GetCastProgress MyCustomFrames/Units.lua:860:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "GetCastProgress MyCustomFrames/Units.lua:860:6");
     local casting, prog = false, 0
-    pcall(function()
+    pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:862:10"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:862:10");
         local name, _, _, startMS, endMS = UnitCastingInfo(unit)
         local channel = false
         if name == nil then
@@ -875,8 +877,8 @@ local function GetCastProgress(unit)
                 casting, prog = true, p
             end
         end
-    end)
-    return casting, prog
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:862:10"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:862:10"); end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "GetCastProgress MyCustomFrames/Units.lua:860:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "GetCastProgress MyCustomFrames/Units.lua:860:6"); return casting, prog
 end
 
 -- Direcciones del timer de StatusBar (API C, 12.0). ElapsedTime = se llena (casteo);
@@ -897,14 +899,14 @@ end
 
 -- Modo de casteo actual, SECRET-SAFE: "cast" / "channel" / nil. Solo compara con nil
 -- (permitido); NO usa el nombre/castID (secretos en enemigos), evitando el taint.
-local function ReadCastMode(unit)
+local function ReadCastMode(unit) Perfy_Trace(Perfy_GetTime(), "Enter", "ReadCastMode MyCustomFrames/Units.lua:900:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "ReadCastMode MyCustomFrames/Units.lua:900:6");
     -- (RUTA MUY CALIENTE: corre por FRAME por cada cast bar via CastOnUpdate — la
     -- version con closure alocaba ~1 closure/frame/unidad.) Comparar solo con nil.
     local ok, v = pcall(UnitCastingInfo, unit)
-    if ok and v ~= nil then return "cast" end
+    if ok and v ~= nil then Perfy_Trace(Perfy_GetTime(), "Leave", "ReadCastMode MyCustomFrames/Units.lua:900:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "ReadCastMode MyCustomFrames/Units.lua:900:6"); return "cast" end
     local ok2, v2 = pcall(UnitChannelInfo, unit)
-    if ok2 and v2 ~= nil then return "channel" end
-    return nil
+    if ok2 and v2 ~= nil then Perfy_Trace(Perfy_GetTime(), "Leave", "ReadCastMode MyCustomFrames/Units.lua:900:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "ReadCastMode MyCustomFrames/Units.lua:900:6"); return "channel" end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "ReadCastMode MyCustomFrames/Units.lua:900:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "ReadCastMode MyCustomFrames/Units.lua:900:6"); return nil
 end
 
 -- OnUpdate del cast bar (StatusBar). Los tiempos de casteo son SECRETOS para enemigos
@@ -912,9 +914,9 @@ end
 -- Se detecta "cast nuevo" por el cambio de MODO (legible) y se rellena con
 -- StatusBar:SetTimerDuration (en C, con el duration object absoluto). Fallback manual
 -- solo para tiempos legibles (p.ej. el player).
-local function CastOnUpdate(self, elapsed)
+local function CastOnUpdate(self, elapsed) Perfy_Trace(Perfy_GetTime(), "Enter", "CastOnUpdate MyCustomFrames/Units.lua:915:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "CastOnUpdate MyCustomFrames/Units.lua:915:6");
     local u = self._u
-    if not ns.GetDB() then return end
+    if not ns.GetDB() then Perfy_Trace(Perfy_GetTime(), "Leave", "CastOnUpdate MyCustomFrames/Units.lua:915:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "CastOnUpdate MyCustomFrames/Units.lua:915:6"); return end
     local p = P(u)
 
     -- Preview: barra estatica ~60%.
@@ -936,7 +938,7 @@ local function CastOnUpdate(self, elapsed)
         self._castMode, self._timerActive = nil, false
         self:SetMinMaxValues(0, 1); self:SetValue(0.6)
         if u.castSpark then u.castSpark:Show() end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "CastOnUpdate MyCustomFrames/Units.lua:915:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "CastOnUpdate MyCustomFrames/Units.lua:915:6"); return
     end
 
     -- PERF (2026-07-19, "arregla todo"): ReadCastMode hace 2 pcall+API por
@@ -970,7 +972,7 @@ local function CastOnUpdate(self, elapsed)
             if u.castSpark then u.castSpark:Hide() end
         end
         self._castMode, self._timerActive = nil, false
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "CastOnUpdate MyCustomFrames/Units.lua:915:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "CastOnUpdate MyCustomFrames/Units.lua:915:6"); return
     end
     self._idleApplied = false
 
@@ -1015,11 +1017,11 @@ local function CastOnUpdate(self, elapsed)
         end
         self:SetValue(prog)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "CastOnUpdate MyCustomFrames/Units.lua:915:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "CastOnUpdate MyCustomFrames/Units.lua:915:6"); end
 
 -- Fuerza re-deteccion del cast (al cambiar de target/focus/pet el frame reapunta a
 -- otra unidad; sin esto seguiria mostrando el timer del casteo anterior).
-local function ResetCastBar(key)
+local function ResetCastBar(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ResetCastBar MyCustomFrames/Units.lua:1022:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "ResetCastBar MyCustomFrames/Units.lua:1022:6");
     local u = ns.frames[key]
     if u and u.castBar then
         u.castBar._castMode, u.castBar._timerActive = nil, false
@@ -1028,28 +1030,28 @@ local function ResetCastBar(key)
         -- estado de casteo de la unidad ANTERIOR un instante tras el cambio.
         u.castBar._castPollAcc, u.castBar._lastPolledMode = nil, nil
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ResetCastBar MyCustomFrames/Units.lua:1022:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "ResetCastBar MyCustomFrames/Units.lua:1022:6"); end
 ns.ResetCastBar = ResetCastBar
 
 -- Smooth del hp/power bar (relleno manual; solo si el valor es legible).
-local function BarOnUpdate(self, elapsed)
-    if not self._readable then return end
+local function BarOnUpdate(self, elapsed) Perfy_Trace(Perfy_GetTime(), "Enter", "BarOnUpdate MyCustomFrames/Units.lua:1035:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "BarOnUpdate MyCustomFrames/Units.lua:1035:6");
+    if not self._readable then Perfy_Trace(Perfy_GetTime(), "Leave", "BarOnUpdate MyCustomFrames/Units.lua:1035:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "BarOnUpdate MyCustomFrames/Units.lua:1035:6"); return end
     local u = self._u
-    if not u then return end
+    if not u then Perfy_Trace(Perfy_GetTime(), "Leave", "BarOnUpdate MyCustomFrames/Units.lua:1035:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "BarOnUpdate MyCustomFrames/Units.lua:1035:6"); return end
     local p = P(u)
-    if not p.smooth then return end
+    if not p.smooth then Perfy_Trace(Perfy_GetTime(), "Leave", "BarOnUpdate MyCustomFrames/Units.lua:1035:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "BarOnUpdate MyCustomFrames/Units.lua:1035:6"); return end
     local t = self._target or 0
     local cur = self._cur or t
     cur = cur + (t - cur) * math.min((elapsed or 0) * 10, 1)
     if math.abs(t - cur) < 0.001 then cur = t end
     self._cur = cur
     RenderManualFill(u.fillTex, self, cur, p.reverseFill)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "BarOnUpdate MyCustomFrames/Units.lua:1035:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "BarOnUpdate MyCustomFrames/Units.lua:1035:6"); end
 
 -- ==========================================================================
 -- CREACION DE FRAMES
 -- ==========================================================================
-local function CreateUnit(def)
+local function CreateUnit(def) Perfy_Trace(Perfy_GetTime(), "Enter", "CreateUnit MyCustomFrames/Units.lua:1052:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "CreateUnit MyCustomFrames/Units.lua:1052:6");
     local u = {
         key = def.key, unit = def.unit, label = def.label,
         driver = def.driver, kind = def.kind or "health",
@@ -1160,7 +1162,7 @@ local function CreateUnit(def)
     end
 
     if not isPower then
-        button:SetScript("OnEnter", function(self)
+        button:SetScript("OnEnter", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:1163:36"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:1163:36");
             u.isMouseOver = true
             if ns.GetDB() then UnitTextVisibility(u) end
             if ns.GetDB() and P(u).showTooltip and UnitExists(u.unit) then
@@ -1168,28 +1170,28 @@ local function CreateUnit(def)
                 GameTooltip:SetUnit(u.unit)
                 GameTooltip:Show()
             end
-        end)
-        button:SetScript("OnLeave", function()
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:1163:36"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:1163:36"); end)
+        button:SetScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:1172:36"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:1172:36");
             u.isMouseOver = false
             if ns.GetDB() then UnitTextVisibility(u) end
             GameTooltip:Hide()
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:1172:36"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:1172:36"); end)
     end
 
-    button:SetScript("OnDragStart", function(self)
+    button:SetScript("OnDragStart", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:1179:36"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:1179:36");
         if ns.IsUnlocked() and not InCombatLockdown() then
             u._dragStart = { self:GetCenter() }   -- centro al empezar (para mover el grupo)
             self:StartMoving()
         end
-    end)
-    button:SetScript("OnDragStop", function(self)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:1179:36"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:1179:36"); end)
+    button:SetScript("OnDragStop", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:1185:35"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:1185:35");
         -- Si el combate empezo A MITAD del drag (el drag solo puede EMPEZAR fuera de
         -- combate), StopMovingOrSizing sobre el frame SEGURO esta bloqueado
         -- (ADDON_ACTION_BLOCKED). Diferir el stop + guardado a PLAYER_REGEN_ENABLED,
         -- que re-invoca este mismo handler.
         if InCombatLockdown() and self:IsProtected() then
             u._stopMovePending = true
-            return
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:1185:35"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:1185:35"); return
         end
         u._stopMovePending = nil
         self:StopMovingOrSizing()
@@ -1229,7 +1231,7 @@ local function CreateUnit(def)
         u._dragStart = nil
         RefreshUnit(u.key)
         if ns.OnDragStopped then ns.OnDragStopped(u.key) end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:1185:35"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:1185:35"); end)
 
     if not isPower then
         if def.driver then
@@ -1258,7 +1260,7 @@ local function CreateUnit(def)
         trinket.cd = cd
         u.trinket = trinket
 
-        local function ReassertTrinket()
+        local function ReassertTrinket() Perfy_Trace(Perfy_GetTime(), "Enter", "ReassertTrinket MyCustomFrames/Units.lua:1261:14"); Perfy_Trace(Perfy_GetTime(), "Enter", "ReassertTrinket MyCustomFrames/Units.lua:1261:14");
             -- FIX (2026-07-19, reportado por el usuario -- "Units.lua:15:
             -- attempt to index a nil value"): P(u) hace ns.GetDB().units[...]
             -- SIN chequear que GetDB() no sea nil -- a la hora en que
@@ -1271,7 +1273,7 @@ local function CreateUnit(def)
             -- eager de mas abajo Y se guarda esta funcion contra GetDB() nil.
             local dbRoot = ns.GetDB and ns.GetDB()
             local p = dbRoot and dbRoot.units and dbRoot.units[u.key]
-            if not (p and p.showTrinket) then trinket:Hide(); return end
+            if not (p and p.showTrinket) then trinket:Hide(); Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertTrinket MyCustomFrames/Units.lua:1261:14"); Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertTrinket MyCustomFrames/Units.lua:1261:14"); return end
             local sz = p.trinketSize or 24
             trinket:ClearAllPoints()
             trinket:SetSize(sz, sz)
@@ -1281,7 +1283,7 @@ local function CreateUnit(def)
             if st and st.start and st.duration then
                 pcall(cd.SetCooldown, cd, st.start, st.duration)
             end
-        end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertTrinket MyCustomFrames/Units.lua:1261:14"); Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertTrinket MyCustomFrames/Units.lua:1261:14"); end
         u.trinketReassert = ReassertTrinket
         -- (sin llamada eager aca -- RefreshAll()/UnitApplyAppearance la
         -- invoca despues de ADDON_LOADED, cuando GetDB() ya existe)
@@ -1300,58 +1302,58 @@ local function CreateUnit(def)
         u.readyCheckIcon = readyCheckIcon
     end
 
-    ns.AttachScaleWheel(u.button, function() return P(u) end, function() UnitApplyLayout(u) end)
+    ns.AttachScaleWheel(u.button, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:1303:34"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:1303:34"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Units.lua:1303:34", Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Units.lua:1303:34", P(u))) end, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:1303:231"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:1303:62"); UnitApplyLayout(u) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:1303:62"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:1303:231"); end)
 
     -- Range fade / shield bar (2026-07-27, ver Indicators.lua, que carga
     -- ANTES de este archivo para que la funcion ya exista aca).
     if ns.CreateUnitIndicators then ns.CreateUnitIndicators(u) end
 
     ns.frames[def.key] = u
-    return u
+    Perfy_Trace(Perfy_GetTime(), "Leave", "CreateUnit MyCustomFrames/Units.lua:1052:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "CreateUnit MyCustomFrames/Units.lua:1052:6"); return u
 end
 
 -- Expuesta para que ArenaTrinket.lua (deteccion pura, sin conocer frames) avise
 -- cuando detecta/limpia un uso de trinket -- busca el frame arena_enemy* cuyo
 -- unit coincide y reaplica su cooldown visual. Separacion total pedida por el
 -- usuario: este archivo (dibujo) nunca escucha COMBAT_LOG el mismo.
-function ns.RefreshArenaTrinketIcon(unit)
+function ns.RefreshArenaTrinketIcon(unit) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.RefreshArenaTrinketIcon MyCustomFrames/Units.lua:1317:0"); Perfy_Trace(Perfy_GetTime(), "Enter", "ns.RefreshArenaTrinketIcon MyCustomFrames/Units.lua:1317:0");
     for _, u in pairs(ns.frames) do
         if u.trinketReassert and u.unit == unit then u.trinketReassert() end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.RefreshArenaTrinketIcon MyCustomFrames/Units.lua:1317:0"); Perfy_Trace(Perfy_GetTime(), "Leave", "ns.RefreshArenaTrinketIcon MyCustomFrames/Units.lua:1317:0"); end
 
 for _, def in ipairs(ns.UNITS) do CreateUnit(def) end
 
-local function PetDriverString()
-    if ns.safeBool(IsInInstance) then return "[@pet,exists] show; hide" end
-    return "[@pet,exists,combat] show; [@pet,exists,@target,exists] show; hide"
+local function PetDriverString() Perfy_Trace(Perfy_GetTime(), "Enter", "PetDriverString MyCustomFrames/Units.lua:1325:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "PetDriverString MyCustomFrames/Units.lua:1325:6");
+    if ns.safeBool(IsInInstance) then Perfy_Trace(Perfy_GetTime(), "Leave", "PetDriverString MyCustomFrames/Units.lua:1325:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PetDriverString MyCustomFrames/Units.lua:1325:6"); return "[@pet,exists] show; hide" end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "PetDriverString MyCustomFrames/Units.lua:1325:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PetDriverString MyCustomFrames/Units.lua:1325:6"); return "[@pet,exists,combat] show; [@pet,exists,@target,exists] show; hide"
 end
 
-local function UpdatePetDriver()
+local function UpdatePetDriver() Perfy_Trace(Perfy_GetTime(), "Enter", "UpdatePetDriver MyCustomFrames/Units.lua:1330:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "UpdatePetDriver MyCustomFrames/Units.lua:1330:6");
     local u = ns.frames["pet"]
-    if not u then return end
+    if not u then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdatePetDriver MyCustomFrames/Units.lua:1330:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UpdatePetDriver MyCustomFrames/Units.lua:1330:6"); return end
     local d = PetDriverString()
     u.driver = d
-    if ns.IsUnlocked() then return end
-    if InCombatLockdown() then u.needsDriver = true return end
+    if ns.IsUnlocked() then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdatePetDriver MyCustomFrames/Units.lua:1330:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UpdatePetDriver MyCustomFrames/Units.lua:1330:6"); return end
+    if InCombatLockdown() then u.needsDriver = true Perfy_Trace(Perfy_GetTime(), "Leave", "UpdatePetDriver MyCustomFrames/Units.lua:1330:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UpdatePetDriver MyCustomFrames/Units.lua:1330:6"); return end
     UnregisterStateDriver(u.button, "visibility")
     RegisterStateDriver(u.button, "visibility", d)
     u.needsDriver = nil
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UpdatePetDriver MyCustomFrames/Units.lua:1330:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UpdatePetDriver MyCustomFrames/Units.lua:1330:6"); end
 
 -- Party1-5: visibles SOLO en grupo pequeño (party/dungeon). Se ocultan en raid
 -- y en cualquier instancia PvP (battleground/arena). En raid los tokens party1-4
 -- ni existen, pero en ARENA sí → por eso hace falta el chequeo de tipo de
 -- instancia en Lua (no hay condicional de macro para "arena").
-local function PartyDriverString(u)
+local function PartyDriverString(u) Perfy_Trace(Perfy_GetTime(), "Enter", "PartyDriverString MyCustomFrames/Units.lua:1346:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "PartyDriverString MyCustomFrames/Units.lua:1346:6");
     -- Arena (grupo de party + instancia pvp): no hay condicional de macro para
     -- "arena", asi que se detecta en Lua y se oculta del todo.
     local isPvP = false
-    pcall(function()
+    pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:1350:10"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:1350:10");
         local _, it = IsInInstance()
         isPvP = (it == "pvp" or it == "arena")
-    end)
-    if isPvP then return "hide" end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:1350:10"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:1350:10"); end)
+    if isPvP then Perfy_Trace(Perfy_GetTime(), "Leave", "PartyDriverString MyCustomFrames/Units.lua:1346:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PartyDriverString MyCustomFrames/Units.lua:1346:6"); return "hide" end
     -- [group:raid] es un condicional SEGURO y dinamico: oculta en raid y en
     -- CUALQUIER battleground (todos son grupos de raid al activarse), sin depender
     -- del timing del update en Lua ni del diferido por combate.
@@ -1362,12 +1364,12 @@ local function PartyDriverString(u)
     -- grupo). Se usa `[group]` (verdadero en CUALQUIER grupo, party o raid) en su lugar,
     -- para que se comporte igual que las otras 4 tiles: visible solo si estas agrupado.
     if u.key == "party5" then
-        return "[group:raid] hide; [group] show; hide"
+        Perfy_Trace(Perfy_GetTime(), "Leave", "PartyDriverString MyCustomFrames/Units.lua:1346:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PartyDriverString MyCustomFrames/Units.lua:1346:6"); return "[group:raid] hide; [group] show; hide"
     end
-    return "[group:raid] hide; [@" .. u.unit .. ",exists] show; hide"
+    return Perfy_Trace_Passthrough("Leave", "PartyDriverString MyCustomFrames/Units.lua:1346:6", Perfy_Trace_Passthrough("Leave", "PartyDriverString MyCustomFrames/Units.lua:1346:6", "[group:raid] hide; [@" .. u.unit .. ",exists] show; hide"))
 end
 
-local function UpdatePartyDrivers()
+local function UpdatePartyDrivers() Perfy_Trace(Perfy_GetTime(), "Enter", "UpdatePartyDrivers MyCustomFrames/Units.lua:1370:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "UpdatePartyDrivers MyCustomFrames/Units.lua:1370:6");
     for _, key in ipairs(ns.PARTY_KEYS) do
         local u = ns.frames[key]
         if u and u.button then
@@ -1385,24 +1387,24 @@ local function UpdatePartyDrivers()
             end
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UpdatePartyDrivers MyCustomFrames/Units.lua:1370:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UpdatePartyDrivers MyCustomFrames/Units.lua:1370:6"); end
 -- ARENA (pedido del usuario 2026-07-19): "solo debe aparecer en arenas" -- mismo
 -- patron que PartyDriverString/UpdatePartyDrivers de arriba (no hay condicional
 -- de macro para "arena", se detecta en Lua via IsInInstance y se arma el driver
 -- a mano). A diferencia de party, arena_player/party1/party2 usan tokens que
 -- SIEMPRE existen fuera de arena tambien (player/party1/party2) -- por eso el
 -- gate de "estoy en arena" es OBLIGATORIO (no alcanza con [@unit,exists]).
-local function ArenaDriverString(u)
+local function ArenaDriverString(u) Perfy_Trace(Perfy_GetTime(), "Enter", "ArenaDriverString MyCustomFrames/Units.lua:1395:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "ArenaDriverString MyCustomFrames/Units.lua:1395:6");
     local isArena = false
-    pcall(function()
+    pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:1397:10"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Units.lua:1397:10");
         local _, it = IsInInstance()
         isArena = (it == "arena")
-    end)
-    if not isArena then return "hide" end
-    return "[@" .. u.unit .. ",exists] show; hide"
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:1397:10"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Units.lua:1397:10"); end)
+    if not isArena then Perfy_Trace(Perfy_GetTime(), "Leave", "ArenaDriverString MyCustomFrames/Units.lua:1395:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "ArenaDriverString MyCustomFrames/Units.lua:1395:6"); return "hide" end
+    return Perfy_Trace_Passthrough("Leave", "ArenaDriverString MyCustomFrames/Units.lua:1395:6", Perfy_Trace_Passthrough("Leave", "ArenaDriverString MyCustomFrames/Units.lua:1395:6", "[@" .. u.unit .. ",exists] show; hide"))
 end
 
-local function UpdateArenaDrivers()
+local function UpdateArenaDrivers() Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateArenaDrivers MyCustomFrames/Units.lua:1405:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateArenaDrivers MyCustomFrames/Units.lua:1405:6");
     for _, key in ipairs(ns.ARENA_KEYS) do
         local u = ns.frames[key]
         if u and u.button then
@@ -1420,7 +1422,7 @@ local function UpdateArenaDrivers()
             end
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateArenaDrivers MyCustomFrames/Units.lua:1405:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateArenaDrivers MyCustomFrames/Units.lua:1405:6"); end
 ns.UpdateArenaDrivers = UpdateArenaDrivers
 
 -- Expuestas para que core.lua (ticker principal, SetUnlocked, eventos) las invoque
@@ -1466,7 +1468,7 @@ ns.UpdatePartyDrivers = UpdatePartyDrivers
 -- Resetear en la TRANSICION es correcto pase lo que pase con la visibilidad del
 -- frame, y de paso saca el parpadeo de un frame que quedaba incluso cuando el
 -- OnUpdate si revivia.
-function ns.ResetUnitCastBars()
+function ns.ResetUnitCastBars() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ResetUnitCastBars MyCustomFrames/Units.lua:1469:0"); Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ResetUnitCastBars MyCustomFrames/Units.lua:1469:0");
     for _, u in pairs(ns.frames) do
         local cb = u.castBar
         if cb then
@@ -1487,18 +1489,18 @@ function ns.ResetUnitCastBars()
             cb._lastPolledMode, cb._castPollAcc = nil, 0
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetUnitCastBars MyCustomFrames/Units.lua:1469:0"); Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetUnitCastBars MyCustomFrames/Units.lua:1469:0"); end
 
-ns.RefreshAllUnits = function()
+ns.RefreshAllUnits = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.RefreshAllUnits MyCustomFrames/Units.lua:1492:21"); Perfy_Trace(Perfy_GetTime(), "Enter", "ns.RefreshAllUnits MyCustomFrames/Units.lua:1492:21");
     for _, u in pairs(ns.frames) do
         UnitApplyLayout(u)
         UnitApplyAppearance(u)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.RefreshAllUnits MyCustomFrames/Units.lua:1492:21"); Perfy_Trace(Perfy_GetTime(), "Leave", "ns.RefreshAllUnits MyCustomFrames/Units.lua:1492:21"); end
 
 -- Tick por-unidad (barras/highlight/badges), llamado desde el ticker principal de core.
 local tickUnitsN = 0
-ns.TickUnits = function()
+ns.TickUnits = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.TickUnits MyCustomFrames/Units.lua:1501:15"); Perfy_Trace(Perfy_GetTime(), "Enter", "ns.TickUnits MyCustomFrames/Units.lua:1501:15");
     local db = ns.GetDB()
     -- Textos en pasadas alternas: 5 Hz en vez de 10. Un porcentaje que cambia 5
     -- veces por segundo ya es mas rapido de lo que se puede leer, y la BARRA
@@ -1557,4 +1559,7 @@ ns.TickUnits = function()
             u.readyCheckIcon:Hide()
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.TickUnits MyCustomFrames/Units.lua:1501:15"); Perfy_Trace(Perfy_GetTime(), "Leave", "ns.TickUnits MyCustomFrames/Units.lua:1501:15"); end
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Units.lua");
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Units.lua");

@@ -1,4 +1,4 @@
--- ==========================================================================
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/MicroMenu.lua"); -- ==========================================================================
 -- MyCustomFrames - MicroMenu.lua
 -- MICRO MENU: reskin de los micro-botones SEGUROS de Blizzard (movible + escalable).
 -- Extraido de core.lua (el chunk principal excedia el limite de 200 locals de Lua).
@@ -12,7 +12,7 @@ local ADDON, ns = ...
 
 local MICROMENU_KEY = "micromenu"
 ns.MICROMENU_KEY = MICROMENU_KEY
-ns.IsMicroMenu = function(key) return key == MICROMENU_KEY end
+ns.IsMicroMenu = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.IsMicroMenu MyCustomFrames/MicroMenu.lua:15:17"); return Perfy_Trace_Passthrough("Leave", "ns.IsMicroMenu MyCustomFrames/MicroMenu.lua:15:17", key == MICROMENU_KEY) end
 
 local MM_PATH = "Interface\\AddOns\\" .. ADDON .. "\\Assets\\"
 local MM_BTN_W, MM_BTN_H, MM_SPACING, MM_ICON = 41, 46, 2, 32
@@ -45,9 +45,9 @@ local MM_BUTTONS = {
 -- en combate). Solo alpha/mouse/icono, que NO taintean.
 local MM_HIDE = { "CharacterMicroButton" }
 
-local function MicroMenuDefaults()
-    return { enabled = true, strata = "MEDIUM", scale = 1.0,
-        anchor = "", point = "CENTER", relPoint = "CENTER", offsetX = 0, offsetY = -220 }
+local function MicroMenuDefaults() Perfy_Trace(Perfy_GetTime(), "Enter", "MicroMenuDefaults MyCustomFrames/MicroMenu.lua:48:6");
+    return Perfy_Trace_Passthrough("Leave", "MicroMenuDefaults MyCustomFrames/MicroMenu.lua:48:6", { enabled = true, strata = "MEDIUM", scale = 1.0,
+        anchor = "", point = "CENTER", relPoint = "CENTER", offsetX = 0, offsetY = -220 })
 end
 ns.MicroMenuDefaults = MicroMenuDefaults
 
@@ -59,15 +59,15 @@ local micromenu  -- frame contenedor (MyCF_MicroMenu)
 -- diagnosticado con /mcfchar: alpha=0 estaba bien pero mouseEnabled=false mataba el clic). Por eso
 -- EnableMouse se deja en TRUE; el boton sigue sin robar clics reales porque esta INVISIBLE (alpha 0)
 -- y Blizzard no le movio la posicion (sigue en su sitio de siempre, fuera del area visible del addon).
-local function MM_SoftHide(b)
-    if not b then return end
+local function MM_SoftHide(b) Perfy_Trace(Perfy_GetTime(), "Enter", "MM_SoftHide MyCustomFrames/MicroMenu.lua:62:6");
+    if not b then Perfy_Trace(Perfy_GetTime(), "Leave", "MM_SoftHide MyCustomFrames/MicroMenu.lua:62:6"); return end
     if b._mmIcon then b._mmIcon:Hide() end
-    pcall(function()
+    pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MicroMenu.lua:65:10");
         b:SetAlpha(0)
         b:EnableMouse(true)    -- REQUERIDO por /click (ver nota arriba); invisible, no molesta
         b:Show()               -- MOSTRADO (invisible) → :Click() dispara su OnClick (abre en combate)
-    end)
-end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MicroMenu.lua:65:10"); end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "MM_SoftHide MyCustomFrames/MicroMenu.lua:62:6"); end
 
 -- Oculta una textura NATIVA de Blizzard sin tocar su estado real (patron EllesmereUI: "hide via
 -- SetTexture(\"\") only — SetTexture(nil) and SetAlpha(0) both taint Blizzard-owned textures.
@@ -75,26 +75,26 @@ end
 -- SetTexture("") = queda sin archivo → no dibuja nada, sin Hide()/SetAlpha() (que si taintean si
 -- Blizzard reutiliza ese mismo objeto Texture en otro widget mas adelante). Solo se ESCRIBE, nunca
 -- se lee el estado de vuelta.
-local function MM_HideTex(t)
+local function MM_HideTex(t) Perfy_Trace(Perfy_GetTime(), "Enter", "MM_HideTex MyCustomFrames/MicroMenu.lua:78:6");
     if t and t.SetTexture then pcall(t.SetTexture, t, "") end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "MM_HideTex MyCustomFrames/MicroMenu.lua:78:6"); end
 
-local function MM_HideOriginalArt(b)
+local function MM_HideOriginalArt(b) Perfy_Trace(Perfy_GetTime(), "Enter", "MM_HideOriginalArt MyCustomFrames/MicroMenu.lua:82:6");
     for _, k in ipairs(MM_ART_KEYS) do MM_HideTex(b[k]) end
     MM_HideTex(b.GetNormalTexture and b:GetNormalTexture())
     MM_HideTex(b.GetPushedTexture and b:GetPushedTexture())
     MM_HideTex(b.GetDisabledTexture and b:GetDisabledTexture())
     MM_HideTex(b.GetHighlightTexture and b:GetHighlightTexture())
     if type(MicroButtonPulseStop) == "function" then pcall(MicroButtonPulseStop, b) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "MM_HideOriginalArt MyCustomFrames/MicroMenu.lua:82:6"); end
 
 -- Re-aplica el skin: Blizzard vuelve a poner su arte al actualizar el boton.
-local function MM_RefreshArt(b)
+local function MM_RefreshArt(b) Perfy_Trace(Perfy_GetTime(), "Enter", "MM_RefreshArt MyCustomFrames/MicroMenu.lua:92:6");
     MM_HideOriginalArt(b)
     if b._mmIcon then b._mmIcon:Show() end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "MM_RefreshArt MyCustomFrames/MicroMenu.lua:92:6"); end
 
-local function MM_SkinButton(b, iconFile)
+local function MM_SkinButton(b, iconFile) Perfy_Trace(Perfy_GetTime(), "Enter", "MM_SkinButton MyCustomFrames/MicroMenu.lua:97:6");
     b:SetSize(MM_BTN_W, MM_BTN_H)
     MM_HideOriginalArt(b)
     local icon = b._mmIcon
@@ -116,14 +116,14 @@ local function MM_SkinButton(b, iconFile)
     if not b._mmHooked then
         b._mmHooked = true
         for _, m in ipairs({ "SetNormalAtlas", "SetPushedAtlas", "SetNormalTexture", "SetPushedTexture" }) do
-            if type(b[m]) == "function" then pcall(hooksecurefunc, b, m, function() MM_RefreshArt(b) end) end
+            if type(b[m]) == "function" then pcall(hooksecurefunc, b, m, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MicroMenu.lua:119:73"); MM_RefreshArt(b) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MicroMenu.lua:119:73"); end) end
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "MM_SkinButton MyCustomFrames/MicroMenu.lua:97:6"); end
 
 -- Reparent + skin + fila (operaciones PROTEGIDAS → solo fuera de combate).
-local function MM_LayoutButtons()
-    if not micromenu then return end
+local function MM_LayoutButtons() Perfy_Trace(Perfy_GetTime(), "Enter", "MM_LayoutButtons MyCustomFrames/MicroMenu.lua:125:6");
+    if not micromenu then Perfy_Trace(Perfy_GetTime(), "Leave", "MM_LayoutButtons MyCustomFrames/MicroMenu.lua:125:6"); return end
     local unlocked = ns.IsUnlocked()
     local x, n = 0, 0
     for _, e in ipairs(MM_BUTTONS) do
@@ -147,14 +147,14 @@ local function MM_LayoutButtons()
     for _, name in ipairs(MM_HIDE) do
         MM_SoftHide(_G[name])
     end
-    return n
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MM_LayoutButtons MyCustomFrames/MicroMenu.lua:125:6"); return n
 end
 
 -- Re-afirma el skin (por si Blizzard repuso su arte) y re-oculta los no deseados.
 -- NO reparenta ni reposiciona (eso es protegido); solo texturas/visibilidad de arte.
-local function MM_ReassertArt()
+local function MM_ReassertArt() Perfy_Trace(Perfy_GetTime(), "Enter", "MM_ReassertArt MyCustomFrames/MicroMenu.lua:155:6");
     local db = ns.GetDB()
-    if not (micromenu and db and db.micromenu and db.micromenu.enabled) then return end
+    if not (micromenu and db and db.micromenu and db.micromenu.enabled) then Perfy_Trace(Perfy_GetTime(), "Leave", "MM_ReassertArt MyCustomFrames/MicroMenu.lua:155:6"); return end
     for _, e in ipairs(MM_BUTTONS) do
         local b = _G[e[1]]
         if b and b._mmIcon then MM_RefreshArt(b) end
@@ -162,12 +162,12 @@ local function MM_ReassertArt()
     for _, name in ipairs(MM_HIDE) do
         MM_SoftHide(_G[name])
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "MM_ReassertArt MyCustomFrames/MicroMenu.lua:155:6"); end
 ns.MM_ReassertArt = MM_ReassertArt
 
 -- Devuelve los micro-botones a Blizzard (al desactivar). Blizzard re-aplica su
 -- arte y posicion en UpdateMicroButtons.
-local function MM_Restore()
+local function MM_Restore() Perfy_Trace(Perfy_GetTime(), "Enter", "MM_Restore MyCustomFrames/MicroMenu.lua:170:6");
     for _, e in ipairs(MM_BUTTONS) do
         local b = _G[e[1]]
         if b and b._mmOrigParent then
@@ -180,9 +180,9 @@ local function MM_Restore()
     if micromenu then micromenu:Hide() end
     if type(UpdateMicroButtons) == "function" then pcall(UpdateMicroButtons) end
     if MicroMenu and MicroMenu.Layout then pcall(MicroMenu.Layout, MicroMenu) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "MM_Restore MyCustomFrames/MicroMenu.lua:170:6"); end
 
-local function MM_Place()
+local function MM_Place() Perfy_Trace(Perfy_GetTime(), "Enter", "MM_Place MyCustomFrames/MicroMenu.lua:185:6");
     local p = ns.GetDB().micromenu
     if ns.CompensateScale then ns.CompensateScale(p, "simple") end   -- B3: reancla offset si la escala cambio
     local parent = _G[p.anchor]
@@ -194,16 +194,16 @@ local function MM_Place()
     -- "Hide in preview (Lock only)" (lockHide.micromenu): oculta SOLO en preview.
     if ns.IsUnlocked() and ns.GetDB().lockHide and ns.GetDB().lockHide.micromenu then
         micromenu:Hide()
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "MM_Place MyCustomFrames/MicroMenu.lua:185:6"); return
     end
     micromenu:SetShown(p.enabled or ns.IsUnlocked())
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "MM_Place MyCustomFrames/MicroMenu.lua:185:6"); end
 
-local function RefreshMicroMenu()
+local function RefreshMicroMenu() Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshMicroMenu MyCustomFrames/MicroMenu.lua:202:6");
     local db = ns.GetDB()
-    if not (micromenu and db and db.micromenu) then return end
+    if not (micromenu and db and db.micromenu) then Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshMicroMenu MyCustomFrames/MicroMenu.lua:202:6"); return end
     -- Reparent/posicion/escala/visibilidad tocan frames PROTEGIDOS → diferir en combate.
-    if InCombatLockdown() then micromenu.needsLayout = true; return end
+    if InCombatLockdown() then micromenu.needsLayout = true; Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshMicroMenu MyCustomFrames/MicroMenu.lua:202:6"); return end
     micromenu.needsLayout = nil
     if db.micromenu.enabled or ns.IsUnlocked() then
         MM_LayoutButtons()
@@ -212,10 +212,10 @@ local function RefreshMicroMenu()
         MM_Restore()
     end
     if micromenu.editBG then micromenu.editBG:SetShown(ns.IsUnlocked() and not db.hideEditOutline) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshMicroMenu MyCustomFrames/MicroMenu.lua:202:6"); end
 ns.RefreshMicroMenu = RefreshMicroMenu
 
-local function CreateMicroMenu()
+local function CreateMicroMenu() Perfy_Trace(Perfy_GetTime(), "Enter", "CreateMicroMenu MyCustomFrames/MicroMenu.lua:218:6");
     local root = CreateFrame("Frame", "MyCF_MicroMenu", UIParent)
     root:SetSize(200, MM_BTN_H)
     root:SetPoint("CENTER", UIParent, "CENTER", 0, -220)
@@ -226,10 +226,10 @@ local function CreateMicroMenu()
     local editBG = ns.MakeEditHighlight(root, "Micro Menu")
     root.editBG = editBG
 
-    root:SetScript("OnDragStart", function(self)
+    root:SetScript("OnDragStart", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MicroMenu.lua:229:34");
         if ns.IsUnlocked() and not InCombatLockdown() then self:StartMoving() end
-    end)
-    root:SetScript("OnDragStop", function(self)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MicroMenu.lua:229:34"); end)
+    root:SetScript("OnDragStop", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MicroMenu.lua:232:33");
         self:StopMovingOrSizing()
         if ns.SnapFrameToGrid then ns.SnapFrameToGrid(self) end
         local p = ns.GetDB().micromenu
@@ -244,43 +244,45 @@ local function CreateMicroMenu()
         end
         RefreshMicroMenu()
         if ns.OnDragStopped then ns.OnDragStopped(MICROMENU_KEY) end
-    end)
-    ns.AttachScaleWheel(root, function() return ns.GetDB().micromenu end, function() if ns.RefreshMicroMenu then ns.RefreshMicroMenu() end end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MicroMenu.lua:232:33"); end)
+    ns.AttachScaleWheel(root, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MicroMenu.lua:248:30"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/MicroMenu.lua:248:30", ns.GetDB().micromenu) end, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MicroMenu.lua:248:74"); if ns.RefreshMicroMenu then ns.RefreshMicroMenu() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MicroMenu.lua:248:74"); end)
 
     micromenu = root
     ns.micromenu = root
 
-    local function MM_Active(b)
+    local function MM_Active(b) Perfy_Trace(Perfy_GetTime(), "Enter", "MM_Active MyCustomFrames/MicroMenu.lua:253:10");
         local db = ns.GetDB()
-        return b and b._mmIcon and micromenu and db and db.micromenu
-            and db.micromenu.enabled and not ns.IsUnlocked()
+        return Perfy_Trace_Passthrough("Leave", "MM_Active MyCustomFrames/MicroMenu.lua:253:10", b and b._mmIcon and micromenu and db and db.micromenu
+            and db.micromenu.enabled and not ns.IsUnlocked())
     end
 
     -- Blizzard re-coloca/re-arte los micro-botones al actualizarlos: re-afirmar.
     if type(UpdateMicroButtons) == "function" then
-        hooksecurefunc("UpdateMicroButtons", function()
+        hooksecurefunc("UpdateMicroButtons", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MicroMenu.lua:261:45");
             if MM_Active(_G.MainMenuMicroButton) and not InCombatLockdown() then
                 MM_LayoutButtons()
             end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MicroMenu.lua:261:45"); end)
     end
 
     -- FLASH / PULSE de "novedad" (nueva habilidad, etc.) re-muestra el arte
     -- original parpadeando. Lo cortamos: paramos el pulse y re-ocultamos el arte.
     if type(MicroButtonPulse) == "function" then
-        hooksecurefunc("MicroButtonPulse", function(b)
+        hooksecurefunc("MicroButtonPulse", function(b) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MicroMenu.lua:271:43");
             if MM_Active(b) then
                 if type(MicroButtonPulseStop) == "function" then pcall(MicroButtonPulseStop, b) end
                 MM_RefreshArt(b)
             end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MicroMenu.lua:271:43"); end)
     end
     -- Algunos alerts animan un FlashBorder propio; hookeamos el mostrar del alert.
     if type(MainMenuMicroButton_ShowAlert) == "function" then
-        hooksecurefunc("MainMenuMicroButton_ShowAlert", function(b)
+        hooksecurefunc("MainMenuMicroButton_ShowAlert", function(b) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MicroMenu.lua:280:56");
             if MM_Active(b) then MM_RefreshArt(b) end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MicroMenu.lua:280:56"); end)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "CreateMicroMenu MyCustomFrames/MicroMenu.lua:218:6"); end
 
 CreateMicroMenu()
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/MicroMenu.lua");

@@ -1,4 +1,4 @@
--- ==========================================================================
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Options.lua"); -- ==========================================================================
 -- MyCustomFrames - Options.lua
 -- Menu de opciones con estilo inspirado en Plumber (fondo, divisores, fuente
 -- Lato, botones custom) y organizado por secciones (pestanas).
@@ -8,9 +8,9 @@ local ADDON, ns = ...
 local PL = ns.PL
 local FONT = PL.FONT
 
-local function setFont(fs, size, flags)
+local function setFont(fs, size, flags) Perfy_Trace(Perfy_GetTime(), "Enter", "setFont MyCustomFrames/Options.lua:11:6");
     if not fs:SetFont(FONT, size, flags or "") then fs:SetFontObject("GameFontNormal") end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "setFont MyCustomFrames/Options.lua:11:6"); end
 
 -- ==========================================================================
 -- Ocultar la textura NATIVA del EditBox de chat (el borde/fondo ornamentado
@@ -21,45 +21,45 @@ end
 -- Cubre ChatFrame1..N (dock general) + hookea FCF_OpenTemporaryWindow para
 -- las ventanas temporales (susurros) que Blizzard crea sobre la marcha.
 -- ==========================================================================
-local function SetChatEditBoxTexture(eb, hide)
-    if not eb then return end
-    local ok, regions = pcall(function() return { eb:GetRegions() } end)
-    if not ok then return end
+local function SetChatEditBoxTexture(eb, hide) Perfy_Trace(Perfy_GetTime(), "Enter", "SetChatEditBoxTexture MyCustomFrames/Options.lua:24:6");
+    if not eb then Perfy_Trace(Perfy_GetTime(), "Leave", "SetChatEditBoxTexture MyCustomFrames/Options.lua:24:6"); return end
+    local ok, regions = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:26:30"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:26:30", { eb:GetRegions() }) end)
+    if not ok then Perfy_Trace(Perfy_GetTime(), "Leave", "SetChatEditBoxTexture MyCustomFrames/Options.lua:24:6"); return end
     for _, r in ipairs(regions) do
         if r.GetObjectType and r:GetObjectType() == "Texture" then
             pcall(r.SetAlpha, r, hide and 0 or 1)
         end
     end
     if eb.NineSlice then eb.NineSlice:SetShown(not hide) end
-end
-local function RefreshChatEditBoxSkin()
+Perfy_Trace(Perfy_GetTime(), "Leave", "SetChatEditBoxTexture MyCustomFrames/Options.lua:24:6"); end
+local function RefreshChatEditBoxSkin() Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshChatEditBoxSkin MyCustomFrames/Options.lua:35:6");
     local hide = ns.GetDB and ns.GetDB() and ns.GetDB().hideChatEditBoxTexture
     for i = 1, (NUM_CHAT_WINDOWS or 10) + 10 do
         local eb = _G["ChatFrame" .. i .. "EditBox"]
         if eb then SetChatEditBoxTexture(eb, hide) end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshChatEditBoxSkin MyCustomFrames/Options.lua:35:6"); end
 ns.RefreshChatEditBoxSkin = RefreshChatEditBoxSkin
 do
     local f = CreateFrame("Frame")
     f:RegisterEvent("PLAYER_LOGIN")
-    f:SetScript("OnEvent", function()
+    f:SetScript("OnEvent", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:46:27");
         RefreshChatEditBoxSkin()
-        hooksecurefunc("FCF_OpenTemporaryWindow", function()
+        hooksecurefunc("FCF_OpenTemporaryWindow", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:48:50");
             C_Timer.After(0, RefreshChatEditBoxSkin)
-        end)
-    end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:48:50"); end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:46:27"); end)
 end
 
-local getP = function() return ns.CurrentProfile() end
-local OnEdit = function() ns.ApplyCurrent() end
+local getP = function() Perfy_Trace(Perfy_GetTime(), "Enter", "getP MyCustomFrames/Options.lua:54:13"); return Perfy_Trace_Passthrough("Leave", "getP MyCustomFrames/Options.lua:54:13", ns.CurrentProfile()) end
+local OnEdit = function() Perfy_Trace(Perfy_GetTime(), "Enter", "OnEdit MyCustomFrames/Options.lua:55:15"); ns.ApplyCurrent() Perfy_Trace(Perfy_GetTime(), "Leave", "OnEdit MyCustomFrames/Options.lua:55:15"); end
 
-local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
+local function clamp(v, lo, hi) Perfy_Trace(Perfy_GetTime(), "Enter", "clamp MyCustomFrames/Options.lua:57:6"); return Perfy_Trace_Passthrough("Leave", "clamp MyCustomFrames/Options.lua:57:6", math.max(lo, math.min(hi, v))) end
 
 local refreshers = {}
-local function RefreshControls() for _, f in ipairs(refreshers) do f() end end
+local function RefreshControls() Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshControls MyCustomFrames/Options.lua:60:6"); for _, f in ipairs(refreshers) do f() end Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshControls MyCustomFrames/Options.lua:60:6"); end
 ns.OnProfilePasted = RefreshControls
-ns.OnDragStopped = function(k) if k == ns.currentEdit then RefreshControls() end end
+ns.OnDragStopped = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.OnDragStopped MyCustomFrames/Options.lua:62:19"); if k == ns.currentEdit then RefreshControls() end Perfy_Trace(Perfy_GetTime(), "Leave", "ns.OnDragStopped MyCustomFrames/Options.lua:62:19"); end
 ns.OnScaleWheel = RefreshControls   -- la rueda en modo Lock cambio una escala: refresca sliders
 
 -- Proxy de metatable (2026-07-24, mejora #3 del Explorer: opacidad custom
@@ -72,17 +72,17 @@ ns.OnScaleWheel = RefreshControls   -- la rueda en modo Lock cambio una escala: 
 -- (explorerFadeAlpha) mientras no haya override guardado, para que el
 -- slider siempre arranque mostrando un numero coherente (nunca nil).
 local explorerAlphaProxy = setmetatable({}, {
-    __index = function(_, _key)
+    __index = function(_, _key) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:75:14");
         local db = ns.GetDB()
         local v = db.explorerElementAlpha and db.explorerElementAlpha[ns.currentEdit]
         if v == nil then v = db.explorerFadeAlpha or 0 end
-        return v
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:75:14"); return v
     end,
-    __newindex = function(_, _key, v)
+    __newindex = function(_, _key, v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:81:17");
         local db = ns.GetDB()
         db.explorerElementAlpha = db.explorerElementAlpha or {}
         db.explorerElementAlpha[ns.currentEdit] = v
-    end,
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:81:17"); end,
 })
 
 -- Paleta LITERAL de Plumber (2026-07-16, extraida directo de su Def table en
@@ -110,7 +110,7 @@ local WIDGET = "Interface\\AddOns\\MyCustomFrames\\Assets\\SettingsPanelWidget.p
 local PLB = "Interface\\AddOns\\MyCustomFrames\\Assets\\PlumberSettingsPanel.png"
 
 -- Fondo 3-slice del atlas de Plumber (cap izq/der + centro estirado).
-local function ThreeSlice(frame, capW)
+local function ThreeSlice(frame, capW) Perfy_Trace(Perfy_GetTime(), "Enter", "ThreeSlice MyCustomFrames/Options.lua:113:6");
     local left = frame:CreateTexture(nil, "BACKGROUND")
     left:SetTexture(WIDGET)
     left:SetPoint("TOPLEFT"); left:SetPoint("BOTTOMLEFT"); left:SetWidth(capW)
@@ -123,10 +123,10 @@ local function ThreeSlice(frame, capW)
     mid:SetTexture(WIDGET)
     mid:SetPoint("TOPLEFT", left, "TOPRIGHT"); mid:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
     mid:SetTexCoord(68 / 512, 132 / 512, 0, 80 / 512)
-    return { left, mid, right }
+    return Perfy_Trace_Passthrough("Leave", "ThreeSlice MyCustomFrames/Options.lua:113:6", { left, mid, right })
 end
 
-local function StyleButton(b, w, h)
+local function StyleButton(b, w, h) Perfy_Trace(Perfy_GetTime(), "Enter", "StyleButton MyCustomFrames/Options.lua:129:6");
     b:SetSize(w, h)
     local parts = ThreeSlice(b, 14)
     b.bgparts = parts
@@ -140,15 +140,15 @@ local function StyleButton(b, w, h)
     hl:SetBlendMode("ADD")
     hl:SetAlpha(0.5)
     hl:Hide()
-    b:SetScript("OnEnter", function() hl:Show() end)
-    b:SetScript("OnLeave", function() hl:Hide() end)
+    b:SetScript("OnEnter", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:143:27"); hl:Show() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:143:27"); end)
+    b:SetScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:144:27"); hl:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:144:27"); end)
 
     local txt = b:CreateFontString(nil, "OVERLAY")
     setFont(txt, 12)
     txt:SetPoint("CENTER")
     b.text = txt
 
-    function b:SetActive(on)
+    function b:SetActive(on) Perfy_Trace(Perfy_GetTime(), "Enter", "b:SetActive MyCustomFrames/Options.lua:151:4");
         if on then
             for _, t in ipairs(parts) do t:SetVertexColor(1.0, 0.82, 0.35) end
             txt:SetTextColor(1, 1, 1)          -- blanco: se lee sobre el boton oscuro
@@ -159,17 +159,17 @@ local function StyleButton(b, w, h)
             for _, t in ipairs(parts) do t:SetVertexColor(0.62, 0.52, 0.40) end
             txt:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
         end
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "b:SetActive MyCustomFrames/Options.lua:151:4"); end
     b:SetActive(false)
-    return b
+    Perfy_Trace(Perfy_GetTime(), "Leave", "StyleButton MyCustomFrames/Options.lua:129:6"); return b
 end
 
-local function MakeButton(parent, text, w, h)
+local function MakeButton(parent, text, w, h) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeButton MyCustomFrames/Options.lua:167:6");
     local b = CreateFrame("Button", nil, parent)
     StyleButton(b, w or 100, h or 22)
     b.text:SetText(text)
     b._label = text
-    return b
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeButton MyCustomFrames/Options.lua:167:6"); return b
 end
 -- Expuesto para NameplateDesigner.lua (pedido del usuario: "sigue el
 -- formato de diseño de mi menu") -- carga DESPUES en el .toc, pero esto se
@@ -186,19 +186,19 @@ local TAB_SEL   = { left = { 600, 648 }, center = { 648, 760 }, right = { 760, 8
 -- flipY (2026-07-17): voltea verticalmente la textura de la pildora (la parte
 -- "plana" queda abajo en vez de arriba) — pedido puntual para Copy/Paste, sin
 -- afectar al resto de los botones que usan esta misma factory.
-local function MakeTabButton(parent, text, w, h, flipY)
+local function MakeTabButton(parent, text, w, h, flipY) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeTabButton MyCustomFrames/Options.lua:189:6");
     w = w or 90
     h = h or 32
     local b = CreateFrame("Button", nil, parent)
     b:SetSize(w, h)
 
-    local function tex(coords)
+    local function tex(coords) Perfy_Trace(Perfy_GetTime(), "Enter", "tex MyCustomFrames/Options.lua:195:10");
         local t = b:CreateTexture(nil, "BACKGROUND")
         t:SetTexture(PLB)
         local y1, y2 = TAB_UNSEL.y[1], TAB_UNSEL.y[2]
         if flipY then y1, y2 = y2, y1 end
         t:SetTexCoord(coords[1] / 1024, coords[2] / 1024, y1 / 1024, y2 / 1024)
-        return t
+        Perfy_Trace(Perfy_GetTime(), "Leave", "tex MyCustomFrames/Options.lua:195:10"); return t
     end
     local capW = (h < 26) and 14 or 24
     local left = tex(TAB_UNSEL.left); left:SetSize(capW, h); left:SetPoint("LEFT")
@@ -223,21 +223,21 @@ local function MakeTabButton(parent, text, w, h, flipY)
     local needed = txt:GetStringWidth() + capW * 2 + 12
     if needed > w then b:SetWidth(needed) end
 
-    local function applyCoords(set)
+    local function applyCoords(set) Perfy_Trace(Perfy_GetTime(), "Enter", "applyCoords MyCustomFrames/Options.lua:226:10");
         local y1, y2 = set.y[1], set.y[2]
         if flipY then y1, y2 = y2, y1 end
         left:SetTexCoord(set.left[1] / 1024, set.left[2] / 1024, y1 / 1024, y2 / 1024)
         center:SetTexCoord(set.center[1] / 1024, set.center[2] / 1024, y1 / 1024, y2 / 1024)
         right:SetTexCoord(set.right[1] / 1024, set.right[2] / 1024, y1 / 1024, y2 / 1024)
-    end
-    function b:SetActive(on)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "applyCoords MyCustomFrames/Options.lua:226:10"); end
+    function b:SetActive(on) Perfy_Trace(Perfy_GetTime(), "Enter", "b:SetActive MyCustomFrames/Options.lua:233:4");
         b._active = on
         applyCoords(on and TAB_SEL or TAB_UNSEL)
         txt:SetTextColor(on and 1 or COLOR_TITLE[1], on and 1 or COLOR_TITLE[2], on and 1 or COLOR_TITLE[3])
-    end
-    b:SetScript("OnEnter", function() if not b._active then txt:SetTextColor(1, 1, 1) end end)
-    b:SetScript("OnLeave", function() if not b._active then txt:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]) end end)
-    return b
+    Perfy_Trace(Perfy_GetTime(), "Leave", "b:SetActive MyCustomFrames/Options.lua:233:4"); end
+    b:SetScript("OnEnter", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:238:27"); if not b._active then txt:SetTextColor(1, 1, 1) end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:238:27"); end)
+    b:SetScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:239:27"); if not b._active then txt:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]) end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:239:27"); end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeTabButton MyCustomFrames/Options.lua:189:6"); return b
 end
 
 -- Item de lista SIN chrome de boton por defecto (estilo sidebar real de Plumber:
@@ -251,15 +251,15 @@ end
 -- de abajo (mismo tamaño/color, parecia que "Setup" era otro elemento mas de las
 -- unitframes). Con prominent=true: fuente mas grande, tinte SIEMPRE visible (no
 -- solo en hover/seleccion) y color mas brillante en reposo.
-local function MakeListItem(parent, text, w, h, prominent)
+local function MakeListItem(parent, text, w, h, prominent) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeListItem MyCustomFrames/Options.lua:254:6");
     local b = CreateFrame("Button", nil, parent)
     b:SetSize(w or 104, h or 18)
 
-    local function pillPiece(x1, x2)
+    local function pillPiece(x1, x2) Perfy_Trace(Perfy_GetTime(), "Enter", "pillPiece MyCustomFrames/Options.lua:258:10");
         local t = b:CreateTexture(nil, "ARTWORK")
         t:SetTexture(PLB)
         t:SetTexCoord(x1 / 1024, x2 / 1024, 0 / 1024, 80 / 1024)
-        return t
+        Perfy_Trace(Perfy_GetTime(), "Leave", "pillPiece MyCustomFrames/Options.lua:258:10"); return t
     end
     local pLeft = pillPiece(0, 32); pLeft:SetSize(10, (h or 18) + 4); pLeft:SetPoint("LEFT", -2, 0)
     local pRight = pillPiece(160, 192); pRight:SetSize(10, (h or 18) + 4); pRight:SetPoint("RIGHT", 2, 0)
@@ -283,7 +283,7 @@ local function MakeListItem(parent, text, w, h, prominent)
     -- el mouse (UIFrameFadeIn/Out son las utilidades estandar de Blizzard, animan
     -- alpha solas via su propio OnUpdate compartido).
     for _, t in ipairs(pill) do t:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]) end
-    local function fadePillTo(a, duration)
+    local function fadePillTo(a, duration) Perfy_Trace(Perfy_GetTime(), "Enter", "fadePillTo MyCustomFrames/Options.lua:286:10");
         for _, t in ipairs(pill) do
             if UIFrameFadeIn then
                 if not t:IsShown() then t:SetAlpha(0) end
@@ -293,8 +293,8 @@ local function MakeListItem(parent, text, w, h, prominent)
                 t:SetAlpha(a); t:Show()
             end
         end
-    end
-    function b:SetActive(on)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "fadePillTo MyCustomFrames/Options.lua:286:10"); end
+    function b:SetActive(on) Perfy_Trace(Perfy_GetTime(), "Enter", "b:SetActive MyCustomFrames/Options.lua:297:4");
         b._active = on
         if on then
             fadePillTo(0.85)
@@ -304,20 +304,20 @@ local function MakeListItem(parent, text, w, h, prominent)
             fadePillTo(0, 0.15)
         end
         txt:SetTextColor(on and 1 or idleColor[1], on and 1 or idleColor[2], on and 1 or idleColor[3])
-    end
-    b:SetScript("OnEnter", function()
+    Perfy_Trace(Perfy_GetTime(), "Leave", "b:SetActive MyCustomFrames/Options.lua:297:4"); end
+    b:SetScript("OnEnter", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:308:27");
         if not b._active then fadePillTo(0.35); txt:SetTextColor(1, 1, 1) end
-    end)
-    b:SetScript("OnLeave", function()
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:308:27"); end)
+    b:SetScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:311:27");
         if not b._active then
             fadePillTo(prominent and idleAlpha or 0, 0.15)
             txt:SetTextColor(idleColor[1], idleColor[2], idleColor[3])
         end
-    end)
-    return b
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:311:27"); end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeListItem MyCustomFrames/Options.lua:254:6"); return b
 end
 
-local function MakeHeader(parent, text, x, y, width)
+local function MakeHeader(parent, text, x, y, width) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeHeader MyCustomFrames/Options.lua:320:6");
     -- Diamante (2026-07-17): rombo de textura solida rotada 45 grados en vez de un
     -- glyph de fuente (evita tofu si la fuente no tiene el caracter), calcando el
     -- iconito que Plumber pone a la izquierda de cada header de seccion.
@@ -346,7 +346,7 @@ local function MakeHeader(parent, text, x, y, width)
     div:SetVertexColor(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.4)
     fs.div = div   -- expuesto para que otros archivos (p.ej. Setup.lua) puedan re-tenirlo
     fs.diamond = diamond
-    return fs
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeHeader MyCustomFrames/Options.lua:320:6"); return fs
 end
 
 -- Lista de bullets (2026-07-17): parrafos largos como texto plano se leen como
@@ -354,7 +354,7 @@ end
 -- el panel de preview: cuadradito + linea, con el ALTO calculado dinamicamente
 -- via GetStringHeight() en vez de offsets fijos adivinados a mano (eso era lo
 -- que dejaba todo apretado/desalineado). Devuelve el Y final para encadenar.
-local function MakeBulletList(parent, lines, x, y, width)
+local function MakeBulletList(parent, lines, x, y, width) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeBulletList MyCustomFrames/Options.lua:357:6");
     local cy = y
     for _, line in ipairs(lines) do
         local dot = parent:CreateTexture(nil, "ARTWORK")
@@ -370,13 +370,13 @@ local function MakeBulletList(parent, lines, x, y, width)
         fs:SetText(line)
         cy = cy - (fs:GetStringHeight() or 14) - 10
     end
-    return cy
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeBulletList MyCustomFrames/Options.lua:357:6"); return cy
 end
 
 -- Checkbox: recuadro + check clasicos de Blizzard (cargan SIEMPRE, los usa Ace3), con el
 -- check y el texto en la paleta de Plumber + highlight de fila en hover. (El asset .png de
 -- Plumber no mostraba la region del checkbox de forma fiable; estos paths son a prueba de balas.)
-local function MakeToggle(parent, label, x, y, getf, setf)
+local function MakeToggle(parent, label, x, y, getf, setf) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeToggle MyCustomFrames/Options.lua:379:6");
     local cb = CreateFrame("Button", nil, parent)
     cb:SetPoint("TOPLEFT", x, y)
     cb:SetSize(210, 24)
@@ -402,24 +402,24 @@ local function MakeToggle(parent, label, x, y, getf, setf)
     lbl:SetText(label)
     cb.label = lbl   -- expuesto para que otros archivos (p.ej. Setup.lua) puedan re-fontear
     cb.box, cb.check = box, check   -- idem: permite reskinear el checkbox (p.ej. Setup.lua)
-    local function refresh() check:SetShown(getf() and true or false) end
-    cb:SetScript("OnEnter", function() hl:Show(); lbl:SetTextColor(1, 1, 1) end)
-    cb:SetScript("OnLeave", function() hl:Hide(); lbl:SetTextColor(COLOR_OPTION[1], COLOR_OPTION[2], COLOR_OPTION[3]) end)
-    cb:SetScript("OnClick", function() setf(not (getf() and true or false)); refresh() end)
+    local function refresh() Perfy_Trace(Perfy_GetTime(), "Enter", "refresh MyCustomFrames/Options.lua:405:10"); check:SetShown(getf() and true or false) Perfy_Trace(Perfy_GetTime(), "Leave", "refresh MyCustomFrames/Options.lua:405:10"); end
+    cb:SetScript("OnEnter", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:406:28"); hl:Show(); lbl:SetTextColor(1, 1, 1) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:406:28"); end)
+    cb:SetScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:407:28"); hl:Hide(); lbl:SetTextColor(COLOR_OPTION[1], COLOR_OPTION[2], COLOR_OPTION[3]) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:407:28"); end)
+    cb:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:408:28"); setf(not (getf() and true or false)); refresh() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:408:28"); end)
     cb.refresh = refresh
     refreshers[#refreshers + 1] = refresh
-    return cb
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeToggle MyCustomFrames/Options.lua:379:6"); return cb
 end
 
-local function MakeCheckbox(parent, label, dbKey, x, y)
-    return MakeToggle(parent, label, x, y,
-        function() return getP()[dbKey] end,
-        function(v) getP()[dbKey] = v; OnEdit() end)
+local function MakeCheckbox(parent, label, dbKey, x, y) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeCheckbox MyCustomFrames/Options.lua:414:6");
+    return Perfy_Trace_Passthrough("Leave", "MakeCheckbox MyCustomFrames/Options.lua:414:6", MakeToggle(parent, label, x, y,
+        function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:416:8"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:416:8", getP()[dbKey]) end,
+        function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:417:8"); getP()[dbKey] = v; OnEdit() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:417:8"); end))
 end
 
 -- getTbl/onChange opcionales: por defecto usa el perfil actual + ApplyCurrent. Para valores
 -- GLOBALES (p.ej. tamaño de grilla) pasar getTbl = function() return ns.GetDB() end.
-local function MakeSlider(parent, label, minV, maxV, step, dbKey, x, y, getTbl, onChange)
+local function MakeSlider(parent, label, minV, maxV, step, dbKey, x, y, getTbl, onChange) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeSlider MyCustomFrames/Options.lua:422:6");
     local get = getTbl or getP
     local edit = onChange or OnEdit
     local s = CreateFrame("Slider", nil, parent)
@@ -448,8 +448,8 @@ local function MakeSlider(parent, label, minV, maxV, step, dbKey, x, y, getTbl, 
     local syncing = false
     local decimals = (step < 1) and 2 or 0
     local fmt = "%." .. decimals .. "f"
-    local function roundStep(v) return math.floor(v / step + 0.5) * step end
-    local function fmtVal(v) return string.format(fmt, v) end
+    local function roundStep(v) Perfy_Trace(Perfy_GetTime(), "Enter", "roundStep MyCustomFrames/Options.lua:451:10"); return Perfy_Trace_Passthrough("Leave", "roundStep MyCustomFrames/Options.lua:451:10", math.floor(v / step + 0.5) * step) end
+    local function fmtVal(v) Perfy_Trace(Perfy_GetTime(), "Enter", "fmtVal MyCustomFrames/Options.lua:452:10"); return Perfy_Trace_Passthrough("Leave", "fmtVal MyCustomFrames/Options.lua:452:10", string.format(fmt, v)) end
 
     local plus = MakeButton(s, "+", 18, 16)
     plus:SetPoint("BOTTOMRIGHT", s, "TOPRIGHT", 0, 2)
@@ -489,55 +489,55 @@ local function MakeSlider(parent, label, minV, maxV, step, dbKey, x, y, getTbl, 
     lbl:SetWidth(128)
     lbl:SetWordWrap(false)
 
-    local function setValue(v)
+    local function setValue(v) Perfy_Trace(Perfy_GetTime(), "Enter", "setValue MyCustomFrames/Options.lua:492:10");
         v = clamp(roundStep(v), minV, maxV)
         get()[dbKey] = v
         syncing = true; s:SetValue(v); syncing = false
         box:SetText(fmtVal(v)); edit()
-    end
-    s:SetScript("OnValueChanged", function(self, value)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "setValue MyCustomFrames/Options.lua:492:10"); end
+    s:SetScript("OnValueChanged", function(self, value) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:498:34");
         value = roundStep(value)
         get()[dbKey] = value
         if not syncing then box:SetText(fmtVal(value)) end
         edit()
-    end)
-    plus:SetScript("OnClick",  function() setValue(get()[dbKey] + step) end)
-    minus:SetScript("OnClick", function() setValue(get()[dbKey] - step) end)
-    box:SetScript("OnEnterPressed", function(self)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:498:34"); end)
+    plus:SetScript("OnClick",  function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:504:31"); setValue(get()[dbKey] + step) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:504:31"); end)
+    minus:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:505:31"); setValue(get()[dbKey] - step) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:505:31"); end)
+    box:SetScript("OnEnterPressed", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:506:36");
         local v = tonumber(self:GetText())
         if v then setValue(v) else self:SetText(fmtVal(get()[dbKey])) end
         self:ClearFocus()
-    end)
-    box:SetScript("OnEscapePressed", function(self)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:506:36"); end)
+    box:SetScript("OnEscapePressed", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:511:37");
         self:SetText(fmtVal(get()[dbKey])); self:ClearFocus()
         if ns.CloseMainPanel then ns.CloseMainPanel() end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:511:37"); end)
 
-    refreshers[#refreshers + 1] = function()
+    refreshers[#refreshers + 1] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "refreshers.? MyCustomFrames/Options.lua:516:34");
         local v = get()[dbKey]
-        if v == nil then return end   -- clave ausente (p.ej. unidad vs portrait): no tocar
+        if v == nil then Perfy_Trace(Perfy_GetTime(), "Leave", "refreshers.? MyCustomFrames/Options.lua:516:34"); return end   -- clave ausente (p.ej. unidad vs portrait): no tocar
         lbl:SetText(label)
         syncing = true; s:SetValue(clamp(v, minV, maxV)); syncing = false
         box:SetText(fmtVal(v))
-    end
-    return s
+    Perfy_Trace(Perfy_GetTime(), "Leave", "refreshers.? MyCustomFrames/Options.lua:516:34"); end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeSlider MyCustomFrames/Options.lua:422:6"); return s
 end
 
-local function MakeCycle(parent, label, values, dbKey, x, y)
+local function MakeCycle(parent, label, values, dbKey, x, y) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeCycle MyCustomFrames/Options.lua:526:6");
     local btn = MakeButton(parent, "", 200, 22)
     btn:SetPoint("TOPLEFT", x, y)
-    local function txt() btn.text:SetText(label .. ": " .. tostring(getP()[dbKey])) end
-    btn:SetScript("OnClick", function()
+    local function txt() Perfy_Trace(Perfy_GetTime(), "Enter", "txt MyCustomFrames/Options.lua:529:10"); btn.text:SetText(label .. ": " .. tostring(getP()[dbKey])) Perfy_Trace(Perfy_GetTime(), "Leave", "txt MyCustomFrames/Options.lua:529:10"); end
+    btn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:530:29");
         local cur, idx = getP()[dbKey], 1
         for i, v in ipairs(values) do if v == cur then idx = i break end end
         getP()[dbKey] = values[(idx % #values) + 1]
         txt(); OnEdit()
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:530:29"); end)
     refreshers[#refreshers + 1] = txt
-    return btn
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeCycle MyCustomFrames/Options.lua:526:6"); return btn
 end
 
-local function MakeEditBox(parent, label, dbKey, x, y, width)
+local function MakeEditBox(parent, label, dbKey, x, y, width) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeEditBox MyCustomFrames/Options.lua:540:6");
     local lbl = parent:CreateFontString(nil, "ARTWORK")
     setFont(lbl, 11)
     lbl:SetPoint("TOPLEFT", x, y)
@@ -547,63 +547,63 @@ local function MakeEditBox(parent, label, dbKey, x, y, width)
     eb:SetSize(width or 200, 20)
     eb:SetPoint("TOPLEFT", x + 4, y - 15)
     eb:SetAutoFocus(false)
-    eb:SetScript("OnEnterPressed", function(self) getP()[dbKey] = self:GetText(); self:ClearFocus(); OnEdit() end)
-    eb:SetScript("OnEscapePressed", function(self)
+    eb:SetScript("OnEnterPressed", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:550:35"); getP()[dbKey] = self:GetText(); self:ClearFocus(); OnEdit() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:550:35"); end)
+    eb:SetScript("OnEscapePressed", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:551:36");
         self:ClearFocus()
         if ns.CloseMainPanel then ns.CloseMainPanel() end
-    end)
-    refreshers[#refreshers + 1] = function() eb:SetText(getP()[dbKey] or "") end
-    return eb
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:551:36"); end)
+    refreshers[#refreshers + 1] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "refreshers.? MyCustomFrames/Options.lua:555:34"); eb:SetText(getP()[dbKey] or "") Perfy_Trace(Perfy_GetTime(), "Leave", "refreshers.? MyCustomFrames/Options.lua:555:34"); end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeEditBox MyCustomFrames/Options.lua:540:6"); return eb
 end
 
-local function MakeColorButton(parent, label, dbKey, x, y)
+local function MakeColorButton(parent, label, dbKey, x, y) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeColorButton MyCustomFrames/Options.lua:559:6");
     local btn = MakeButton(parent, label, 150, 22)
     btn:SetPoint("TOPLEFT", x, y)
     local sw = btn:CreateTexture(nil, "OVERLAY")
     sw:SetSize(14, 14); sw:SetPoint("RIGHT", btn, "RIGHT", -6, 0)
-    local function refreshSw() local c = getP()[dbKey]; if c then sw:SetColorTexture(c.r, c.g, c.b) end end
-    btn:SetScript("OnClick", function()
+    local function refreshSw() Perfy_Trace(Perfy_GetTime(), "Enter", "refreshSw MyCustomFrames/Options.lua:564:10"); local c = getP()[dbKey]; if c then sw:SetColorTexture(c.r, c.g, c.b) end Perfy_Trace(Perfy_GetTime(), "Leave", "refreshSw MyCustomFrames/Options.lua:564:10"); end
+    btn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:565:29");
         local c = getP()[dbKey]
         local r, g, b = c.r, c.g, c.b
-        local function apply()
+        local function apply() Perfy_Trace(Perfy_GetTime(), "Enter", "apply MyCustomFrames/Options.lua:568:14");
             local nr, ng, nb = ColorPickerFrame:GetColorRGB()
             local cc = getP()[dbKey]; cc.r, cc.g, cc.b = nr, ng, nb
             refreshSw(); OnEdit()
-        end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "apply MyCustomFrames/Options.lua:568:14"); end
         ColorPickerFrame:SetupColorPickerAndShow({
             r = r, g = g, b = b, hasOpacity = false, swatchFunc = apply,
-            cancelFunc = function() local cc = getP()[dbKey]; cc.r, cc.g, cc.b = r, g, b; refreshSw(); OnEdit() end,
+            cancelFunc = function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:575:25"); local cc = getP()[dbKey]; cc.r, cc.g, cc.b = r, g, b; refreshSw(); OnEdit() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:575:25"); end,
         })
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:565:29"); end)
     refreshers[#refreshers + 1] = refreshSw
-    return btn
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeColorButton MyCustomFrames/Options.lua:559:6"); return btn
 end
 
 -- Boton de color para una tabla arbitraria (no ligado a getP; para opciones globales).
-local function MakeGlobalColor(parent, label, getTbl, x, y, onChange)
+local function MakeGlobalColor(parent, label, getTbl, x, y, onChange) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeGlobalColor MyCustomFrames/Options.lua:583:6");
     local btn = MakeButton(parent, label, 180, 22); btn:SetPoint("TOPLEFT", x, y)
     local sw = btn:CreateTexture(nil, "OVERLAY")
     sw:SetSize(14, 14); sw:SetPoint("RIGHT", btn, "RIGHT", -6, 0)
-    local function refreshSw() local c = getTbl(); if c then sw:SetColorTexture(c.r, c.g, c.b) end end
-    btn:SetScript("OnClick", function()
-        local c = getTbl(); if not c then return end
+    local function refreshSw() Perfy_Trace(Perfy_GetTime(), "Enter", "refreshSw MyCustomFrames/Options.lua:587:10"); local c = getTbl(); if c then sw:SetColorTexture(c.r, c.g, c.b) end Perfy_Trace(Perfy_GetTime(), "Leave", "refreshSw MyCustomFrames/Options.lua:587:10"); end
+    btn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:588:29");
+        local c = getTbl(); if not c then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:588:29"); return end
         local r, g, b = c.r, c.g, c.b
         ColorPickerFrame:SetupColorPickerAndShow({
             r = r, g = g, b = b, hasOpacity = false,
-            swatchFunc = function() local nr, ng, nb = ColorPickerFrame:GetColorRGB(); c.r, c.g, c.b = nr, ng, nb; refreshSw(); if onChange then onChange() end end,
-            cancelFunc = function() c.r, c.g, c.b = r, g, b; refreshSw(); if onChange then onChange() end end,
+            swatchFunc = function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:593:25"); local nr, ng, nb = ColorPickerFrame:GetColorRGB(); c.r, c.g, c.b = nr, ng, nb; refreshSw(); if onChange then onChange() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:593:25"); end,
+            cancelFunc = function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:594:25"); c.r, c.g, c.b = r, g, b; refreshSw(); if onChange then onChange() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:594:25"); end,
         })
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:588:29"); end)
     refreshers[#refreshers + 1] = refreshSw
-    return btn
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeGlobalColor MyCustomFrames/Options.lua:583:6"); return btn
 end
 
 -- ==========================================================================
 -- SELECTOR DE TEXTURAS (browse + preview; libreria en ns.TEX_LIB / ns.TEX_SKINS)
 -- ==========================================================================
 local texPopup
-local function GetTexPopup()
-    if texPopup then return texPopup end
+local function GetTexPopup() Perfy_Trace(Perfy_GetTime(), "Enter", "GetTexPopup MyCustomFrames/Options.lua:605:6");
+    if texPopup then Perfy_Trace(Perfy_GetTime(), "Leave", "GetTexPopup MyCustomFrames/Options.lua:605:6"); return texPopup end
     local p = CreateFrame("Frame", "MyCF_TexPopup", UIParent)
     p:SetSize(252, 340)
     p:SetFrameStrata("FULLSCREEN_DIALOG")
@@ -618,30 +618,30 @@ local function GetTexPopup()
     local ttl = p:CreateFontString(nil, "OVERLAY"); setFont(ttl, 13)
     ttl:SetPoint("TOPLEFT", 10, -8); ttl:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]); ttl:SetText("Choose texture")
     local close = MakeButton(p, "X", 22, 20); close:SetPoint("TOPRIGHT", -6, -6)
-    close:SetScript("OnClick", function() p:Hide() end)   -- cierra SIN aplicar (cancelar)
+    close:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:621:31"); p:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:621:31"); end)   -- cierra SIN aplicar (cancelar)
     -- Fila de botones fija abajo (Accept/Cancel): el click en una fila ya NO aplica
     -- directo, solo selecciona/marca; hace falta Accept para confirmar.
     local acceptBtn = MakeButton(p, "Accept", 106, 22)
     acceptBtn:SetPoint("BOTTOMLEFT", 8, 8)
-    acceptBtn:SetScript("OnClick", function() if p.applySelected then p.applySelected() end end)
+    acceptBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:626:35"); if p.applySelected then p.applySelected() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:626:35"); end)
     local cancelBtn = MakeButton(p, "Cancel", 106, 22)
     cancelBtn:SetPoint("BOTTOMRIGHT", -8, 8)
-    cancelBtn:SetScript("OnClick", function() p:Hide() end)
+    cancelBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:629:35"); p:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:629:35"); end)
     p.acceptBtn = acceptBtn
     local sf = CreateFrame("ScrollFrame", nil, p)
     sf:SetPoint("TOPLEFT", 8, -34); sf:SetPoint("BOTTOMRIGHT", -8, 38)
     local child = CreateFrame("Frame", nil, sf); child:SetSize(232, 10); sf:SetScrollChild(child)
     sf:EnableMouseWheel(true)
-    sf:SetScript("OnMouseWheel", function(self, d)
+    sf:SetScript("OnMouseWheel", function(self, d) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:635:33");
         local mx = math.max((child:GetHeight() or 0) - (self:GetHeight() or 0), 0)
         self:SetVerticalScroll(math.min(math.max(self:GetVerticalScroll() - d * 30, 0), mx))
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:635:33"); end)
     p.child, p.pool = child, {}
     texPopup = p
-    return p
+    Perfy_Trace(Perfy_GetTime(), "Leave", "GetTexPopup MyCustomFrames/Options.lua:605:6"); return p
 end
 
-local function AcquireTexRow(p, i)
+local function AcquireTexRow(p, i) Perfy_Trace(Perfy_GetTime(), "Enter", "AcquireTexRow MyCustomFrames/Options.lua:644:6");
     local r = p.pool[i]
     if not r then
         r = CreateFrame("Button", nil, p.child)
@@ -660,20 +660,20 @@ local function AcquireTexRow(p, i)
         r.sel = sel
         p.pool[i] = r
     end
-    return r
+    Perfy_Trace(Perfy_GetTime(), "Leave", "AcquireTexRow MyCustomFrames/Options.lua:644:6"); return r
 end
 
-local function OpenTexPopup(category, dbKey, anchor, getTbl, onChange)
+local function OpenTexPopup(category, dbKey, anchor, getTbl, onChange) Perfy_Trace(Perfy_GetTime(), "Enter", "OpenTexPopup MyCustomFrames/Options.lua:666:6");
     local get = getTbl or getP
     local edit = onChange or OnEdit
     local p = GetTexPopup()
     local files = (ns.TEX_LIB and ns.TEX_LIB[category]) or {}
     local currentPath = get()[dbKey]
     p.selectedRow, p.selectedPath = nil, nil
-    p.applySelected = function()
+    p.applySelected = function() Perfy_Trace(Perfy_GetTime(), "Enter", "p.applySelected MyCustomFrames/Options.lua:673:22");
         if p.selectedPath then get()[dbKey] = p.selectedPath; edit(); RefreshControls() end
         p:Hide()
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "p.applySelected MyCustomFrames/Options.lua:673:22"); end
     local i, y = 0, -2
     for _, skin in ipairs(ns.TEX_SKINS or {}) do
         if #files > 0 then
@@ -690,11 +690,11 @@ local function OpenTexPopup(category, dbKey, anchor, getTbl, onChange)
                 r:SetPoint("TOPLEFT", 0, y); r:Enable()
                 r.sel:SetShown(path == currentPath)   -- preselecciona la textura actual
                 if path == currentPath then p.selectedRow, p.selectedPath = r, path end
-                r:SetScript("OnClick", function()
+                r:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:693:39");
                     if p.selectedRow then p.selectedRow.sel:Hide() end
                     p.selectedRow, p.selectedPath = r, path
                     r.sel:Show()
-                end)
+                Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:693:39"); end)
                 r:Show(); y = y - 24
             end
         end
@@ -703,23 +703,23 @@ local function OpenTexPopup(category, dbKey, anchor, getTbl, onChange)
     p.child:SetHeight(math.max(-y + 4, 10))
     p:ClearAllPoints(); p:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT", 30, -2)
     p:Show(); p:Raise()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "OpenTexPopup MyCustomFrames/Options.lua:666:6"); end
 
 -- Editbox (ruta manual, reskin flat) + boton "..." que abre el selector.
 -- (2026-07-17: sacada la swatch de preview al lado, el usuario no la necesita
 -- — solo el editbox + el boton para abrir el selector.)
-local function MakeTexturePicker(parent, label, dbKey, category, x, y, getTbl, onChange)
+local function MakeTexturePicker(parent, label, dbKey, category, x, y, getTbl, onChange) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeTexturePicker MyCustomFrames/Options.lua:711:6");
     local get = getTbl or getP
     local edit = onChange or OnEdit
     local lbl = parent:CreateFontString(nil, "ARTWORK"); setFont(lbl, 11)
     lbl:SetPoint("TOPLEFT", x, y); lbl:SetTextColor(COLOR_OPTION[1], COLOR_OPTION[2], COLOR_OPTION[3]); lbl:SetText(label)
     local eb = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
     eb:SetSize(138, 20); eb:SetPoint("TOPLEFT", x + 4, y - 15); eb:SetAutoFocus(false)
-    eb:SetScript("OnEnterPressed", function(self) get()[dbKey] = self:GetText(); self:ClearFocus(); edit() end)
-    eb:SetScript("OnEscapePressed", function(self)
+    eb:SetScript("OnEnterPressed", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:718:35"); get()[dbKey] = self:GetText(); self:ClearFocus(); edit() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:718:35"); end)
+    eb:SetScript("OnEscapePressed", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:719:36");
         self:ClearFocus()
         if ns.CloseMainPanel then ns.CloseMainPanel() end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:719:36"); end)
     -- Reskin FLAT (mismo lenguaje visual que MakeSlider): oculta el arte azul
     -- default de InputBoxTemplate y dibuja fondo plano + lineas finas.
     if eb.Left then eb.Left:SetAlpha(0) end
@@ -741,20 +741,20 @@ local function MakeTexturePicker(parent, label, dbKey, category, x, y, getTbl, o
     ebBot:SetHeight(1)
 
     local pick = MakeButton(parent, "...", 24, 20); pick:SetPoint("LEFT", eb, "RIGHT", 10, 0)
-    pick:SetScript("OnClick", function() OpenTexPopup(category, dbKey, pick, getTbl, onChange) end)
-    refreshers[#refreshers + 1] = function()
+    pick:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:744:30"); OpenTexPopup(category, dbKey, pick, getTbl, onChange) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:744:30"); end)
+    refreshers[#refreshers + 1] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "refreshers.? MyCustomFrames/Options.lua:745:34");
         local v = get()[dbKey]
         eb:SetText(v or "")
-    end
-    return eb
+    Perfy_Trace(Perfy_GetTime(), "Leave", "refreshers.? MyCustomFrames/Options.lua:745:34"); end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeTexturePicker MyCustomFrames/Options.lua:711:6"); return eb
 end
 
 -- ==========================================================================
 -- POPUP EXPORTAR / IMPORTAR (editbox multilinea copiable)
 -- ==========================================================================
 local ioPopup
-local function GetIOPopup()
-    if ioPopup then return ioPopup end
+local function GetIOPopup() Perfy_Trace(Perfy_GetTime(), "Enter", "GetIOPopup MyCustomFrames/Options.lua:756:6");
+    if ioPopup then Perfy_Trace(Perfy_GetTime(), "Leave", "GetIOPopup MyCustomFrames/Options.lua:756:6"); return ioPopup end
     local p = CreateFrame("Frame", "MyCF_IOPopup", UIParent)
     p:SetSize(440, 300); p:SetFrameStrata("FULLSCREEN_DIALOG"); p:EnableMouse(true); p:Hide()
     tinsert(UISpecialFrames, "MyCF_IOPopup")   -- mismo motivo que MyCF_TexPopup
@@ -764,7 +764,7 @@ local function GetIOPopup()
     local ttl = p:CreateFontString(nil, "OVERLAY"); setFont(ttl, 14)
     ttl:SetPoint("TOPLEFT", 12, -10); ttl:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]); p.ttl = ttl
     local close = MakeButton(p, "X", 22, 20); close:SetPoint("TOPRIGHT", -6, -6)
-    close:SetScript("OnClick", function() p:Hide() end)
+    close:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:767:31"); p:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:767:31"); end)
 
     local box = CreateFrame("Frame", nil, p)
     box:SetPoint("TOPLEFT", 12, -36); box:SetPoint("BOTTOMRIGHT", -12, 40)
@@ -781,29 +781,29 @@ local function GetIOPopup()
     -- lo que el usuario copiaba ya venia cortado (Lua invalido al
     -- reimportar). 0 = sin limite.
     eb:SetMaxLetters(0); eb:SetWidth(400)
-    eb:SetScript("OnEscapePressed", function(self) self:ClearFocus(); p:Hide() end)
+    eb:SetScript("OnEscapePressed", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:784:36"); self:ClearFocus(); p:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:784:36"); end)
     sf:SetScrollChild(eb)
     sf:EnableMouseWheel(true)
-    sf:SetScript("OnMouseWheel", function(self, d)
+    sf:SetScript("OnMouseWheel", function(self, d) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:787:33");
         local mx = math.max((eb:GetHeight() or 0) - (self:GetHeight() or 0), 0)
         self:SetVerticalScroll(math.min(math.max(self:GetVerticalScroll() - d * 30, 0), mx))
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:787:33"); end)
     -- Clic en cualquier parte de la caja = enfocar el editbox (si esta vacio es diminuto
     -- y no se puede clicar para pegar). Sin esto Ctrl+V no tiene donde ir.
     box:EnableMouse(true)
-    box:SetScript("OnMouseDown", function() eb:SetFocus() end)
+    box:SetScript("OnMouseDown", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:794:33"); eb:SetFocus() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:794:33"); end)
     sf:EnableMouse(true)
-    sf:SetScript("OnMouseDown", function() eb:SetFocus() end)
+    sf:SetScript("OnMouseDown", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:796:32"); eb:SetFocus() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:796:32"); end)
     p.eb = eb
 
     local action = MakeButton(p, "Import", 110, 24); action:SetPoint("BOTTOMRIGHT", -12, 10); p.action = action
     local hint = p:CreateFontString(nil, "ARTWORK"); setFont(hint, 10)
     hint:SetPoint("BOTTOMLEFT", 12, 16); hint:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3]); p.hint = hint
     ioPopup = p
-    return p
+    Perfy_Trace(Perfy_GetTime(), "Leave", "GetIOPopup MyCustomFrames/Options.lua:756:6"); return p
 end
 
-local function ShowExport(name)
+local function ShowExport(name) Perfy_Trace(Perfy_GetTime(), "Enter", "ShowExport MyCustomFrames/Options.lua:806:6");
     local p = GetIOPopup()
     p.ttl:SetText("Export profile")
     p.hint:SetText("Ctrl+C to copy (already selected).")
@@ -811,22 +811,22 @@ local function ShowExport(name)
     p.action:Hide()
     p:ClearAllPoints(); p:SetPoint("CENTER"); p:Show()
     p.eb:SetFocus(); p.eb:HighlightText()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ShowExport MyCustomFrames/Options.lua:806:6"); end
 
-local function ShowImport(onDone)
+local function ShowImport(onDone) Perfy_Trace(Perfy_GetTime(), "Enter", "ShowImport MyCustomFrames/Options.lua:816:6");
     local p = GetIOPopup()
     p.ttl:SetText("Import profile")
     p.hint:SetText("Paste the code and press Import.")
     p.eb:SetText("")
     p.action:Show()
-    p.action:SetScript("OnClick", function()
+    p.action:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:822:34");
         local ok, res = ns.ImportPreset(p.eb:GetText())
         if ok then p:Hide(); if onDone then onDone(res) end
         else p.hint:SetText("|cffff5555Error: " .. tostring(res) .. "|r") end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:822:34"); end)
     p:ClearAllPoints(); p:SetPoint("CENTER"); p:Show()
     p.eb:SetFocus()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ShowImport MyCustomFrames/Options.lua:816:6"); end
 
 -- ==========================================================================
 -- PANEL
@@ -886,9 +886,9 @@ tinsert(UISpecialFrames, "MyCF_ControlCenter")   -- permite cerrar con ESC
 -- realmente ejecuta: si se llega a abrir el menu de Blizzard mientras
 -- nuestro panel sigue abierto, se cierra al toque.
 if ToggleGameMenu then
-    hooksecurefunc("ToggleGameMenu", function()
+    hooksecurefunc("ToggleGameMenu", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:889:37");
         if panel:IsShown() then panel:Hide() end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:889:37"); end)
 end
 
 -- Borde (2026-07-17, intento 2): Background_complete1.tga — version nueva del
@@ -907,14 +907,14 @@ borderTex:SetPoint("BOTTOMRIGHT", 44, -41)
 -- down; los widgets interactivos (botones, sliders, editboxes, tabs) viven en
 -- frames propios con su propio mouse habilitado, asi que capturan el click
 -- ANTES de que llegue a `panel` — solo el fondo/espacios vacios arrastran.
-panel:SetScript("OnMouseDown", function(self, btn)
+panel:SetScript("OnMouseDown", function(self, btn) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:910:31");
     if btn == "LeftButton" and not self.isMoving then self.isMoving = true; self:StartMoving() end
-end)
-local function PanelFinishMove(self)
-    if not self.isMoving then return end
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:910:31"); end)
+local function PanelFinishMove(self) Perfy_Trace(Perfy_GetTime(), "Enter", "PanelFinishMove MyCustomFrames/Options.lua:913:6");
+    if not self.isMoving then Perfy_Trace(Perfy_GetTime(), "Leave", "PanelFinishMove MyCustomFrames/Options.lua:913:6"); return end
     self.isMoving = false
     self:StopMovingOrSizing()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "PanelFinishMove MyCustomFrames/Options.lua:913:6"); end
 panel:SetScript("OnMouseUp", PanelFinishMove)
 -- Red de seguridad (2026-07-18): si el boton se suelta fuera del panel (p.ej.
 -- sobre el boton de cerrar, que captura el click antes de llegar a `panel`),
@@ -924,14 +924,14 @@ panel:SetScript("OnMouseUp", PanelFinishMove)
 -- ni bien se suelta, sin depender de que el evento llegue a este frame.
 local moveWatcher = CreateFrame("Frame")
 moveWatcher:Hide()
-moveWatcher:SetScript("OnUpdate", function()
+moveWatcher:SetScript("OnUpdate", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:927:34");
     if panel.isMoving and not IsMouseButtonDown("LeftButton") then PanelFinishMove(panel) end
     if not panel.isMoving then moveWatcher:Hide() end
-end)
-panel:HookScript("OnMouseDown", function() if panel.isMoving then moveWatcher:Show() end end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:927:34"); end)
+panel:HookScript("OnMouseDown", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:931:32"); if panel.isMoving then moveWatcher:Show() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:931:32"); end)
 -- Si el panel se oculta (ESC, boton de cerrar, toggle rapido) mientras se
 -- estaba arrastrando, forzar el corte del movimiento tambien aca.
-panel:HookScript("OnHide", function(self)
+panel:HookScript("OnHide", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:934:27");
     PanelFinishMove(self)
     -- A pedido del usuario: cerrar el menu cancela el modo Lock/edicion.
     if ns.IsUnlocked and ns.IsUnlocked() and ns.SetUnlocked then ns.SetUnlocked(false) end
@@ -940,10 +940,10 @@ panel:HookScript("OnHide", function(self)
     -- se cierran solos con ESC, pero por si el panel se oculta por otra via).
     if texPopup then texPopup:Hide() end
     if ioPopup then ioPopup:Hide() end
-end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:934:27"); end)
 
-ns.OpenControlCenter = function() panel:Show() end
-ns.ToggleControlCenter = function() if panel:IsShown() then panel:Hide() else panel:Show() end end
+ns.OpenControlCenter = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.OpenControlCenter MyCustomFrames/Options.lua:945:23"); panel:Show() Perfy_Trace(Perfy_GetTime(), "Leave", "ns.OpenControlCenter MyCustomFrames/Options.lua:945:23"); end
+ns.ToggleControlCenter = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ToggleControlCenter MyCustomFrames/Options.lua:946:25"); if panel:IsShown() then panel:Hide() else panel:Show() end Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ToggleControlCenter MyCustomFrames/Options.lua:946:25"); end
 -- 2026-07-18: el motivo real de "ESC no cierra el panel" (confirmado con
 -- /mcfpaneldiag: panel quedaba shown=true despues de ESC) es un comportamiento
 -- NATIVO de EditBox -- si CUALQUIERA de los editbox del panel (sliders con
@@ -952,13 +952,13 @@ ns.ToggleControlCenter = function() if panel:IsShown() then panel:Hide() else pa
 -- un SEGUNDO ESC para cerrar el panel. Los OnEscapePressed de esos editbox
 -- ahora llaman esto ademas de ClearFocus(), para que UN solo ESC alcance
 -- siempre, tenga foco un editbox o no.
-ns.CloseMainPanel = function() panel:Hide() end
+ns.CloseMainPanel = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.CloseMainPanel MyCustomFrames/Options.lua:955:20"); panel:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "ns.CloseMainPanel MyCustomFrames/Options.lua:955:20"); end
 
 -- Diagnostico 2026-07-18: correr esto PARADO SOBRE la zona muerta, ANTES de
 -- clickear nada mas (el click en el boton del minimapa "libera" la zona, asi
 -- que hay que capturar el estado mientras sigue trabada).
 SLASH_MCFPANELDIAG1 = "/mcfpaneldiag"
-SlashCmdList["MCFPANELDIAG"] = function()
+SlashCmdList["MCFPANELDIAG"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFPANELDIAG MyCustomFrames/Options.lua:961:31");
     print(("|cff00ff00[MCF diag]|r panel: shown=%s mouse=%s alpha=%.2f isMoving=%s strata=%s point=%s"):format(
         tostring(panel:IsShown()), tostring(panel:IsMouseEnabled()), panel:GetAlpha() or -1,
         tostring(panel.isMoving), panel:GetFrameStrata(), tostring(select(1, panel:GetPoint()))))
@@ -969,7 +969,7 @@ SlashCmdList["MCFPANELDIAG"] = function()
     x, y = x / scale, y / scale
     local f = GetMouseFocus and GetMouseFocus()
     print(("  cursor=(%.0f,%.0f) mouseFocus=%s"):format(x, y, f and (f:GetName() or "<anon>") or "nil"))
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFPANELDIAG MyCustomFrames/Options.lua:961:31"); end
 
 local sections = {}          -- key -> frame
 local sectionTabs = {}       -- key -> button
@@ -1017,9 +1017,9 @@ local GLOBAL_SECTION_TITLE = { presets = "Profile", explorer = "Explorer", editi
 -- siempre los cubre. Solo cuenta lo VISIBLE: varias secciones ocultan widgets
 -- segun la unidad (power/color), y contarlos inflaria el scroll con espacio
 -- vacio.
-local function MeasureSectionBottom(obj, lowest, depth)
-    if depth > 3 then return lowest end
-    local okKids, kids = pcall(function() return { obj:GetChildren() } end)
+local function MeasureSectionBottom(obj, lowest, depth) Perfy_Trace(Perfy_GetTime(), "Enter", "MeasureSectionBottom MyCustomFrames/Options.lua:1020:6");
+    if depth > 3 then Perfy_Trace(Perfy_GetTime(), "Leave", "MeasureSectionBottom MyCustomFrames/Options.lua:1020:6"); return lowest end
+    local okKids, kids = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1022:31"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1022:31", { obj:GetChildren() }) end)
     if okKids then
         for _, c in ipairs(kids) do
             if c.IsShown and c:IsShown() then
@@ -1029,7 +1029,7 @@ local function MeasureSectionBottom(obj, lowest, depth)
             end
         end
     end
-    local okRegs, regs = pcall(function() return { obj:GetRegions() } end)
+    local okRegs, regs = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1032:31"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1032:31", { obj:GetRegions() }) end)
     if okRegs then
         for _, r in ipairs(regs) do
             if r.IsShown and r:IsShown() and r.GetBottom then
@@ -1038,19 +1038,19 @@ local function MeasureSectionBottom(obj, lowest, depth)
             end
         end
     end
-    return lowest
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MeasureSectionBottom MyCustomFrames/Options.lua:1020:6"); return lowest
 end
 
 -- Redimensiona el child del scroll al alto de la seccion visible y muestra u
 -- oculta la barrita. Llega a secScroll/secArea por GetParent() en vez de por un
 -- local de archivo: BuildPanel ya rozo el limite de 60 upvalues de Lua.
-local function UpdateSectionScroll(f)
-    if not f then return end
+local function UpdateSectionScroll(f) Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateSectionScroll MyCustomFrames/Options.lua:1047:6");
+    if not f then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateSectionScroll MyCustomFrames/Options.lua:1047:6"); return end
     local area = f:GetParent()
     local scroll = area and area:GetParent()
-    if not (area and scroll and scroll.SetVerticalScroll) then return end
+    if not (area and scroll and scroll.SetVerticalScroll) then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateSectionScroll MyCustomFrames/Options.lua:1047:6"); return end
     local viewH = scroll:GetHeight() or 0
-    if viewH <= 0 then return end
+    if viewH <= 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateSectionScroll MyCustomFrames/Options.lua:1047:6"); return end
     local top = f:GetTop()
     local contentH = viewH
     if top then
@@ -1062,20 +1062,20 @@ local function UpdateSectionScroll(f)
     scroll:SetVerticalScroll(0)
 
     local track, thumb = scroll.mcfTrack, scroll.mcfThumb
-    if not (track and thumb) then return end
+    if not (track and thumb) then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateSectionScroll MyCustomFrames/Options.lua:1047:6"); return end
     local maxScroll = contentH - viewH
     if maxScroll <= 0 then
         track:Hide()
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateSectionScroll MyCustomFrames/Options.lua:1047:6"); return
     end
     track:Show()
     -- Alto del thumb proporcional a cuanto del contenido se ve (minimo 24px para
     -- que siga siendo agarrable en secciones muy largas).
     thumb:SetHeight(math.max(viewH * (viewH / contentH), 24))
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateSectionScroll MyCustomFrames/Options.lua:1047:6"); end
 
-local function ShowSection(key)
-    if not sections[key] then return end
+local function ShowSection(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ShowSection MyCustomFrames/Options.lua:1077:6");
+    if not sections[key] then Perfy_Trace(Perfy_GetTime(), "Leave", "ShowSection MyCustomFrames/Options.lua:1077:6"); return end
     currentSection = key
     for k, f in pairs(sections) do f:SetShown(k == key) end
     if GLOBAL_SECTION_TITLE[key] then
@@ -1115,39 +1115,39 @@ local function ShowSection(key)
         f:SetAlpha(0)
         UIFrameFadeIn(f, 0.15, 0, 1)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ShowSection MyCustomFrames/Options.lua:1077:6"); end
 
-local function IsPortraitSection(k) return k:sub(1, 2) == "p_" end
-local function IsAuraSection(k) return k:sub(1, 2) == "a_" end
-local function IsInfoSection(k) return k:sub(1, 2) == "i_" end
-local function IsMicroSection(k) return k:sub(1, 3) == "mm_" end
-local function IsChatSection(k) return k:sub(1, 3) == "cb_" end
-local function IsTrackerSection(k) return k:sub(1, 2) == "t_" end
-local function IsGlowSection(k) return k:sub(1, 2) == "g_" end
-local function IsPartyAuraSection(k) return k:sub(1, 3) == "ap_" end
-local function IsArenaAuraSection(k) return k:sub(1, 3) == "aa_" end
-local function IsFocusAuraSection(k) return k:sub(1, 3) == "af_" end
+local function IsPortraitSection(k) Perfy_Trace(Perfy_GetTime(), "Enter", "IsPortraitSection MyCustomFrames/Options.lua:1120:6"); return Perfy_Trace_Passthrough("Leave", "IsPortraitSection MyCustomFrames/Options.lua:1120:6", k:sub(1, 2) == "p_") end
+local function IsAuraSection(k) Perfy_Trace(Perfy_GetTime(), "Enter", "IsAuraSection MyCustomFrames/Options.lua:1121:6"); return Perfy_Trace_Passthrough("Leave", "IsAuraSection MyCustomFrames/Options.lua:1121:6", k:sub(1, 2) == "a_") end
+local function IsInfoSection(k) Perfy_Trace(Perfy_GetTime(), "Enter", "IsInfoSection MyCustomFrames/Options.lua:1122:6"); return Perfy_Trace_Passthrough("Leave", "IsInfoSection MyCustomFrames/Options.lua:1122:6", k:sub(1, 2) == "i_") end
+local function IsMicroSection(k) Perfy_Trace(Perfy_GetTime(), "Enter", "IsMicroSection MyCustomFrames/Options.lua:1123:6"); return Perfy_Trace_Passthrough("Leave", "IsMicroSection MyCustomFrames/Options.lua:1123:6", k:sub(1, 3) == "mm_") end
+local function IsChatSection(k) Perfy_Trace(Perfy_GetTime(), "Enter", "IsChatSection MyCustomFrames/Options.lua:1124:6"); return Perfy_Trace_Passthrough("Leave", "IsChatSection MyCustomFrames/Options.lua:1124:6", k:sub(1, 3) == "cb_") end
+local function IsTrackerSection(k) Perfy_Trace(Perfy_GetTime(), "Enter", "IsTrackerSection MyCustomFrames/Options.lua:1125:6"); return Perfy_Trace_Passthrough("Leave", "IsTrackerSection MyCustomFrames/Options.lua:1125:6", k:sub(1, 2) == "t_") end
+local function IsGlowSection(k) Perfy_Trace(Perfy_GetTime(), "Enter", "IsGlowSection MyCustomFrames/Options.lua:1126:6"); return Perfy_Trace_Passthrough("Leave", "IsGlowSection MyCustomFrames/Options.lua:1126:6", k:sub(1, 2) == "g_") end
+local function IsPartyAuraSection(k) Perfy_Trace(Perfy_GetTime(), "Enter", "IsPartyAuraSection MyCustomFrames/Options.lua:1127:6"); return Perfy_Trace_Passthrough("Leave", "IsPartyAuraSection MyCustomFrames/Options.lua:1127:6", k:sub(1, 3) == "ap_") end
+local function IsArenaAuraSection(k) Perfy_Trace(Perfy_GetTime(), "Enter", "IsArenaAuraSection MyCustomFrames/Options.lua:1128:6"); return Perfy_Trace_Passthrough("Leave", "IsArenaAuraSection MyCustomFrames/Options.lua:1128:6", k:sub(1, 3) == "aa_") end
+local function IsFocusAuraSection(k) Perfy_Trace(Perfy_GetTime(), "Enter", "IsFocusAuraSection MyCustomFrames/Options.lua:1129:6"); return Perfy_Trace_Passthrough("Leave", "IsFocusAuraSection MyCustomFrames/Options.lua:1129:6", k:sub(1, 3) == "af_") end
 -- Player/Target Aura: SIN function propia a proposito (2026-07-27) -- sumar
 -- estas 2 empujo a BuildPanel de "justo bajo" a "justo sobre" el limite de
 -- Lua de 60 upvalues por funcion (LUA_WARNING real, reportado por el
 -- usuario). Se chequea el prefijo EN LINEA en sus pocos usos (abajo) en vez
 -- de agregar 2 upvalues mas -- los otros 12 Is*Section ya existian antes de
 -- hoy y no se tocan.
-local function IsMinimapSection(k) return k:sub(1, 3) == "mn_" end
-local function IsNameplatesSection(k) return k:sub(1, 3) == "np_" end
-local function IsClassPowerSection(k) return k:sub(1, 3) == "cp_" end
-local function IsRaidSection(k) return k:sub(1, 2) == "r_" end
+local function IsMinimapSection(k) Perfy_Trace(Perfy_GetTime(), "Enter", "IsMinimapSection MyCustomFrames/Options.lua:1136:6"); return Perfy_Trace_Passthrough("Leave", "IsMinimapSection MyCustomFrames/Options.lua:1136:6", k:sub(1, 3) == "mn_") end
+local function IsNameplatesSection(k) Perfy_Trace(Perfy_GetTime(), "Enter", "IsNameplatesSection MyCustomFrames/Options.lua:1137:6"); return Perfy_Trace_Passthrough("Leave", "IsNameplatesSection MyCustomFrames/Options.lua:1137:6", k:sub(1, 3) == "np_") end
+local function IsClassPowerSection(k) Perfy_Trace(Perfy_GetTime(), "Enter", "IsClassPowerSection MyCustomFrames/Options.lua:1138:6"); return Perfy_Trace_Passthrough("Leave", "IsClassPowerSection MyCustomFrames/Options.lua:1138:6", k:sub(1, 3) == "cp_") end
+local function IsRaidSection(k) Perfy_Trace(Perfy_GetTime(), "Enter", "IsRaidSection MyCustomFrames/Options.lua:1139:6"); return Perfy_Trace_Passthrough("Leave", "IsRaidSection MyCustomFrames/Options.lua:1139:6", k:sub(1, 2) == "r_") end
 
 -- p_rest / p_badges dependen de features del portrait; el resto siempre aplican.
-local function PortraitSectionAllowed(k, feats)
-    if k == "p_rest"   then return feats.rest and true or false end
-    if k == "p_badges" then return (feats.faction or feats.combat) and true or false end
-    if k == "p_raid"   then return feats.raidTarget and true or false end
-    if k == "p_role"   then return (feats.roleLeader or feats.leader) and true or false end
-    return true
+local function PortraitSectionAllowed(k, feats) Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitSectionAllowed MyCustomFrames/Options.lua:1142:6");
+    if k == "p_rest"   then return Perfy_Trace_Passthrough("Leave", "PortraitSectionAllowed MyCustomFrames/Options.lua:1142:6", feats.rest and true or false) end
+    if k == "p_badges" then return Perfy_Trace_Passthrough("Leave", "PortraitSectionAllowed MyCustomFrames/Options.lua:1142:6", (feats.faction or feats.combat) and true or false) end
+    if k == "p_raid"   then return Perfy_Trace_Passthrough("Leave", "PortraitSectionAllowed MyCustomFrames/Options.lua:1142:6", feats.raidTarget and true or false) end
+    if k == "p_role"   then return Perfy_Trace_Passthrough("Leave", "PortraitSectionAllowed MyCustomFrames/Options.lua:1142:6", (feats.roleLeader or feats.leader) and true or false) end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitSectionAllowed MyCustomFrames/Options.lua:1142:6"); return true
 end
 
-local function SelectUnit(key)
+local function SelectUnit(key) Perfy_Trace(Perfy_GetTime(), "Enter", "SelectUnit MyCustomFrames/Options.lua:1150:6");
     ns.currentEdit = key
     for k, b in pairs(unitTabs) do b:SetActive(k == key) end
     RefreshControls()
@@ -1181,91 +1181,91 @@ local function SelectUnit(key)
     if isInfo then
         for k, b in pairs(sectionTabs) do b:SetShown(IsInfoSection(k)) end
         if not IsInfoSection(currentSection) then ShowSection("i_general") end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SelectUnit MyCustomFrames/Options.lua:1150:6"); return
     end
 
     if isMicro then
         for k, b in pairs(sectionTabs) do b:SetShown(IsMicroSection(k)) end
         if not IsMicroSection(currentSection) then ShowSection("mm_general") end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SelectUnit MyCustomFrames/Options.lua:1150:6"); return
     end
 
     if isChat then
         for k, b in pairs(sectionTabs) do b:SetShown(IsChatSection(k)) end
         if not IsChatSection(currentSection) then ShowSection("cb_general") end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SelectUnit MyCustomFrames/Options.lua:1150:6"); return
     end
 
     if isTracker then
         for k, b in pairs(sectionTabs) do b:SetShown(IsTrackerSection(k)) end
         if not IsTrackerSection(currentSection) then ShowSection("t_general") end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SelectUnit MyCustomFrames/Options.lua:1150:6"); return
     end
 
     if isGlow then
         for k, b in pairs(sectionTabs) do b:SetShown(IsGlowSection(k)) end
         if not IsGlowSection(currentSection) then ShowSection("g_general") end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SelectUnit MyCustomFrames/Options.lua:1150:6"); return
     end
 
     if isMinimap then
         for k, b in pairs(sectionTabs) do b:SetShown(IsMinimapSection(k)) end
         if not IsMinimapSection(currentSection) then ShowSection("mn_general") end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SelectUnit MyCustomFrames/Options.lua:1150:6"); return
     end
 
     if isNameplates then
         for k, b in pairs(sectionTabs) do b:SetShown(IsNameplatesSection(k)) end
         if not IsNameplatesSection(currentSection) then ShowSection("np_general") end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SelectUnit MyCustomFrames/Options.lua:1150:6"); return
     end
 
     if isRaid then
         for k, b in pairs(sectionTabs) do b:SetShown(IsRaidSection(k)) end
         if not IsRaidSection(currentSection) then ShowSection("r_general") end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SelectUnit MyCustomFrames/Options.lua:1150:6"); return
     end
 
     local isPartyAura = ns.IsPartyAura and ns.IsPartyAura(key)
     if isPartyAura then
         for k, b in pairs(sectionTabs) do b:SetShown(IsPartyAuraSection(k)) end
         if not IsPartyAuraSection(currentSection) then ShowSection("ap_general") end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SelectUnit MyCustomFrames/Options.lua:1150:6"); return
     end
 
     local isArenaAura = ns.IsArenaAura and ns.IsArenaAura(key)
     if isArenaAura then
         for k, b in pairs(sectionTabs) do b:SetShown(IsArenaAuraSection(k)) end
         if not IsArenaAuraSection(currentSection) then ShowSection("aa_general") end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SelectUnit MyCustomFrames/Options.lua:1150:6"); return
     end
 
     local isFocusAura = ns.IsFocusAura and ns.IsFocusAura(key)
     if isFocusAura then
         for k, b in pairs(sectionTabs) do b:SetShown(IsFocusAuraSection(k)) end
         if not IsFocusAuraSection(currentSection) then ShowSection("af_general") end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SelectUnit MyCustomFrames/Options.lua:1150:6"); return
     end
 
     local isPlayerAura = ns.IsPlayerAura and ns.IsPlayerAura(key)
     if isPlayerAura then
         for k, b in pairs(sectionTabs) do b:SetShown(k:sub(1, 3) == "pa_") end
         if currentSection:sub(1, 3) ~= "pa_" then ShowSection("pa_general") end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SelectUnit MyCustomFrames/Options.lua:1150:6"); return
     end
 
     local isTargetAura = ns.IsTargetAura and ns.IsTargetAura(key)
     if isTargetAura then
         for k, b in pairs(sectionTabs) do b:SetShown(k:sub(1, 3) == "ta_") end
         if currentSection:sub(1, 3) ~= "ta_" then ShowSection("ta_general") end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SelectUnit MyCustomFrames/Options.lua:1150:6"); return
     end
 
     local isClassPower = ns.IsClassPower and ns.IsClassPower(key)
     if isClassPower then
         for k, b in pairs(sectionTabs) do b:SetShown(IsClassPowerSection(k)) end
         if not IsClassPowerSection(currentSection) then ShowSection("cp_general") end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SelectUnit MyCustomFrames/Options.lua:1150:6"); return
     end
 
     if isAura then
@@ -1278,7 +1278,7 @@ local function SelectUnit(key)
         for _, w in ipairs(VIS.auraDualBoxes) do w:SetShown(dual and true or false) end
         local okSec = IsAuraSection(currentSection) and (currentSection ~= "a_dead" or dual)
         if not okSec then ShowSection("a_general") end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SelectUnit MyCustomFrames/Options.lua:1150:6"); return
     end
 
     if isPortrait then
@@ -1294,7 +1294,7 @@ local function SelectUnit(key)
         local okSection = IsPortraitSection(currentSection)
             and PortraitSectionAllowed(currentSection, feats)
         if not okSection then ShowSection("p_general") end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SelectUnit MyCustomFrames/Options.lua:1150:6"); return
     end
 
     -- Unidad normal.
@@ -1327,7 +1327,7 @@ local function SelectUnit(key)
        or ((currentSection == "cast" or currentSection == "highlight") and isPower) then
         ShowSection("general")
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SelectUnit MyCustomFrames/Options.lua:1150:6"); end
 
 -- ---- Construccion -------------------------------------------------------
 local UNIT_GROUPS = {
@@ -1367,7 +1367,7 @@ local UNIT_GROUPS = {
 
 
 local built = false
-local function BuildPanel()
+local function BuildPanel() Perfy_Trace(Perfy_GetTime(), "Enter", "BuildPanel MyCustomFrames/Options.lua:1370:6");
     -- Fondo.
     -- 2026-07-17 (ronda 2): el usuario sigue viendolo muy oscuro — ademas del
     -- velo negro de aca, sidebar (sbBg) y preview (pvBg) suman SUS PROPIOS
@@ -1390,7 +1390,7 @@ local function BuildPanel()
     -- vivian aparte en esta fila, ahora son items de lista igual que las unidades).
     local closeBtn = MakeTabButton(panel, "Close", 70)
     closeBtn:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -62, -7)
-    closeBtn:SetScript("OnClick", function() panel:Hide() end)
+    closeBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1393:34"); panel:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1393:34"); end)
     panelButtons[#panelButtons + 1] = closeBtn
 
     -- Escala de la VENTANA del menu (no confundir con "scale" de las unidades,
@@ -1402,8 +1402,8 @@ local function BuildPanel()
     do
         local step = 0.05
         local minV, maxV = 0.6, 1.5
-        local function clampScale(v) return math.max(minV, math.min(maxV, v)) end
-        local function roundScale(v) return math.floor(v / step + 0.5) * step end
+        local function clampScale(v) Perfy_Trace(Perfy_GetTime(), "Enter", "clampScale MyCustomFrames/Options.lua:1405:14"); return Perfy_Trace_Passthrough("Leave", "clampScale MyCustomFrames/Options.lua:1405:14", math.max(minV, math.min(maxV, v))) end
+        local function roundScale(v) Perfy_Trace(Perfy_GetTime(), "Enter", "roundScale MyCustomFrames/Options.lua:1406:14"); return Perfy_Trace_Passthrough("Leave", "roundScale MyCustomFrames/Options.lua:1406:14", math.floor(v / step + 0.5) * step) end
 
         local scalePlus = MakeButton(panel, "+", 20, 20)
         scalePlus:SetPoint("RIGHT", closeBtn, "LEFT", -8, 0)
@@ -1444,7 +1444,7 @@ local function BuildPanel()
         -- StopRaidHeaderDrag en Raid.lua) ANTES de escalar, y re-anclar a ese
         -- mismo centro DESPUES -- normaliza cualquier ancla de esquina vieja
         -- a un CENTER limpio de paso.
-        local function ApplyPanelScale(v)
+        local function ApplyPanelScale(v) Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyPanelScale MyCustomFrames/Options.lua:1447:14");
             local oldEff = panel:GetEffectiveScale()
             local fx, fy = panel:GetCenter()
             local px, py = UIParent:GetCenter()
@@ -1461,30 +1461,30 @@ local function BuildPanel()
                 panel:ClearAllPoints()
                 panel:SetPoint("CENTER", UIParent, "CENTER", realOffX / newEff, realOffY / newEff)
             end
-        end
-        local function setScale(v)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyPanelScale MyCustomFrames/Options.lua:1447:14"); end
+        local function setScale(v) Perfy_Trace(Perfy_GetTime(), "Enter", "setScale MyCustomFrames/Options.lua:1465:14");
             v = clampScale(roundScale(v))
             ns.GetDB().panelScale = v
             ApplyPanelScale(v)
             scaleVal:SetText(string.format("%.2f", v))
-        end
-        scalePlus:SetScript("OnClick", function() setScale(((ns.GetDB() and ns.GetDB().panelScale) or 1.0) + step) end)
-        scaleMinus:SetScript("OnClick", function() setScale(((ns.GetDB() and ns.GetDB().panelScale) or 1.0) - step) end)
-        scaleVal:SetScript("OnEnterPressed", function(self)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "setScale MyCustomFrames/Options.lua:1465:14"); end
+        scalePlus:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1471:39"); setScale(((ns.GetDB() and ns.GetDB().panelScale) or 1.0) + step) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1471:39"); end)
+        scaleMinus:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1472:40"); setScale(((ns.GetDB() and ns.GetDB().panelScale) or 1.0) - step) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1472:40"); end)
+        scaleVal:SetScript("OnEnterPressed", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1473:45");
             local v = tonumber(self:GetText())
             if v then setScale(v) else self:SetText(string.format("%.2f", (ns.GetDB() and ns.GetDB().panelScale) or 1.0)) end
             self:ClearFocus()
-        end)
-        scaleVal:SetScript("OnEscapePressed", function(self)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1473:45"); end)
+        scaleVal:SetScript("OnEscapePressed", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1478:46");
             self:ClearFocus()
             if ns.CloseMainPanel then ns.CloseMainPanel() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1478:46"); end)
 
-        refreshers[#refreshers + 1] = function()
+        refreshers[#refreshers + 1] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "refreshers.? MyCustomFrames/Options.lua:1483:38");
             local v = (ns.GetDB() and ns.GetDB().panelScale) or 1.0
             scaleVal:SetText(string.format("%.2f", v))
             ApplyPanelScale(v)
-        end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "refreshers.? MyCustomFrames/Options.lua:1483:38"); end
 
         -- Rueda del mouse sobre el HEADER (pedido del usuario 2026-07-23:
         -- "mas rapido que clickear +/- 10 veces") -- mismo patron/paso que
@@ -1499,10 +1499,10 @@ local function BuildPanel()
         headerWheel:SetPoint("TOPRIGHT", scaleLbl, "TOPLEFT", -10, 0)
         headerWheel:SetHeight(26)
         headerWheel:EnableMouseWheel(true)
-        headerWheel:SetScript("OnMouseWheel", function(self, delta)
+        headerWheel:SetScript("OnMouseWheel", function(self, delta) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1502:46");
             local cur = (ns.GetDB() and ns.GetDB().panelScale) or 1.0
             setScale(cur + (delta > 0 and step or -step))
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1502:46"); end)
     end
 
     local LABELS = {}
@@ -1584,18 +1584,18 @@ local function BuildPanel()
     local sortBtn = MakeButton(sidebar, "All", 40, 22)
     sortBtn:SetPoint("TOPRIGHT", -2, -40)
     local RelayoutGlobalNav   -- asignada mas abajo (bloque de la fila global Setup/Editing/...)
-    searchBox:SetScript("OnTextChanged", function(self)
+    searchBox:SetScript("OnTextChanged", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1587:41");
         searchText = self:GetText() or ""
         searchHint:SetShown(searchText == "")
         if RelayoutSidebar then RelayoutSidebar() end
         if RelayoutGlobalNav then RelayoutGlobalNav() end
-    end)
-    searchBox:SetScript("OnEscapePressed", function(self)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1587:41"); end)
+    searchBox:SetScript("OnEscapePressed", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1593:43");
         self:SetText(""); self:ClearFocus()
         if ns.CloseMainPanel then ns.CloseMainPanel() end
-    end)
-    searchBox:SetScript("OnEditFocusGained", function(self) sbMag:SetVertexColor(1, 0.9, 0.6) end)
-    searchBox:SetScript("OnEditFocusLost", function(self) sbMag:SetVertexColor(0.6, 0.55, 0.45) end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1593:43"); end)
+    searchBox:SetScript("OnEditFocusGained", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1597:45"); sbMag:SetVertexColor(1, 0.9, 0.6) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1597:45"); end)
+    searchBox:SetScript("OnEditFocusLost", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1598:43"); sbMag:SetVertexColor(0.6, 0.55, 0.45) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1598:43"); end)
 
     -- Fila FIJA (no scrollea, pero SI filtra por busqueda via RelayoutGlobalNav mas
     -- abajo) con las 4 categorias globales Setup/Editing/Explorer/Profile — viven
@@ -1623,7 +1623,7 @@ local function BuildPanel()
 
     for i, e in ipairs(GLOBAL_NAV_ITEMS) do
         local b = MakeListItem(globalNav, e.label, 118, 18, true)
-        b:SetScript("OnClick", function() ShowSection(e.key) end)
+        b:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1626:31"); ShowSection(e.key) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1626:31"); end)
         panelButtons[#panelButtons + 1] = b
         e.btn = b
         if e.key == "setup" then NAVBTN.setup = b
@@ -1636,7 +1636,7 @@ local function BuildPanel()
     -- Reposiciona/filtra los items globales por busqueda (2026-07-17: antes
     -- quedaban fuera del filtro; buscar "setup" no los ocultaba/mostraba como
     -- al resto de la sidebar). Sin busqueda entran todos siempre.
-    RelayoutGlobalNav = function()
+    RelayoutGlobalNav = function() Perfy_Trace(Perfy_GetTime(), "Enter", "RelayoutGlobalNav MyCustomFrames/Options.lua:1639:24");
         local q = (searchText or ""):lower()
         local sy = -4
         local anyVisible = false
@@ -1656,7 +1656,7 @@ local function BuildPanel()
         navDiv:SetPoint("TOPLEFT", globalNav, "BOTTOMLEFT", 4, anyVisible and -2 or 0)
         navDiv:SetPoint("TOPRIGHT", globalNav, "BOTTOMRIGHT", -4, anyVisible and -2 or 0)
         navDiv:SetShown(anyVisible)
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "RelayoutGlobalNav MyCustomFrames/Options.lua:1639:24"); end
     RelayoutGlobalNav()
 
     -- ScrollFrame + scrollbar CUSTOM (thumb arrastrable + flechas; texturas Plumber).
@@ -1671,16 +1671,16 @@ local function BuildPanel()
     local BAR_W, ARROW = 10, 12
     local scrollValue, scrollRange = 0, 0
 
-    local function TexBtn(y1, y2)
+    local function TexBtn(y1, y2) Perfy_Trace(Perfy_GetTime(), "Enter", "TexBtn MyCustomFrames/Options.lua:1674:10");
         local btn = CreateFrame("Button", nil, sidebar)
         btn:SetSize(ARROW, ARROW)
         local tex = btn:CreateTexture(nil, "ARTWORK")
         tex:SetAllPoints(); tex:SetTexture(WIDGET); tex:SetTexCoord(0 / 512, 32 / 512, y1 / 512, y2 / 512)
         tex:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
         btn.tex = tex
-        btn:SetScript("OnEnter", function() tex:SetVertexColor(1, 0.9, 0.45) end)
-        btn:SetScript("OnLeave", function() tex:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]) end)
-        return btn
+        btn:SetScript("OnEnter", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1681:33"); tex:SetVertexColor(1, 0.9, 0.45) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1681:33"); end)
+        btn:SetScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1682:33"); tex:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1682:33"); end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "TexBtn MyCustomFrames/Options.lua:1674:10"); return btn
     end
     -- 2026-07-17: antes anclado a un offset FIJO desde arriba de la sidebar (-26),
     -- que asumia que la lista scrolleable empezaba justo debajo del buscador. Desde
@@ -1711,21 +1711,21 @@ local function BuildPanel()
     -- de saltar de golpe (rueda del mouse / flechas). Arrastrando el thumb SI es
     -- 1:1 inmediato (instant=true), un lag ahi se siente mal.
     local displayValue = 0
-    local function PositionThumb()
+    local function PositionThumb() Perfy_Trace(Perfy_GetTime(), "Enter", "PositionThumb MyCustomFrames/Options.lua:1714:10");
         local usable = math.max((track:GetHeight() or 1) - (thumb:GetHeight() or 1), 0)
         local frac = (scrollRange > 0) and (displayValue / scrollRange) or 0
         thumb:ClearAllPoints(); thumb:SetPoint("TOP", track, "TOP", 0, -frac * usable)
-    end
-    local function ApplyScroll(v, instant)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "PositionThumb MyCustomFrames/Options.lua:1714:10"); end
+    local function ApplyScroll(v, instant) Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyScroll MyCustomFrames/Options.lua:1719:10");
         scrollValue = math.min(math.max(v or 0, 0), scrollRange)
         if instant then
             displayValue = scrollValue
             scroll:SetVerticalScroll(displayValue)
             PositionThumb()
         end
-    end
-    scroll:SetScript("OnUpdate", function(self, elapsed)
-        if displayValue == scrollValue then return end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyScroll MyCustomFrames/Options.lua:1719:10"); end
+    scroll:SetScript("OnUpdate", function(self, elapsed) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1727:33");
+        if displayValue == scrollValue then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1727:33"); return end
         local diff = scrollValue - displayValue
         if math.abs(diff) < 0.5 then
             displayValue = scrollValue
@@ -1734,29 +1734,29 @@ local function BuildPanel()
         end
         scroll:SetVerticalScroll(displayValue)
         PositionThumb()
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1727:33"); end)
 
-    upBtn:SetScript("OnClick",   function() ApplyScroll(scrollValue - 30) end)
-    downBtn:SetScript("OnClick", function() ApplyScroll(scrollValue + 30) end)
+    upBtn:SetScript("OnClick",   function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1739:33"); ApplyScroll(scrollValue - 30) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1739:33"); end)
+    downBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1740:33"); ApplyScroll(scrollValue + 30) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1740:33"); end)
 
-    thumb:SetScript("OnMouseDown", function(self)
+    thumb:SetScript("OnMouseDown", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1742:35");
         self.dragging = true; self.startY = select(2, GetCursorPosition()); self.startV = scrollValue
         tt:SetVertexColor(1, 0.9, 0.5)
-    end)
-    thumb:SetScript("OnMouseUp", function(self) self.dragging = false; tt:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]) end)
-    thumb:SetScript("OnUpdate", function(self)
-        if not self.dragging then return end
-        if not IsMouseButtonDown("LeftButton") then self.dragging = false; tt:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]); return end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1742:35"); end)
+    thumb:SetScript("OnMouseUp", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1746:33"); self.dragging = false; tt:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1746:33"); end)
+    thumb:SetScript("OnUpdate", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1747:32");
+        if not self.dragging then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1747:32"); return end
+        if not IsMouseButtonDown("LeftButton") then self.dragging = false; tt:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1747:32"); return end
         local _, y = GetCursorPosition()
         local usable = math.max((track:GetHeight() or 1) - (thumb:GetHeight() or 1), 1)
         local dy = (self.startY - y) / (track:GetEffectiveScale() or 1)
         ApplyScroll(self.startV + (dy / usable) * scrollRange, true)
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1747:32"); end)
 
     scroll:EnableMouseWheel(true)
-    scroll:SetScript("OnMouseWheel", function(self, delta) ApplyScroll(scrollValue - delta * 30) end)
+    scroll:SetScript("OnMouseWheel", function(self, delta) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1757:37"); ApplyScroll(scrollValue - delta * 30) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1757:37"); end)
 
-    local function updateScroll()
+    local function updateScroll() Perfy_Trace(Perfy_GetTime(), "Enter", "updateScroll MyCustomFrames/Options.lua:1759:10");
         local content, visible = sbChild:GetHeight() or 1, scroll:GetHeight() or 1
         scrollRange = math.max(content - visible, 0)
         local scrollable = scrollRange > 1
@@ -1764,7 +1764,7 @@ local function BuildPanel()
         local trackH = track:GetHeight() or 1
         thumb:SetSize(BAR_W, math.max(24, trackH * math.min(visible / math.max(content, 1), 1)))
         ApplyScroll(scrollValue, true)
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "updateScroll MyCustomFrames/Options.lua:1759:10"); end
     scroll:SetScript("OnSizeChanged", updateScroll)
 
     -- Grupos COLAPSABLES: header (boton con flecha) + botones. Se crean UNA vez y
@@ -1777,20 +1777,20 @@ local function BuildPanel()
     -- abre un popup) — aca no aplica un "sort by" real (nuestras categorias no
     -- tienen fecha), asi que se reutiliza el espacio para algo util: colapsar todo.
     local allCollapsed = false
-    sortBtn:SetScript("OnClick", function()
+    sortBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1780:33");
         allCollapsed = not allCollapsed
         for _, grp in ipairs(UNIT_GROUPS) do collapsed[grp.title] = allCollapsed end
         if RelayoutSidebar then RelayoutSidebar() end
-    end)
-    sortBtn:HookScript("OnEnter", function()
-        if GameTooltip:IsForbidden() then return end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1780:33"); end)
+    sortBtn:HookScript("OnEnter", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1785:34");
+        if GameTooltip:IsForbidden() then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1785:34"); return end
         GameTooltip:SetOwner(sortBtn, "ANCHOR_LEFT")
         GameTooltip:SetText("Expand / collapse all groups", 1, 1, 1)
         GameTooltip:Show()
-    end)
-    sortBtn:HookScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1785:34"); end)
+    sortBtn:HookScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1791:34"); if not GameTooltip:IsForbidden() then GameTooltip:Hide() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1791:34"); end)
 
-    local function MakeCollapseHeader(grp)
+    local function MakeCollapseHeader(grp) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeCollapseHeader MyCustomFrames/Options.lua:1793:10");
         local h = CreateFrame("Button", nil, sbChild)
         h:SetSize(112, 15)
         -- COLOR_GROUP (dorado-ambar vivo): SOLO estos headers de grupo de la
@@ -1801,28 +1801,28 @@ local function BuildPanel()
         local fs = h:CreateFontString(nil, "ARTWORK"); setFont(fs, 10)
         fs:SetPoint("LEFT", 11, 0); fs:SetTextColor(COLOR_GROUP[1], COLOR_GROUP[2], COLOR_GROUP[3]); fs:SetText(grp.title)
         h.fs = fs
-        h:SetScript("OnEnter", function() fs:SetTextColor(1, 0.9, 0.45); arrow:SetTextColor(1, 0.9, 0.45) end)
-        h:SetScript("OnLeave", function()
+        h:SetScript("OnEnter", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1804:31"); fs:SetTextColor(1, 0.9, 0.45); arrow:SetTextColor(1, 0.9, 0.45) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1804:31"); end)
+        h:SetScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1805:31");
             fs:SetTextColor(COLOR_GROUP[1], COLOR_GROUP[2], COLOR_GROUP[3])
             arrow:SetTextColor(COLOR_GROUP[1], COLOR_GROUP[2], COLOR_GROUP[3])
-        end)
-        h:SetScript("OnClick", function()
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1805:31"); end)
+        h:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1809:31");
             collapsed[grp.title] = not collapsed[grp.title]
             RelayoutSidebar()
-        end)
-        return h
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1809:31"); end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "MakeCollapseHeader MyCustomFrames/Options.lua:1793:10"); return h
     end
 
     for _, grp in ipairs(UNIT_GROUPS) do
         sideHeaders[grp.title] = MakeCollapseHeader(grp)
         for _, key in ipairs(grp.keys) do
             local b = MakeListItem(sbChild, LABELS[key] or key, 104, 18)
-            b:SetScript("OnClick", function() SelectUnit(key) end)
+            b:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1820:35"); SelectUnit(key) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:1820:35"); end)
             unitTabs[key] = b
         end
     end
 
-    function RelayoutSidebar()
+    function RelayoutSidebar() Perfy_Trace(Perfy_GetTime(), "Enter", "RelayoutSidebar MyCustomFrames/Options.lua:1825:4");
         local q = (searchText or ""):lower()
         local sy = -6
         for _, grp in ipairs(UNIT_GROUPS) do
@@ -1860,7 +1860,7 @@ local function BuildPanel()
         end
         sbChild:SetHeight(math.max(-sy + 6, 10))
         updateScroll()
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "RelayoutSidebar MyCustomFrames/Options.lua:1825:4"); end
 
     RelayoutSidebar()
 
@@ -1906,7 +1906,7 @@ local function BuildPanel()
     -- organizadas en puntos, con un cuadradito antes de cada uno — calcando el estilo
     -- del changelog real de Plumber). Pool reutilizable, UpdatePreview la rearma.
     local pvBullets = {}
-    local function GetBullet(i)
+    local function GetBullet(i) Perfy_Trace(Perfy_GetTime(), "Enter", "GetBullet MyCustomFrames/Options.lua:1909:10");
         local b = pvBullets[i]
         if not b then
             local dot = preview:CreateTexture(nil, "ARTWORK")
@@ -1919,7 +1919,7 @@ local function BuildPanel()
             b = { dot = dot, fs = fs }
             pvBullets[i] = b
         end
-        return b
+        Perfy_Trace(Perfy_GetTime(), "Leave", "GetBullet MyCustomFrames/Options.lua:1909:10"); return b
     end
 
     -- Descripcion corta por familia de seccion (arrays = puntos separados con
@@ -1937,49 +1937,49 @@ local function BuildPanel()
     -- son funciones aparte y tienen su propio presupuesto de upvalues.
     -- Al agregar una familia nueva aca: inline, no el helper.
     local FAMILY_DESC = {
-        { test = function(k) return k:sub(1, 2) == "p_" end, title = "Portraits", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1940:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1940:17", k:sub(1, 2) == "p_") end, title = "Portraits", desc = {
             "Portrait: frame, 3D model or icon.", "Badges and raid role/target marker." } },
-        { test = function(k) return k:sub(1, 2) == "a_" end, title = "Auras", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1942:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1942:17", k:sub(1, 2) == "a_") end, title = "Auras", desc = {
             "Grid, position and border of the group.", "Death/no-target icons and text." } },
-        { test = function(k) return k:sub(1, 2) == "i_" end, title = "Info Bar", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1944:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1944:17", k:sub(1, 2) == "i_") end, title = "Info Bar", desc = {
             "Visible elements and their position.", "Text and background of the bar." } },
-        { test = function(k) return k:sub(1, 3) == "mm_" end, title = "Micro Menu", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1946:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1946:17", k:sub(1, 3) == "mm_") end, title = "Micro Menu", desc = {
             "Reskin of Blizzard's micro buttons.", "Movable and scalable." } },
-        { test = function(k) return k:sub(1, 3) == "cb_" end, title = "Chat Bubble", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1948:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1948:17", k:sub(1, 3) == "cb_") end, title = "Chat Bubble", desc = {
             "Background of world chat bubbles.", "Font and text color." } },
-        { test = function(k) return k:sub(1, 2) == "t_" end, title = "Quest Tracker", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1950:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1950:17", k:sub(1, 2) == "t_") end, title = "Quest Tracker", desc = {
             "Colors of the quest tracker.", "Auto-hide in combat/instances." } },
-        { test = function(k) return k:sub(1, 2) == "g_" end, title = "Assisted Glow", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1952:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1952:17", k:sub(1, 2) == "g_") end, title = "Assisted Glow", desc = {
             "Assisted highlight for available abilities." } },
-        { test = function(k) return k:sub(1, 3) == "ap_" end, title = "Party Auras", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1954:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1954:17", k:sub(1, 3) == "ap_") end, title = "Party Auras", desc = {
             "Auras for Party1-5.", "Revealed on hover or in combat." } },
-        { test = function(k) return k:sub(1, 3) == "aa_" end, title = "Arena Auras", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1956:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1956:17", k:sub(1, 3) == "aa_") end, title = "Arena Auras", desc = {
             "Auras for the 6 arena frames.", "Revealed on hover or in combat, arena-only." } },
-        { test = function(k) return k:sub(1, 3) == "af_" end, title = "Focus Auras", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1958:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1958:17", k:sub(1, 3) == "af_") end, title = "Focus Auras", desc = {
             "Auras for your focus target.", "Revealed on hover or in combat, whenever you have a focus." } },
-        { test = function(k) return k:sub(1, 3) == "pa_" end, title = "Player Auras", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1960:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1960:17", k:sub(1, 3) == "pa_") end, title = "Player Auras", desc = {
             "Your own buffs and debuffs.", "Revealed on hover, in combat, or while casting." } },
-        { test = function(k) return k:sub(1, 3) == "ta_" end, title = "Target Auras", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1962:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1962:17", k:sub(1, 3) == "ta_") end, title = "Target Auras", desc = {
             "Auras on your target.", "Always visible while you have a target -- also reveals on hover." } },
-        { test = function(k) return k:sub(1, 3) == "mn_" end, title = "Minimap", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1964:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1964:17", k:sub(1, 3) == "mn_") end, title = "Minimap", desc = {
             "Round custom skin around the native map.", "Compass, coordinates, LFG eye, XP/Rep ring." } },
-        { test = function(k) return k:sub(1, 3) == "np_" end, title = "Nameplates", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1966:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1966:17", k:sub(1, 3) == "np_") end, title = "Nameplates", desc = {
             "Reskin of Blizzard's native nameplates.", "Size/offsets via the Nameplate Designer (drag + wheel)." } },
-        { test = function(k) return k:sub(1, 3) == "cp_" end, title = "Class Power", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1968:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1968:17", k:sub(1, 3) == "cp_") end, title = "Class Power", desc = {
             "Combo Points/Holy Power/Chi/Soul Shards/Arcane Charges/Essence/Runes/Soul Fragments/Maelstrom Weapon.",
             "Movable and scalable in Lock, even without an active class resource." } },
-        { test = function(k) return k:sub(1, 2) == "r_" end, title = "Raid Frames", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1971:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1971:17", k:sub(1, 2) == "r_") end, title = "Raid Frames", desc = {
             "Up to 40 players, AzeriteUI look. Shows in raid groups and battlegrounds only.",
             "Growth direction, spacing, and icon position/size are configurable — the rest of the look is fixed by design." } },
-        { test = function(k) return k == "presets" end, title = "Profiles", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1974:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1974:17", k == "presets") end, title = "Profiles", desc = {
             "Save and load full profiles.", "Export and import across accounts." } },
-        { test = function(k) return k == "explorer" end, title = "Explorer", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1976:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1976:17", k == "explorer") end, title = "Explorer", desc = {
             "Auto-hide UI elements.", "Revealed on mouseover." } },
-        { test = function(k) return k == "editing" end, title = "Editing", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1978:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1978:17", k == "editing") end, title = "Editing", desc = {
             "Grid, snap and layout preview.", "Lock mode to move elements." } },
-        { test = function(k) return k == "setup" end, title = "Setup", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1980:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1980:17", k == "setup") end, title = "Setup", desc = {
             "Integration with other addons.", "Bundled profiles ready to apply." } },
-        { test = function(k) return k == "extras" end, title = "Extras", desc = {
+        { test = function(k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:1982:17"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:1982:17", k == "extras") end, title = "Extras", desc = {
             "Tooltip skin, Mirror Timers, and the top-center widget.", "Global, not per-unit." } },
     }
     -- Pedido del usuario 2026-07-19 ("me gustaria que sea PER UNIDAD... si
@@ -1989,45 +1989,45 @@ local function BuildPanel()
     -- estuviera editando. Ahora resume lo especifico de CADA unidad -- las
     -- familias especiales (portraits/auras/tracker/etc, ver FAMILY_DESC arriba)
     -- siguen igual, esto solo reemplaza el fallback generico del final.
-    local function GetUnitDescription(key)
+    local function GetUnitDescription(key) Perfy_Trace(Perfy_GetTime(), "Enter", "GetUnitDescription MyCustomFrames/Options.lua:1992:10");
         local u = ns.frames[key]
         local label = (u and u.label) or key
         if key == "playerpower" or key == "targetpower" then
-            return label, { "Power bar only.", "No name, spell, cast or highlight tabs." }
+            return Perfy_Trace_Passthrough("Leave", "GetUnitDescription MyCustomFrames/Options.lua:1992:10", label, { "Power bar only.", "No name, spell, cast or highlight tabs." })
         end
         if key:sub(1, 4) == "boss" then
-            return label, { "Boss encounter frame, fixed color.", "Shows automatically during boss fights." }
+            return Perfy_Trace_Passthrough("Leave", "GetUnitDescription MyCustomFrames/Options.lua:1992:10", label, { "Boss encounter frame, fixed color.", "Shows automatically during boss fights." })
         end
         if key == "targettarget" then
-            return label, { "Target-of-target — small frame under Target.", "Shows what your current target is looking at." }
+            return Perfy_Trace_Passthrough("Leave", "GetUnitDescription MyCustomFrames/Options.lua:1992:10", label, { "Target-of-target — small frame under Target.", "Shows what your current target is looking at." })
         end
         if key == "pet" then
-            return label, { "Pet frame — auto-hides without an active pet.", "Bar, cage, highlight and health, like the rest." }
+            return Perfy_Trace_Passthrough("Leave", "GetUnitDescription MyCustomFrames/Options.lua:1992:10", label, { "Pet frame — auto-hides without an active pet.", "Bar, cage, highlight and health, like the rest." })
         end
         if key == "focus" then
-            return label, { "Focus frame — set/clear focus via UI or macro.", "Bar, cage, highlight and health, like the rest." }
+            return Perfy_Trace_Passthrough("Leave", "GetUnitDescription MyCustomFrames/Options.lua:1992:10", label, { "Focus frame — set/clear focus via UI or macro.", "Bar, cage, highlight and health, like the rest." })
         end
         if key == "party5" then
-            return label, { "5th party slot — shows YOUR OWN frame.", "Visible whenever you're in any group (party or raid)." }
+            return Perfy_Trace_Passthrough("Leave", "GetUnitDescription MyCustomFrames/Options.lua:1992:10", label, { "5th party slot — shows YOUR OWN frame.", "Visible whenever you're in any group (party or raid)." })
         end
         if key:sub(1, 5) == "party" then
-            return label, { "Party member — visible only in a 5-man group.", "Hidden in raids, arenas and battlegrounds." }
+            return Perfy_Trace_Passthrough("Leave", "GetUnitDescription MyCustomFrames/Options.lua:1992:10", label, { "Party member — visible only in a 5-man group.", "Hidden in raids, arenas and battlegrounds." })
         end
         if key == "arena_player" or key == "arena_party1" or key == "arena_party2" then
-            return label, { "Arena ally — visible ONLY in an arena match.", "Independent copy, doesn't affect your normal frames." }
+            return Perfy_Trace_Passthrough("Leave", "GetUnitDescription MyCustomFrames/Options.lua:1992:10", label, { "Arena ally — visible ONLY in an arena match.", "Independent copy, doesn't affect your normal frames." })
         end
         if key:sub(1, 11) == "arena_enemy" then
-            return label, { "Arena enemy — visible ONLY in an arena match.", "Also has a PvP Trinket icon (see Trinket tab)." }
+            return Perfy_Trace_Passthrough("Leave", "GetUnitDescription MyCustomFrames/Options.lua:1992:10", label, { "Arena enemy — visible ONLY in an arena match.", "Also has a PvP Trinket icon (see Trinket tab)." })
         end
-        return label, { "Bar, cage, highlight and health.", "Name, spell, cast bar and colors." }
+        return Perfy_Trace_Passthrough("Leave", "GetUnitDescription MyCustomFrames/Options.lua:1992:10", label, { "Bar, cage, highlight and health.", "Name, spell, cast bar and colors." })
     end
-    local function GetFamilyDescription(key)
+    local function GetFamilyDescription(key) Perfy_Trace(Perfy_GetTime(), "Enter", "GetFamilyDescription MyCustomFrames/Options.lua:2024:10");
         for _, f in ipairs(FAMILY_DESC) do
-            if f.test(key) then return f.title, f.desc end
+            if f.test(key) then return Perfy_Trace_Passthrough("Leave", "GetFamilyDescription MyCustomFrames/Options.lua:2024:10", f.title, f.desc) end
         end
-        return GetUnitDescription(ns.currentEdit)
+        return Perfy_Trace_Passthrough("Leave", "GetFamilyDescription MyCustomFrames/Options.lua:2024:10", GetUnitDescription(ns.currentEdit))
     end
-    UpdatePreview = function()
+    UpdatePreview = function() Perfy_Trace(Perfy_GetTime(), "Enter", "UpdatePreview MyCustomFrames/Options.lua:2030:20");
         local t, d = GetFamilyDescription(currentSection)
         pvTitle:SetText(t)
         local anchor = pvTitle
@@ -2045,7 +2045,7 @@ local function BuildPanel()
         for i = #d + 1, #pvBullets do
             pvBullets[i].dot:Hide(); pvBullets[i].fs:Hide()
         end
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "UpdatePreview MyCustomFrames/Options.lua:2030:20"); end
     UpdatePreview()
 
     -- ===== CONTENIDO =====
@@ -2106,7 +2106,7 @@ local function BuildPanel()
     hbThumb:SetTexCoord(0 / 512, 132 / 512, 0 / 512, 260 / 512, 32 / 512, 260 / 512, 32 / 512, 132 / 512)
     hbThumb:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3], 0.9)
 
-    local function UpdateHScroll()
+    local function UpdateHScroll() Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateHScroll MyCustomFrames/Options.lua:2109:10");
         local visibleW = tabScroll:GetWidth() or 1
         local maxX = math.max(tabRowWidth - visibleW, 0)
         tabScrollX = math.min(math.max(tabScrollX, 0), maxX)
@@ -2121,21 +2121,21 @@ local function BuildPanel()
             hbThumb:SetPoint("LEFT", hbTrack, "LEFT", (tabScrollX / maxX) * (visibleW - thumbW), 0)
             hbThumb:SetWidth(thumbW)
         end
-    end
-    tabScroll:SetScript("OnMouseWheel", function(self, delta)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateHScroll MyCustomFrames/Options.lua:2109:10"); end
+    tabScroll:SetScript("OnMouseWheel", function(self, delta) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2125:40");
         tabScrollX = tabScrollX - delta * 40
         UpdateHScroll()
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2125:40"); end)
     tabScroll:SetScript("OnSizeChanged", UpdateHScroll)
     tabScrollUI.frame, tabScrollUI.track, tabScrollUI.thumb = tabScroll, hbTrack, hbThumb
 
-    local function BuildTabRow(list, minW, hiddenByDefault)
+    local function BuildTabRow(list, minW, hiddenByDefault) Perfy_Trace(Perfy_GetTime(), "Enter", "BuildTabRow MyCustomFrames/Options.lua:2132:10");
         local prevBtn
         for _, s in ipairs(list) do
             local b = MakeTabButton(tabRow, s.label, minW, 20)
             if prevBtn then b:SetPoint("TOPLEFT", prevBtn, "TOPRIGHT", 2, 0)
             else b:SetPoint("TOPLEFT", 0, 0) end
-            b:SetScript("OnClick", function() ShowSection(s.key) end)
+            b:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2138:35"); ShowSection(s.key) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2138:35"); end)
             if hiddenByDefault then b:Hide() end
             sectionTabs[s.key] = b
             prevBtn = b
@@ -2144,7 +2144,7 @@ local function BuildPanel()
             local right = (prevBtn:GetRight() or 0) - (tabRow:GetLeft() or 0)
             tabRowWidth = math.max(tabRowWidth, right)
         end
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "BuildTabRow MyCustomFrames/Options.lua:2132:10"); end
 
     -- Pestanas de SECCION.
     local secList = {
@@ -2293,7 +2293,7 @@ local function BuildPanel()
     -- Cuando cambia de unidad/familia (otro grupo de sub-tabs, otro ancho total)
     -- hay que resetear el scroll horizontal, si no algunas filas mas angostas
     -- podrian quedar "cortadas" con un scroll heredado de la fila anterior.
-    ns.ResetTabRowScroll = function() tabScrollX = 0; UpdateHScroll() end
+    ns.ResetTabRowScroll = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ResetTabRowScroll MyCustomFrames/Options.lua:2296:27"); tabScrollX = 0; UpdateHScroll() Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetTabRowScroll MyCustomFrames/Options.lua:2296:27"); end
 
     -- Divisor horizontal (Plumber) separando la fila de pestanas del contenido.
     -- 2026-07-17 (ronda 2): movida de DEBAJO a ENCIMA de la fila de sub-tabs
@@ -2324,11 +2324,11 @@ local function BuildPanel()
     secScroll:SetPoint("TOPLEFT", 0, -70)
     secScroll:SetPoint("BOTTOMRIGHT", -10, 0)
     secScroll:EnableMouseWheel(true)
-    secScroll:SetScript("OnMouseWheel", function(self, delta)
+    secScroll:SetScript("OnMouseWheel", function(self, delta) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2327:40");
         local child = self:GetScrollChild()
         local maxScroll = math.max((child and child:GetHeight() or 0) - (self:GetHeight() or 0), 0)
         self:SetVerticalScroll(math.min(math.max(self:GetVerticalScroll() - delta * 40, 0), maxScroll))
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2327:40"); end)
 
     local secArea = CreateFrame("Frame", nil, secScroll)
     -- Alto inicial GENEROSO a proposito: un ScrollFrame SI recorta a su hijo, asi
@@ -2342,7 +2342,7 @@ local function BuildPanel()
     -- todos apilados en el borde izquierdo. El SetWidth de arriba cubre el caso en
     -- que el scroll YA tenga tamaño al crearse (OnSizeChanged no dispara si nunca
     -- cambia despues).
-    secScroll:SetScript("OnSizeChanged", function(_, w) secArea:SetWidth(w) end)
+    secScroll:SetScript("OnSizeChanged", function(_, w) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2345:41"); secArea:SetWidth(w) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2345:41"); end)
 
     -- Barrita de scroll: fina, sin flechas (a diferencia de la del sidebar) y
     -- OCULTA cuando la seccion entra entera -- asi el 90% de las secciones, que
@@ -2364,21 +2364,21 @@ local function BuildPanel()
     -- Arrastre del thumb: convierte la posicion del mouse dentro del track en
     -- scroll (misma idea que el del sidebar, sin las flechas).
     secThumb:RegisterForDrag("LeftButton")
-    secThumb:SetScript("OnDragStart", function(self) self.dragging = true end)
-    secThumb:SetScript("OnDragStop", function(self) self.dragging = false end)
-    secThumb:SetScript("OnUpdate", function(self)
-        if not self.dragging then return end
+    secThumb:SetScript("OnDragStart", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2367:38"); self.dragging = true Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2367:38"); end)
+    secThumb:SetScript("OnDragStop", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2368:37"); self.dragging = false Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2368:37"); end)
+    secThumb:SetScript("OnUpdate", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2369:35");
+        if not self.dragging then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2369:35"); return end
         local _, cursorY = GetCursorPosition()
         local scale = secTrack:GetEffectiveScale()
-        if not scale or scale == 0 then return end
+        if not scale or scale == 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2369:35"); return end
         cursorY = cursorY / scale
         local top, height = secTrack:GetTop(), secTrack:GetHeight()
         local child = secScroll:GetScrollChild()
         local maxScroll = math.max((child and child:GetHeight() or 0) - (secScroll:GetHeight() or 0), 0)
-        if not (top and height and height > 0) or maxScroll <= 0 then return end
+        if not (top and height and height > 0) or maxScroll <= 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2369:35"); return end
         local frac = math.min(math.max((top - cursorY) / height, 0), 1)
         secScroll:SetVerticalScroll(frac * maxScroll)
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2369:35"); end)
     -- Expuestos para ShowSection (que vive a nivel de archivo y llega hasta aca
     -- via GetParent()): se cuelgan del propio ScrollFrame en vez de crear locals
     -- de archivo nuevos -- BuildPanel ya rozo el limite de 60 upvalues de Lua
@@ -2386,24 +2386,24 @@ local function BuildPanel()
     secScroll.mcfTrack, secScroll.mcfThumb = secTrack, secThumb
     -- El thumb sigue la posicion del scroll venga de donde venga (rueda, arrastre
     -- o el reset a 0 de ShowSection) -- OnVerticalScroll dispara en los 3 casos.
-    secScroll:SetScript("OnVerticalScroll", function(self, offset)
+    secScroll:SetScript("OnVerticalScroll", function(self, offset) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2389:44");
         local child = self:GetScrollChild()
         local maxScroll = math.max((child and child:GetHeight() or 0) - (self:GetHeight() or 0), 0)
-        if maxScroll <= 0 then return end
+        if maxScroll <= 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2389:44"); return end
         local travel = math.max((secTrack:GetHeight() or 0) - (secThumb:GetHeight() or 0), 0)
         secThumb:SetPoint("TOP", secTrack, "TOP", 0, -(offset / maxScroll) * travel)
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2389:44"); end)
 
     local cdiv = secArea:CreateTexture(nil, "ARTWORK")
     cdiv:SetTexture(PL.DIV_V)
     cdiv:SetPoint("TOP", secArea, "TOPLEFT", 220, -2)
     cdiv:SetHeight(330); cdiv:SetWidth(14); cdiv:SetVertexColor(1, 1, 1, 0.22)
 
-    local function Section(key)
+    local function Section(key) Perfy_Trace(Perfy_GetTime(), "Enter", "Section MyCustomFrames/Options.lua:2402:10");
         local f = CreateFrame("Frame", nil, secArea)
         f:SetAllPoints(secArea)
         sections[key] = f
-        return f
+        Perfy_Trace(Perfy_GetTime(), "Leave", "Section MyCustomFrames/Options.lua:2402:10"); return f
     end
     local L, R = 6, 232
 
@@ -2428,15 +2428,15 @@ local function BuildPanel()
     -- `toggleFn` se resuelve al hacer CLICK, no al construir el panel: varios
     -- ns.ToggleXxxTest los definen AuraHoverPreview.lua/Indicators.lua, que en
     -- el .toc cargan DESPUES que Options.lua -- capturarlos aca seria nil.
-    local function MakePreviewButton(parent, x, y, toggleFn)
+    local function MakePreviewButton(parent, x, y, toggleFn) Perfy_Trace(Perfy_GetTime(), "Enter", "MakePreviewButton MyCustomFrames/Options.lua:2431:10");
         local b = MakeButton(parent, "Preview", 90, 22)
         b:SetPoint("TOPLEFT", x, y)
-        b:SetScript("OnClick", function()
+        b:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2434:31");
             local fn = toggleFn()
-            if type(fn) ~= "function" then return end
+            if type(fn) ~= "function" then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2434:31"); return end
             b:SetActive(fn() and true or false)
-        end)
-        return b
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2434:31"); end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "MakePreviewButton MyCustomFrames/Options.lua:2431:10"); return b
     end
 
     -- General
@@ -2450,7 +2450,7 @@ local function BuildPanel()
         MakeSlider(f, "Scale (wheel in Lock too)", 0.3, 3, 0.02, "scale", L, -178)
         local resetBtn = MakeButton(f, "Reset this unit", 200, 22)
         resetBtn:SetPoint("TOPLEFT", L, -226)
-        resetBtn:SetScript("OnClick", function() ns.ResetUnit(ns.currentEdit) end)
+        resetBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2453:38"); ns.ResetUnit(ns.currentEdit) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2453:38"); end)
 
         MakeHeader(f, "Position offset", R, -6, 210)
         MakeSlider(f, "Offset X", -2000, 2000, 1, "offsetX", R, -48)
@@ -2467,14 +2467,14 @@ local function BuildPanel()
         -- importa mientras la unidad este ademas prendida en Explorer
         -- (Elements tab) -- si no, este valor no se usa para nada.
         MakeSlider(f, "Explorer opacity (this unit)", 0, 1, 0.05, "v", R, -198,
-            function() return explorerAlphaProxy end, function() end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2470:12"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2470:12"); return explorerAlphaProxy end, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2470:54"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2470:54"); end)
         local resetAlphaBtn = MakeButton(f, "Use default", 100, 18)
         resetAlphaBtn:SetPoint("TOPLEFT", R, -222)
-        resetAlphaBtn:SetScript("OnClick", function()
+        resetAlphaBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2473:43");
             local db = ns.GetDB()
             if db.explorerElementAlpha then db.explorerElementAlpha[ns.currentEdit] = nil end
             RefreshControls()
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2473:43"); end)
     end
     -- Barra: reorganizada en grupos con header (2026-07-17) — antes era una
     -- columna larga de sliders sin agrupar, dificil de escanear. Ahora:
@@ -2565,7 +2565,7 @@ local function BuildPanel()
         note:SetText("Detected via combat log only (public API) -- same as Blizzard's own arena frames.")
         -- Solo prueba el DIBUJO (tamaño/posicion/que showTrinket este on), no la
         -- deteccion -- eso unicamente se confirma con un rival usandolo de verdad.
-        MakePreviewButton(f, L, -96, function() return ns.ToggleArenaTrinketTest end)
+        MakePreviewButton(f, L, -96, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2568:37"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:2568:37", ns.ToggleArenaTrinketTest) end)
 
         MakeHeader(f, "Position & size", R, -6, 210)
         MakeSlider(f, "Size", 8, 64, 1, "trinketSize", R, -48)
@@ -2705,20 +2705,20 @@ local function BuildPanel()
         -- ===== DERECHA: opciones globales + quest tracker =====
         MakeHeader(f, "Global options", R, -6, 200)
         MakeToggle(f, "Hide edit outline in preview", R, -30,
-            function() return ns.GetDB().hideEditOutline end,
-            function(v) ns.GetDB().hideEditOutline = v; ns.ToggleEditOutline() end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2708:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:2708:12", ns.GetDB().hideEditOutline) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2709:12"); ns.GetDB().hideEditOutline = v; ns.ToggleEditOutline() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2709:12"); end)
         MakeToggle(f, "Move Party 1-5 together", R, -54,
-            function() return ns.GetDB().groupMoveParty end,
-            function(v) ns.GetDB().groupMoveParty = v end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2711:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:2711:12", ns.GetDB().groupMoveParty) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2712:12"); ns.GetDB().groupMoveParty = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2712:12"); end)
         MakeToggle(f, "Move Boss 1-5 together", R, -78,
-            function() return ns.GetDB().groupMoveBoss end,
-            function(v) ns.GetDB().groupMoveBoss = v end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2714:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:2714:12", ns.GetDB().groupMoveBoss) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2715:12"); ns.GetDB().groupMoveBoss = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2715:12"); end)
         MakeToggle(f, "Mouselook (right-click drag)", R, -102,
-            function() return ns.GetDB().mouselook end,
-            function(v) ns.GetDB().mouselook = v end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2717:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:2717:12", ns.GetDB().mouselook) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2718:12"); ns.GetDB().mouselook = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2718:12"); end)
         MakeToggle(f, "Hide Blizzard unit frames", R, -126,
-            function() return ns.GetDB().hideBlizzard end,
-            function(v)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2720:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:2720:12", ns.GetDB().hideBlizzard) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2721:12");
                 ns.GetDB().hideBlizzard = v
                 if v then
                     if ns.HideBlizzardFrames then ns.HideBlizzardFrames() end
@@ -2726,15 +2726,15 @@ local function BuildPanel()
                 else
                     print("|cffffcc00[MCF]|r Reload (/reload) to restore the Blizzard frames.")
                 end
-            end)
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2721:12"); end)
         MakeToggle(f, "Smooth fade-in (frames appearing)", R, -150,
-            function() return ns.GetDB().fadeIn end,
-            function(v) ns.GetDB().fadeIn = v end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2731:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:2731:12", ns.GetDB().fadeIn) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2732:12"); ns.GetDB().fadeIn = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2732:12"); end)
         local dcFixCB = MakeToggle(f, "DynamicCam camera fix", R, -174,
-            function() return ns.GetDB().dcFix end,
-            function(v) ns.GetDB().dcFix = v; if ns.ApplyDcFix then ns.ApplyDcFix() end end)
-        dcFixCB:HookScript("OnEnter", function(self)
-            if GameTooltip:IsForbidden() then return end
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2734:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:2734:12", ns.GetDB().dcFix) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2735:12"); ns.GetDB().dcFix = v; if ns.ApplyDcFix then ns.ApplyDcFix() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2735:12"); end)
+        dcFixCB:HookScript("OnEnter", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2736:38");
+            if GameTooltip:IsForbidden() then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2736:38"); return end
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:SetText("DynamicCam camera fix", COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
             GameTooltip:AddLine("Fixes DialogueUI's compatibility with DynamicCam: opening DialogueUI's " ..
@@ -2743,23 +2743,23 @@ local function BuildPanel()
                 "DialogueUI and DynamicCam — and DialogueUI's own \"Camera Movement\" option must be " ..
                 "turned OFF for this to work.", 1, 1, 1, true)
             GameTooltip:Show()
-        end)
-        dcFixCB:HookScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2736:38"); end)
+        dcFixCB:HookScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2747:38"); if not GameTooltip:IsForbidden() then GameTooltip:Hide() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2747:38"); end)
         -- INDICADORES (Indicators.lua). Hasta 2026-07-28 eran la unica feature
         -- del addon sin ningun control de usuario: siempre encendidas y con los
         -- valores clavados en el codigo.
         MakeToggle(f, "Dim frames out of range", R, -198,
-            function() return ns.GetDB().indicatorRange ~= false end,
-            function(v)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2752:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:2752:12", ns.GetDB().indicatorRange ~= false) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2753:12");
                 ns.GetDB().indicatorRange = v and true or false
                 if ns.RefreshIndicators then ns.RefreshIndicators() end
-            end)
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2753:12"); end)
         MakeToggle(f, "Absorb / shield overlay", R, -222,
-            function() return ns.GetDB().indicatorShield ~= false end,
-            function(v)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2758:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:2758:12", ns.GetDB().indicatorShield ~= false) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2759:12");
                 ns.GetDB().indicatorShield = v and true or false
                 if ns.RefreshIndicators then ns.RefreshIndicators() end
-            end)
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2759:12"); end)
         local indNote = f:CreateFontString(nil, "ARTWORK"); setFont(indNote, 10)
         indNote:SetPoint("TOPLEFT", R, -246); indNote:SetWidth(210); indNote:SetJustifyH("LEFT")
         indNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
@@ -2771,71 +2771,71 @@ local function BuildPanel()
         tnote:SetText("Grid, Snap and Preview moved to the EDITING tab (top). Quest tracker options are in the TRACKER tab.")
 
         -- ===== Logica (handlers) =====
-        local function refreshSel() selBtn.text:SetText(selected.name or "(no presets)") end
-        local function updateLabels()
+        local function refreshSel() Perfy_Trace(Perfy_GetTime(), "Enter", "refreshSel MyCustomFrames/Options.lua:2774:14"); selBtn.text:SetText(selected.name or "(no presets)") Perfy_Trace(Perfy_GetTime(), "Leave", "refreshSel MyCustomFrames/Options.lua:2774:14"); end
+        local function updateLabels() Perfy_Trace(Perfy_GetTime(), "Enter", "updateLabels MyCustomFrames/Options.lua:2775:14");
             defLbl:SetText("Default (Reset ALL): |cff88ff88" .. (ns.GetDefaultPreset() or "none") .. "|r")
-        end
-        local function cycleSelect(dir)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "updateLabels MyCustomFrames/Options.lua:2775:14"); end
+        local function cycleSelect(dir) Perfy_Trace(Perfy_GetTime(), "Enter", "cycleSelect MyCustomFrames/Options.lua:2778:14");
             local names = ns.GetPresetNames()
-            if #names == 0 then selected.name = nil return end
+            if #names == 0 then selected.name = nil Perfy_Trace(Perfy_GetTime(), "Leave", "cycleSelect MyCustomFrames/Options.lua:2778:14"); return end
             local idx = 1
             for i, n in ipairs(names) do if n == selected.name then idx = i break end end
             idx = ((idx - 1 + dir) % #names) + 1
             selected.name = names[idx]
-        end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "cycleSelect MyCustomFrames/Options.lua:2778:14"); end
 
-        prevBtn:SetScript("OnClick", function() cycleSelect(-1); refreshSel() end)
-        nextBtn:SetScript("OnClick", function() cycleSelect(1); refreshSel() end)
-        saveBtn:SetScript("OnClick", function()
+        prevBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2787:37"); cycleSelect(-1); refreshSel() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2787:37"); end)
+        nextBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2788:37"); cycleSelect(1); refreshSel() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2788:37"); end)
+        saveBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2789:37");
             local n = nameBox:GetText()
             if n and n ~= "" then
                 ns.SavePreset(n); selected.name = n
                 nameBox:SetText(""); nameBox:ClearFocus(); refreshSel(); updateLabels()
             end
-        end)
-        loadBtn:SetScript("OnClick", function() if selected.name then ns.LoadPreset(selected.name); RefreshControls() end end)
-        delBtn:SetScript("OnClick", function()
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2789:37"); end)
+        loadBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2796:37"); if selected.name then ns.LoadPreset(selected.name); RefreshControls() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2796:37"); end)
+        delBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2797:36");
             if selected.name then ns.DeletePreset(selected.name); selected.name = nil; refreshSel(); updateLabels() end
-        end)
-        defBtn:SetScript("OnClick", function() if selected.name then ns.SetDefaultPreset(selected.name); updateLabels() end end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2797:36"); end)
+        defBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2800:36"); if selected.name then ns.SetDefaultPreset(selected.name); updateLabels() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2800:36"); end)
         -- Pedido del usuario 2026-07-19: mismo boton "Set default" tambien
         -- accesible desde el footer -- selected/updateLabels son locals de
         -- ESTE bloque (Section("presets")), se exponen via ns.* para que el
         -- footer los pueda llamar sin duplicar la logica.
-        ns.SetDefaultToSelectedPreset = function()
+        ns.SetDefaultToSelectedPreset = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.SetDefaultToSelectedPreset MyCustomFrames/Options.lua:2805:40");
             if selected.name then ns.SetDefaultPreset(selected.name); updateLabels() end
-        end
-        ns.GetSelectedPresetName = function() return selected.name end
-        exportBtn:SetScript("OnClick", function() ShowExport(selected.name) end)
-        importBtn:SetScript("OnClick", function()
-            ShowImport(function(newName) selected.name = newName; refreshSel(); updateLabels() end)
-        end)
-        defNowBtn:SetScript("OnClick", function()
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.SetDefaultToSelectedPreset MyCustomFrames/Options.lua:2805:40"); end
+        ns.GetSelectedPresetName = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.GetSelectedPresetName MyCustomFrames/Options.lua:2808:35"); return Perfy_Trace_Passthrough("Leave", "ns.GetSelectedPresetName MyCustomFrames/Options.lua:2808:35", selected.name) end
+        exportBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2809:39"); ShowExport(selected.name) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2809:39"); end)
+        importBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2810:39");
+            ShowImport(function(newName) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2811:23"); selected.name = newName; refreshSel(); updateLabels() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2811:23"); end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2810:39"); end)
+        defNowBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2813:39");
             ns.SavePreset("Default"); ns.SetDefaultPreset("Default")
             selected.name = "Default"; refreshSel(); updateLabels()
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2813:39"); end)
 
         StaticPopupDialogs["MYCF_RESETALL"] = {
             text = "Reset EVERYTHING?\n(If you marked a preset as Default, that one loads; otherwise factory values.)",
             button1 = YES, button2 = NO, timeout = 0, whileDead = true,
             hideOnEscape = true, preferredIndex = 3,
-            OnAccept = function() ns.ResetAll() end,
+            OnAccept = function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2822:23"); ns.ResetAll() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2822:23"); end,
         }
-        resetAllBtn:SetScript("OnClick", function() StaticPopup_Show("MYCF_RESETALL") end)
+        resetAllBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2824:41"); StaticPopup_Show("MYCF_RESETALL") Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2824:41"); end)
 
         StaticPopupDialogs["MYCF_OVERWRITE"] = {
             text = "Overwrite the selected profile with the CURRENT layout?\n|cffff8080%s|r",
             button1 = YES, button2 = NO, timeout = 0, whileDead = true,
             hideOnEscape = true, preferredIndex = 3,
-            OnAccept = function()
+            OnAccept = function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2830:23");
                 if selected.name then ns.SavePreset(selected.name); refreshSel(); updateLabels() end
-            end,
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2830:23"); end,
         }
-        ovrBtn:SetScript("OnClick", function()
+        ovrBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2834:36");
             if selected.name then StaticPopup_Show("MYCF_OVERWRITE", selected.name) end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2834:36"); end)
 
-        refreshers[#refreshers + 1] = function() refreshSel(); updateLabels() end
+        refreshers[#refreshers + 1] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "refreshers.? MyCustomFrames/Options.lua:2838:38"); refreshSel(); updateLabels() Perfy_Trace(Perfy_GetTime(), "Leave", "refreshers.? MyCustomFrames/Options.lua:2838:38"); end
     end
 
     -- Extras (pedido del usuario 2026-07-19: "muevelo todo a una seccion
@@ -2846,10 +2846,10 @@ local function BuildPanel()
         -- Grupo local (el MakeGroup compartido de mas abajo, usado por las
         -- secciones Portrait, se declara DESPUES de este bloque en el archivo
         -- -- no esta en scope aca todavia, asi que se define uno propio).
-        local function MakeGroup(parent)
+        local function MakeGroup(parent) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeGroup MyCustomFrames/Options.lua:2849:14");
             local g = CreateFrame("Frame", nil, parent)
             g:SetAllPoints(parent)
-            return g
+            Perfy_Trace(Perfy_GetTime(), "Leave", "MakeGroup MyCustomFrames/Options.lua:2849:14"); return g
         end
 
         -- Sub-tabs internos (Tooltip & Timers / Top Widget) -- pedido del
@@ -2867,33 +2867,33 @@ local function BuildPanel()
         tabTopWidget:SetPoint("TOPLEFT", tabMain, "TOPRIGHT", 4, 0)
         local mainGroup = MakeGroup(f)
         local topWidgetGroup = MakeGroup(f)
-        local function ShowExtrasTab(which)
+        local function ShowExtrasTab(which) Perfy_Trace(Perfy_GetTime(), "Enter", "ShowExtrasTab MyCustomFrames/Options.lua:2870:14");
             mainGroup:SetShown(which == "main")
             topWidgetGroup:SetShown(which == "topwidget")
             tabMain:SetActive(which == "main")
             tabTopWidget:SetActive(which == "topwidget")
-        end
-        tabMain:SetScript("OnClick", function() ShowExtrasTab("main") end)
-        tabTopWidget:SetScript("OnClick", function() ShowExtrasTab("topwidget") end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ShowExtrasTab MyCustomFrames/Options.lua:2870:14"); end
+        tabMain:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2876:37"); ShowExtrasTab("main") Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2876:37"); end)
+        tabTopWidget:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2877:42"); ShowExtrasTab("topwidget") Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2877:42"); end)
 
         MakeHeader(mainGroup, "Tooltip", L, -6, 210)
-        local function TTDB() return ns.GetDB() and ns.GetDB().tooltip end
+        local function TTDB() Perfy_Trace(Perfy_GetTime(), "Enter", "TTDB MyCustomFrames/Options.lua:2880:14"); return Perfy_Trace_Passthrough("Leave", "TTDB MyCustomFrames/Options.lua:2880:14", ns.GetDB() and ns.GetDB().tooltip) end
         MakeToggle(mainGroup, "Enable tooltip skin", L, -30,
-            function() return TTDB() and TTDB().enabled end,
-            function(v) if TTDB() then TTDB().enabled = v end; if ns.RefreshTooltipSkin then ns.RefreshTooltipSkin() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2882:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:2882:12", TTDB() and TTDB().enabled) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2883:12"); if TTDB() then TTDB().enabled = v end; if ns.RefreshTooltipSkin then ns.RefreshTooltipSkin() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2883:12"); end)
         MakeSlider(mainGroup, "Scale", 0.5, 2, 0.05, "scale", L, -74, TTDB,
-            function() if ns.RefreshTooltipSkin then ns.RefreshTooltipSkin() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2885:12"); if ns.RefreshTooltipSkin then ns.RefreshTooltipSkin() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2885:12"); end)
         local ttNote = mainGroup:CreateFontString(nil, "ARTWORK"); setFont(ttNote, 10)
         ttNote:SetPoint("TOPLEFT", L, -128); ttNote:SetWidth(210); ttNote:SetJustifyH("LEFT")
         ttNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         ttNote:SetText("Reskins GameTooltip and related tooltips (items, units, comparisons) to match this preset.")
 
         MakeHeader(mainGroup, "Mirror Timers (breath/rested/feign death)", R, -6, 210)
-        local function MTDB() return ns.GetDB() and ns.GetDB().mirrortimer end
-        local function RefreshMT() if ns.RefreshMirrorTimers then ns.RefreshMirrorTimers() end end
+        local function MTDB() Perfy_Trace(Perfy_GetTime(), "Enter", "MTDB MyCustomFrames/Options.lua:2892:14"); return Perfy_Trace_Passthrough("Leave", "MTDB MyCustomFrames/Options.lua:2892:14", ns.GetDB() and ns.GetDB().mirrortimer) end
+        local function RefreshMT() Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshMT MyCustomFrames/Options.lua:2893:14"); if ns.RefreshMirrorTimers then ns.RefreshMirrorTimers() end Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshMT MyCustomFrames/Options.lua:2893:14"); end
         MakeToggle(mainGroup, "Enable", R, -30,
-            function() return MTDB() and MTDB().enabled end,
-            function(v) if MTDB() then MTDB().enabled = v end; RefreshMT() end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2895:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:2895:12", MTDB() and MTDB().enabled) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2896:12"); if MTDB() then MTDB().enabled = v end; RefreshMT() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2896:12"); end)
         MakeSlider(mainGroup, "Bar Width", 60, 400, 5, "width", R, -74, MTDB, RefreshMT)
         MakeSlider(mainGroup, "Bar Height", 8, 40, 1, "height", R, -126, MTDB, RefreshMT)
         -- Pedido del usuario 2026-07-19: "dejame elegir el w h de ambas" --
@@ -2917,18 +2917,18 @@ local function BuildPanel()
         MakeSlider(mainGroup, "Text Offset X", -100, 100, 1, "labelOffsetX", L, -224, MTDB, RefreshMT)
         MakeSlider(mainGroup, "Text Offset Y", -100, 100, 1, "labelOffsetY", L, -276, MTDB, RefreshMT)
         MakeSlider(mainGroup, "Text Size", 6, 24, 1, "labelFontSize", L, -328, MTDB, RefreshMT)
-        MakeGlobalColor(mainGroup, "Text Color", function() return MTDB() and MTDB().labelColor end, L, -370, RefreshMT)
+        MakeGlobalColor(mainGroup, "Text Color", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2920:49"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:2920:49", MTDB() and MTDB().labelColor) end, L, -370, RefreshMT)
 
         -- FIX (2026-07-23, "se superpone con el texto de las pestañas"): el
         -- header arrancaba en la MISMA fila que los tabs (L,-6) -- se corre
         -- debajo de la fila de pestañas (que termina en ~-24), con mas aire
         -- entre elementos ya que esta pestaña tiene lugar de sobra.
         MakeHeader(topWidgetGroup, "Top Widget (event/delve progress bars)", L, -40, 430)
-        local function TWDB() return ns.GetDB() and ns.GetDB().topwidget end
-        local function RefreshTW() if ns.RefreshTopWidget then ns.RefreshTopWidget() end end
+        local function TWDB() Perfy_Trace(Perfy_GetTime(), "Enter", "TWDB MyCustomFrames/Options.lua:2927:14"); return Perfy_Trace_Passthrough("Leave", "TWDB MyCustomFrames/Options.lua:2927:14", ns.GetDB() and ns.GetDB().topwidget) end
+        local function RefreshTW() Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshTW MyCustomFrames/Options.lua:2928:14"); if ns.RefreshTopWidget then ns.RefreshTopWidget() end Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshTW MyCustomFrames/Options.lua:2928:14"); end
         MakeToggle(topWidgetGroup, "Enable repositioning", L, -72,
-            function() return TWDB() and TWDB().enabled end,
-            function(v) if TWDB() then TWDB().enabled = v end; RefreshTW() end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2930:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:2930:12", TWDB() and TWDB().enabled) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2931:12"); if TWDB() then TWDB().enabled = v end; RefreshTW() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2931:12"); end)
         -- Pedido del usuario 2026-07-23: sliders ademas de arrastrar/rueda en Lock.
         -- FIX (2026-07-23, "entre al menu y se desposiciona"): el rango de estos
         -- sliders era mas angosto que una posicion real ya arrastrada a mano
@@ -2955,19 +2955,19 @@ local function BuildPanel()
         -- Minimap Buttons).
         local strataBtn = MakeButton(topWidgetGroup, "", 200, 22)
         strataBtn:SetPoint("TOPLEFT", R, -72)
-        local function StrataText()
+        local function StrataText() Perfy_Trace(Perfy_GetTime(), "Enter", "StrataText MyCustomFrames/Options.lua:2958:14");
             local d = TWDB()
             strataBtn.text:SetText("Strata: " .. tostring(d and d.strata or "MEDIUM"))
-        end
-        strataBtn:SetScript("OnClick", function()
-            local d = TWDB(); if not d then return end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "StrataText MyCustomFrames/Options.lua:2958:14"); end
+        strataBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2962:39");
+            local d = TWDB(); if not d then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2962:39"); return end
             local values = ns.STRATA_VALUES or { "MEDIUM" }
             local cur, idx = d.strata or "MEDIUM", 1
             for i, v in ipairs(values) do if v == cur then idx = i break end end
             d.strata = values[(idx % #values) + 1]
             StrataText()
             RefreshTW()
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2962:39"); end)
         refreshers[#refreshers + 1] = StrataText
 
         MakeHeader(topWidgetGroup, "Anchor to (frame; empty = screen)", R, -108, 210)
@@ -2975,23 +2975,23 @@ local function BuildPanel()
         anchorBox:SetSize(200, 20)
         anchorBox:SetPoint("TOPLEFT", R + 4, -137)
         anchorBox:SetAutoFocus(false)
-        anchorBox:SetScript("OnEnterPressed", function(self)
+        anchorBox:SetScript("OnEnterPressed", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2978:46");
             local d = TWDB(); if d then d.anchor = self:GetText() end
             self:ClearFocus()
             RefreshTW()
-        end)
-        anchorBox:SetScript("OnEscapePressed", function(self)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2978:46"); end)
+        anchorBox:SetScript("OnEscapePressed", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2983:47");
             self:ClearFocus()
             if ns.CloseMainPanel then ns.CloseMainPanel() end
-        end)
-        refreshers[#refreshers + 1] = function()
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2983:47"); end)
+        refreshers[#refreshers + 1] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "refreshers.? MyCustomFrames/Options.lua:2987:38");
             local d = TWDB()
             anchorBox:SetText((d and d.anchor) or "")
-        end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "refreshers.? MyCustomFrames/Options.lua:2987:38"); end
 
         local resetTWBtn = MakeButton(topWidgetGroup, "Reset position", 150, 22)
         resetTWBtn:SetPoint("TOPLEFT", L, -252)
-        resetTWBtn:SetScript("OnClick", function() ns.ResetUnit(ns.TOPWIDGET_KEY) end)
+        resetTWBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:2994:40"); ns.ResetUnit(ns.TOPWIDGET_KEY) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:2994:40"); end)
         local twNote = topWidgetGroup:CreateFontString(nil, "ARTWORK"); setFont(twNote, 10)
         twNote:SetPoint("TOPLEFT", L, -284); twNote:SetWidth(400); twNote:SetJustifyH("LEFT")
         twNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
@@ -3002,10 +3002,10 @@ local function BuildPanel()
 
     -- =========================== SECCIONES PORTRAIT ===========================
     -- Grupo (sub-frame) para poder mostrar/ocultar bloques enteros de widgets.
-    local function MakeGroup(parent)
+    local function MakeGroup(parent) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeGroup MyCustomFrames/Options.lua:3005:10");
         local g = CreateFrame("Frame", nil, parent)
         g:SetAllPoints(parent)
-        return g
+        Perfy_Trace(Perfy_GetTime(), "Leave", "MakeGroup MyCustomFrames/Options.lua:3005:10"); return g
     end
 
     -- Portrait / General
@@ -3017,7 +3017,7 @@ local function BuildPanel()
         MakeCycle(f, "Strata", ns.STRATA_VALUES, "strata", L, -136)
         local resetBtn = MakeButton(f, "Reset portrait", 200, 22)
         resetBtn:SetPoint("TOPLEFT", L, -176)
-        resetBtn:SetScript("OnClick", function() ns.ResetUnit(ns.currentEdit) end)
+        resetBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3020:38"); ns.ResetUnit(ns.currentEdit) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3020:38"); end)
 
         -- Solo player: click izquierdo abre el panel de personaje.
         local playerOnly = MakeGroup(f)
@@ -3030,14 +3030,22 @@ local function BuildPanel()
         local dual = MakeGroup(f)
         VIS.portraitDualBoxes[#VIS.portraitDualBoxes + 1] = dual
         MakeHeader(dual, "Dual position", R, -6, 250)
-        MakeCycle(dual, "Edit (preview)", { "center", "alt" }, "editPos", R, -30)
-        MakeCheckbox(dual, "Center if: target", "centerOnTarget", R, -62)
-        MakeCheckbox(dual, "Center if: combat", "centerInCombat", R, -88)
-        MakeCheckbox(dual, "Center if: raid/dungeon", "centerInInstance", R, -114)
+        -- Interruptor maestro (pedido del usuario 2026-07-29: "poder activar
+        -- o desactivar lo de las posiciones alternativas"): con esto apagado,
+        -- las 3 condiciones de abajo se ignoran y el portrait se queda
+        -- siempre en la posicion "centro" -- util para quien configuro una
+        -- posicion alterna en algun momento y ya no la quiere, sin tener que
+        -- desmarcar las 3 condiciones una por una (que ademas dejaria "alt"
+        -- como resultado, no "center").
+        MakeCheckbox(dual, "Enable alternate position", "dualPosEnabled", R, -30)
+        MakeCycle(dual, "Edit (preview)", { "center", "alt" }, "editPos", R, -56)
+        MakeCheckbox(dual, "Center if: target", "centerOnTarget", R, -88)
+        MakeCheckbox(dual, "Center if: combat", "centerInCombat", R, -114)
+        MakeCheckbox(dual, "Center if: raid/dungeon", "centerInInstance", R, -140)
         local note = dual:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
-        note:SetPoint("TOPLEFT", R, -148); note:SetWidth(210); note:SetJustifyH("LEFT")
+        note:SetPoint("TOPLEFT", R, -174); note:SetWidth(210); note:SetJustifyH("LEFT")
         note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        note:SetText("If no condition is met, the alternate position is used.")
+        note:SetText("If no condition is met, the alternate position is used. Disabling the toggle above always keeps the primary position, regardless of the conditions.")
     end
     -- Portrait / Posicion
     do
@@ -3204,7 +3212,7 @@ local function BuildPanel()
         note:SetText("Global font size/color here are the base. Per-text Size/Color/Alpha are in the TEXT tab; the calendar button is in the CAL tab. In preview, drag each element to move it.")
         local resetBtn = MakeButton(f, "Reset info bar", 200, 22)
         resetBtn:SetPoint("TOPLEFT", R, -110)
-        resetBtn:SetScript("OnClick", function() ns.ResetUnit(ns.currentEdit) end)
+        resetBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3207:38"); ns.ResetUnit(ns.currentEdit) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3207:38"); end)
     end
     -- Info / Posicion (mover todo)
     do
@@ -3287,7 +3295,7 @@ local function BuildPanel()
         note:SetText("In preview (/mcf): drag the row to move it. Reskins the Blizzard micro buttons (no background). Repositioning applies out of combat.")
         local resetBtn = MakeButton(f, "Reset micro menu", 200, 22)
         resetBtn:SetPoint("TOPLEFT", R, -150)
-        resetBtn:SetScript("OnClick", function() ns.ResetUnit(ns.currentEdit) end)
+        resetBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3290:38"); ns.ResetUnit(ns.currentEdit) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3290:38"); end)
     end
 
     -- =========================== SECCION CHAT BUBBLE ===========================
@@ -3307,7 +3315,7 @@ local function BuildPanel()
         note:SetText("Controls the world chat bubbles: hides their background and sets the text font/size/outline/color. Applies live as bubbles appear.")
         local resetBtn = MakeButton(f, "Reset chat bubble", 200, 22)
         resetBtn:SetPoint("TOPLEFT", R, -130)
-        resetBtn:SetScript("OnClick", function() ns.ResetUnit(ns.currentEdit) end)
+        resetBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3310:38"); ns.ResetUnit(ns.currentEdit) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3310:38"); end)
 
         -- Pedido del usuario 2026-07-19: "eso es de blizzard, se puede
         -- ocultar, azeriteui lo hace" -- el borde/fondo nativo del EditBox de
@@ -3317,12 +3325,12 @@ local function BuildPanel()
         -- RefreshChatEditBoxSkin al principio del archivo.
         MakeHeader(f, "Chat window", L, -210, 440)
         MakeToggle(f, "Hide chat edit box border texture", L, -234,
-            function() local d = ns.GetDB(); return d and d.hideChatEditBoxTexture end,
-            function(v)
-                local d = ns.GetDB(); if not d then return end
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3320:12"); local d = ns.GetDB(); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:3320:12", d and d.hideChatEditBoxTexture) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3321:12");
+                local d = ns.GetDB(); if not d then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3321:12"); return end
                 d.hideChatEditBoxTexture = v and true or false
                 if ns.RefreshChatEditBoxSkin then ns.RefreshChatEditBoxSkin() end
-            end)
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3321:12"); end)
     end
 
     -- =========================== SECCION QUEST TRACKER ===========================
@@ -3331,11 +3339,11 @@ local function BuildPanel()
         MakeCheckbox(f, "Colorize titles", "enabled", L, -10)
         MakeColorButton(f, "Title color", "color", L, -42)
         MakeSlider(f, "Title center offset", -100, 100, 1, "titleOffsetX", L, -84,
-            function() return ns.GetDB().tracker end,
-            function() if ns.RefreshTracker then ns.RefreshTracker() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3334:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:3334:12", ns.GetDB().tracker) end,
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3335:12"); if ns.RefreshTracker then ns.RefreshTracker() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3335:12"); end)
         MakeSlider(f, "Dungeon title offset", -100, 100, 1, "dungeonTitleOffsetX", L, -126,
-            function() return ns.GetDB().tracker end,
-            function() if ns.RefreshTracker then ns.RefreshTracker() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3337:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:3337:12", ns.GetDB().tracker) end,
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3338:12"); if ns.RefreshTracker then ns.RefreshTracker() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3338:12"); end)
         -- Pedido del usuario 2026-07-21: "controlar el text alignment leading/justified/
         -- trailing" -- WoW solo tiene LEFT/CENTER/RIGHT (no un 4to modo "justified" real de
         -- texto), asi que se mapea a esos 3. Aplica a TODO texto que el tracker toca (headers,
@@ -3383,7 +3391,7 @@ local function BuildPanel()
         note:SetText(libNote)
         local resetBtn = MakeButton(f, "Reset assisted glow", 200, 22)
         resetBtn:SetPoint("TOPLEFT", R, -250)
-        resetBtn:SetScript("OnClick", function() ns.ResetUnit(ns.currentEdit) end)
+        resetBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3386:38"); ns.ResetUnit(ns.currentEdit) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3386:38"); end)
     end
 
     -- =========================== SECCIONES MINIMAP ===========================
@@ -3405,7 +3413,7 @@ local function BuildPanel()
         note:SetText("The map itself keeps whatever size Blizzard's Edit Mode gives it — this only moves/scales the round frame (border, icons, ring) built around it. Drag in Lock mode to reposition; mouse wheel over it in Lock adjusts scale.")
         local resetBtn = MakeButton(f, "Reset minimap", 200, 22)
         resetBtn:SetPoint("TOPLEFT", L, -230)
-        resetBtn:SetScript("OnClick", function() ns.ResetUnit(ns.currentEdit) end)
+        resetBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3408:38"); ns.ResetUnit(ns.currentEdit) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3408:38"); end)
     end
     -- Minimap / Display (que elementos mostrar).
     do
@@ -3492,8 +3500,8 @@ local function BuildPanel()
     -- que Party/Arena Auras. La posicion/escala del trigger en si se maneja
     -- arrastrando + rueda del mouse en Lock (como TopWidget), no aca.
     do
-        local function MMBDB() return ns.GetDB() and ns.GetDB().minimapbuttons end
-        local function RefreshMMB() if ns.RefreshMinimapButtons then ns.RefreshMinimapButtons() end end
+        local function MMBDB() Perfy_Trace(Perfy_GetTime(), "Enter", "MMBDB MyCustomFrames/Options.lua:3495:14"); return Perfy_Trace_Passthrough("Leave", "MMBDB MyCustomFrames/Options.lua:3495:14", ns.GetDB() and ns.GetDB().minimapbuttons) end
+        local function RefreshMMB() Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshMMB MyCustomFrames/Options.lua:3496:14"); if ns.RefreshMinimapButtons then ns.RefreshMinimapButtons() end Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshMMB MyCustomFrames/Options.lua:3496:14"); end
 
         local f = Section("mn_buttons")
         MakeHeader(f, "Addon Buttons  —  hover reveal", L, -6, 430)
@@ -3504,26 +3512,26 @@ local function BuildPanel()
             "icon itself is moved/scaled by dragging + mouse wheel in Lock mode, next to the minimap.")
 
         MakeToggle(f, "Enabled", L, -76,
-            function() local d = MMBDB(); return d and d.enabled end,
-            function(v) local d = MMBDB(); if d then d.enabled = v end; RefreshMMB() end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3507:12"); local d = MMBDB(); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:3507:12", d and d.enabled) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3508:12"); local d = MMBDB(); if d then d.enabled = v end; RefreshMMB() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3508:12"); end)
 
         -- Direccion: boton ciclico, mismo patron que Party/Arena Auras (no hay
         -- MakeCycle generico para valores en una tabla custom).
         local dirBtn = MakeButton(f, "", 220, 24)
         dirBtn:SetPoint("TOPLEFT", L, -110)
         local DIRS = { "down", "up", "left", "right" }
-        local function DirText()
+        local function DirText() Perfy_Trace(Perfy_GetTime(), "Enter", "DirText MyCustomFrames/Options.lua:3515:14");
             local d = MMBDB()
             dirBtn.text:SetText("Direction: " .. (d and d.direction or "down"))
-        end
-        dirBtn:SetScript("OnClick", function()
-            local d = MMBDB(); if not d then return end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "DirText MyCustomFrames/Options.lua:3515:14"); end
+        dirBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3519:36");
+            local d = MMBDB(); if not d then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3519:36"); return end
             local cur, idx = d.direction or "down", 1
             for i, v in ipairs(DIRS) do if v == cur then idx = i break end end
             d.direction = DIRS[(idx % #DIRS) + 1]
             DirText()
             RefreshMMB()
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3519:36"); end)
         refreshers[#refreshers + 1] = DirText
 
         MakeSlider(f, "Icon size", 12, 40, 1, "iconSize", L, -154, MMBDB, RefreshMMB)
@@ -3536,19 +3544,19 @@ local function BuildPanel()
         -- mismo criterio y motivo que se agrego a Top Widget (ver esa seccion).
         local strataBtn = MakeButton(f, "", 200, 22)
         strataBtn:SetPoint("TOPLEFT", L, -252)
-        local function StrataText()
+        local function StrataText() Perfy_Trace(Perfy_GetTime(), "Enter", "StrataText MyCustomFrames/Options.lua:3539:14");
             local d = MMBDB()
             strataBtn.text:SetText("Strata: " .. tostring(d and d.strata or "MEDIUM"))
-        end
-        strataBtn:SetScript("OnClick", function()
-            local d = MMBDB(); if not d then return end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "StrataText MyCustomFrames/Options.lua:3539:14"); end
+        strataBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3543:39");
+            local d = MMBDB(); if not d then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3543:39"); return end
             local values = ns.STRATA_VALUES or { "MEDIUM" }
             local cur, idx = d.strata or "MEDIUM", 1
             for i, v in ipairs(values) do if v == cur then idx = i break end end
             d.strata = values[(idx % #values) + 1]
             StrataText()
             RefreshMMB()
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3543:39"); end)
         refreshers[#refreshers + 1] = StrataText
 
         MakeHeader(f, "Anchor to (frame; empty = Minimap)", R, -252, 210)
@@ -3556,23 +3564,23 @@ local function BuildPanel()
         anchorBox:SetSize(200, 20)
         anchorBox:SetPoint("TOPLEFT", R + 4, -281)
         anchorBox:SetAutoFocus(false)
-        anchorBox:SetScript("OnEnterPressed", function(self)
+        anchorBox:SetScript("OnEnterPressed", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3559:46");
             local d = MMBDB(); if d then d.anchor = self:GetText() end
             self:ClearFocus()
             RefreshMMB()
-        end)
-        anchorBox:SetScript("OnEscapePressed", function(self)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3559:46"); end)
+        anchorBox:SetScript("OnEscapePressed", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3564:47");
             self:ClearFocus()
             if ns.CloseMainPanel then ns.CloseMainPanel() end
-        end)
-        refreshers[#refreshers + 1] = function()
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3564:47"); end)
+        refreshers[#refreshers + 1] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "refreshers.? MyCustomFrames/Options.lua:3568:38");
             local d = MMBDB()
             anchorBox:SetText((d and d.anchor) or "")
-        end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "refreshers.? MyCustomFrames/Options.lua:3568:38"); end
 
         local resetBtn = MakeButton(f, "Reset position", 200, 22)
         resetBtn:SetPoint("TOPLEFT", L, -300)
-        resetBtn:SetScript("OnClick", function() if ns.ResetUnit then ns.ResetUnit(ns.MINIMAPBUTTONS_KEY) end end)
+        resetBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3575:38"); if ns.ResetUnit then ns.ResetUnit(ns.MINIMAPBUTTONS_KEY) end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3575:38"); end)
     end
 
     -- =========================== SECCIONES RAID FRAMES ===========================
@@ -3592,7 +3600,7 @@ local function BuildPanel()
         note:SetText("Shows automatically in any raid group and in battlegrounds only. Growth direction, per-row/column limits and spacing live in the Layout tab; the container's own screen position lives in Pos; icon positions live in Icons.")
         local resetBtn = MakeButton(f, "Reset raid frames", 200, 22)
         resetBtn:SetPoint("TOPLEFT", L, -130)
-        resetBtn:SetScript("OnClick", function() ns.ResetUnit(ns.currentEdit) end)
+        resetBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3595:38"); ns.ResetUnit(ns.currentEdit) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3595:38"); end)
     end
     -- Raid / Icons (posicion de raid target/ready check-resurrect/rol,
     -- pedido del usuario 2026-07-20: "dejame controlar la posicion de los
@@ -3686,7 +3694,7 @@ local function BuildPanel()
         note:SetText("Reskins Blizzard's nameplates to match this preset. Position/size are set in the Nameplate Designer, not here.")
         local resetBtn = MakeButton(f, "Reset nameplates", 200, 22)
         resetBtn:SetPoint("TOPLEFT", L, -84)
-        resetBtn:SetScript("OnClick", function() ns.ResetUnit(ns.currentEdit) end)
+        resetBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3689:38"); ns.ResetUnit(ns.currentEdit) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3689:38"); end)
 
         -- Canvas de diseño (drag + rueda) -- ver NameplateDesigner.lua. TODO
         -- el control de posicion/tamaño vive aca, no en sliders de texto.
@@ -3698,10 +3706,10 @@ local function BuildPanel()
         designBtn:SetActive(true)
         -- Pedido del usuario 2026-07-19: "quiero que cuando abras el panel del
         -- nameplate, se cierre el menu" -- antes quedaban superpuestos.
-        designBtn:SetScript("OnClick", function()
+        designBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3701:39");
             if ns.ToggleNameplateDesigner then ns.ToggleNameplateDesigner() end
             if ns.CloseMainPanel then ns.CloseMainPanel() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3701:39"); end)
 
         -- Grupo 2: rango (CVar nativo de Blizzard).
         MakeHeader(f, "Range", L, -126, 430)
@@ -3835,53 +3843,53 @@ local function BuildPanel()
         -- mano igual que el resto de los botones ciclicos del addon).
         local dirBtn = MakeButton(f, "", 220, 24)
         dirBtn:SetPoint("TOPLEFT", L, -76)
-        local function DirText()
+        local function DirText() Perfy_Trace(Perfy_GetTime(), "Enter", "DirText MyCustomFrames/Options.lua:3838:14");
             local d = ns.GetDB() and ns.GetDB().partyAuraDirection or "left"
             dirBtn.text:SetText("Direction: " .. d)
-        end
-        dirBtn:SetScript("OnClick", function()
+        Perfy_Trace(Perfy_GetTime(), "Leave", "DirText MyCustomFrames/Options.lua:3838:14"); end
+        dirBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3842:36");
             local list = ns.PARTY_AURA_DIRECTIONS or { "left", "right", "up", "down" }
-            local d = ns.GetDB(); if not d then return end
+            local d = ns.GetDB(); if not d then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3842:36"); return end
             local cur, idx = d.partyAuraDirection or "left", 1
             for i, v in ipairs(list) do if v == cur then idx = i break end end
             d.partyAuraDirection = list[(idx % #list) + 1]
             DirText()
             if ns.RefreshPartyAuraDirection then ns.RefreshPartyAuraDirection() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3842:36"); end)
         refreshers[#refreshers + 1] = DirText
 
         MakeSlider(f, "Icon size", 12, 48, 1, "partyAuraIconSize", L, -120,
-            function() return ns.GetDB() end,
-            function() if ns.RefreshPartyAuraSize then ns.RefreshPartyAuraSize() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3854:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:3854:12", ns.GetDB()) end,
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3855:12"); if ns.RefreshPartyAuraSize then ns.RefreshPartyAuraSize() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3855:12"); end)
 
         -- Sort/limite/padding (2026-07-27, pedido del usuario: "que este en el menu option de
         -- elegir sort, limite de buffs y debuffs o auras mostradas y el padding entre ellas").
         local auraSortBtn = MakeButton(f, "", 220, 24)
         auraSortBtn:SetPoint("TOPLEFT", L, -164)
-        local function SortText()
+        local function SortText() Perfy_Trace(Perfy_GetTime(), "Enter", "SortText MyCustomFrames/Options.lua:3861:14");
             local d = ns.GetDB() and ns.GetDB().partyAuraSort or "priority"
             auraSortBtn.text:SetText("Sort: " .. d)
-        end
-        auraSortBtn:SetScript("OnClick", function()
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SortText MyCustomFrames/Options.lua:3861:14"); end
+        auraSortBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3865:41");
             local list = ns.AURA_SORT_MODES or { "priority", "time", "index" }
-            local d = ns.GetDB(); if not d then return end
+            local d = ns.GetDB(); if not d then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3865:41"); return end
             local cur, idx = d.partyAuraSort or "priority", 1
             for i, v in ipairs(list) do if v == cur then idx = i break end end
             d.partyAuraSort = list[(idx % #list) + 1]
             SortText()
             if ns.RefreshPartyAuraSort then ns.RefreshPartyAuraSort() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3865:41"); end)
         refreshers[#refreshers + 1] = SortText
 
         MakeSlider(f, "Max icons shown", 1, 8, 1, "partyAuraMaxIcons", L, -208,
-            function() return ns.GetDB() end,
-            function() if ns.RefreshPartyAuraMaxIcons then ns.RefreshPartyAuraMaxIcons() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3877:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:3877:12", ns.GetDB()) end,
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3878:12"); if ns.RefreshPartyAuraMaxIcons then ns.RefreshPartyAuraMaxIcons() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3878:12"); end)
 
         MakeSlider(f, "Icon padding", 0, 20, 1, "partyAuraPadding", L, -252,
-            function() return ns.GetDB() end,
-            function() if ns.RefreshPartyAuraPadding then ns.RefreshPartyAuraPadding() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3881:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:3881:12", ns.GetDB()) end,
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3882:12"); if ns.RefreshPartyAuraPadding then ns.RefreshPartyAuraPadding() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3882:12"); end)
 
-        MakePreviewButton(f, R, -164, function() return ns.TogglePartyAuraTest end)
+        MakePreviewButton(f, R, -164, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3884:38"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:3884:38", ns.TogglePartyAuraTest) end)
     end
 
     -- =========================== SECCION ARENA AURAS (2026-07-19) ===========================
@@ -3901,51 +3909,51 @@ local function BuildPanel()
 
         local dirBtn = MakeButton(f, "", 220, 24)
         dirBtn:SetPoint("TOPLEFT", L, -76)
-        local function DirText()
+        local function DirText() Perfy_Trace(Perfy_GetTime(), "Enter", "DirText MyCustomFrames/Options.lua:3904:14");
             local d = ns.GetDB() and ns.GetDB().arenaAuraDirection or "down"
             dirBtn.text:SetText("Direction: " .. d)
-        end
-        dirBtn:SetScript("OnClick", function()
+        Perfy_Trace(Perfy_GetTime(), "Leave", "DirText MyCustomFrames/Options.lua:3904:14"); end
+        dirBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3908:36");
             local list = ns.ARENA_AURA_DIRECTIONS or { "left", "right", "up", "down" }
-            local d = ns.GetDB(); if not d then return end
+            local d = ns.GetDB(); if not d then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3908:36"); return end
             local cur, idx = d.arenaAuraDirection or "down", 1
             for i, v in ipairs(list) do if v == cur then idx = i break end end
             d.arenaAuraDirection = list[(idx % #list) + 1]
             DirText()
             if ns.RefreshArenaAuraDirection then ns.RefreshArenaAuraDirection() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3908:36"); end)
         refreshers[#refreshers + 1] = DirText
 
         MakeSlider(f, "Icon size", 12, 48, 1, "arenaAuraIconSize", L, -120,
-            function() return ns.GetDB() end,
-            function() if ns.RefreshArenaAuraSize then ns.RefreshArenaAuraSize() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3920:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:3920:12", ns.GetDB()) end,
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3921:12"); if ns.RefreshArenaAuraSize then ns.RefreshArenaAuraSize() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3921:12"); end)
 
         local auraSortBtn = MakeButton(f, "", 220, 24)
         auraSortBtn:SetPoint("TOPLEFT", L, -164)
-        local function SortText()
+        local function SortText() Perfy_Trace(Perfy_GetTime(), "Enter", "SortText MyCustomFrames/Options.lua:3925:14");
             local d = ns.GetDB() and ns.GetDB().arenaAuraSort or "priority"
             auraSortBtn.text:SetText("Sort: " .. d)
-        end
-        auraSortBtn:SetScript("OnClick", function()
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SortText MyCustomFrames/Options.lua:3925:14"); end
+        auraSortBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3929:41");
             local list = ns.AURA_SORT_MODES or { "priority", "time", "index" }
-            local d = ns.GetDB(); if not d then return end
+            local d = ns.GetDB(); if not d then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3929:41"); return end
             local cur, idx = d.arenaAuraSort or "priority", 1
             for i, v in ipairs(list) do if v == cur then idx = i break end end
             d.arenaAuraSort = list[(idx % #list) + 1]
             SortText()
             if ns.RefreshArenaAuraSort then ns.RefreshArenaAuraSort() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3929:41"); end)
         refreshers[#refreshers + 1] = SortText
 
         MakeSlider(f, "Max icons shown", 1, 8, 1, "arenaAuraMaxIcons", L, -208,
-            function() return ns.GetDB() end,
-            function() if ns.RefreshArenaAuraMaxIcons then ns.RefreshArenaAuraMaxIcons() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3941:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:3941:12", ns.GetDB()) end,
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3942:12"); if ns.RefreshArenaAuraMaxIcons then ns.RefreshArenaAuraMaxIcons() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3942:12"); end)
 
         MakeSlider(f, "Icon padding", 0, 20, 1, "arenaAuraPadding", L, -252,
-            function() return ns.GetDB() end,
-            function() if ns.RefreshArenaAuraPadding then ns.RefreshArenaAuraPadding() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3945:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:3945:12", ns.GetDB()) end,
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3946:12"); if ns.RefreshArenaAuraPadding then ns.RefreshArenaAuraPadding() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3946:12"); end)
 
-        MakePreviewButton(f, R, -164, function() return ns.ToggleArenaAuraTest end)
+        MakePreviewButton(f, R, -164, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3948:38"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:3948:38", ns.ToggleArenaAuraTest) end)
     end
 
     -- =========================== SECCION FOCUS AURAS (2026-07-27) ===========================
@@ -3966,51 +3974,51 @@ local function BuildPanel()
 
         local dirBtn = MakeButton(f, "", 220, 24)
         dirBtn:SetPoint("TOPLEFT", L, -76)
-        local function DirText()
+        local function DirText() Perfy_Trace(Perfy_GetTime(), "Enter", "DirText MyCustomFrames/Options.lua:3969:14");
             local d = ns.GetDB() and ns.GetDB().focusAuraDirection or "down"
             dirBtn.text:SetText("Direction: " .. d)
-        end
-        dirBtn:SetScript("OnClick", function()
+        Perfy_Trace(Perfy_GetTime(), "Leave", "DirText MyCustomFrames/Options.lua:3969:14"); end
+        dirBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3973:36");
             local list = ns.FOCUS_AURA_DIRECTIONS or { "left", "right", "up", "down" }
-            local d = ns.GetDB(); if not d then return end
+            local d = ns.GetDB(); if not d then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3973:36"); return end
             local cur, idx = d.focusAuraDirection or "down", 1
             for i, v in ipairs(list) do if v == cur then idx = i break end end
             d.focusAuraDirection = list[(idx % #list) + 1]
             DirText()
             if ns.RefreshFocusAuraDirection then ns.RefreshFocusAuraDirection() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3973:36"); end)
         refreshers[#refreshers + 1] = DirText
 
         MakeSlider(f, "Icon size", 12, 48, 1, "focusAuraIconSize", L, -120,
-            function() return ns.GetDB() end,
-            function() if ns.RefreshFocusAuraSize then ns.RefreshFocusAuraSize() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3985:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:3985:12", ns.GetDB()) end,
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3986:12"); if ns.RefreshFocusAuraSize then ns.RefreshFocusAuraSize() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3986:12"); end)
 
         local auraSortBtn = MakeButton(f, "", 220, 24)
         auraSortBtn:SetPoint("TOPLEFT", L, -164)
-        local function SortText()
+        local function SortText() Perfy_Trace(Perfy_GetTime(), "Enter", "SortText MyCustomFrames/Options.lua:3990:14");
             local d = ns.GetDB() and ns.GetDB().focusAuraSort or "priority"
             auraSortBtn.text:SetText("Sort: " .. d)
-        end
-        auraSortBtn:SetScript("OnClick", function()
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SortText MyCustomFrames/Options.lua:3990:14"); end
+        auraSortBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:3994:41");
             local list = ns.AURA_SORT_MODES or { "priority", "time", "index" }
-            local d = ns.GetDB(); if not d then return end
+            local d = ns.GetDB(); if not d then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3994:41"); return end
             local cur, idx = d.focusAuraSort or "priority", 1
             for i, v in ipairs(list) do if v == cur then idx = i break end end
             d.focusAuraSort = list[(idx % #list) + 1]
             SortText()
             if ns.RefreshFocusAuraSort then ns.RefreshFocusAuraSort() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:3994:41"); end)
         refreshers[#refreshers + 1] = SortText
 
         MakeSlider(f, "Max icons shown", 1, 8, 1, "focusAuraMaxIcons", L, -208,
-            function() return ns.GetDB() end,
-            function() if ns.RefreshFocusAuraMaxIcons then ns.RefreshFocusAuraMaxIcons() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4006:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4006:12", ns.GetDB()) end,
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4007:12"); if ns.RefreshFocusAuraMaxIcons then ns.RefreshFocusAuraMaxIcons() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4007:12"); end)
 
         MakeSlider(f, "Icon padding", 0, 20, 1, "focusAuraPadding", L, -252,
-            function() return ns.GetDB() end,
-            function() if ns.RefreshFocusAuraPadding then ns.RefreshFocusAuraPadding() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4010:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4010:12", ns.GetDB()) end,
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4011:12"); if ns.RefreshFocusAuraPadding then ns.RefreshFocusAuraPadding() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4011:12"); end)
 
-        MakePreviewButton(f, R, -164, function() return ns.ToggleFocusAuraTest end)
+        MakePreviewButton(f, R, -164, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4013:38"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4013:38", ns.ToggleFocusAuraTest) end)
     end
 
     -- =========================== SECCION PLAYER AURAS (2026-07-27) ===========================
@@ -4031,51 +4039,51 @@ local function BuildPanel()
 
         local dirBtn = MakeButton(f, "", 220, 24)
         dirBtn:SetPoint("TOPLEFT", L, -76)
-        local function DirText()
+        local function DirText() Perfy_Trace(Perfy_GetTime(), "Enter", "DirText MyCustomFrames/Options.lua:4034:14");
             local d = ns.GetDB() and ns.GetDB().playerAuraDirection or "up"
             dirBtn.text:SetText("Direction: " .. d)
-        end
-        dirBtn:SetScript("OnClick", function()
+        Perfy_Trace(Perfy_GetTime(), "Leave", "DirText MyCustomFrames/Options.lua:4034:14"); end
+        dirBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4038:36");
             local list = ns.PLAYER_AURA_DIRECTIONS or { "left", "right", "up", "down" }
-            local d = ns.GetDB(); if not d then return end
+            local d = ns.GetDB(); if not d then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4038:36"); return end
             local cur, idx = d.playerAuraDirection or "up", 1
             for i, v in ipairs(list) do if v == cur then idx = i break end end
             d.playerAuraDirection = list[(idx % #list) + 1]
             DirText()
             if ns.RefreshPlayerAuraDirection then ns.RefreshPlayerAuraDirection() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4038:36"); end)
         refreshers[#refreshers + 1] = DirText
 
         MakeSlider(f, "Icon size", 12, 48, 1, "playerAuraIconSize", L, -120,
-            function() return ns.GetDB() end,
-            function() if ns.RefreshPlayerAuraSize then ns.RefreshPlayerAuraSize() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4050:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4050:12", ns.GetDB()) end,
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4051:12"); if ns.RefreshPlayerAuraSize then ns.RefreshPlayerAuraSize() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4051:12"); end)
 
         local auraSortBtn = MakeButton(f, "", 220, 24)
         auraSortBtn:SetPoint("TOPLEFT", L, -164)
-        local function SortText()
+        local function SortText() Perfy_Trace(Perfy_GetTime(), "Enter", "SortText MyCustomFrames/Options.lua:4055:14");
             local d = ns.GetDB() and ns.GetDB().playerAuraSort or "priority"
             auraSortBtn.text:SetText("Sort: " .. d)
-        end
-        auraSortBtn:SetScript("OnClick", function()
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SortText MyCustomFrames/Options.lua:4055:14"); end
+        auraSortBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4059:41");
             local list = ns.AURA_SORT_MODES or { "priority", "time", "index" }
-            local d = ns.GetDB(); if not d then return end
+            local d = ns.GetDB(); if not d then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4059:41"); return end
             local cur, idx = d.playerAuraSort or "priority", 1
             for i, v in ipairs(list) do if v == cur then idx = i break end end
             d.playerAuraSort = list[(idx % #list) + 1]
             SortText()
             if ns.RefreshPlayerAuraSort then ns.RefreshPlayerAuraSort() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4059:41"); end)
         refreshers[#refreshers + 1] = SortText
 
         MakeSlider(f, "Max icons shown", 1, 8, 1, "playerAuraMaxIcons", L, -208,
-            function() return ns.GetDB() end,
-            function() if ns.RefreshPlayerAuraMaxIcons then ns.RefreshPlayerAuraMaxIcons() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4071:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4071:12", ns.GetDB()) end,
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4072:12"); if ns.RefreshPlayerAuraMaxIcons then ns.RefreshPlayerAuraMaxIcons() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4072:12"); end)
 
         MakeSlider(f, "Icon padding", 0, 20, 1, "playerAuraPadding", L, -252,
-            function() return ns.GetDB() end,
-            function() if ns.RefreshPlayerAuraPadding then ns.RefreshPlayerAuraPadding() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4075:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4075:12", ns.GetDB()) end,
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4076:12"); if ns.RefreshPlayerAuraPadding then ns.RefreshPlayerAuraPadding() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4076:12"); end)
 
-        MakePreviewButton(f, R, -164, function() return ns.TogglePlayerAuraTest end)
+        MakePreviewButton(f, R, -164, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4078:38"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4078:38", ns.TogglePlayerAuraTest) end)
     end
 
     -- =========================== SECCION TARGET AURAS (2026-07-27) ===========================
@@ -4095,51 +4103,51 @@ local function BuildPanel()
 
         local dirBtn = MakeButton(f, "", 220, 24)
         dirBtn:SetPoint("TOPLEFT", L, -76)
-        local function DirText()
+        local function DirText() Perfy_Trace(Perfy_GetTime(), "Enter", "DirText MyCustomFrames/Options.lua:4098:14");
             local d = ns.GetDB() and ns.GetDB().targetAuraDirection or "down"
             dirBtn.text:SetText("Direction: " .. d)
-        end
-        dirBtn:SetScript("OnClick", function()
+        Perfy_Trace(Perfy_GetTime(), "Leave", "DirText MyCustomFrames/Options.lua:4098:14"); end
+        dirBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4102:36");
             local list = ns.TARGET_AURA_DIRECTIONS or { "left", "right", "up", "down" }
-            local d = ns.GetDB(); if not d then return end
+            local d = ns.GetDB(); if not d then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4102:36"); return end
             local cur, idx = d.targetAuraDirection or "down", 1
             for i, v in ipairs(list) do if v == cur then idx = i break end end
             d.targetAuraDirection = list[(idx % #list) + 1]
             DirText()
             if ns.RefreshTargetAuraDirection then ns.RefreshTargetAuraDirection() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4102:36"); end)
         refreshers[#refreshers + 1] = DirText
 
         MakeSlider(f, "Icon size", 12, 48, 1, "targetAuraIconSize", L, -120,
-            function() return ns.GetDB() end,
-            function() if ns.RefreshTargetAuraSize then ns.RefreshTargetAuraSize() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4114:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4114:12", ns.GetDB()) end,
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4115:12"); if ns.RefreshTargetAuraSize then ns.RefreshTargetAuraSize() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4115:12"); end)
 
         local auraSortBtn = MakeButton(f, "", 220, 24)
         auraSortBtn:SetPoint("TOPLEFT", L, -164)
-        local function SortText()
+        local function SortText() Perfy_Trace(Perfy_GetTime(), "Enter", "SortText MyCustomFrames/Options.lua:4119:14");
             local d = ns.GetDB() and ns.GetDB().targetAuraSort or "priority"
             auraSortBtn.text:SetText("Sort: " .. d)
-        end
-        auraSortBtn:SetScript("OnClick", function()
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SortText MyCustomFrames/Options.lua:4119:14"); end
+        auraSortBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4123:41");
             local list = ns.AURA_SORT_MODES or { "priority", "time", "index" }
-            local d = ns.GetDB(); if not d then return end
+            local d = ns.GetDB(); if not d then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4123:41"); return end
             local cur, idx = d.targetAuraSort or "priority", 1
             for i, v in ipairs(list) do if v == cur then idx = i break end end
             d.targetAuraSort = list[(idx % #list) + 1]
             SortText()
             if ns.RefreshTargetAuraSort then ns.RefreshTargetAuraSort() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4123:41"); end)
         refreshers[#refreshers + 1] = SortText
 
         MakeSlider(f, "Max icons shown", 1, 8, 1, "targetAuraMaxIcons", L, -208,
-            function() return ns.GetDB() end,
-            function() if ns.RefreshTargetAuraMaxIcons then ns.RefreshTargetAuraMaxIcons() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4135:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4135:12", ns.GetDB()) end,
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4136:12"); if ns.RefreshTargetAuraMaxIcons then ns.RefreshTargetAuraMaxIcons() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4136:12"); end)
 
         MakeSlider(f, "Icon padding", 0, 20, 1, "targetAuraPadding", L, -252,
-            function() return ns.GetDB() end,
-            function() if ns.RefreshTargetAuraPadding then ns.RefreshTargetAuraPadding() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4139:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4139:12", ns.GetDB()) end,
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4140:12"); if ns.RefreshTargetAuraPadding then ns.RefreshTargetAuraPadding() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4140:12"); end)
 
-        MakePreviewButton(f, R, -164, function() return ns.ToggleTargetAuraTest end)
+        MakePreviewButton(f, R, -164, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4142:38"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4142:38", ns.ToggleTargetAuraTest) end)
     end
 
     -- =========================== SECCION CLASS POWER (2026-07-19) ===========================
@@ -4149,22 +4157,22 @@ local function BuildPanel()
     -- ns.GetDB() directo (patron distinto al de Party Auras, que SI guarda en el root).
     do
         local f = Section("cp_general")
-        local function CPDB() return ns.GetDB() and ns.GetDB().classpower end
+        local function CPDB() Perfy_Trace(Perfy_GetTime(), "Enter", "CPDB MyCustomFrames/Options.lua:4152:14"); return Perfy_Trace_Passthrough("Leave", "CPDB MyCustomFrames/Options.lua:4152:14", ns.GetDB() and ns.GetDB().classpower) end
         MakeHeader(f, "Class Power", L, -6, 430)
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", L, -32); note:SetWidth(430); note:SetJustifyH("LEFT")
         note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("Combo points, Holy Power, Chi, Soul Shards, Arcane Charges, Essence — auto-detects your class/spec's resource. Same layout and textures as AzeriteUI. Runes (Death Knight), Stagger (Brewmaster) and Soul Fragments (Demon Hunter) aren't supported yet. Try /mcfclasspowerdiag to check detection live.")
 
-        local function Refresh() if ns.RefreshClassPower then ns.RefreshClassPower() end end
-        local function RefreshRelayout()
+        local function Refresh() Perfy_Trace(Perfy_GetTime(), "Enter", "Refresh MyCustomFrames/Options.lua:4159:14"); if ns.RefreshClassPower then ns.RefreshClassPower() end Perfy_Trace(Perfy_GetTime(), "Leave", "Refresh MyCustomFrames/Options.lua:4159:14"); end
+        local function RefreshRelayout() Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshRelayout MyCustomFrames/Options.lua:4160:14");
             if ns.ClassPowerForceRelayout then ns.ClassPowerForceRelayout() end
             Refresh()
-        end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshRelayout MyCustomFrames/Options.lua:4160:14"); end
 
         MakeToggle(f, "Enabled", L, -90,
-            function() local d = CPDB(); return d and d.enabled end,
-            function(v) local d = CPDB(); if d then d.enabled = v end; Refresh() end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4166:12"); local d = CPDB(); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4166:12", d and d.enabled) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4167:12"); local d = CPDB(); if d then d.enabled = v end; Refresh() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4167:12"); end)
 
         MakeSlider(f, "Offset X", -800, 800, 1, "offsetX", L, -134, CPDB, Refresh)
         MakeSlider(f, "Offset Y", -800, 800, 1, "offsetY", R, -134, CPDB, Refresh)
@@ -4176,22 +4184,22 @@ local function BuildPanel()
         local eb = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
         eb:SetSize(180, 20); eb:SetPoint("TOPLEFT", ebLbl, "BOTTOMLEFT", 4, -4)
         eb:SetAutoFocus(false)
-        eb:SetScript("OnShow", function(self) local d = CPDB(); self:SetText((d and d.anchorFrame) or "") end)
-        eb:SetScript("OnEnterPressed", function(self)
+        eb:SetScript("OnShow", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4179:31"); local d = CPDB(); self:SetText((d and d.anchorFrame) or "") Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4179:31"); end)
+        eb:SetScript("OnEnterPressed", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4180:39");
             local d = CPDB(); if d then d.anchorFrame = self:GetText() or "" end
             Refresh(); self:ClearFocus()
-        end)
-        eb:SetScript("OnEditFocusLost", function(self)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4180:39"); end)
+        eb:SetScript("OnEditFocusLost", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4184:40");
             local d = CPDB(); self:SetText((d and d.anchorFrame) or "")
-        end)
-        refreshers[#refreshers + 1] = function() local d = CPDB(); eb:SetText((d and d.anchorFrame) or "") end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4184:40"); end)
+        refreshers[#refreshers + 1] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "refreshers.? MyCustomFrames/Options.lua:4187:38"); local d = CPDB(); eb:SetText((d and d.anchorFrame) or "") Perfy_Trace(Perfy_GetTime(), "Leave", "refreshers.? MyCustomFrames/Options.lua:4187:38"); end
 
         MakeToggle(f, "Use resource color for lit points", L, -220,
-            function() local d = CPDB(); return d and d.useClassColor ~= false end,
-            function(v) local d = CPDB(); if d then d.useClassColor = v end; RefreshRelayout() end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4190:12"); local d = CPDB(); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4190:12", d and d.useClassColor ~= false) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4191:12"); local d = CPDB(); if d then d.useClassColor = v end; RefreshRelayout() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4191:12"); end)
         MakeSlider(f, "Unlit point opacity", 0, 1, 0.05, "dimAlpha", R, -220, CPDB, Refresh)
 
-        MakeGlobalColor(f, "Case/backdrop color", function() local d = CPDB(); return d and d.caseColor end,
+        MakeGlobalColor(f, "Case/backdrop color", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4194:50"); local d = CPDB(); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4194:50", d and d.caseColor) end,
             L, -252, RefreshRelayout)
     end
 
@@ -4211,18 +4219,18 @@ local function BuildPanel()
 
         local applyBtn = MakeButton(f, "Apply Profiles", 160, 24)
         applyBtn:SetPoint("TOPLEFT", L, y - 16)
-        applyBtn:SetScript("OnClick", function() if ns.ApplyProfiles then ns.ApplyProfiles() end end)
+        applyBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4214:38"); if ns.ApplyProfiles then ns.ApplyProfiles() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4214:38"); end)
 
         -- Lista de addons detectados (se refresca al abrir la seccion).
         local statusFS = f:CreateFontString(nil, "ARTWORK"); setFont(statusFS, 10)
         statusFS:SetPoint("TOPLEFT", applyBtn, "BOTTOMLEFT", 0, -12)
         statusFS:SetWidth(440); statusFS:SetJustifyH("LEFT"); statusFS:SetWordWrap(true)
         statusFS:SetTextColor(0.55, 0.85, 0.55)
-        local function refreshStatus()
+        local function refreshStatus() Perfy_Trace(Perfy_GetTime(), "Enter", "refreshStatus MyCustomFrames/Options.lua:4221:14");
             local list = (ns.ProfilesStatus and ns.ProfilesStatus()) or {}
             if #list == 0 then statusFS:SetText("Detected: (none of the supported addons are loaded)")
             else statusFS:SetText("Detected: " .. table.concat(list, ", ")) end
-        end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "refreshStatus MyCustomFrames/Options.lua:4221:14"); end
         refreshers[#refreshers + 1] = refreshStatus
     end
 
@@ -4231,41 +4239,41 @@ local function BuildPanel()
         local f = Section("editing")
         MakeHeader(f, "Editing  —  layout tools", L, -6, 430)
         MakeToggle(f, "Preview / Move mode (/mcf)", L, -40,
-            function() return ns.IsUnlocked() end,
-            function() ns.SetUnlocked(not ns.IsUnlocked()) end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4234:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4234:12", ns.IsUnlocked()) end,
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4235:12"); ns.SetUnlocked(not ns.IsUnlocked()) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4235:12"); end)
         MakeToggle(f, "Show edit outline", L, -64,
-            function() return not ns.GetDB().hideEditOutline end,
-            function(v) ns.GetDB().hideEditOutline = not v; if ns.ToggleEditOutline then ns.ToggleEditOutline() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4237:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4237:12", not ns.GetDB().hideEditOutline) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4238:12"); ns.GetDB().hideEditOutline = not v; if ns.ToggleEditOutline then ns.ToggleEditOutline() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4238:12"); end)
         MakeToggle(f, "Secure button preview (hit area)", L, -88,
-            function() return ns.GetDB().previewSecureButton end,
-            function(v) ns.GetDB().previewSecureButton = v; if ns.RefreshAll then ns.RefreshAll() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4240:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4240:12", ns.GetDB().previewSecureButton) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4241:12"); ns.GetDB().previewSecureButton = v; if ns.RefreshAll then ns.RefreshAll() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4241:12"); end)
         -- Grid + Snap (movidos aqui desde Global options).
         MakeToggle(f, "Alignment grid", L, -120,
-            function() return ns.GetDB().gridShow end,
-            function(v) ns.GetDB().gridShow = v; if ns.UpdateGrid then ns.UpdateGrid() end end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4244:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4244:12", ns.GetDB().gridShow) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4245:12"); ns.GetDB().gridShow = v; if ns.UpdateGrid then ns.UpdateGrid() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4245:12"); end)
         MakeToggle(f, "Snap to grid (on release)", L, -144,
-            function() return ns.GetDB().gridSnap end,
-            function(v) ns.GetDB().gridSnap = v end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4247:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4247:12", ns.GetDB().gridSnap) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4248:12"); ns.GetDB().gridSnap = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4248:12"); end)
         -- Texto acortado (el original, "Snap to other elements (edges/centers)", desbordaba la
         -- columna y se montaba sobre "Hide in preview" a la derecha — MakeToggle no envuelve ni
         -- trunca el texto). Detalle completo movido a un tooltip.
         local snapBtn = MakeToggle(f, "Snap to other elements", L, -168,
-            function() return ns.GetDB().snapElements ~= false end,
-            function(v) ns.GetDB().snapElements = v and true or false end)
-        snapBtn:HookScript("OnEnter", function(self)
-            if GameTooltip:IsForbidden() then return end
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4253:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4253:12", ns.GetDB().snapElements ~= false) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4254:12"); ns.GetDB().snapElements = v and true or false Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4254:12"); end)
+        snapBtn:HookScript("OnEnter", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4255:38");
+            if GameTooltip:IsForbidden() then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4255:38"); return end
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:SetText("Snap to other elements' edges and centers while dragging.", 1, 1, 1, 1, true)
             GameTooltip:Show()
-        end)
-        snapBtn:HookScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4255:38"); end)
+        snapBtn:HookScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4261:38"); if not GameTooltip:IsForbidden() then GameTooltip:Hide() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4261:38"); end)
         -- Accesos directos a las otras secciones globales.
         local exBtn = MakeButton(f, "Explorer Mode", 150, 22)
         exBtn:SetPoint("TOPLEFT", R, -34)
-        exBtn:SetScript("OnClick", function() ShowSection("explorer") end)
+        exBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4265:35"); ShowSection("explorer") Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4265:35"); end)
         local prBtn = MakeButton(f, "Profiles", 150, 22)
         prBtn:SetPoint("TOPLEFT", R, -64)
-        prBtn:SetScript("OnClick", function() ShowSection("presets") end)
+        prBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4268:35"); ShowSection("presets") Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4268:35"); end)
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", L, -198); note:SetWidth(210); note:SetJustifyH("LEFT")
         note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
@@ -4279,13 +4287,13 @@ local function BuildPanel()
         for i, e in ipairs(LH) do
             local lk = e[2]
             MakeToggle(f, e[1], R, -164 - (i - 1) * 24,
-                function() return ns.GetDB().lockHide[lk] end,
-                function(v)
+                function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4282:16"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4282:16", ns.GetDB().lockHide[lk]) end,
+                function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4283:16");
                     ns.GetDB().lockHide[lk] = v or nil
                     if lk == "names" and ns.RefreshOutlineNames then ns.RefreshOutlineNames()
                     elseif lk == "tracker" and ns.ApplyTrackerPreviewHide then ns.ApplyTrackerPreviewHide()
                     elseif ns.RefreshAll then ns.RefreshAll() end
-                end)
+                Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4283:16"); end)
         end
         -- Segunda columna de "Hide in preview" (2026-07-20): la lista de arriba
         -- ya no tenia lugar vertical para mas entradas (se salia del panel,
@@ -4303,11 +4311,11 @@ local function BuildPanel()
             local col = (i <= 3) and L or (L + 110)
             local row = (i <= 3) and i or (i - 3)
             MakeToggle(f, e[1], col, -322 - (row - 1) * 24,
-                function() return ns.GetDB().lockHide[lk] end,
-                function(v)
+                function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4306:16"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4306:16", ns.GetDB().lockHide[lk]) end,
+                function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4307:16");
                     ns.GetDB().lockHide[lk] = v or nil
                     if ns.RefreshAll then ns.RefreshAll() end
-                end)
+                Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4307:16"); end)
         end
     end
 
@@ -4316,7 +4324,7 @@ local function BuildPanel()
     -- extraida del scrollbar de la sidebar (arriba: texturas WIDGET/Plumber +
     -- flechas + thumb arrastrable + scroll suave), generalizada para poder
     -- anclarse en cualquier panel en vez de quedar pegada a la sidebar.
-    local function MakeStyledScroll(parent, childW, childH)
+    local function MakeStyledScroll(parent, childW, childH) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeStyledScroll MyCustomFrames/Options.lua:4319:10");
         local mssScroll = CreateFrame("ScrollFrame", nil, parent)
         local mssChild = CreateFrame("Frame", nil, mssScroll)
         mssChild:SetSize(childW or 10, childH or 10)
@@ -4325,16 +4333,16 @@ local function BuildPanel()
         local mssBarW, mssArrow = 10, 12
         local mssValue, mssRange, mssDisplay = 0, 0, 0
 
-        local function MssTexBtn(y1, y2)
+        local function MssTexBtn(y1, y2) Perfy_Trace(Perfy_GetTime(), "Enter", "MssTexBtn MyCustomFrames/Options.lua:4328:14");
             local btn = CreateFrame("Button", nil, parent)
             btn:SetSize(mssArrow, mssArrow)
             local tex = btn:CreateTexture(nil, "ARTWORK")
             tex:SetAllPoints(); tex:SetTexture(WIDGET); tex:SetTexCoord(0 / 512, 32 / 512, y1 / 512, y2 / 512)
             tex:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
             btn.tex = tex
-            btn:SetScript("OnEnter", function() tex:SetVertexColor(1, 0.9, 0.45) end)
-            btn:SetScript("OnLeave", function() tex:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]) end)
-            return btn
+            btn:SetScript("OnEnter", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4335:37"); tex:SetVertexColor(1, 0.9, 0.45) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4335:37"); end)
+            btn:SetScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4336:37"); tex:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4336:37"); end)
+            Perfy_Trace(Perfy_GetTime(), "Leave", "MssTexBtn MyCustomFrames/Options.lua:4328:14"); return btn
         end
         local mssUpBtn = MssTexBtn(396, 428)
         local mssDownBtn = MssTexBtn(428, 460)
@@ -4356,21 +4364,21 @@ local function BuildPanel()
         mssThumbTex:SetAllPoints(); mssThumbTex:SetTexture(WIDGET); mssThumbTex:SetTexCoord(0 / 512, 32 / 512, 132 / 512, 260 / 512)
         mssThumbTex:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
 
-        local function MssPositionThumb()
+        local function MssPositionThumb() Perfy_Trace(Perfy_GetTime(), "Enter", "MssPositionThumb MyCustomFrames/Options.lua:4359:14");
             local usable = math.max((mssTrack:GetHeight() or 1) - (mssThumb:GetHeight() or 1), 0)
             local frac = (mssRange > 0) and (mssDisplay / mssRange) or 0
             mssThumb:ClearAllPoints(); mssThumb:SetPoint("TOP", mssTrack, "TOP", 0, -frac * usable)
-        end
-        local function MssApplyScroll(v, instant)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "MssPositionThumb MyCustomFrames/Options.lua:4359:14"); end
+        local function MssApplyScroll(v, instant) Perfy_Trace(Perfy_GetTime(), "Enter", "MssApplyScroll MyCustomFrames/Options.lua:4364:14");
             mssValue = math.min(math.max(v or 0, 0), mssRange)
             if instant then
                 mssDisplay = mssValue
                 mssScroll:SetVerticalScroll(mssDisplay)
                 MssPositionThumb()
             end
-        end
-        mssScroll:SetScript("OnUpdate", function(self, elapsed)
-            if mssDisplay == mssValue then return end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "MssApplyScroll MyCustomFrames/Options.lua:4364:14"); end
+        mssScroll:SetScript("OnUpdate", function(self, elapsed) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4372:40");
+            if mssDisplay == mssValue then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4372:40"); return end
             local diff = mssValue - mssDisplay
             if math.abs(diff) < 0.5 then
                 mssDisplay = mssValue
@@ -4379,29 +4387,29 @@ local function BuildPanel()
             end
             mssScroll:SetVerticalScroll(mssDisplay)
             MssPositionThumb()
-        end)
-        mssUpBtn:SetScript("OnClick", function() MssApplyScroll(mssValue - 30) end)
-        mssDownBtn:SetScript("OnClick", function() MssApplyScroll(mssValue + 30) end)
-        mssThumb:SetScript("OnMouseDown", function(self)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4372:40"); end)
+        mssUpBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4383:38"); MssApplyScroll(mssValue - 30) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4383:38"); end)
+        mssDownBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4384:40"); MssApplyScroll(mssValue + 30) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4384:40"); end)
+        mssThumb:SetScript("OnMouseDown", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4385:42");
             self.dragging = true; self.startY = select(2, GetCursorPosition()); self.startV = mssValue
             mssThumbTex:SetVertexColor(1, 0.9, 0.5)
-        end)
-        mssThumb:SetScript("OnMouseUp", function(self)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4385:42"); end)
+        mssThumb:SetScript("OnMouseUp", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4389:40");
             self.dragging = false; mssThumbTex:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
-        end)
-        mssThumb:SetScript("OnUpdate", function(self)
-            if not self.dragging then return end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4389:40"); end)
+        mssThumb:SetScript("OnUpdate", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4392:39");
+            if not self.dragging then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4392:39"); return end
             if not IsMouseButtonDown("LeftButton") then
-                self.dragging = false; mssThumbTex:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]); return
+                self.dragging = false; mssThumbTex:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3]); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4392:39"); return
             end
             local _, y = GetCursorPosition()
             local usable = math.max((mssTrack:GetHeight() or 1) - (mssThumb:GetHeight() or 1), 1)
             local dy = (self.startY - y) / (mssTrack:GetEffectiveScale() or 1)
             MssApplyScroll(self.startV + (dy / usable) * mssRange, true)
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4392:39"); end)
         mssScroll:EnableMouseWheel(true)
-        mssScroll:SetScript("OnMouseWheel", function(self, delta) MssApplyScroll(mssValue - delta * 30) end)
-        local function MssUpdateScroll()
+        mssScroll:SetScript("OnMouseWheel", function(self, delta) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4403:44"); MssApplyScroll(mssValue - delta * 30) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4403:44"); end)
+        local function MssUpdateScroll() Perfy_Trace(Perfy_GetTime(), "Enter", "MssUpdateScroll MyCustomFrames/Options.lua:4404:14");
             local contentH, visibleH = mssChild:GetHeight() or 1, mssScroll:GetHeight() or 1
             mssRange = math.max(contentH - visibleH, 0)
             local scrollable = mssRange > 1
@@ -4409,9 +4417,9 @@ local function BuildPanel()
             local trackH = mssTrack:GetHeight() or 1
             mssThumb:SetSize(mssBarW, math.max(24, trackH * math.min(visibleH / math.max(contentH, 1), 1)))
             MssApplyScroll(mssValue, true)
-        end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "MssUpdateScroll MyCustomFrames/Options.lua:4404:14"); end
         mssScroll:SetScript("OnSizeChanged", MssUpdateScroll)
-        return mssScroll, mssChild
+        Perfy_Trace(Perfy_GetTime(), "Leave", "MakeStyledScroll MyCustomFrames/Options.lua:4319:10"); return mssScroll, mssChild
     end
 
     -- =========================== SECCION EXPLORER (#11) ===========================
@@ -4443,11 +4451,11 @@ local function BuildPanel()
         -- registro. UIPanelScrollFrameTemplate = scrollbar NATIVA con thumb
         -- arrastrable (el "slider" pedido), mismo patron ya usado para las
         -- cajas de diagnostico copiables (Tracker.lua/BartenderScale.lua).
-        local function MakeScrollGroup(height)
+        local function MakeScrollGroup(height) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeScrollGroup MyCustomFrames/Options.lua:4446:14");
             local expScroll, child = MakeStyledScroll(f, 456, height)
             expScroll:SetPoint("TOPLEFT", 0, -56)
             expScroll:SetPoint("BOTTOMRIGHT", -24, 60)   -- 60px: deja el footer fijo del panel libre
-            return expScroll, child
+            Perfy_Trace(Perfy_GetTime(), "Leave", "MakeScrollGroup MyCustomFrames/Options.lua:4446:14"); return expScroll, child
         end
         -- Alturas calculadas a mano segun el contenido real de cada tab (ver
         -- ROWS mas abajo para Elements; Conditions es mucho mas corto, altura
@@ -4458,17 +4466,17 @@ local function BuildPanel()
         -- solapamiento con los toggles de zona (ver el FIX de condNote).
         local conditionsScroll, conditionsGroup = MakeScrollGroup(300)
         local quickScroll, quickGroup = MakeScrollGroup(220)
-        local function ShowExplorerTab(which)
+        local function ShowExplorerTab(which) Perfy_Trace(Perfy_GetTime(), "Enter", "ShowExplorerTab MyCustomFrames/Options.lua:4461:14");
             elementsScroll:SetShown(which == "elements")
             conditionsScroll:SetShown(which == "conditions")
             quickScroll:SetShown(which == "quick")
             tabElements:SetActive(which == "elements")
             tabConditions:SetActive(which == "conditions")
             tabQuick:SetActive(which == "quick")
-        end
-        tabElements:SetScript("OnClick", function() ShowExplorerTab("elements") end)
-        tabConditions:SetScript("OnClick", function() ShowExplorerTab("conditions") end)
-        tabQuick:SetScript("OnClick", function() ShowExplorerTab("quick") end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ShowExplorerTab MyCustomFrames/Options.lua:4461:14"); end
+        tabElements:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4469:41"); ShowExplorerTab("elements") Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4469:41"); end)
+        tabConditions:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4470:43"); ShowExplorerTab("conditions") Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4470:43"); end)
+        tabQuick:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4471:38"); ShowExplorerTab("quick") Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4471:38"); end)
 
         -- Registro UNIFICADO (2026-07-24, "unificar" -- antes esta lista y la del
         -- Setup Wizard (Setup.lua) eran 2 copias hardcodeadas por separado, y ya se
@@ -4480,14 +4488,14 @@ local function BuildPanel()
         local TOP = -62
         -- Toggle MAESTRO: apaga el Explorer entero (los toggles por elemento se conservan).
         MakeToggle(elementsGroup, "Enable Explorer (master switch)", L, TOP,
-            function() return ns.GetDB().explorerEnabled ~= false end,
-            function(v)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4483:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4483:12", ns.GetDB().explorerEnabled ~= false) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4484:12");
                 ns.GetDB().explorerEnabled = v and true or false
                 if not v and ns.ExplorerResetAll then ns.ExplorerResetAll() end
                 -- Mismo fix que Explorer.lua TickExplorer (2026-07-27, pet bar
                 -- reaparecia sin mascota al apagar Explorer desde este toggle).
                 if not v and ns.RefreshPetBarVisibility then ns.RefreshPetBarVisibility() end
-            end)
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4484:12"); end)
         -- Grid a 2 columnas (llenado por columna, no por fila).
         local ROWS = math.ceil(#EXPLORER_ELEMENTS / 2)
         for i, e in ipairs(EXPLORER_ELEMENTS) do
@@ -4496,13 +4504,13 @@ local function BuildPanel()
             local yy = TOP - 34 - row * 21
             local keys = e.keys
             MakeToggle(elementsGroup, e.label, col, yy,
-                function() return ns.GetDB().explorer[keys[1]] end,
-                function(v)
+                function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4499:16"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4499:16", ns.GetDB().explorer[keys[1]]) end,
+                function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4500:16");
                     for _, k in ipairs(keys) do
                         ns.GetDB().explorer[k] = v or nil
                         if not v and ns.ExplorerReset then ns.ExplorerReset(k) end
                     end
-                end)
+                Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4500:16"); end)
         end
         local elNote = elementsGroup:CreateFontString(nil, "ARTWORK"); setFont(elNote, 10)
         elNote:SetPoint("TOPLEFT", L, TOP - 34 - ROWS * 21 - 14); elNote:SetWidth(430); elNote:SetJustifyH("LEFT")
@@ -4510,43 +4518,43 @@ local function BuildPanel()
         elNote:SetText("Enabled elements fade out and reappear when you hover where they are (works even while hidden). See 'Conditions' for always-show rules, opacity, and content-type filters.")
 
         MakeToggle(conditionsGroup, "Always show in combat", L, TOP,
-            function() return ns.GetDB().explorerCombat end,
-            function(v) ns.GetDB().explorerCombat = v end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4513:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4513:12", ns.GetDB().explorerCombat) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4514:12"); ns.GetDB().explorerCombat = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4514:12"); end)
         MakeToggle(conditionsGroup, "Always show on target", L, TOP - 24,
-            function() return ns.GetDB().explorerTarget end,
-            function(v) ns.GetDB().explorerTarget = v end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4516:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4516:12", ns.GetDB().explorerTarget) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4517:12"); ns.GetDB().explorerTarget = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4517:12"); end)
         MakeToggle(conditionsGroup, "Always show while casting", L, TOP - 48,
-            function() return ns.GetDB().explorerCasting end,
-            function(v) ns.GetDB().explorerCasting = v end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4519:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4519:12", ns.GetDB().explorerCasting) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4520:12"); ns.GetDB().explorerCasting = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4520:12"); end)
         MakeSlider(conditionsGroup, "Hidden opacity", 0, 1, 0.05, "explorerFadeAlpha", L, TOP - 90,
-            function() return ns.GetDB() end, function() end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4522:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4522:12", ns.GetDB()) end, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4522:46"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4522:46"); end)
         -- AUTOMATISMOS (2026-07-28, ExplorerAuto.lua). Los dos apagados por
         -- defecto. El segundo NO depende del Explorer -- funciona con el
         -- prendido o apagado -- pero vive aca porque tematicamente es una
         -- condicion mas de "cuando esconder cosas".
         MakeToggle(conditionsGroup, "Minimal while in housing", L, TOP - 132,
-            function() return ns.GetDB().explorerHousingMinimal end,
-            function(v)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4528:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4528:12", ns.GetDB().explorerHousingMinimal) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4529:12");
                 ns.GetDB().explorerHousingMinimal = v
                 if ns.UpdateExplorerHousing then ns.UpdateExplorerHousing() end
-            end)
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4529:12"); end)
         MakeToggle(conditionsGroup, "Hide other bars when bar 1 is replaced", L, TOP - 156,
-            function() return ns.GetDB().explorerHideBarsOnReplace end,
-            function(v)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4534:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4534:12", ns.GetDB().explorerHideBarsOnReplace) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4535:12");
                 ns.GetDB().explorerHideBarsOnReplace = v
                 if ns.UpdateExplorerBarHiding then ns.UpdateExplorerBarHiding() end
-            end)
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4535:12"); end)
         -- Apagado por defecto A PROPOSITO, con el motivo en el tooltip: las
         -- formas de druida usan bonusbar, asi que encenderlo deja a un feral en
         -- forma con TODAS las barras escondidas de forma permanente.
         local bonusBtn = MakeToggle(conditionsGroup, "...also count bonus bars", L, TOP - 180,
-            function() return ns.GetDB().explorerReplaceBonusBar end,
-            function(v)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4543:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4543:12", ns.GetDB().explorerReplaceBonusBar) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4544:12");
                 ns.GetDB().explorerReplaceBonusBar = v
                 if ns.UpdateExplorerBarHiding then ns.UpdateExplorerBarHiding() end
-            end)
-        bonusBtn:HookScript("OnEnter", function(self)
-            if GameTooltip:IsForbidden() then return end
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4544:12"); end)
+        bonusBtn:HookScript("OnEnter", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4548:39");
+            if GameTooltip:IsForbidden() then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4548:39"); return end
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:SetText("Also treat bonus bars as a replacement.", 1, 1, 1, 1, true)
             GameTooltip:AddLine(" ")
@@ -4554,8 +4562,8 @@ local function BuildPanel()
             GameTooltip:AddLine(" ")
             GameTooltip:AddLine("Useful if you fly or use a bar-swapping mount and want the rest out of the way.", 0.7, 0.7, 0.7, true)
             GameTooltip:Show()
-        end)
-        bonusBtn:HookScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4548:39"); end)
+        bonusBtn:HookScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4558:39"); if not GameTooltip:IsForbidden() then GameTooltip:Hide() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4558:39"); end)
         local autoNote = conditionsGroup:CreateFontString(nil, "ARTWORK"); setFont(autoNote, 10)
         autoNote:SetPoint("TOPLEFT", L, TOP - 204); autoNote:SetWidth(210); autoNote:SetJustifyH("LEFT")
         autoNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
@@ -4571,13 +4579,13 @@ local function BuildPanel()
         for i, z in ipairs(ZONES) do
             local zk = z[2]
             MakeToggle(conditionsGroup, z[1], R, TOP - 22 - (i - 1) * 24,
-                function() return ns.GetDB().explorerZones[zk] ~= false end,
-                function(v)
+                function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4574:16"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Options.lua:4574:16", ns.GetDB().explorerZones[zk] ~= false) end,
+                function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4575:16");
                     ns.GetDB().explorerZones[zk] = v and true or false
                     if not v and ns.ExplorerResetAll then ns.ExplorerResetAll() end
                     -- Mismo fix que el master toggle de arriba (2026-07-27).
                     if not v and ns.RefreshPetBarVisibility then ns.RefreshPetBarVisibility() end
-                end)
+                Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4575:16"); end)
         end
         -- FIX (2026-07-25, reportado por el usuario: "el texto en explorer conditions
         -- esta sobre algunos toggles"): la nota estaba clavada en TOP - 136, pero la
@@ -4612,9 +4620,9 @@ local function BuildPanel()
                 local yy = TOP - (i - 1) * 60
                 local btn = MakeButton(quickGroup, prof.label, 140, 22)
                 btn:SetPoint("TOPLEFT", L, yy)
-                btn:SetScript("OnClick", function()
+                btn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4615:41");
                     if ns.ApplyExplorerQuickProfile then ns.ApplyExplorerQuickProfile(name) end
-                end)
+                Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4615:41"); end)
                 local desc = quickGroup:CreateFontString(nil, "ARTWORK"); setFont(desc, 10)
                 desc:SetPoint("TOPLEFT", L, yy - 26); desc:SetWidth(430); desc:SetJustifyH("LEFT")
                 desc:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
@@ -4638,20 +4646,20 @@ local function BuildPanel()
 
     -- 2026-07-17: tooltips para los botones del footer (antes no explicaban nada,
     -- a diferencia del resto del panel que ya tiene tooltips en varios lugares).
-    local function AddTooltip(btn, title, desc)
-        btn:HookScript("OnEnter", function()
-            if GameTooltip:IsForbidden() then return end
+    local function AddTooltip(btn, title, desc) Perfy_Trace(Perfy_GetTime(), "Enter", "AddTooltip MyCustomFrames/Options.lua:4641:10");
+        btn:HookScript("OnEnter", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4642:34");
+            if GameTooltip:IsForbidden() then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4642:34"); return end
             GameTooltip:SetOwner(btn, "ANCHOR_TOP")
             GameTooltip:SetText(title, COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
             if desc then GameTooltip:AddLine(desc, 1, 1, 1, true) end
             GameTooltip:Show()
-        end)
-        btn:HookScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
-    end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4642:34"); end)
+        btn:HookScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4649:34"); if not GameTooltip:IsForbidden() then GameTooltip:Hide() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4649:34"); end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "AddTooltip MyCustomFrames/Options.lua:4641:10"); end
 
     local moveBtn = MakeTabButton(panel, "Move / Lock (/mcf)", 170, 24)
     moveBtn:SetPoint("BOTTOMLEFT", 10, 22)
-    moveBtn:SetScript("OnClick", function() ns.SetUnlocked(not ns.IsUnlocked()) end)
+    moveBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4654:33"); ns.SetUnlocked(not ns.IsUnlocked()) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4654:33"); end)
     panelButtons[#panelButtons + 1] = moveBtn
     AddTooltip(moveBtn, "Move / Lock", "Toggles edit mode: drag any element to reposition it. Same as typing /mcf.")
 
@@ -4665,7 +4673,7 @@ local function BuildPanel()
     -- 2026-07-17 (ronda 2): transicion animada (UIFrameFadeIn/Out) en vez del
     -- salto brusco de SetAlpha.
     local editAlphaActive = false
-    local function UpdatePanelAlpha()
+    local function UpdatePanelAlpha() Perfy_Trace(Perfy_GetTime(), "Enter", "UpdatePanelAlpha MyCustomFrames/Options.lua:4668:10");
         -- FIX (2026-07-20, "el edit mode nativo me abre el menu del addon"):
         -- UIFrameFadeIn/UIFrameFadeOut llaman Show() INTERNAMENTE para poder
         -- animar el fade -- si esta funcion corre con el panel CERRADO (ej.
@@ -4674,7 +4682,7 @@ local function BuildPanel()
         -- abren solo. El dimming al entrar/salir de Lock solo tiene sentido
         -- si el panel YA esta abierto -- si esta cerrado, no hay nada que
         -- atenuar, listo.
-        if not panel:IsShown() then return end
+        if not panel:IsShown() then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdatePanelAlpha MyCustomFrames/Options.lua:4668:10"); return end
         local target = (editAlphaActive and not panel:IsMouseOver()) and 0.3 or 1
         if UIFrameFadeIn and UIFrameFadeOut then
             if target == 1 then UIFrameFadeIn(panel, 0.25, panel:GetAlpha(), 1)
@@ -4682,31 +4690,31 @@ local function BuildPanel()
         else
             panel:SetAlpha(target)
         end
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "UpdatePanelAlpha MyCustomFrames/Options.lua:4668:10"); end
     panel:HookScript("OnEnter", UpdatePanelAlpha)
     panel:HookScript("OnLeave", UpdatePanelAlpha)
 
-    ns.OnUnlockChanged = function(state)
+    ns.OnUnlockChanged = function(state) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.OnUnlockChanged MyCustomFrames/Options.lua:4689:25");
         moveBtn:SetActive(state)
         if ns.ApplyTrackerPreviewHide then ns.ApplyTrackerPreviewHide() end
         editAlphaActive = state
         UpdatePanelAlpha()
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "ns.OnUnlockChanged MyCustomFrames/Options.lua:4689:25"); end
 
     local greenBtn = MakeTabButton(panel, "Outline: ON", 104, 24)
     greenBtn:SetPoint("LEFT", moveBtn, "RIGHT", 6, 0)
-    local function updGreen()
+    local function updGreen() Perfy_Trace(Perfy_GetTime(), "Enter", "updGreen MyCustomFrames/Options.lua:4698:10");
         local hidden = ns.GetDB().hideEditOutline
         local txt = hidden and "Outline: OFF" or "Outline: ON"
         greenBtn.text:SetText(txt)
         greenBtn._label = txt   -- el label es DINAMICO: ReassertLabels debe reaplicar EL ACTUAL, no el de creacion
         greenBtn:SetActive(hidden)
-    end
-    greenBtn:SetScript("OnClick", function()
+    Perfy_Trace(Perfy_GetTime(), "Leave", "updGreen MyCustomFrames/Options.lua:4698:10"); end
+    greenBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4705:34");
         local d = ns.GetDB()
         d.hideEditOutline = not (d.hideEditOutline and true or false)
         ns.ToggleEditOutline(); updGreen()
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4705:34"); end)
     refreshers[#refreshers + 1] = updGreen
     panelButtons[#panelButtons + 1] = greenBtn
     AddTooltip(greenBtn, "Outline", "Toggles the edit outline shown around elements while in Move/Lock mode.")
@@ -4717,13 +4725,13 @@ local function BuildPanel()
     -- de Setup.
     local resetAllFooterBtn = MakeTabButton(panel, "Reset ALL", 100, 24)
     resetAllFooterBtn:SetPoint("LEFT", greenBtn, "RIGHT", 6, 0)
-    resetAllFooterBtn:SetScript("OnClick", function() StaticPopup_Show("MYCF_RESETALL") end)
+    resetAllFooterBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4720:43"); StaticPopup_Show("MYCF_RESETALL") Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4720:43"); end)
     panelButtons[#panelButtons + 1] = resetAllFooterBtn
     AddTooltip(resetAllFooterBtn, "Reset ALL", "Resets everything to the default preset (or factory values if none is marked as default).")
 
     local wizardBtn = MakeTabButton(panel, "Setup Wizard", 120, 24)
     wizardBtn:SetPoint("LEFT", resetAllFooterBtn, "RIGHT", 6, 0)
-    wizardBtn:SetScript("OnClick", function() if ns.ShowSetupWizard then ns.ShowSetupWizard() end end)
+    wizardBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4726:35"); if ns.ShowSetupWizard then ns.ShowSetupWizard() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4726:35"); end)
     panelButtons[#panelButtons + 1] = wizardBtn
     AddTooltip(wizardBtn, "Setup Wizard", "Reopens the first-install wizard (addon integration, profiles, Explorer Mode, etc).")
 
@@ -4753,14 +4761,14 @@ local function BuildPanel()
     -- que SkinResolve usa (ver core.lua), sin probe de existencia (si el
     -- archivo no esta, la fila simplemente no muestra icono, no rompe nada).
     local ICON_FILE = "group-finder-eye-orange.tga"
-    local function SkinRowIcon(skin)
-        if skin.basePath then return skin.basePath .. ICON_FILE end
-        if skin.folder and skin.folder ~= "" then return (ns.ASSETS or "") .. skin.folder .. ICON_FILE end
-        return (ns.ASSETS or "") .. ICON_FILE
+    local function SkinRowIcon(skin) Perfy_Trace(Perfy_GetTime(), "Enter", "SkinRowIcon MyCustomFrames/Options.lua:4756:10");
+        if skin.basePath then return Perfy_Trace_Passthrough("Leave", "SkinRowIcon MyCustomFrames/Options.lua:4756:10", skin.basePath .. ICON_FILE) end
+        if skin.folder and skin.folder ~= "" then return Perfy_Trace_Passthrough("Leave", "SkinRowIcon MyCustomFrames/Options.lua:4756:10", (ns.ASSETS or "") .. skin.folder .. ICON_FILE) end
+        return Perfy_Trace_Passthrough("Leave", "SkinRowIcon MyCustomFrames/Options.lua:4756:10", (ns.ASSETS or "") .. ICON_FILE)
     end
     local skinsPopup
-    local function GetSkinsPopup()
-        if skinsPopup then return skinsPopup end
+    local function GetSkinsPopup() Perfy_Trace(Perfy_GetTime(), "Enter", "GetSkinsPopup MyCustomFrames/Options.lua:4762:10");
+        if skinsPopup then Perfy_Trace(Perfy_GetTime(), "Leave", "GetSkinsPopup MyCustomFrames/Options.lua:4762:10"); return skinsPopup end
         local p = CreateFrame("Frame", "MyCF_SkinsPopup", UIParent)
         p:SetFrameStrata("FULLSCREEN_DIALOG")
         p:EnableMouse(true)
@@ -4779,9 +4787,9 @@ local function BuildPanel()
         div:SetHeight(4); div:SetVertexColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3], 0.5)
         p.rows = {}
         skinsPopup = p
-        return p
+        Perfy_Trace(Perfy_GetTime(), "Leave", "GetSkinsPopup MyCustomFrames/Options.lua:4762:10"); return p
     end
-    local function OpenSkinsPopup(anchor)
+    local function OpenSkinsPopup(anchor) Perfy_Trace(Perfy_GetTime(), "Enter", "OpenSkinsPopup MyCustomFrames/Options.lua:4784:10");
         local p = GetSkinsPopup()
         local skins = ns.TEX_SKINS or {}
         -- Ancho automatico segun el label mas largo, con un piso razonable.
@@ -4833,26 +4841,26 @@ local function BuildPanel()
                 isActive and 0.2 or COLOR_OPTION[3])
             r:SetPoint("TOPLEFT", 2, -TOP_PAD - (i - 1) * ROW_H)
             r:SetPoint("TOPRIGHT", -2, -TOP_PAD - (i - 1) * ROW_H)
-            r:SetScript("OnClick", function()
+            r:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4836:35");
                 if ns.ApplySkin then ns.ApplySkin(skin) end
                 p:Hide()
-            end)
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4836:35"); end)
             r:Show()
         end
         p:ClearAllPoints(); p:SetPoint("BOTTOM", anchor, "TOP", 0, 4)
         p:Show(); p:Raise()
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "OpenSkinsPopup MyCustomFrames/Options.lua:4784:10"); end
     local skinsBtn = MakeTabButton(panel, "Skins", 90, 24)
     skinsBtn:SetPoint("LEFT", wizardBtn, "RIGHT", 6, 0)
     -- Toggle (pedido del usuario 2026-07-23): apretar el boton de nuevo con
     -- el popup YA abierto lo CIERRA, en vez de solo re-posicionarlo/mostrarlo.
-    skinsBtn:SetScript("OnClick", function()
+    skinsBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4849:34");
         if skinsPopup and skinsPopup:IsShown() then
             skinsPopup:Hide()
         else
             OpenSkinsPopup(skinsBtn)
         end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4849:34"); end)
     panelButtons[#panelButtons + 1] = skinsBtn
 
     -- 2026-07-17: centrar el grupo entero (estaba pegado a la izquierda). Como
@@ -4869,11 +4877,11 @@ local function BuildPanel()
     -- Cada seccion se AUTO-OCULTA si el canvas la muestra sin ser la seccion activa.
     -- Es event-driven (sin polling) y permanente, no depende del timing de los timers.
     for key, f in pairs(sections) do
-        f:HookScript("OnShow", function(self)
+        f:HookScript("OnShow", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4872:31");
             if currentSection and key ~= currentSection then self:Hide() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4872:31"); end)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "BuildPanel MyCustomFrames/Options.lua:1370:6"); end
 
 -- El bug del canvas de Settings no solo re-muestra secciones ocultas: a veces tambien
 -- deja botones existentes y VISIBLES con su FontString en blanco (el boton se ve, el
@@ -4887,11 +4895,11 @@ end
 -- el pase de layout del canvas) nunca se vuelve a intentar. FIX: forzar un cambio REAL vaciando
 -- primero (`SetText("")`) y recien despues poniendo el label — eso garantiza que WoW detecte una
 -- diferencia y re-renderice el glyph, sin importar si el string visible ya "parecia" correcto.
-local function ReassertText(fs, label)
+local function ReassertText(fs, label) Perfy_Trace(Perfy_GetTime(), "Enter", "ReassertText MyCustomFrames/Options.lua:4890:6");
     fs:SetText("")
     fs:SetText(label)
-end
-local function ReassertLabels()
+Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertText MyCustomFrames/Options.lua:4890:6"); end
+local function ReassertLabels() Perfy_Trace(Perfy_GetTime(), "Enter", "ReassertLabels MyCustomFrames/Options.lua:4894:6");
     for _, b in pairs(sectionTabs) do
         if b._label and b.text then ReassertText(b.text, b._label) end
     end
@@ -4904,9 +4912,9 @@ local function ReassertLabels()
     for _, b in ipairs(panelButtons) do
         if b._label and b.text then ReassertText(b.text, b._label) end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertLabels MyCustomFrames/Options.lua:4894:6"); end
 
-local function ApplyPanelView()
+local function ApplyPanelView() Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyPanelView MyCustomFrames/Options.lua:4909:6");
     SelectUnit(ns.currentEdit or "player")
     ShowSection(currentSection)   -- ShowSection ya hace el nudge de la seccion activa
     ReassertLabels()
@@ -4915,7 +4923,7 @@ local function ApplyPanelView()
     if panel._content and panel._content:IsShown() then
         panel._content:Hide(); panel._content:Show()
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyPanelView MyCustomFrames/Options.lua:4909:6"); end
 
 -- 2026-07-15: los 5 reintentos puntuales (0/0.05/0.15/0.3/0.6s) seguian sin alcanzar a veces
 -- (el usuario seguia viendo botones/labels en blanco al entrar, "arreglado" solo saliendo y
@@ -4933,19 +4941,19 @@ end
 -- reintento volvia a llamar ShowSection(), que re-dispara el fade-in de la
 -- seccion activa, o sea la seccion se desvanecia y reaparecia ~20 veces seguidas
 -- en los primeros 2 segundos tras abrir. Se elimina el ticker por completo.
-panel:SetScript("OnShow", function()
-    if not ns.GetDB() then return end
+panel:SetScript("OnShow", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4936:26");
+    if not ns.GetDB() then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4936:26"); return end
     if not built then BuildPanel() built = true end
     ApplyPanelView()
     panel:SetAlpha(1)
-end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4936:26"); end)
 
 -- Construir el panel POR ADELANTADO (una vez que exista la DB) en lugar de
 -- perezosamente en el primer OnShow, para que este listo apenas se invoque
 -- /mcfmenu por primera vez.
 local builder = CreateFrame("Frame")
 builder:RegisterEvent("PLAYER_LOGIN")
-builder:SetScript("OnEvent", function(self)
+builder:SetScript("OnEvent", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4948:29");
     self:UnregisterAllEvents()
     if not built and ns.GetDB() then
         BuildPanel()
@@ -4966,10 +4974,10 @@ builder:SetScript("OnEvent", function(self)
             text = "AzeriteUI - Gonkast Preset",
             icon = "Interface\\AddOns\\" .. ADDON .. "\\Assets\\addon_icon.tga",
             notCheckable = true,
-            func = function()
+            func = function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4969:19");
                 if not built and ns.GetDB() then BuildPanel(); built = true end
                 if built then ns.ToggleControlCenter() end
-            end,
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4969:19"); end,
         })
     end
 
@@ -4985,10 +4993,10 @@ builder:SetScript("OnEvent", function(self)
         openBtn:SetSize(200, 26)
         openBtn:SetPoint("TOPLEFT", 16, -16)
         openBtn:SetText("Open Options Panel")
-        openBtn:SetScript("OnClick", function()
+        openBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:4988:37");
             if not built and ns.GetDB() then BuildPanel(); built = true end
             if built then ns.ToggleControlCenter() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4988:37"); end)
         local hint = miniPanel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
         hint:SetPoint("TOPLEFT", openBtn, "BOTTOMLEFT", 0, -10)
         hint:SetText("Or type /mcfmenu, or click the AddOn Compartment icon (puzzle piece near the minimap).")
@@ -5017,17 +5025,17 @@ builder:SetScript("OnEvent", function(self)
     mmBorder:SetSize(54, 54)
     mmBorder:SetPoint("TOPLEFT")
 
-    local function UpdateMinimapPos()
+    local function UpdateMinimapPos() Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateMinimapPos MyCustomFrames/Options.lua:5020:10");
         local d = ns.GetDB()
         local angle = (d and d.minimapButtonAngle) or 200
         local rad = math.rad(angle)
         local r = 80
         mmBtn:ClearAllPoints()
         mmBtn:SetPoint("CENTER", Minimap, "CENTER", r * math.cos(rad), r * math.sin(rad))
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateMinimapPos MyCustomFrames/Options.lua:5020:10"); end
 
-    mmBtn:SetScript("OnDragStart", function(self)
-        self:SetScript("OnUpdate", function()
+    mmBtn:SetScript("OnDragStart", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:5029:35");
+        self:SetScript("OnUpdate", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:5030:35");
             local mx, my = Minimap:GetCenter()
             local px, py = GetCursorPosition()
             local scale = Minimap:GetEffectiveScale()
@@ -5036,40 +5044,40 @@ builder:SetScript("OnEvent", function(self)
             local d = ns.GetDB()
             if d then d.minimapButtonAngle = angle end
             UpdateMinimapPos()
-        end)
-    end)
-    mmBtn:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:5030:35"); end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:5029:35"); end)
+    mmBtn:SetScript("OnDragStop", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:5041:34"); self:SetScript("OnUpdate", nil) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:5041:34"); end)
 
     -- Shift+click abre el Nameplate Designer directo (pedido del usuario
     -- 2026-07-19) -- click normal sigue abriendo el panel de siempre.
-    mmBtn:SetScript("OnClick", function()
+    mmBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:5045:31");
         if IsShiftKeyDown() then
             if ns.ToggleNameplateDesigner then ns.ToggleNameplateDesigner() end
-            return
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:5045:31"); return
         end
         if not built and ns.GetDB() then BuildPanel(); built = true end
         if built then ns.ToggleControlCenter() end
-    end)
-    mmBtn:SetScript("OnEnter", function(self)
-        if GameTooltip:IsForbidden() then return end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:5045:31"); end)
+    mmBtn:SetScript("OnEnter", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:5053:31");
+        if GameTooltip:IsForbidden() then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:5053:31"); return end
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
         GameTooltip:SetText("AzeriteUI - Gonkast Preset", COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
         GameTooltip:AddLine("Click to open the options panel.", 1, 1, 1)
         GameTooltip:AddLine("Shift+click to open the Nameplate Designer.", 1, 1, 1)
         GameTooltip:AddLine("Drag to move this button.", 0.7, 0.7, 0.7)
         GameTooltip:Show()
-    end)
-    mmBtn:SetScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:5053:31"); end)
+    mmBtn:SetScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Options.lua:5062:31"); if not GameTooltip:IsForbidden() then GameTooltip:Hide() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:5062:31"); end)
 
     UpdateMinimapPos()
-end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Options.lua:4948:29"); end)
 
 -- Abre el panel de opciones standalone (reemplaza la categoria de Blizzard Settings).
 SLASH_MCFMENU1 = "/mcfmenu"
-SlashCmdList["MCFMENU"] = function()
+SlashCmdList["MCFMENU"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFMENU MyCustomFrames/Options.lua:5069:26");
     if not built and ns.GetDB() then BuildPanel(); built = true end
     if built then ns.ToggleControlCenter() end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFMENU MyCustomFrames/Options.lua:5069:26"); end
 
 -- Expone el toolkit de estilo del panel (botones/toggles/headers Plumber-style) para otros
 -- archivos que necesiten la misma UI sin duplicarla, p.ej. el wizard de primera instalacion
@@ -5082,3 +5090,5 @@ ns.UI = {
     setFont    = setFont,
     clamp      = clamp,
 }
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Options.lua");

@@ -1,4 +1,4 @@
--- ==========================================================================
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/MinimapButtons.lua"); -- ==========================================================================
 -- MyCustomFrames - MinimapButtons.lua
 -- Pedido del usuario 2026-07-24: "un sistema de mouse-over para los botones
 -- de addons del minimapa, como el de las auras de party/arena -- la idea es
@@ -25,7 +25,7 @@ local ADDON, ns = ...
 
 local MINIMAPBUTTONS_KEY = "minimapbuttons"
 ns.MINIMAPBUTTONS_KEY = MINIMAPBUTTONS_KEY
-ns.IsMinimapButtons = function(key) return key == MINIMAPBUTTONS_KEY end
+ns.IsMinimapButtons = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.IsMinimapButtons MyCustomFrames/MinimapButtons.lua:28:22"); return Perfy_Trace_Passthrough("Leave", "ns.IsMinimapButtons MyCustomFrames/MinimapButtons.lua:28:22", key == MINIMAPBUTTONS_KEY) end
 
 local TRIGGER_BG_FILE = "point_plate.tga"       -- resuelto via skin, ver ResolveTex
 local BORDER_FILE = "actionbutton-border square.tga"   -- idem, ya usado por auras/glow
@@ -35,13 +35,13 @@ local BORDER_FILE = "actionbutton-border square.tga"   -- idem, ya usado por aur
 -- de nuevo en cada Layout()/LayoutGroup() (no solo al crear), asi que un
 -- cambio de skin se refleja solo con que ns.ApplySkin llame
 -- ns.RefreshMinimapButtons (ver core.lua).
-local function ResolveTex(filename)
-    if ns.SkinResolve then return ns.SkinResolve(filename) end
-    return "Interface\\AddOns\\MyCustomFrames\\Assets\\" .. filename
+local function ResolveTex(filename) Perfy_Trace(Perfy_GetTime(), "Enter", "ResolveTex MyCustomFrames/MinimapButtons.lua:38:6");
+    if ns.SkinResolve then return Perfy_Trace_Passthrough("Leave", "ResolveTex MyCustomFrames/MinimapButtons.lua:38:6", ns.SkinResolve(filename)) end
+    return Perfy_Trace_Passthrough("Leave", "ResolveTex MyCustomFrames/MinimapButtons.lua:38:6", "Interface\\AddOns\\MyCustomFrames\\Assets\\" .. filename)
 end
 
-local function MinimapButtonsDefaults()
-    return {
+local function MinimapButtonsDefaults() Perfy_Trace(Perfy_GetTime(), "Enter", "MinimapButtonsDefaults MyCustomFrames/MinimapButtons.lua:43:6");
+    return Perfy_Trace_Passthrough("Leave", "MinimapButtonsDefaults MyCustomFrames/MinimapButtons.lua:43:6", {
         enabled = true,
         -- Posicion del TRIGGER (el icono siempre visible que hay que
         -- hoverear) -- mismo esquema point/relPoint/offset/anchor/scale que
@@ -66,13 +66,13 @@ local function MinimapButtonsDefaults()
         -- ahora (sin menu todavia) via /mcfminimapbtnsignore <nombre> o
         -- escribiendo directo aca.
         ignoreList = {},
-    }
+    })
 end
 ns.MinimapButtonsDefaults = MinimapButtonsDefaults
 
-local function P()
+local function P() Perfy_Trace(Perfy_GetTime(), "Enter", "P MyCustomFrames/MinimapButtons.lua:73:6");
     local db = ns.GetDB and ns.GetDB()
-    return db and db.minimapbuttons
+    return Perfy_Trace_Passthrough("Leave", "P MyCustomFrames/MinimapButtons.lua:73:6", db and db.minimapbuttons)
 end
 
 -- ==========================================================================
@@ -89,13 +89,13 @@ end
 local MSQ_GROUP_NAME = "Minimap Buttons"
 local MSQ_BASE_ICON_SIZE = 36   -- tamaño "base" que asumen los skins de Masque (Core/Skins/Defaults)
 local msqGroup
-local function EnsureMasqueGroup()
-    if msqGroup then return msqGroup end
+local function EnsureMasqueGroup() Perfy_Trace(Perfy_GetTime(), "Enter", "EnsureMasqueGroup MyCustomFrames/MinimapButtons.lua:92:6");
+    if msqGroup then Perfy_Trace(Perfy_GetTime(), "Leave", "EnsureMasqueGroup MyCustomFrames/MinimapButtons.lua:92:6"); return msqGroup end
     local MSQ = LibStub and LibStub("Masque", true)
-    if not MSQ then return nil end
+    if not MSQ then Perfy_Trace(Perfy_GetTime(), "Leave", "EnsureMasqueGroup MyCustomFrames/MinimapButtons.lua:92:6"); return nil end
     local ok, grp = pcall(MSQ.Group, MSQ, ADDON, MSQ_GROUP_NAME)
     if ok then msqGroup = grp end
-    return msqGroup
+    Perfy_Trace(Perfy_GetTime(), "Leave", "EnsureMasqueGroup MyCustomFrames/MinimapButtons.lua:92:6"); return msqGroup
 end
 
 -- FIX (2026-07-24, "cambia el tamaño del icono, pero no del borde"): con
@@ -107,14 +107,14 @@ end
 -- junto. Se llama SOLO cuando el numero realmente cambio (evita ReSkin todo
 -- el grupo en cada tick de la grilla).
 local lastMsqScale
-local function SyncMasqueScale(iconSize)
+local function SyncMasqueScale(iconSize) Perfy_Trace(Perfy_GetTime(), "Enter", "SyncMasqueScale MyCustomFrames/MinimapButtons.lua:110:6");
     local grp = EnsureMasqueGroup()
-    if not grp then return end
+    if not grp then Perfy_Trace(Perfy_GetTime(), "Leave", "SyncMasqueScale MyCustomFrames/MinimapButtons.lua:110:6"); return end
     local scale = (iconSize or 24) / MSQ_BASE_ICON_SIZE
-    if scale == lastMsqScale then return end
+    if scale == lastMsqScale then Perfy_Trace(Perfy_GetTime(), "Leave", "SyncMasqueScale MyCustomFrames/MinimapButtons.lua:110:6"); return end
     lastMsqScale = scale
     pcall(grp.__Set, grp, "Scale", scale)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SyncMasqueScale MyCustomFrames/MinimapButtons.lua:110:6"); end
 
 local collected = {}   -- [button] = true (ya capturado, no volver a agarrar)
 local iconList = {}    -- array ordenado de botones capturados
@@ -122,16 +122,16 @@ local buttonNames = {} -- [button] = nombre (LDB name, o GetName() del scan gene
 local container        -- frame que contiene la grilla revelada
 local trigger           -- icono siempre visible, arrastrable/escalable
 
-local function IsIgnored(name)
-    if not name then return false end
+local function IsIgnored(name) Perfy_Trace(Perfy_GetTime(), "Enter", "IsIgnored MyCustomFrames/MinimapButtons.lua:125:6");
+    if not name then Perfy_Trace(Perfy_GetTime(), "Leave", "IsIgnored MyCustomFrames/MinimapButtons.lua:125:6"); return false end
     local p = P()
     local list = p and p.ignoreList
-    if not list then return false end
+    if not list then Perfy_Trace(Perfy_GetTime(), "Leave", "IsIgnored MyCustomFrames/MinimapButtons.lua:125:6"); return false end
     local lower = name:lower()
     for _, n in ipairs(list) do
-        if type(n) == "string" and n:lower() == lower then return true end
+        if type(n) == "string" and n:lower() == lower then Perfy_Trace(Perfy_GetTime(), "Leave", "IsIgnored MyCustomFrames/MinimapButtons.lua:125:6"); return true end
     end
-    return false
+    Perfy_Trace(Perfy_GetTime(), "Leave", "IsIgnored MyCustomFrames/MinimapButtons.lua:125:6"); return false
 end
 
 -- FIX (2026-07-24, "no esta ocultando el borde dorado original"): Masque solo
@@ -145,7 +145,7 @@ end
 -- "borde" de su icono. Mismo chequeo aca: escanea las regiones del boton por
 -- ESA textura puntual (por fileID o por nombre de archivo) y la oculta.
 local NATIVE_BORDER_FILEID = 136430   -- Interface\Minimap\MiniMap-TrackingBorder
-local function HideNativeBorder(btn)
+local function HideNativeBorder(btn) Perfy_Trace(Perfy_GetTime(), "Enter", "HideNativeBorder MyCustomFrames/MinimapButtons.lua:148:6");
     for _, region in ipairs({ btn:GetRegions() }) do
         if region.GetObjectType and region:GetObjectType() == "Texture" then
             local tex = region:GetTexture()
@@ -159,29 +159,29 @@ local function HideNativeBorder(btn)
                 -- recorrer TODAS las regiones cada vez.
                 if not region._mcfNativeBorderHooked then
                     region._mcfNativeBorderHooked = true
-                    hooksecurefunc(region, "SetAlpha", function(self, a)
+                    hooksecurefunc(region, "SetAlpha", function(self, a) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MinimapButtons.lua:162:55");
                         if a and a > 0 then self:SetAlpha(0) end
-                    end)
+                    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MinimapButtons.lua:162:55"); end)
                 end
             end
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "HideNativeBorder MyCustomFrames/MinimapButtons.lua:148:6"); end
 
-local function IsCandidateButton(btn)
-    if not btn or collected[btn] then return false end
-    if btn == trigger or btn == container then return false end
-    if btn.IsProtected and btn:IsProtected() then return false end
-    if btn.IsForbidden and btn:IsForbidden() then return false end
-    return true
+local function IsCandidateButton(btn) Perfy_Trace(Perfy_GetTime(), "Enter", "IsCandidateButton MyCustomFrames/MinimapButtons.lua:171:6");
+    if not btn or collected[btn] then Perfy_Trace(Perfy_GetTime(), "Leave", "IsCandidateButton MyCustomFrames/MinimapButtons.lua:171:6"); return false end
+    if btn == trigger or btn == container then Perfy_Trace(Perfy_GetTime(), "Leave", "IsCandidateButton MyCustomFrames/MinimapButtons.lua:171:6"); return false end
+    if btn.IsProtected and btn:IsProtected() then Perfy_Trace(Perfy_GetTime(), "Leave", "IsCandidateButton MyCustomFrames/MinimapButtons.lua:171:6"); return false end
+    if btn.IsForbidden and btn:IsForbidden() then Perfy_Trace(Perfy_GetTime(), "Leave", "IsCandidateButton MyCustomFrames/MinimapButtons.lua:171:6"); return false end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "IsCandidateButton MyCustomFrames/MinimapButtons.lua:171:6"); return true
 end
 
 -- `name` opcional: LDB name (LibDBIcon) o btn:GetName() (scan generico, puede
 -- ser nil para frames anonimos) -- usado para el orden alfabetico (mejora #1)
 -- y la ignore list (mejora #2).
-local function AddButton(btn, name)
-    if not IsCandidateButton(btn) then return end
-    if IsIgnored(name) then return end   -- se deja intacto, nunca se captura
+local function AddButton(btn, name) Perfy_Trace(Perfy_GetTime(), "Enter", "AddButton MyCustomFrames/MinimapButtons.lua:182:6");
+    if not IsCandidateButton(btn) then Perfy_Trace(Perfy_GetTime(), "Leave", "AddButton MyCustomFrames/MinimapButtons.lua:182:6"); return end
+    if IsIgnored(name) then Perfy_Trace(Perfy_GetTime(), "Leave", "AddButton MyCustomFrames/MinimapButtons.lua:182:6"); return end   -- se deja intacto, nunca se captura
     collected[btn] = true
     buttonNames[btn] = name
     iconList[#iconList + 1] = btn
@@ -206,13 +206,13 @@ local function AddButton(btn, name)
     local grp = EnsureMasqueGroup()
     if grp then pcall(grp.AddButton, grp, btn) end
     pcall(HideNativeBorder, btn)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "AddButton MyCustomFrames/MinimapButtons.lua:182:6"); end
 
 -- Libera un boton capturado: lo devuelve a su parent original y lo saca del
 -- sistema (usado por /mcfminimapbtnsignore cuando se ignora algo que YA
 -- estaba capturado).
-local function ReleaseButton(btn)
-    if not collected[btn] then return end
+local function ReleaseButton(btn) Perfy_Trace(Perfy_GetTime(), "Enter", "ReleaseButton MyCustomFrames/MinimapButtons.lua:214:6");
+    if not collected[btn] then Perfy_Trace(Perfy_GetTime(), "Leave", "ReleaseButton MyCustomFrames/MinimapButtons.lua:214:6"); return end
     if msqGroup then pcall(msqGroup.RemoveButton, msqGroup, btn) end
     collected[btn] = nil
     buttonNames[btn] = nil
@@ -221,16 +221,16 @@ local function ReleaseButton(btn)
     end
     local orig = btn._mcfMMOrigParent
     if orig then btn:SetParent(orig) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ReleaseButton MyCustomFrames/MinimapButtons.lua:214:6"); end
 
 -- Escaneo generico (fallback, ver nota de arriba): mismos criterios que
 -- HidingBar:grabMinimapAddonsButtons -- cuadrado-ish, chico respecto al
 -- minimapa, con algun handler de click, no protegido.
-local function ScanMinimapChildren()
+local function ScanMinimapChildren() Perfy_Trace(Perfy_GetTime(), "Enter", "ScanMinimapChildren MyCustomFrames/MinimapButtons.lua:229:6");
     local mm = _G.Minimap
-    if not mm then return end
+    if not mm then Perfy_Trace(Perfy_GetTime(), "Leave", "ScanMinimapChildren MyCustomFrames/MinimapButtons.lua:229:6"); return end
     local mw, mh = mm:GetSize()
-    if not mw or not mh or mw == 0 or mh == 0 then return end
+    if not mw or not mh or mw == 0 or mh == 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "ScanMinimapChildren MyCustomFrames/MinimapButtons.lua:229:6"); return end
     local halfW, halfH = mw * 0.5, mh * 0.5
     for _, child in ipairs({ mm:GetChildren() }) do
         if not collected[child] and child.GetObjectType then
@@ -246,10 +246,10 @@ local function ScanMinimapChildren()
                 -- ZoomHitArea es un Frame plano, sin slot OnClick) -- HasScript
                 -- primero evita eso (mismo chequeo que usa HidingBar); pcall
                 -- de respaldo por si algun frame tampoco expone HasScript.
-                local function SafeHasScript(scriptName)
-                    if child.HasScript and not child:HasScript(scriptName) then return false end
+                local function SafeHasScript(scriptName) Perfy_Trace(Perfy_GetTime(), "Enter", "SafeHasScript MyCustomFrames/MinimapButtons.lua:249:22");
+                    if child.HasScript and not child:HasScript(scriptName) then Perfy_Trace(Perfy_GetTime(), "Leave", "SafeHasScript MyCustomFrames/MinimapButtons.lua:249:22"); return false end
                     local ok, handler = pcall(child.GetScript, child, scriptName)
-                    return ok and handler ~= nil
+                    return Perfy_Trace_Passthrough("Leave", "SafeHasScript MyCustomFrames/MinimapButtons.lua:249:22", ok and handler ~= nil)
                 end
                 if SafeHasScript("OnClick") or SafeHasScript("OnMouseUp") or SafeHasScript("OnMouseDown") then
                     local okName, cname = pcall(child.GetName, child)
@@ -258,12 +258,12 @@ local function ScanMinimapChildren()
             end
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ScanMinimapChildren MyCustomFrames/MinimapButtons.lua:229:6"); end
 
 local ldbiHooked = false
-local function TryLibDBIcon()
+local function TryLibDBIcon() Perfy_Trace(Perfy_GetTime(), "Enter", "TryLibDBIcon MyCustomFrames/MinimapButtons.lua:264:6");
     local ldbi = LibStub and LibStub("LibDBIcon-1.0", true)
-    if not ldbi then return end
+    if not ldbi then Perfy_Trace(Perfy_GetTime(), "Leave", "TryLibDBIcon MyCustomFrames/MinimapButtons.lua:264:6"); return end
     -- Botones ya registrados (creados antes de que este archivo corriera).
     local ok, names = pcall(ldbi.GetButtonList, ldbi)
     if ok and names then
@@ -275,12 +275,12 @@ local function TryLibDBIcon()
     -- Botones nuevos, registrados despues (addon que carga tarde, etc).
     if not ldbiHooked then
         ldbiHooked = true
-        pcall(ldbi.RegisterCallback, ldbi, ns, "LibDBIcon_IconCreated", function(_, btn, name)
+        pcall(ldbi.RegisterCallback, ldbi, ns, "LibDBIcon_IconCreated", function(_, btn, name) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MinimapButtons.lua:278:72");
             AddButton(btn, name)
             if ns.RefreshMinimapButtons then ns.RefreshMinimapButtons() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MinimapButtons.lua:278:72"); end)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "TryLibDBIcon MyCustomFrames/MinimapButtons.lua:264:6"); end
 
 -- ==========================================================================
 -- LAYOUT de la grilla revelada.
@@ -297,18 +297,18 @@ end
 -- OVERLAY del borde SI gana dentro de ESE mismo frame contra el icono
 -- (tipicamente ARTWORK/BACKGROUND). 1 borde por boton, reusado entre pasadas.
 local borders = {}
-local function GetBorder(btn)
+local function GetBorder(btn) Perfy_Trace(Perfy_GetTime(), "Enter", "GetBorder MyCustomFrames/MinimapButtons.lua:300:6");
     local b = borders[btn]
     if not b then
         b = btn:CreateTexture(nil, "OVERLAY")
         borders[btn] = b
     end
-    return b
+    Perfy_Trace(Perfy_GetTime(), "Leave", "GetBorder MyCustomFrames/MinimapButtons.lua:300:6"); return b
 end
 
-local function LayoutGroup()
+local function LayoutGroup() Perfy_Trace(Perfy_GetTime(), "Enter", "LayoutGroup MyCustomFrames/MinimapButtons.lua:309:6");
     local p = P()
-    if not p or not container then return end
+    if not p or not container then Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutGroup MyCustomFrames/MinimapButtons.lua:309:6"); return end
     local iconSize = p.iconSize or 24
     local colSpacing = p.colSpacing or 4   -- hueco horizontal, entre columnas
     local rowSpacing = p.rowSpacing or 4   -- hueco vertical, entre filas
@@ -325,12 +325,12 @@ local function LayoutGroup()
     for _, btn in ipairs(iconList) do
         if btn:IsShown() then shown[#shown + 1] = btn end
     end
-    table.sort(shown, function(a, b)
+    table.sort(shown, function(a, b) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MinimapButtons.lua:328:22");
         local na, nb = buttonNames[a], buttonNames[b]
-        if na and nb then return na:lower() < nb:lower() end
-        if na and not nb then return true end
-        if nb and not na then return false end
-        return false
+        if na and nb then return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/MinimapButtons.lua:328:22", na:lower() < nb:lower()) end
+        if na and not nb then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MinimapButtons.lua:328:22"); return true end
+        if nb and not na then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MinimapButtons.lua:328:22"); return false end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MinimapButtons.lua:328:22"); return false
     end)
 
     local n = #shown
@@ -338,7 +338,7 @@ local function LayoutGroup()
     if n == 0 then
         container:SetSize(1, 1)
         for _, b in pairs(borders) do b:Hide() end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutGroup MyCustomFrames/MinimapButtons.lua:309:6"); return
     end
 
     local cols, rows
@@ -399,7 +399,7 @@ local function LayoutGroup()
     for btn, border in pairs(borders) do
         if not seen[btn] then border:Hide() end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutGroup MyCustomFrames/MinimapButtons.lua:309:6"); end
 ns.RefreshMinimapButtonsLayout = LayoutGroup
 
 -- ==========================================================================
@@ -422,28 +422,28 @@ ns.RefreshMinimapButtonsLayout = LayoutGroup
 local isOverGroup = false          -- estado actual (evita reiniciar el fade a cada tick)
 local leaveElapsed = nil           -- nil = no contando; numero = segundos sin hover
 
-local function ShowGroup()
-    if not container then return end
+local function ShowGroup() Perfy_Trace(Perfy_GetTime(), "Enter", "ShowGroup MyCustomFrames/MinimapButtons.lua:425:6");
+    if not container then Perfy_Trace(Perfy_GetTime(), "Leave", "ShowGroup MyCustomFrames/MinimapButtons.lua:425:6"); return end
     leaveElapsed = nil
-    if isOverGroup then return end
+    if isOverGroup then Perfy_Trace(Perfy_GetTime(), "Leave", "ShowGroup MyCustomFrames/MinimapButtons.lua:425:6"); return end
     isOverGroup = true
     LayoutGroup()
     container:Show()
     UIFrameFadeIn(container, (P() and P().fadeDuration) or 0.15, container:GetAlpha(), 1)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ShowGroup MyCustomFrames/MinimapButtons.lua:425:6"); end
 
-local function HideGroupNow()
-    if not container then return end
+local function HideGroupNow() Perfy_Trace(Perfy_GetTime(), "Enter", "HideGroupNow MyCustomFrames/MinimapButtons.lua:435:6");
+    if not container then Perfy_Trace(Perfy_GetTime(), "Leave", "HideGroupNow MyCustomFrames/MinimapButtons.lua:435:6"); return end
     isOverGroup = false
     leaveElapsed = nil
     UIFrameFadeOut(container, (P() and P().fadeDuration) or 0.15, container:GetAlpha(), 0)
     -- UIFrameFadeOut no oculta el frame solo (queda invisible pero "shown",
     -- lo que seguiria bloqueando el mouse) -- lo oculta de verdad al terminar
     -- el fade, salvo que se haya vuelto a mostrar mientras tanto.
-    C_Timer.After((P() and P().fadeDuration) or 0.15, function()
+    C_Timer.After((P() and P().fadeDuration) or 0.15, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MinimapButtons.lua:443:54");
         if container and not isOverGroup then container:Hide() end
-    end)
-end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MinimapButtons.lua:443:54"); end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "HideGroupNow MyCustomFrames/MinimapButtons.lua:435:6"); end
 
 -- ==========================================================================
 -- CONSTRUCCION (holder/trigger arrastrable+escalable, mismo patron que
@@ -452,8 +452,8 @@ end
 local Layout   -- forward-declarada: EnsureFrames la referencia en callbacks
                 -- (OnDragStop/AttachScaleWheel) definidos ANTES de asignarla.
 
-local function EnsureFrames()
-    if trigger then return end
+local function EnsureFrames() Perfy_Trace(Perfy_GetTime(), "Enter", "EnsureFrames MyCustomFrames/MinimapButtons.lua:455:6");
+    if trigger then Perfy_Trace(Perfy_GetTime(), "Leave", "EnsureFrames MyCustomFrames/MinimapButtons.lua:455:6"); return end
 
     trigger = CreateFrame("Button", nil, UIParent)
     ns.minimapButtonsTrigger = trigger   -- expuesto para diagnostico (/mcfscaledump)
@@ -487,10 +487,10 @@ local function EnsureFrames()
     countText:SetTextColor(1, 1, 1, 0.5)
     trigger.countText = countText
 
-    trigger:SetScript("OnDragStart", function(self)
+    trigger:SetScript("OnDragStart", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MinimapButtons.lua:490:37");
         if ns.IsUnlocked() and not InCombatLockdown() then self:StartMoving() end
-    end)
-    trigger:SetScript("OnDragStop", function(self)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MinimapButtons.lua:490:37"); end)
+    trigger:SetScript("OnDragStop", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MinimapButtons.lua:493:36");
         self:StopMovingOrSizing()
         if ns.SnapFrameToGrid then ns.SnapFrameToGrid(self) end
         local p = P()
@@ -510,17 +510,17 @@ local function EnsureFrames()
         end
         Layout()
         if ns.OnDragStopped then ns.OnDragStopped(MINIMAPBUTTONS_KEY) end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MinimapButtons.lua:493:36"); end)
     -- OnEnter/OnLeave del trigger: SOLO tooltip. Mostrar/ocultar el grupo ya
     -- NO depende de estos eventos (ver nota arriba de ShowGroup/HideGroupNow)
     -- -- lo maneja el ticker de poll geometrico mas abajo.
-    trigger:SetScript("OnEnter", function()
+    trigger:SetScript("OnEnter", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MinimapButtons.lua:517:33");
         GameTooltip:SetOwner(trigger, "ANCHOR_TOP")
         GameTooltip:SetText("Minimap addon buttons")
         GameTooltip:AddLine("Hover to show", 0.7, 0.7, 0.7)
         GameTooltip:Show()
-    end)
-    trigger:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MinimapButtons.lua:517:33"); end)
+    trigger:SetScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MinimapButtons.lua:523:33"); GameTooltip:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MinimapButtons.lua:523:33"); end)
     ns.AttachScaleWheel(trigger, P, Layout)
 
     container = CreateFrame("Frame", nil, UIParent)
@@ -540,17 +540,17 @@ local function EnsureFrames()
     -- true en el diagnostico); esto solo servia para tapar todo por debajo
     -- de HIGH.
     container:EnableMouse(false)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "EnsureFrames MyCustomFrames/MinimapButtons.lua:455:6"); end
 
-Layout = function()
+Layout = function() Perfy_Trace(Perfy_GetTime(), "Enter", "Layout MyCustomFrames/MinimapButtons.lua:545:9");
     EnsureFrames()
     local p = P()
-    if not p then return end
+    if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "Layout MyCustomFrames/MinimapButtons.lua:545:9"); return end
 
     if not p.enabled then
         trigger:Hide()
         container:Hide()
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "Layout MyCustomFrames/MinimapButtons.lua:545:9"); return
     end
     trigger:Show()
     trigger:SetFrameStrata(p.strata or "MEDIUM")
@@ -587,7 +587,7 @@ Layout = function()
     end
 
     LayoutGroup()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "Layout MyCustomFrames/MinimapButtons.lua:545:9"); end
 ns.RefreshMinimapButtons = Layout
 
 -- Ticker: poll de hover cada frame (rapido, ver nota en ShowGroup/
@@ -598,7 +598,7 @@ ns.RefreshMinimapButtons = Layout
 -- tarde sin pasar por LibDBIcon).
 local ticker = CreateFrame("Frame")
 ticker:Hide()
-ticker:SetScript("OnUpdate", function(self, elapsed)
+ticker:SetScript("OnUpdate", function(self, elapsed) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MinimapButtons.lua:601:29");
     if trigger and container then
         local unlocked = ns.IsUnlocked and ns.IsUnlocked()
         local over = trigger:IsMouseOver() or (container:IsShown() and container:IsMouseOver())
@@ -613,7 +613,7 @@ ticker:SetScript("OnUpdate", function(self, elapsed)
     end
 
     self.t = (self.t or 0) + elapsed
-    if self.t < 1.0 then return end
+    if self.t < 1.0 then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MinimapButtons.lua:601:29"); return end
     self.t = 0
 
     TryLibDBIcon()
@@ -632,33 +632,33 @@ ticker:SetScript("OnUpdate", function(self, elapsed)
     if p and p.enabled and container and (container:IsShown() or ns.IsUnlocked()) then
         LayoutGroup()
     end
-end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MinimapButtons.lua:601:29"); end)
 
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_LOGIN")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
-f:SetScript("OnEvent", function()
+f:SetScript("OnEvent", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MinimapButtons.lua:640:23");
     Layout()
     TryLibDBIcon()
     ScanMinimapChildren()
     LayoutGroup()
     ticker:Show()
-end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MinimapButtons.lua:640:23"); end)
 
 -- Temporal (2026-07-24): sin seccion de menu todavia -- resetea SOLO la
 -- posicion/escala del trigger a los defaults actuales (util porque
 -- FillProfile no pisa un punto ya guardado con el default viejo).
 SLASH_MCFMINIMAPBTNSRESET1 = "/mcfminimapbtnsreset"
-SlashCmdList["MCFMINIMAPBTNSRESET"] = function()
+SlashCmdList["MCFMINIMAPBTNSRESET"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFMINIMAPBTNSRESET MyCustomFrames/MinimapButtons.lua:652:38");
     if ns.ResetUnit then ns.ResetUnit(MINIMAPBUTTONS_KEY) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFMINIMAPBTNSRESET MyCustomFrames/MinimapButtons.lua:652:38"); end
 
 -- Mejora #2 (2026-07-24, "lista de exclusion"): sin menu todavia, dos
 -- comandos de texto para manejarla. /list imprime lo detectado (nombre real
 -- si vino de LibDBIcon, o "sin nombre" para lo agarrado por el scan
 -- generico) para que el usuario sepa que nombre exacto usar en /ignore.
 SLASH_MCFMINIMAPBTNSLIST1 = "/mcfminimapbtnslist"
-SlashCmdList["MCFMINIMAPBTNSLIST"] = function()
+SlashCmdList["MCFMINIMAPBTNSLIST"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFMINIMAPBTNSLIST MyCustomFrames/MinimapButtons.lua:661:37");
     print("|cff00ff00[MCF]|r Minimap buttons detected:")
     for btn in pairs(collected) do
         local name = buttonNames[btn] or "(sin nombre / scan generico)"
@@ -681,24 +681,24 @@ SlashCmdList["MCFMINIMAPBTNSLIST"] = function()
             okLevel and tostring(level) or "?",
             okHit and string.format("%.0f,%.0f,%.0f,%.0f", l, r, t, b) or "?"))
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFMINIMAPBTNSLIST MyCustomFrames/MinimapButtons.lua:661:37"); end
 
 SLASH_MCFMINIMAPBTNSIGNORE1 = "/mcfminimapbtnsignore"
-SlashCmdList["MCFMINIMAPBTNSIGNORE"] = function(msg)
+SlashCmdList["MCFMINIMAPBTNSIGNORE"] = function(msg) Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFMINIMAPBTNSIGNORE MyCustomFrames/MinimapButtons.lua:687:39");
     local name = msg and msg:match("^%s*(.-)%s*$")
     if not name or name == "" then
         print("|cff00ff00[MCF]|r Usage: /mcfminimapbtnsignore <name> (ver /mcfminimapbtnslist). Correrlo de nuevo con el mismo nombre lo saca de la lista.")
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFMINIMAPBTNSIGNORE MyCustomFrames/MinimapButtons.lua:687:39"); return
     end
     local p = P()
-    if not p then return end
+    if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFMINIMAPBTNSIGNORE MyCustomFrames/MinimapButtons.lua:687:39"); return end
     p.ignoreList = p.ignoreList or {}
     local lower = name:lower()
     for i, n in ipairs(p.ignoreList) do
         if type(n) == "string" and n:lower() == lower then
             table.remove(p.ignoreList, i)
             print("|cff00ff00[MCF]|r \"" .. name .. "\" removed from the ignore list.")
-            return
+            Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFMINIMAPBTNSIGNORE MyCustomFrames/MinimapButtons.lua:687:39"); return
         end
     end
     table.insert(p.ignoreList, name)
@@ -711,4 +711,6 @@ SlashCmdList["MCFMINIMAPBTNSIGNORE"] = function(msg)
     end
     if ns.RefreshMinimapButtonsLayout then ns.RefreshMinimapButtonsLayout() end
     print("|cff00ff00[MCF]|r \"" .. name .. "\" added to the ignore list (won't be captured).")
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFMINIMAPBTNSIGNORE MyCustomFrames/MinimapButtons.lua:687:39"); end
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/MinimapButtons.lua");

@@ -1,4 +1,4 @@
-local ADDON, ns = ...
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/NameplateLayout.lua"); local ADDON, ns = ...
 
 -- ==========================================================================
 -- MyCustomFrames - NameplateLayout.lua
@@ -102,29 +102,29 @@ L.AURA_GROUP_DIRECTION_KEYS = {
     big = "bigDebuffDirection", personal = "personalDebuffsDirection", enemy = "enemyBuffsDirection",
 }
 
-local function num(v, dflt) return (type(v) == "number") and v or dflt end
+local function num(v, dflt) Perfy_Trace(Perfy_GetTime(), "Enter", "num MyCustomFrames/NameplateLayout.lua:105:6"); return Perfy_Trace_Passthrough("Leave", "num MyCustomFrames/NameplateLayout.lua:105:6", (type(v) == "number") and v or dflt) end
 
 -- ---- Tamaños -------------------------------------------------------------
-function L.HealthSize(p)
-    return num(p and p.healthWidth, HEALTH_W), num(p and p.healthHeight, HEALTH_H)
+function L.HealthSize(p) Perfy_Trace(Perfy_GetTime(), "Enter", "L.HealthSize MyCustomFrames/NameplateLayout.lua:108:0");
+    return Perfy_Trace_Passthrough("Leave", "L.HealthSize MyCustomFrames/NameplateLayout.lua:108:0", num(p and p.healthWidth, HEALTH_W), num(p and p.healthHeight, HEALTH_H))
 end
-function L.CastSize(p)
-    return num(p and p.castWidth, CAST_W), num(p and p.castHeight, CAST_H)
+function L.CastSize(p) Perfy_Trace(Perfy_GetTime(), "Enter", "L.CastSize MyCustomFrames/NameplateLayout.lua:111:0");
+    return Perfy_Trace_Passthrough("Leave", "L.CastSize MyCustomFrames/NameplateLayout.lua:111:0", num(p and p.castWidth, CAST_W), num(p and p.castHeight, CAST_H))
 end
-function L.HighlightSize(p)
+function L.HighlightSize(p) Perfy_Trace(Perfy_GetTime(), "Enter", "L.HighlightSize MyCustomFrames/NameplateLayout.lua:114:0");
     local w, h = L.HealthSize(p)
-    return w + 4, h + 4
+    return Perfy_Trace_Passthrough("Leave", "L.HighlightSize MyCustomFrames/NameplateLayout.lua:114:0", w + 4, h + 4)
 end
-function L.AuraIconSize(p) return num(p and p.auraIconSize, AURA_ICON) end
-function L.AuraPadding(p)  return num(p and p.auraPadding, AURA_PAD) end
-function L.AuraHolderSize(p)
+function L.AuraIconSize(p) Perfy_Trace(Perfy_GetTime(), "Enter", "L.AuraIconSize MyCustomFrames/NameplateLayout.lua:118:0"); return Perfy_Trace_Passthrough("Leave", "L.AuraIconSize MyCustomFrames/NameplateLayout.lua:118:0", num(p and p.auraIconSize, AURA_ICON)) end
+function L.AuraPadding(p) Perfy_Trace(Perfy_GetTime(), "Enter", "L.AuraPadding MyCustomFrames/NameplateLayout.lua:119:0");  return Perfy_Trace_Passthrough("Leave", "L.AuraPadding MyCustomFrames/NameplateLayout.lua:119:0", num(p and p.auraPadding, AURA_PAD)) end
+function L.AuraHolderSize(p) Perfy_Trace(Perfy_GetTime(), "Enter", "L.AuraHolderSize MyCustomFrames/NameplateLayout.lua:120:0");
     local sz, pad = L.AuraIconSize(p), L.AuraPadding(p)
-    return sz * AURA_MAX_PER_CAT + pad * (AURA_MAX_PER_CAT - 1), sz
+    return Perfy_Trace_Passthrough("Leave", "L.AuraHolderSize MyCustomFrames/NameplateLayout.lua:120:0", sz * AURA_MAX_PER_CAT + pad * (AURA_MAX_PER_CAT - 1), sz)
 end
 -- Posicion de un icono dentro de su holder (slot 1..AURA_MAX_PER_CAT).
-function L.AuraIconOffset(p, slot)
+function L.AuraIconOffset(p, slot) Perfy_Trace(Perfy_GetTime(), "Enter", "L.AuraIconOffset MyCustomFrames/NameplateLayout.lua:125:0");
     local sz, pad = L.AuraIconSize(p), L.AuraPadding(p)
-    return (slot - 1) * (sz + pad), 0
+    return Perfy_Trace_Passthrough("Leave", "L.AuraIconOffset MyCustomFrames/NameplateLayout.lua:125:0", (slot - 1) * (sz + pad), 0)
 end
 
 -- ---- Colocacion ----------------------------------------------------------
@@ -175,26 +175,26 @@ local AURA_BASE = {
 -- OJO si tocas esto: si algun dia escribis codigo que guarde una de estas
 -- tablas o que tenga dos de la misma pieza vivas al mismo tiempo, hace una
 -- copia. Devolver un scratch es la razon por la que esto no aloca.
-local SCRATCH = setmetatable({}, { __index = function(t, k)
+local SCRATCH = setmetatable({}, { __index = function(t, k) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/NameplateLayout.lua:178:45");
     local v = {}
     rawset(t, k, v)
-    return v
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/NameplateLayout.lua:178:45"); return v
 end })
 
-local function fill(key, point, relTo, relPoint, x, y, regime)
+local function fill(key, point, relTo, relPoint, x, y, regime) Perfy_Trace(Perfy_GetTime(), "Enter", "fill MyCustomFrames/NameplateLayout.lua:184:6");
     local o = SCRATCH[key]
     o.point, o.relTo, o.relPoint = point, relTo, relPoint
     o.x, o.y, o.scaleRegime = x, y, regime
-    return o
+    Perfy_Trace(Perfy_GetTime(), "Leave", "fill MyCustomFrames/NameplateLayout.lua:184:6"); return o
 end
 
-local function off(p, xKey, yKey, base)
-    return base[1] + num(p and p[xKey], 0), base[2] + num(p and p[yKey], 0)
+local function off(p, xKey, yKey, base) Perfy_Trace(Perfy_GetTime(), "Enter", "off MyCustomFrames/NameplateLayout.lua:191:6");
+    return Perfy_Trace_Passthrough("Leave", "off MyCustomFrames/NameplateLayout.lua:191:6", base[1] + num(p and p[xKey], 0), base[2] + num(p and p[yKey], 0))
 end
 
 -- Barra de vida: pegada al tope del nameplate. Sin offset de usuario.
-function L.Health(p)
-    return fill("health", "TOP", "plate", "TOP", BASE.health[1], BASE.health[2], "plate")
+function L.Health(p) Perfy_Trace(Perfy_GetTime(), "Enter", "L.Health MyCustomFrames/NameplateLayout.lua:196:0");
+    return Perfy_Trace_Passthrough("Leave", "L.Health MyCustomFrames/NameplateLayout.lua:196:0", fill("health", "TOP", "plate", "TOP", BASE.health[1], BASE.health[2], "plate"))
 end
 
 -- Nombre: ancla al NAMEPLATE, no a la barra.
@@ -216,41 +216,41 @@ end
 -- pisando nl.x/nl.y con `16 + offY` DESPUES de pedir la tabla, y esa formula
 -- vieja se quedo cuando la posicion nativa paso a BASE -- el nombre volvia a
 -- +16 en vez de quedarse en su posicion horneada (reportado 2026-07-28).
-function L.Name(p, nameOnly)
+function L.Name(p, nameOnly) Perfy_Trace(Perfy_GetTime(), "Enter", "L.Name MyCustomFrames/NameplateLayout.lua:219:0");
     local xKey = nameOnly and "nameOnlyOffsetX" or "nameOffsetX"
     local yKey = nameOnly and "nameOnlyOffsetY" or "nameOffsetY"
     local x, y = off(p, xKey, yKey, BASE.name)
-    return fill("name", "BOTTOM", "plate", "TOP", x, y, "plate")
+    return Perfy_Trace_Passthrough("Leave", "L.Name MyCustomFrames/NameplateLayout.lua:219:0", fill("name", "BOTTOM", "plate", "TOP", x, y, "plate"))
 end
 
 -- Valor de vida (% ): respecto de la barra.
-function L.HealthValue(p)
+function L.HealthValue(p) Perfy_Trace(Perfy_GetTime(), "Enter", "L.HealthValue MyCustomFrames/NameplateLayout.lua:227:0");
     local x, y = off(p, "healthValueOffsetX", "healthValueOffsetY", BASE.healthValue)
-    return fill("healthValue", "TOP", "health", "BOTTOM", x, y, "plate")
+    return Perfy_Trace_Passthrough("Leave", "L.HealthValue MyCustomFrames/NameplateLayout.lua:227:0", fill("healthValue", "TOP", "health", "BOTTOM", x, y, "plate"))
 end
 
 -- Cast bar: debajo de la barra de vida.
-function L.Cast(p)
+function L.Cast(p) Perfy_Trace(Perfy_GetTime(), "Enter", "L.Cast MyCustomFrames/NameplateLayout.lua:233:0");
     local x, y = off(p, "castOffsetX", "castOffsetY", BASE.cast)
-    return fill("cast", "TOP", "health", "BOTTOM", x, y, "plate")
+    return Perfy_Trace_Passthrough("Leave", "L.Cast MyCustomFrames/NameplateLayout.lua:233:0", fill("cast", "TOP", "health", "BOTTOM", x, y, "plate"))
 end
 
 -- Texto del cast: centrado en la propia cast bar.
-function L.CastText(p)
+function L.CastText(p) Perfy_Trace(Perfy_GetTime(), "Enter", "L.CastText MyCustomFrames/NameplateLayout.lua:239:0");
     local x, y = off(p, "castTextOffsetX", "castTextOffsetY", BASE.castText)
-    return fill("castText", "CENTER", "cast", "CENTER", x, y, "plate")
+    return Perfy_Trace_Passthrough("Leave", "L.CastText MyCustomFrames/NameplateLayout.lua:239:0", fill("castText", "CENTER", "cast", "CENTER", x, y, "plate"))
 end
 
 -- Icono de clasificacion (elite/rare): al borde derecho de la barra.
-function L.Classification(p)
+function L.Classification(p) Perfy_Trace(Perfy_GetTime(), "Enter", "L.Classification MyCustomFrames/NameplateLayout.lua:245:0");
     local x, y = off(p, "classificationOffsetX", "classificationOffsetY", BASE.classification)
-    return fill("classification", "RIGHT", "health", "RIGHT", x, y, "plate")
+    return Perfy_Trace_Passthrough("Leave", "L.Classification MyCustomFrames/NameplateLayout.lua:245:0", fill("classification", "RIGHT", "health", "RIGHT", x, y, "plate"))
 end
 
 -- Marca de raid: respecto del centro de la barra.
-function L.RaidMark(p)
+function L.RaidMark(p) Perfy_Trace(Perfy_GetTime(), "Enter", "L.RaidMark MyCustomFrames/NameplateLayout.lua:251:0");
     local x, y = off(p, "raidMarkOffsetX", "raidMarkOffsetY", BASE.raidMark)
-    return fill("raidMark", "CENTER", "health", "CENTER", x, y, "plate")
+    return Perfy_Trace_Passthrough("Leave", "L.RaidMark MyCustomFrames/NameplateLayout.lua:251:0", fill("raidMark", "CENTER", "health", "CENTER", x, y, "plate"))
 end
 
 -- Grupo de auras: ancla al NAMEPLATE, igual que el nombre -- NO al nombre.
@@ -267,14 +267,16 @@ end
 -- de pantalla fijo mientras la barra encogia, asi que su tamaño relativo se
 -- disparaba con la distancia (1.08 alturas de barra de cerca, 2.41 de lejos).
 -- Son texturas, escalan suave -- no tienen el problema de rasterizado del texto.
-function L.AuraGroup(p, groupKey)
+function L.AuraGroup(p, groupKey) Perfy_Trace(Perfy_GetTime(), "Enter", "L.AuraGroup MyCustomFrames/NameplateLayout.lua:270:0");
     local keys = L.AURA_GROUP_OFFSET_KEYS[groupKey]
     local base = AURA_BASE[groupKey]
-    if not (keys and base) then return nil end
+    if not (keys and base) then Perfy_Trace(Perfy_GetTime(), "Leave", "L.AuraGroup MyCustomFrames/NameplateLayout.lua:270:0"); return nil end
     local dir = (p and p[L.AURA_GROUP_DIRECTION_KEYS[groupKey]]) or "right"
     local x, y = off(p, keys[1], keys[2], base)
     -- scratch POR GRUPO ("aura:big" y demas): los tres se piden seguidos en el
     -- bucle de LayoutPlate, asi que compartir una sola seria correcto igual,
     -- pero separadas no hay ni que razonarlo.
-    return fill("aura:" .. groupKey, AURA_ANCHOR_POINT[dir] or "BOTTOMLEFT", "plate", "TOP", x, y, "plate")
+    return Perfy_Trace_Passthrough("Leave", "L.AuraGroup MyCustomFrames/NameplateLayout.lua:270:0", fill("aura:" .. groupKey, AURA_ANCHOR_POINT[dir] or "BOTTOMLEFT", "plate", "TOP", x, y, "plate"))
 end
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/NameplateLayout.lua");

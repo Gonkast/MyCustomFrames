@@ -1,4 +1,4 @@
---[[
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua"); --[[
 
 	The MIT License (MIT)
 
@@ -32,7 +32,7 @@ end
 
 local lib, oldversion = LibStub:NewLibrary(MAJOR_VERSION, MINOR_VERSION)
 if (not lib) then
-	return
+	Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua"); return
 end
 
 -- Lua API
@@ -85,7 +85,7 @@ local Orig_GetScript = getmetatable(SpinBar).__index.GetScript
 local Orig_SetScript = getmetatable(SpinBar).__index.SetScript
 
 -- Noop out the old blizzard methods.
-local noop = function() end
+local noop = function() Perfy_Trace(Perfy_GetTime(), "Enter", "noop MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:88:13"); Perfy_Trace(Perfy_GetTime(), "Leave", "noop MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:88:13"); end
 SpinBar.GetFillStyle = noop
 SpinBar.GetMinMaxValues = noop
 SpinBar.GetOrientation = noop
@@ -112,7 +112,7 @@ local Quadrant_MT = { __index = Quadrant }
 -- Resets a quadrant's texture to its default (full)
 -- texcoords and removes any applied rotations.
 -- *Does NOT toggle visibility!
-Quadrant.ResetTexture = function(self)
+Quadrant.ResetTexture = function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "Quadrant.ResetTexture MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:115:24");
 	if (self.quadrantID == 1) then
 		self:SetTexCoord(.5, 1, 0, .5) -- upper right
 		self:SetPoint("BOTTOMLEFT", 0, 0)
@@ -127,16 +127,16 @@ Quadrant.ResetTexture = function(self)
 		self:SetPoint("TOPLEFT", 0, 0)
 	end
 	self:SetRotation(0)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "Quadrant.ResetTexture MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:115:24"); end
 
-Quadrant.RotateTexture = function(self, degrees)
+Quadrant.RotateTexture = function(self, degrees) Perfy_Trace(Perfy_GetTime(), "Enter", "Quadrant.RotateTexture MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:132:25");
 
 	-- Make sure the degree is in bounds, or just reset the texture and exit
 	local compareDegrees = degrees % 360
 
 	-- Reset texture and return if the given degree is not in our quadrant
 	if not((compareDegrees >= self.quadrantDegree) and (compareDegrees < self.quadrantDegree + 90)) then
-		return self:ResetTexture()
+		return Perfy_Trace_Passthrough("Leave", "Quadrant.RotateTexture MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:132:25", self:ResetTexture())
 	end
 
 	-- Calculate where the current position is
@@ -290,10 +290,10 @@ Quadrant.RotateTexture = function(self, degrees)
 
 
 	-- Tell the environment this was the active quadrant
-	return true
+	Perfy_Trace(Perfy_GetTime(), "Leave", "Quadrant.RotateTexture MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:132:25"); return true
 end
 
-local Update = function(self, elapsed)
+local Update = function(self, elapsed) Perfy_Trace(Perfy_GetTime(), "Enter", "Update MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:296:15");
 	local data = Bars[self]
 
 	local value = data.disableSmoothing and data.barValue or data.barDisplayValue
@@ -409,7 +409,7 @@ local Update = function(self, elapsed)
 		end
 	end
 
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "Update MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:296:15"); end
 
 local smoothingMinValue = .3 -- if a value is lower than this, we won't smoothe
 local smoothingFrequency = .5 -- default duration of smooth transitions
@@ -417,11 +417,11 @@ local smartSmoothingDownFrequency = .15 -- duration of smooth reductions in smar
 local smartSmoothingUpFrequency = .75 -- duration of smooth increases in smart mode
 local smoothingLimit = 1/120 -- max updates per second
 
-local OnUpdate = function(self, elapsed)
+local OnUpdate = function(self, elapsed) Perfy_Trace(Perfy_GetTime(), "Enter", "OnUpdate MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:420:17");
 	local data = Bars[self]
 	data.elapsed = (data.elapsed or 0) + elapsed
 	if (data.elapsed < smoothingLimit) then
-		return
+		Perfy_Trace(Perfy_GetTime(), "Leave", "OnUpdate MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:420:17"); return
 	end
 
 	if (data.updatesRunning) then
@@ -487,9 +487,9 @@ local OnUpdate = function(self, elapsed)
 
 	-- only reset this at the very end, as calculations above need it
 	data.elapsed = 0
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "OnUpdate MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:420:17"); end
 
-local UpdateQuadrantOrder = function(self)
+local UpdateQuadrantOrder = function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateQuadrantOrder MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:492:28");
 	local data = Bars[self]
 
 	local clockwise = data.clockwise
@@ -544,32 +544,32 @@ local UpdateQuadrantOrder = function(self)
 	end
 
 	Update(self)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateQuadrantOrder MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:492:28"); end
 
 -- Sets the angles where the bar starts and ends.
 -- Generally recommended to slightly overshoot the texture "edges"
 -- to avoid textures being abruptly cut off.
-SpinBar.SetDegreeOffset = function(self, degreeOffset)
+SpinBar.SetDegreeOffset = function(self, degreeOffset) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetDegreeOffset MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:552:26");
 	Bars[self].degreeOffset = degreeOffset
 	UpdateQuadrantOrder(self)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetDegreeOffset MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:552:26"); end
 
-SpinBar.SetDegreeSpan = function(self, degreeSpan)
+SpinBar.SetDegreeSpan = function(self, degreeSpan) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetDegreeSpan MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:557:24");
 	Bars[self].degreeSpan = degreeSpan
 	UpdateQuadrantOrder(self)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetDegreeSpan MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:557:24"); end
 
 -- Sets the min/max-values as in any other bar.
-SpinBar.SetSmoothingFrequency = function(self, smoothingFrequency)
+SpinBar.SetSmoothingFrequency = function(self, smoothingFrequency) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetSmoothingFrequency MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:563:32");
 	Bars[self].smoothingFrequency = smoothingFrequency
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetSmoothingFrequency MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:563:32"); end
 
-SpinBar.DisableSmoothing = function(self, disableSmoothing)
+SpinBar.DisableSmoothing = function(self, disableSmoothing) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.DisableSmoothing MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:567:27");
 	Bars[self].disableSmoothing = disableSmoothing
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.DisableSmoothing MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:567:27"); end
 
 -- Sets the current value of the spinbar.
-SpinBar.SetValue = function(self, value, overrideSmoothing)
+SpinBar.SetValue = function(self, value, overrideSmoothing) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetValue MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:572:19");
 	local data = Bars[self]
 	local min, max = data.barMin, data.barMax
 	if (value > max) then
@@ -605,19 +605,19 @@ SpinBar.SetValue = function(self, value, overrideSmoothing)
 	end
 
 	Update(self)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetValue MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:572:19"); end
 
-SpinBar.Clear = function(self)
+SpinBar.Clear = function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.Clear MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:610:16");
 	local data = Bars[self]
 	data.barValue = data.barMin
 	data.barDisplayValue = data.barMin
 	Update(self)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.Clear MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:610:16"); end
 
-SpinBar.SetMinMaxValues = function(self, min, max, overrideSmoothing)
+SpinBar.SetMinMaxValues = function(self, min, max, overrideSmoothing) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetMinMaxValues MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:617:26");
 	local data = Bars[self]
 	if (data.barMin == min) and (data.barMax == max) then
-		return
+		Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetMinMaxValues MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:617:26"); return
 	end
 	if (data.barValue > max) then
 		data.barValue = max
@@ -636,17 +636,17 @@ SpinBar.SetMinMaxValues = function(self, min, max, overrideSmoothing)
 	data.barMin = min
 	data.barMax = max
 	Update(self)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetMinMaxValues MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:617:26"); end
 
-SpinBar.SetStatusBarColor = function(self, ...)
+SpinBar.SetStatusBarColor = function(self, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetStatusBarColor MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:641:28");
 	local data = Bars[self]
 	for id,bar in ipairs(data.quadrants) do
 		bar:SetVertexColor(...)
 	end
 	self:SetSparkColor(...)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetStatusBarColor MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:641:28"); end
 
-SpinBar.SetStatusBarTexture = function(self, path)
+SpinBar.SetStatusBarTexture = function(self, path) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetStatusBarTexture MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:649:30");
 	local data = Bars[self]
 	for id,bar in ipairs(data.quadrants) do
 		bar:SetTexture(path)
@@ -654,35 +654,35 @@ SpinBar.SetStatusBarTexture = function(self, path)
 	-- Don't need an update here, texture changes are instant,
 	-- and won't change applied rotations and texcoords. I think(?).
 	--Update(self)
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetStatusBarTexture MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:649:30"); end
+
+SpinBar.GetStatusBarTexture = function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.GetStatusBarTexture MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:659:30");
+	return Perfy_Trace_Passthrough("Leave", "SpinBar.GetStatusBarTexture MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:659:30", Bars[self].quadrants[1]:GetTexture())
 end
 
-SpinBar.GetStatusBarTexture = function(self)
-	return Bars[self].quadrants[1]:GetTexture()
-end
-
-SpinBar.SetClockwise = function(self, clockwise)
+SpinBar.SetClockwise = function(self, clockwise) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetClockwise MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:663:23");
 	local data = Bars[self]
 	data.clockwise = clockwise
 	for id,bar in ipairs(data.quadrants) do
 		bar.clockwise = clockwise
 	end
 	UpdateQuadrantOrder(self)
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetClockwise MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:663:23"); end
+
+SpinBar.IsClockwise = function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.IsClockwise MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:672:22");
+	return Perfy_Trace_Passthrough("Leave", "SpinBar.IsClockwise MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:672:22", Bars[self].clockwise)
 end
 
-SpinBar.IsClockwise = function(self)
-	return Bars[self].clockwise
-end
-
-SpinBar.SetSparkTexture = function(self, ...)
+SpinBar.SetSparkTexture = function(self, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetSparkTexture MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:676:26");
 	local arg = ...
 	if (type(arg) == "number") then
 		Bars[self].spark:SetColorTexture(...)
 	else
 		Bars[self].spark:SetTexture(...)
 	end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetSparkTexture MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:676:26"); end
 
-SpinBar.SetSparkColor = function(self, r, g, b)
+SpinBar.SetSparkColor = function(self, r, g, b) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetSparkColor MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:685:24");
 	local data = Bars[self]
 	local mult = data.statusbar.sparkMultiplier
 	if mult then
@@ -690,36 +690,36 @@ SpinBar.SetSparkColor = function(self, r, g, b)
 	else
 		data.spark:SetVertexColor(r, g, b)
 	end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetSparkColor MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:685:24"); end
 
-SpinBar.SetSparkMinMaxPercent = function(self, min, max)
+SpinBar.SetSparkMinMaxPercent = function(self, min, max) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetSparkMinMaxPercent MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:695:32");
 	local data = Bars[self]
 	data.sparkMinPercent = min
 	data.sparkMinPercent = max
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetSparkMinMaxPercent MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:695:32"); end
 
-SpinBar.SetSparkSize = function(self, width, height)
+SpinBar.SetSparkSize = function(self, width, height) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetSparkSize MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:701:23");
 	local data = Bars[self]
 	data.sparkWidth = width
 	data.sparkHeight = height
 	data.spark:SetSize(width, height)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetSparkSize MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:701:23"); end
 
-SpinBar.SetSparkInset = function(self, inset)
+SpinBar.SetSparkInset = function(self, inset) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetSparkInset MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:708:24");
 	local data = Bars[self]
 	data.sparkInset = inset
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetSparkInset MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:708:24"); end
 
-SpinBar.SetSparkOffset = function(self, offset)
+SpinBar.SetSparkOffset = function(self, offset) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetSparkOffset MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:713:25");
 	local data = Bars[self]
 	data.sparkOffset = offset
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetSparkOffset MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:713:25"); end
 
-SpinBar.SetSparkBlendMode = function(self, blendMode)
+SpinBar.SetSparkBlendMode = function(self, blendMode) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetSparkBlendMode MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:718:28");
 	Bars[self].spark:SetBlendMode(blendMode)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetSparkBlendMode MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:718:28"); end
 
-SpinBar.SetSparkFlash = function(self, durationIn, durationOut, minAlpha, maxAlpha)
+SpinBar.SetSparkFlash = function(self, durationIn, durationOut, minAlpha, maxAlpha) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetSparkFlash MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:722:24");
 	local data = Bars[self]
 	data.sparkDurationIn = durationIn or data.sparkDurationIn
 	data.sparkDurationOut = durationOut or data.sparkDurationOut
@@ -727,29 +727,29 @@ SpinBar.SetSparkFlash = function(self, durationIn, durationOut, minAlpha, maxAlp
 	data.sparkMaxAlpha = maxAlpha or data.sparkMaxAlpha
 	data.sparkDirection = "IN"
 	data.spark:SetAlpha(data.sparkMinAlpha)
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetSparkFlash MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:722:24"); end
+
+SpinBar.GetParent = function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.GetParent MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:732:20");
+	return Perfy_Trace_Passthrough("Leave", "SpinBar.GetParent MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:732:20", Bars[self].scaffold:GetParent())
 end
 
-SpinBar.GetParent = function(self)
-	return Bars[self].scaffold:GetParent()
-end
-
-SpinBar.ClearAllPoints = function(self)
+SpinBar.ClearAllPoints = function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.ClearAllPoints MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:736:25");
 	Bars[self].scaffold:ClearAllPoints()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.ClearAllPoints MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:736:25"); end
 
-SpinBar.SetPoint = function(self, ...)
+SpinBar.SetPoint = function(self, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetPoint MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:740:19");
 	Bars[self].scaffold:SetPoint(...)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetPoint MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:740:19"); end
 
-SpinBar.SetAllPoints = function(self, ...)
+SpinBar.SetAllPoints = function(self, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetAllPoints MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:744:23");
 	Bars[self].scaffold:SetAllPoints(...)
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetAllPoints MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:744:23"); end
+
+SpinBar.GetPoint = function(self, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.GetPoint MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:748:19");
+	return Perfy_Trace_Passthrough("Leave", "SpinBar.GetPoint MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:748:19", Bars[self].scaffold:GetPoint(...))
 end
 
-SpinBar.GetPoint = function(self, ...)
-	return Bars[self].scaffold:GetPoint(...)
-end
-
-SpinBar.SetSize = function(self, width, height)
+SpinBar.SetSize = function(self, width, height) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetSize MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:752:18");
 	local data = Bars[self]
 
 	data.scaffold:SetSize(width, height)
@@ -759,9 +759,9 @@ SpinBar.SetSize = function(self, width, height)
 	end
 
 	Update(self)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetSize MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:752:18"); end
 
-SpinBar.SetWidth = function(self, width)
+SpinBar.SetWidth = function(self, width) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetWidth MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:764:19");
 	local data = Bars[self]
 
 	data.scaffold:SetWidth(width)
@@ -771,9 +771,9 @@ SpinBar.SetWidth = function(self, width)
 	end
 
 	Update(self)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetWidth MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:764:19"); end
 
-SpinBar.SetHeight = function(self, height)
+SpinBar.SetHeight = function(self, height) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetHeight MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:776:20");
 	local data = Bars[self]
 
 	data.scaffold:SetHeight(height)
@@ -783,29 +783,29 @@ SpinBar.SetHeight = function(self, height)
 	end
 
 	Update(self)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetHeight MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:776:20"); end
 
-SpinBar.GetHeight = function(self, ...)
+SpinBar.GetHeight = function(self, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.GetHeight MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:788:20");
 	local top = self:GetTop()
 	local bottom = self:GetBottom()
 	if top and bottom then
-		return top - bottom
+		return Perfy_Trace_Passthrough("Leave", "SpinBar.GetHeight MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:788:20", top - bottom)
 	else
-		return Bars[self].scaffold:GetHeight(...)
+		return Perfy_Trace_Passthrough("Leave", "SpinBar.GetHeight MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:788:20", Bars[self].scaffold:GetHeight(...))
 	end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.GetHeight MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:788:20"); end
 
-SpinBar.GetWidth = function(self, ...)
+SpinBar.GetWidth = function(self, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.GetWidth MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:798:19");
 	local left = self:GetLeft()
 	local right = self:GetRight()
 	if left and right then
-		return right - left
+		return Perfy_Trace_Passthrough("Leave", "SpinBar.GetWidth MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:798:19", right - left)
 	else
-		return Bars[self].scaffold:GetWidth(...)
+		return Perfy_Trace_Passthrough("Leave", "SpinBar.GetWidth MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:798:19", Bars[self].scaffold:GetWidth(...))
 	end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.GetWidth MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:798:19"); end
 
-SpinBar.GetSize = function(self, ...)
+SpinBar.GetSize = function(self, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.GetSize MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:808:18");
 	local top = self:GetTop()
 	local bottom = self:GetBottom()
 	local left = self:GetLeft()
@@ -819,34 +819,34 @@ SpinBar.GetSize = function(self, ...)
 		height = top - bottom
 	end
 
-	return width or Bars[self].scaffold:GetWidth(), height or Bars[self].scaffold:GetHeight()
+	return Perfy_Trace_Passthrough("Leave", "SpinBar.GetSize MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:808:18", width or Bars[self].scaffold:GetWidth(), height or Bars[self].scaffold:GetHeight())
 end
 
-SpinBar.SetFrameLevel = function(self, ...)
+SpinBar.SetFrameLevel = function(self, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetFrameLevel MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:825:24");
 	Bars[self].scaffold:SetFrameLevel(...)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetFrameLevel MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:825:24"); end
 
-SpinBar.SetFrameStrata = function(self, ...)
+SpinBar.SetFrameStrata = function(self, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetFrameStrata MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:829:25");
 	Bars[self].scaffold:SetFrameStrata(...)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetFrameStrata MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:829:25"); end
 
-SpinBar.SetAlpha = function(self, ...)
+SpinBar.SetAlpha = function(self, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetAlpha MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:833:19");
 	Bars[self].scaffold:SetAlpha(...)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetAlpha MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:833:19"); end
 
-SpinBar.SetParent = function(self, ...)
+SpinBar.SetParent = function(self, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetParent MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:837:20");
 	Bars[self].scaffold:SetParent(...)
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetParent MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:837:20"); end
+
+SpinBar.CreateTexture = function(self, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.CreateTexture MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:841:24");
+	return Perfy_Trace_Passthrough("Leave", "SpinBar.CreateTexture MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:841:24", Bars[self].overlay:CreateTexture(...))
 end
 
-SpinBar.CreateTexture = function(self, ...)
-	return Bars[self].overlay:CreateTexture(...)
+SpinBar.CreateFontString = function(self, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.CreateFontString MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:845:27");
+	return Perfy_Trace_Passthrough("Leave", "SpinBar.CreateFontString MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:845:27", Bars[self].overlay:CreateFontString(...))
 end
 
-SpinBar.CreateFontString = function(self, ...)
-	return Bars[self].overlay:CreateFontString(...)
-end
-
-SpinBar.SetScript = function(self, ...)
+SpinBar.SetScript = function(self, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.SetScript MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:849:20");
 	-- can not allow the scaffold to get its scripts overwritten
 	local scriptHandler, func = ...
 	if (scriptHandler == "OnUpdate") then
@@ -854,26 +854,26 @@ SpinBar.SetScript = function(self, ...)
 	else
 		Bars[self].scaffold:SetScript(...)
 	end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.SetScript MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:849:20"); end
 
-SpinBar.GetScript = function(self, ...)
+SpinBar.GetScript = function(self, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.GetScript MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:859:20");
 	local scriptHandler, func = ...
 	if (scriptHandler == "OnUpdate") then
-		return Bars[self].OnUpdate
+		return Perfy_Trace_Passthrough("Leave", "SpinBar.GetScript MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:859:20", Bars[self].OnUpdate)
 	else
-		return Bars[self].scaffold:GetScript(...)
+		return Perfy_Trace_Passthrough("Leave", "SpinBar.GetScript MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:859:20", Bars[self].scaffold:GetScript(...))
 	end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.GetScript MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:859:20"); end
 
-SpinBar.GetAnchor = function(self) return Bars[self].bar end
-SpinBar.GetObjectType = function(self) return "StatusBar" end
-SpinBar.IsObjectType = function(self, type) return type == "SpinBar" or type == "StatusBar" or type == "Frame" end
-SpinBar.Show = function(self) Bars[self].scaffold:Show() end
-SpinBar.Hide = function(self) Bars[self].scaffold:Hide() end
-SpinBar.IsShown = function(self) return Bars[self].scaffold:IsShown() end
-SpinBar.IsForbidden = function(self) return true end
+SpinBar.GetAnchor = function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.GetAnchor MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:868:20"); return Perfy_Trace_Passthrough("Leave", "SpinBar.GetAnchor MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:868:20", Bars[self].bar) end
+SpinBar.GetObjectType = function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.GetObjectType MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:869:24"); Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.GetObjectType MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:869:24"); return "StatusBar" end
+SpinBar.IsObjectType = function(self, type) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.IsObjectType MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:870:23"); return Perfy_Trace_Passthrough("Leave", "SpinBar.IsObjectType MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:870:23", type == "SpinBar" or type == "StatusBar" or type == "Frame") end
+SpinBar.Show = function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.Show MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:871:15"); Bars[self].scaffold:Show() Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.Show MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:871:15"); end
+SpinBar.Hide = function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.Hide MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:872:15"); Bars[self].scaffold:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.Hide MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:872:15"); end
+SpinBar.IsShown = function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.IsShown MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:873:18"); return Perfy_Trace_Passthrough("Leave", "SpinBar.IsShown MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:873:18", Bars[self].scaffold:IsShown()) end
+SpinBar.IsForbidden = function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "SpinBar.IsForbidden MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:874:22"); Perfy_Trace(Perfy_GetTime(), "Leave", "SpinBar.IsForbidden MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:874:22"); return true end
 
-lib.CreateSpinBar = function(self, name, parent, template)
+lib.CreateSpinBar = function(self, name, parent, template) Perfy_Trace(Perfy_GetTime(), "Enter", "lib.CreateSpinBar MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:876:20");
 
 	-- The scaffold is the top level frame object
 	-- that will respond to SetSize, SetPoint and similar.
@@ -1020,21 +1020,23 @@ lib.CreateSpinBar = function(self, name, parent, template)
 		Bars[bar] = data
 	end
 
-	return statusbar
+	Perfy_Trace(Perfy_GetTime(), "Leave", "lib.CreateSpinBar MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:876:20"); return statusbar
 end
 
 local mixins = {
 	CreateSpinBar = true
 }
 
-lib.Embed = function(self, target)
+lib.Embed = function(self, target) Perfy_Trace(Perfy_GetTime(), "Enter", "lib.Embed MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:1030:12");
 	for method in pairs(mixins) do
 		target[method] = self[method]
 	end
 	self.embeds[target] = true
-	return target
+	Perfy_Trace(Perfy_GetTime(), "Leave", "lib.Embed MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua:1030:12"); return target
 end
 
 for target in pairs(lib.embeds) do
 	lib:Embed(target)
 end
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Libs/LibSpinBar-1.0/LibSpinBar-1.0.lua");

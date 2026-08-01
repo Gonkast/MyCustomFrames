@@ -7,6 +7,8 @@
 ## IconTexture: Interface\AddOns\MyCustomFrames\Assets\addon_icon.tga
 ## SavedVariables: MyCustomFramesDB
 ## OptionalDeps: Bartender4, DynamicCam, Masque, Chattynator
+## Dependencies: !!!Perfy
+## X-Perfy-Instrumented: true
 
 # Librerias vendorizadas (MIT) para el Minimap (ver Minimap.lua).
 Libs\LibStub\LibStub.lua

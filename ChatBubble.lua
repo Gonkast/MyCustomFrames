@@ -1,4 +1,4 @@
--- ==========================================================================
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/ChatBubble.lua"); -- ==========================================================================
 -- MyCustomFrames - ChatBubble.lua
 -- CHAT BUBBLE: ocultar el fondo de los bocadillos del mundo + control de
 -- fuente/tamaño/outline/color. Extraido de core.lua (el chunk principal excedia
@@ -13,21 +13,21 @@ local ADDON, ns = ...
 
 local CHATBUBBLE_KEY = "chatbubble"
 ns.CHATBUBBLE_KEY = CHATBUBBLE_KEY
-ns.IsChatBubble = function(key) return key == CHATBUBBLE_KEY end
+ns.IsChatBubble = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.IsChatBubble MyCustomFrames/ChatBubble.lua:16:18"); return Perfy_Trace_Passthrough("Leave", "ns.IsChatBubble MyCustomFrames/ChatBubble.lua:16:18", key == CHATBUBBLE_KEY) end
 
-local function ChatBubbleDefaults()
-    return {
+local function ChatBubbleDefaults() Perfy_Trace(Perfy_GetTime(), "Enter", "ChatBubbleDefaults MyCustomFrames/ChatBubble.lua:18:6");
+    return Perfy_Trace_Passthrough("Leave", "ChatBubbleDefaults MyCustomFrames/ChatBubble.lua:18:6", {
         enabled = true, hideBackground = true,
         fontSize = 13, font = "Fonts\\FRIZQT__.TTF", outline = "OUTLINE",
         useColor = false, color = { r = 1, g = 1, b = 1 },
-    }
+    })
 end
 ns.ChatBubbleDefaults = ChatBubbleDefaults
 
-local function CB_Flags(p)
+local function CB_Flags(p) Perfy_Trace(Perfy_GetTime(), "Enter", "CB_Flags MyCustomFrames/ChatBubble.lua:27:6");
     local f = p.outline or ""
     if f == "NONE" then f = "" end
-    return f
+    Perfy_Trace(Perfy_GetTime(), "Leave", "CB_Flags MyCustomFrames/ChatBubble.lua:27:6"); return f
 end
 
 -- FIX RONDA 5 (2026-07-16): el usuario identifico el asset real -- "Interface\Tooltips\..." es
@@ -36,8 +36,8 @@ end
 -- GetChildren() en Lua -- por eso ninguna de las rondas anteriores (por nombre de campo, ni
 -- recorrido recursivo de regiones) podia encontrarlo NUNCA, sin importar cuanto se recorriera.
 -- El fix real es limpiar el BACKDROP en si: SetBackdrop(nil) + colores a alpha 0 como refuerzo.
-local function CB_ClearBackgroundTextures(frame, depth)
-    if not frame or (depth or 0) > 4 then return end
+local function CB_ClearBackgroundTextures(frame, depth) Perfy_Trace(Perfy_GetTime(), "Enter", "CB_ClearBackgroundTextures MyCustomFrames/ChatBubble.lua:39:6");
+    if not frame or (depth or 0) > 4 then Perfy_Trace(Perfy_GetTime(), "Leave", "CB_ClearBackgroundTextures MyCustomFrames/ChatBubble.lua:39:6"); return end
     if frame.SetBackdrop then
         pcall(frame.SetBackdrop, frame, nil)
     end
@@ -59,7 +59,7 @@ local function CB_ClearBackgroundTextures(frame, depth)
             if child then CB_ClearBackgroundTextures(child, (depth or 0) + 1) end
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "CB_ClearBackgroundTextures MyCustomFrames/ChatBubble.lua:39:6"); end
 
 -- OPTIMIZACION (2026-07-16, auditoria): antes se reaplicaba SetFont/SetTextColor/backdrop a
 -- TODAS las bubbles visibles en CADA tick de 0.1s (10x/seg), aunque nada hubiera cambiado —
@@ -72,10 +72,10 @@ end
 local bubbleState = setmetatable({}, { __mode = "k" })   -- outer -> { text, epoch }
 local configEpoch = 0
 
-local function CB_SkinBubble(outer, frame, fs, p)
+local function CB_SkinBubble(outer, frame, fs, p) Perfy_Trace(Perfy_GetTime(), "Enter", "CB_SkinBubble MyCustomFrames/ChatBubble.lua:75:6");
     local text = fs:GetText()
     local st = bubbleState[outer]
-    if st and st.text == text and st.epoch == configEpoch then return end
+    if st and st.text == text and st.epoch == configEpoch then Perfy_Trace(Perfy_GetTime(), "Leave", "CB_SkinBubble MyCustomFrames/ChatBubble.lua:75:6"); return end
     if not st then st = {}; bubbleState[outer] = st end
     st.text, st.epoch = text, configEpoch
 
@@ -86,7 +86,7 @@ local function CB_SkinBubble(outer, frame, fs, p)
     if p.useColor and p.color then
         pcall(fs.SetTextColor, fs, p.color.r, p.color.g, p.color.b)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "CB_SkinBubble MyCustomFrames/ChatBubble.lua:75:6"); end
 
 -- RONDA 3 (2026-07-16): se probo combinar GetAllChatBubbles(false) + (true) para cubrir bubbles
 -- de NPC en calabozos, pero `true` en este cliente devuelve basura (literalmente WorldFrame,
@@ -96,23 +96,23 @@ end
 -- que el llamador tenga que armar una closure `function(...) ... p end` para
 -- capturar `p`) -- ambos call sites de abajo ahora pasan CB_SkinBubble tal
 -- cual, sin closure nueva en cada tick del ticker de 0.1s.
-local function CB_IterateBubbles(fn, extra)
-    if not (C_ChatBubbles and C_ChatBubbles.GetAllChatBubbles) then return end
+local function CB_IterateBubbles(fn, extra) Perfy_Trace(Perfy_GetTime(), "Enter", "CB_IterateBubbles MyCustomFrames/ChatBubble.lua:99:6");
+    if not (C_ChatBubbles and C_ChatBubbles.GetAllChatBubbles) then Perfy_Trace(Perfy_GetTime(), "Leave", "CB_IterateBubbles MyCustomFrames/ChatBubble.lua:99:6"); return end
     local ok, list = pcall(C_ChatBubbles.GetAllChatBubbles, false)
-    if not ok or type(list) ~= "table" then return end
+    if not ok or type(list) ~= "table" then Perfy_Trace(Perfy_GetTime(), "Leave", "CB_IterateBubbles MyCustomFrames/ChatBubble.lua:99:6"); return end
     for _, obj in pairs(list) do
         local bubble = obj.GetChildren and obj:GetChildren() or nil
         if bubble and bubble.String and bubble.String:GetObjectType() == "FontString" then
             fn(obj, bubble, bubble.String, extra)
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "CB_IterateBubbles MyCustomFrames/ChatBubble.lua:99:6"); end
 
-local function RefreshChatBubble()
+local function RefreshChatBubble() Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshChatBubble MyCustomFrames/ChatBubble.lua:111:6");
     local db = ns.GetDB()
-    if not (db and db.chatbubble) then return end
+    if not (db and db.chatbubble) then Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshChatBubble MyCustomFrames/ChatBubble.lua:111:6"); return end
     local p = db.chatbubble
-    if not p.enabled then return end
+    if not p.enabled then Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshChatBubble MyCustomFrames/ChatBubble.lua:111:6"); return end
     configEpoch = configEpoch + 1   -- invalida la cache de CB_SkinBubble (cambio config)
     -- Fuente/color GLOBAL (afecta a todas las bubbles via su font object).
     if ChatBubbleFont then
@@ -120,15 +120,17 @@ local function RefreshChatBubble()
         if p.useColor and p.color then pcall(ChatBubbleFont.SetTextColor, ChatBubbleFont, p.color.r, p.color.g, p.color.b) end
     end
     CB_IterateBubbles(CB_SkinBubble, p)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshChatBubble MyCustomFrames/ChatBubble.lua:111:6"); end
 ns.RefreshChatBubble = RefreshChatBubble
 
 -- Ticker propio (las bubbles aparecen/desaparecen constantemente).
 if C_Timer and C_Timer.NewTicker then
-    C_Timer.NewTicker(0.1, ns.Prof.Wrap("ChatBubble: skin 0.1s", function()
+    C_Timer.NewTicker(0.1, ns.Prof.Wrap("ChatBubble: skin 0.1s", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/ChatBubble.lua:128:65");
         local db = ns.GetDB()
         if db and db.chatbubble and db.chatbubble.enabled then
             CB_IterateBubbles(CB_SkinBubble, db.chatbubble)
         end
-    end))
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/ChatBubble.lua:128:65"); end))
 end
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/ChatBubble.lua");

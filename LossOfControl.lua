@@ -1,4 +1,4 @@
-local ADDON, ns = ...
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/LossOfControl.lua"); local ADDON, ns = ...
 
 -- ==========================================================================
 -- LOSS OF CONTROL INDICATOR (2026-07-27, pedido del usuario): icono con
@@ -22,10 +22,10 @@ local ADDON, ns = ...
 
 local holder
 
-local function EnsureHolder()
-    if holder then return holder end
+local function EnsureHolder() Perfy_Trace(Perfy_GetTime(), "Enter", "EnsureHolder MyCustomFrames/LossOfControl.lua:25:6");
+    if holder then Perfy_Trace(Perfy_GetTime(), "Leave", "EnsureHolder MyCustomFrames/LossOfControl.lua:25:6"); return holder end
     local portrait = ns.portraits and ns.portraits["portrait_player"]
-    if not (portrait and portrait.root) then return nil end
+    if not (portrait and portrait.root) then Perfy_Trace(Perfy_GetTime(), "Leave", "EnsureHolder MyCustomFrames/LossOfControl.lua:25:6"); return nil end
 
     local f = CreateFrame("Frame", nil, portrait.root)
     -- Nivel POR ENCIMA de todo lo del retrato (2026-07-28, reportado: "el Loss
@@ -59,25 +59,25 @@ local function EnsureHolder()
     f.cd = cd
 
     holder = f
-    return holder
+    Perfy_Trace(Perfy_GetTime(), "Leave", "EnsureHolder MyCustomFrames/LossOfControl.lua:25:6"); return holder
 end
 
 local testMode = false
 
-local function Refresh()
+local function Refresh() Perfy_Trace(Perfy_GetTime(), "Enter", "Refresh MyCustomFrames/LossOfControl.lua:67:6");
     local f = EnsureHolder()
-    if not f then return end
+    if not f then Perfy_Trace(Perfy_GetTime(), "Leave", "Refresh MyCustomFrames/LossOfControl.lua:67:6"); return end
     if not (C_LossOfControl and C_LossOfControl.GetActiveLossOfControlDataCount
         and C_LossOfControl.GetActiveLossOfControlData) then
         f:Hide()
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "Refresh MyCustomFrames/LossOfControl.lua:67:6"); return
     end
 
     if testMode then
         f.tex:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
         f.cd:SetCooldown(GetTime(), 6)
         f:Show()
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "Refresh MyCustomFrames/LossOfControl.lua:67:6"); return
     end
 
     local n = C_LossOfControl.GetActiveLossOfControlDataCount()
@@ -91,17 +91,17 @@ local function Refresh()
                 pcall(f.cd.Clear, f.cd)
             end
             f:Show()
-            return
+            Perfy_Trace(Perfy_GetTime(), "Leave", "Refresh MyCustomFrames/LossOfControl.lua:67:6"); return
         end
     end
     f:Hide()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "Refresh MyCustomFrames/LossOfControl.lua:67:6"); end
 
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("PLAYER_LOGIN")
-eventFrame:SetScript("OnEvent", function(self)
+eventFrame:SetScript("OnEvent", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/LossOfControl.lua:102:32");
     self:UnregisterAllEvents()
-    C_Timer.After(1, function()
+    C_Timer.After(1, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/LossOfControl.lua:104:21");
         local watcher = CreateFrame("Frame")
         watcher:RegisterEvent("LOSS_OF_CONTROL_UPDATE")
         watcher:SetScript("OnEvent", Refresh)
@@ -111,18 +111,20 @@ eventFrame:SetScript("OnEvent", function(self)
         -- ocultar el icono poco despues igual.
         C_Timer.NewTicker(0.3, ns.Prof.Wrap("LossOfControl: 0.3s", Refresh))
         Refresh()
-    end)
-end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/LossOfControl.lua:104:21"); end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/LossOfControl.lua:102:32"); end)
 
 -- Expuesto en ns (2026-07-27) para el boton "Preview" de Options.lua. Devuelve
 -- el estado NUEVO, que el boton usa para quedar marcado mientras este activo.
-function ns.ToggleLossOfControlTest()
+function ns.ToggleLossOfControlTest() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ToggleLossOfControlTest MyCustomFrames/LossOfControl.lua:119:0");
     testMode = not testMode
     Refresh()
-    return testMode
+    Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ToggleLossOfControlTest MyCustomFrames/LossOfControl.lua:119:0"); return testMode
 end
 
 SLASH_MCFLOCTEST1 = "/mcfloctest"
-SlashCmdList["MCFLOCTEST"] = function()
+SlashCmdList["MCFLOCTEST"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFLOCTEST MyCustomFrames/LossOfControl.lua:126:29");
     print("|cff00ff00[MCF Loss of Control test]|r " .. (ns.ToggleLossOfControlTest() and "ON" or "off"))
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFLOCTEST MyCustomFrames/LossOfControl.lua:126:29"); end
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/LossOfControl.lua");

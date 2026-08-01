@@ -1,4 +1,4 @@
--- ==========================================================================
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Setup.lua"); -- ==========================================================================
 -- Setup.lua — asistente de PRIMERA INSTALACION (7 paginas: que hace el addon, que addons
 -- con perfil incluido tenes instalados, opciones globales reducidas, Explorer Mode
 -- (on/off simple), y aplicar el preset Gonkast (perfiles de Bartender4/DynamicCam/
@@ -38,9 +38,9 @@ local CONTENT_W = 720
 
 -- Fuente pedida para el wizard (Blizzard FRIZQT, distinta de la Lato del panel de opciones).
 local FRIZQT = "Fonts\\FRIZQT__.TTF"
-local function SF(fs, size, flags)
+local function SF(fs, size, flags) Perfy_Trace(Perfy_GetTime(), "Enter", "SF MyCustomFrames/Setup.lua:41:6");
     if not fs:SetFont(FRIZQT, size, flags or "") then fs:SetFontObject("GameFontNormal") end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SF MyCustomFrames/Setup.lua:41:6"); end
 
 -- 2026-07-17: actualizada para que coincida EXACTO con la paleta final de
 -- Options.lua (misma jerarquia con contraste real entre roles: titulo dorado
@@ -57,20 +57,20 @@ local COLOR_OPTION = { 226 / 255, 216 / 255, 199 / 255 }   -- casi blanco calido
 -- texto de cada pagina (evita repetir SetWidth/SetJustifyH/SetWordWrap/SetTextColor 3 veces).
 -- Color fijo (COLOR_DESC): antes cada llamada pasaba su propio r,g,b, pero Plumber usa un
 -- unico color de descripcion en todos lados.
-local function Paragraph(parent, x, y, size, text)
+local function Paragraph(parent, x, y, size, text) Perfy_Trace(Perfy_GetTime(), "Enter", "Paragraph MyCustomFrames/Setup.lua:60:6");
     local fs = parent:CreateFontString(nil, "ARTWORK")
     SF(fs, size)
     fs:SetPoint("TOPLEFT", x, y)
     fs:SetWidth(CONTENT_W); fs:SetJustifyH("LEFT"); fs:SetWordWrap(true)
     fs:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
     fs:SetText(text)
-    return fs
+    Perfy_Trace(Perfy_GetTime(), "Leave", "Paragraph MyCustomFrames/Setup.lua:60:6"); return fs
 end
 
 -- Boton generico con textura propia: normal = la textura tal cual; hover = LA MISMA
 -- textura en capa ADD (se ilumina); presionado = la misma textura un poco mas oscura.
 -- Asi no hace falta un asset de "highlight" separado, como pidio el usuario.
-local function TexButton(parent, texturePath, w, h, text, fontSize)
+local function TexButton(parent, texturePath, w, h, text, fontSize) Perfy_Trace(Perfy_GetTime(), "Enter", "TexButton MyCustomFrames/Setup.lua:73:6");
     local b = CreateFrame("Button", nil, parent)
     b:SetSize(w, h)
     b:SetNormalTexture(texturePath)
@@ -88,7 +88,7 @@ local function TexButton(parent, texturePath, w, h, text, fontSize)
         fs:SetText(text)
         b.text = fs
     end
-    return b
+    Perfy_Trace(Perfy_GetTime(), "Leave", "TexButton MyCustomFrames/Setup.lua:73:6"); return b
 end
 
 -- Dropdown 3-slice (asset "EditModeDropdown.png" de Plumber, copiado local: Setup_Dropdown.png):
@@ -96,11 +96,11 @@ end
 -- dropdown, asi que este usa el mismo patron 3-slice + texcoords que Plumber usa para SU
 -- propio dropdown (fondo BACKGROUND recortado en 3 franjas + highlight ADD al pasar el mouse).
 local DROPDOWN_TEX = "Interface\\AddOns\\MyCustomFrames\\Assets\\Setup_Dropdown.png"
-local function DropdownButton(parent, w, h, text, fontSize)
+local function DropdownButton(parent, w, h, text, fontSize) Perfy_Trace(Perfy_GetTime(), "Enter", "DropdownButton MyCustomFrames/Setup.lua:99:6");
     local b = CreateFrame("Button", nil, parent)
     b:SetSize(w, h)
     local capW = 16
-    local function slice(layer, top, bottom)
+    local function slice(layer, top, bottom) Perfy_Trace(Perfy_GetTime(), "Enter", "slice MyCustomFrames/Setup.lua:103:10");
         local left = b:CreateTexture(nil, layer)
         left:SetTexture(DROPDOWN_TEX)
         left:SetPoint("TOPLEFT"); left:SetPoint("BOTTOMLEFT"); left:SetWidth(capW)
@@ -113,7 +113,7 @@ local function DropdownButton(parent, w, h, text, fontSize)
         mid:SetTexture(DROPDOWN_TEX)
         mid:SetPoint("TOPLEFT", left, "TOPRIGHT"); mid:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
         mid:SetTexCoord(32 / 256, 176 / 256, top, bottom)
-        return { left, mid, right }
+        return Perfy_Trace_Passthrough("Leave", "slice MyCustomFrames/Setup.lua:103:10", { left, mid, right })
     end
     slice("BACKGROUND", 0, 80 / 256)
     local hl = slice("HIGHLIGHT", 160 / 256, 240 / 256)
@@ -132,7 +132,7 @@ local function DropdownButton(parent, w, h, text, fontSize)
     arrow:SetPoint("RIGHT", -8, 0)
     arrow:SetTextColor(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3])
     arrow:SetText("v")
-    return b
+    Perfy_Trace(Perfy_GetTime(), "Leave", "DropdownButton MyCustomFrames/Setup.lua:99:6"); return b
 end
 
 -- Sufijo visual para toggles "recomendados" (Plumber no tiene un skin de checkbox dedicado
@@ -148,18 +148,18 @@ local frame, contentPages, selected = nil, {}, {}
 local curPage = 1
 local pageDots, backBtn, nextBtn, skipBtn, stepLabel
 
-local function UI() return ns.UI end
+local function UI() Perfy_Trace(Perfy_GetTime(), "Enter", "UI MyCustomFrames/Setup.lua:151:6"); return Perfy_Trace_Passthrough("Leave", "UI MyCustomFrames/Setup.lua:151:6", ns.UI) end
 
 -- Headers/toggles del toolkit compartido nacen con la fuente Lato del panel de opciones;
 -- estos wrappers los crean igual y despues fuerzan FRIZQT sobre sus FontStrings.
-local function Header(parent, text, x, y, width)
+local function Header(parent, text, x, y, width) Perfy_Trace(Perfy_GetTime(), "Enter", "Header MyCustomFrames/Setup.lua:155:6");
     local fs = UI().MakeHeader(parent, text, x, y, width or CONTENT_W)
     SF(fs, 14)
     fs:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
     if fs.div then fs.div:SetVertexColor(COLOR_LINE[1], COLOR_LINE[2], COLOR_LINE[3], 0.6) end
-    return fs
+    Perfy_Trace(Perfy_GetTime(), "Leave", "Header MyCustomFrames/Setup.lua:155:6"); return fs
 end
-local function Toggle(parent, label, x, y, getf, setf)
+local function Toggle(parent, label, x, y, getf, setf) Perfy_Trace(Perfy_GetTime(), "Enter", "Toggle MyCustomFrames/Setup.lua:162:6");
     local cb = UI().MakeToggle(parent, label, x, y, getf, setf)
     if cb.label then
         SF(cb.label, 12)
@@ -167,7 +167,7 @@ local function Toggle(parent, label, x, y, getf, setf)
         -- MakeToggle ya pone su propio OnEnter/OnLeave (blanco al pasar el mouse, vuelve a SU
         -- color hardcodeado al salir) — HookScript solo AGREGA, asi que hay que re-aplicar
         -- COLOR_OPTION en OnLeave o el hover lo dejaria en el color viejo al soltar el mouse.
-        cb:HookScript("OnLeave", function() cb.label:SetTextColor(COLOR_OPTION[1], COLOR_OPTION[2], COLOR_OPTION[3]) end)
+        cb:HookScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:170:33"); cb.label:SetTextColor(COLOR_OPTION[1], COLOR_OPTION[2], COLOR_OPTION[3]) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:170:33"); end)
     end
     -- Reskin del checkbox con el atlas de checkbox de Plumber (EditModeCheckbox.png):
     -- mismos texcoords que su propio CreateCheckbox (SharedWidgets.lua) — cuadro en el
@@ -196,23 +196,23 @@ local function Toggle(parent, label, x, y, getf, setf)
     -- TODOS los toggles del wizard se ven tildados sin importar el valor real hasta que se
     -- clickean una vez — exactamente el bug reportado ("los no recomendados siguen prendidos").
     if cb.refresh then cb.refresh() end
-    return cb
+    Perfy_Trace(Perfy_GetTime(), "Leave", "Toggle MyCustomFrames/Setup.lua:162:6"); return cb
 end
 -- Toggle con tooltip: HookScript (no SetScript) para no pisar el OnEnter/OnLeave que ya
 -- pone MakeToggle (highlight de fila al pasar el mouse) — solo se AGREGA el tooltip encima.
-local function TooltipToggle(parent, label, x, y, getf, setf, tip)
+local function TooltipToggle(parent, label, x, y, getf, setf, tip) Perfy_Trace(Perfy_GetTime(), "Enter", "TooltipToggle MyCustomFrames/Setup.lua:203:6");
     local cb = Toggle(parent, label, x, y, getf, setf)
     if tip then
-        cb:HookScript("OnEnter", function(self)
-            if GameTooltip:IsForbidden() then return end
+        cb:HookScript("OnEnter", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:206:33");
+            if GameTooltip:IsForbidden() then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:206:33"); return end
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:SetText(label, COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
             GameTooltip:AddLine(tip, 1, 1, 1, true)
             GameTooltip:Show()
-        end)
-        cb:HookScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:206:33"); end)
+        cb:HookScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:213:33"); if not GameTooltip:IsForbidden() then GameTooltip:Hide() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:213:33"); end)
     end
-    return cb
+    Perfy_Trace(Perfy_GetTime(), "Leave", "TooltipToggle MyCustomFrames/Setup.lua:203:6"); return cb
 end
 
 -- Glow pulsante para llamar la atencion sobre el boton de accion principal de una pagina
@@ -225,7 +225,7 @@ end
 -- quede detras en el orden de dibujado sin importar layer/sublevel.
 local GLOW_TEX = U .. "Apply_Button_highlight.tga"
 local GLOW_COLOR = { 1, 0.82, 0.35 }   -- dorado
-local function AttentionGlow(btn, pad)
+local function AttentionGlow(btn, pad) Perfy_Trace(Perfy_GetTime(), "Enter", "AttentionGlow MyCustomFrames/Setup.lua:228:6");
     pad = pad or 0
     local g = btn:GetParent():CreateTexture(nil, "ARTWORK")
     g:SetTexture(GLOW_TEX)
@@ -241,21 +241,21 @@ local function AttentionGlow(btn, pad)
     btn.attentionGlow = g
     -- Al clickear el boton, la pagina ya cumplio su proposito -- apaga el glow para no
     -- seguir insistiendo despues de que el usuario ya hizo lo que se le pedia.
-    btn:HookScript("OnClick", function() ag:Stop(); g:Hide() end)
-    return g
+    btn:HookScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:244:30"); ag:Stop(); g:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:244:30"); end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "AttentionGlow MyCustomFrames/Setup.lua:228:6"); return g
 end
 
 -- Fade suave al cambiar de pagina (en vez de Show/Hide seco).
-local function FadeIn(f, duration)
+local function FadeIn(f, duration) Perfy_Trace(Perfy_GetTime(), "Enter", "FadeIn MyCustomFrames/Setup.lua:249:6");
     f:Show(); f:SetAlpha(0)
     if UIFrameFadeIn then
         UIFrameFadeIn(f, duration or 0.18, 0, 1)
     else
         f:SetAlpha(1)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "FadeIn MyCustomFrames/Setup.lua:249:6"); end
 
-local function BuildFrame()
+local function BuildFrame() Perfy_Trace(Perfy_GetTime(), "Enter", "BuildFrame MyCustomFrames/Setup.lua:258:6");
     local f = CreateFrame("Frame", "MCFSetupWizard", UIParent, "BackdropTemplate")
     f:SetSize(960, 760)
     f:SetPoint("CENTER")
@@ -300,7 +300,7 @@ local function BuildFrame()
 
     local closeBtn = TexButton(f, CUSTOM.EXIT, 38, 38)
     closeBtn:SetPoint("TOPRIGHT", -26, -40)
-    closeBtn:SetScript("OnClick", function() ns.CloseSetupWizard(true) end)
+    closeBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:303:34"); ns.CloseSetupWizard(true) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:303:34"); end)
 
     local content = CreateFrame("Frame", nil, f)
     content:SetPoint("TOPLEFT", 76, -140)
@@ -321,21 +321,21 @@ local function BuildFrame()
 
     skipBtn = TexButton(f, CUSTOM.NAVBTN, 160, 40, "Skip setup", 13)
     skipBtn:SetPoint("BOTTOMLEFT", 64, 64)
-    skipBtn:SetScript("OnClick", function() ns.CloseSetupWizard(true) end)
+    skipBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:324:33"); ns.CloseSetupWizard(true) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:324:33"); end)
 
     backBtn = TexButton(f, CUSTOM.NAVBTN, 130, 40, "< Back", 13)
     backBtn:SetPoint("BOTTOMRIGHT", -214, 64)
-    backBtn:SetScript("OnClick", function() ns.SetupGoTo(curPage - 1) end)
+    backBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:328:33"); ns.SetupGoTo(curPage - 1) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:328:33"); end)
 
     nextBtn = TexButton(f, CUSTOM.NAVBTN, 130, 40, "Next >", 13)
     nextBtn:SetPoint("BOTTOMRIGHT", -64, 64)
-    nextBtn:SetScript("OnClick", function()
+    nextBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:332:33");
         if curPage < PAGE_COUNT then ns.SetupGoTo(curPage + 1) else ns.SetupFinish() end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:332:33"); end)
 
     f:Hide()
     frame = f
-    return content
+    Perfy_Trace(Perfy_GetTime(), "Leave", "BuildFrame MyCustomFrames/Setup.lua:258:6"); return content
 end
 
 -- ---------------- Pagina 1: que hace el addon ----------------
@@ -356,7 +356,7 @@ local FEATURES = {
 }
 local EXTRAS_LINE = "Extras — minimap and nameplate reskins, mouselook, hide Blizzard UI, assisted glow, chat bubbles, Explorer Mode (fade on mouseover)."
 
-local function FeatureCard(parent, x, y, w, title, desc)
+local function FeatureCard(parent, x, y, w, title, desc) Perfy_Trace(Perfy_GetTime(), "Enter", "FeatureCard MyCustomFrames/Setup.lua:359:6");
     local icon = parent:CreateTexture(nil, "ARTWORK")
     icon:SetTexture(ART.CHECK_ICON)
     icon:SetSize(15, 15)
@@ -374,9 +374,9 @@ local function FeatureCard(parent, x, y, w, title, desc)
     fs:SetWidth(w - 20); fs:SetJustifyH("LEFT"); fs:SetWordWrap(true)
     fs:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
     fs:SetText(desc)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "FeatureCard MyCustomFrames/Setup.lua:359:6"); end
 
-local function BuildPage1(content)
+local function BuildPage1(content) Perfy_Trace(Perfy_GetTime(), "Enter", "BuildPage1 MyCustomFrames/Setup.lua:379:6");
     local p = CreateFrame("Frame", nil, content)
     p:SetAllPoints()
     Header(p, "What this addon does", 0, -2)
@@ -406,11 +406,11 @@ local function BuildPage1(content)
 
     Paragraph(p, 0, divY - 16, 11,
         "Everything is editable later with /mcfmenu (options panel), or /mcf to move/lock frames.")
-    return p
+    Perfy_Trace(Perfy_GetTime(), "Leave", "BuildPage1 MyCustomFrames/Setup.lua:379:6"); return p
 end
 
 -- ---------------- Pagina 2: addons detectados con perfil incluido ----------------
-local function BuildPage2(content)
+local function BuildPage2(content) Perfy_Trace(Perfy_GetTime(), "Enter", "BuildPage2 MyCustomFrames/Setup.lua:413:6");
     local p = CreateFrame("Frame", nil, content)
     p:SetAllPoints()
     local icon = p:CreateTexture(nil, "ARTWORK")
@@ -443,10 +443,10 @@ local function BuildPage2(content)
         "-- not by /mcfundo, not by reinstalling. Back up any layout you care about first.")
     warn:SetTextColor(1, 0.35, 0.35)
     p._list = p._list or {}
-    return p
+    Perfy_Trace(Perfy_GetTime(), "Leave", "BuildPage2 MyCustomFrames/Setup.lua:413:6"); return p
 end
 
-local function RefreshPage2(p)
+local function RefreshPage2(p) Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshPage2 MyCustomFrames/Setup.lua:449:6");
     for _, w in ipairs(p._list) do w:Hide() end
     wipe(p._list)
     local list = (ns.ProfilesStatus and ns.ProfilesStatus()) or {}
@@ -457,15 +457,15 @@ local function RefreshPage2(p)
         local fs = Paragraph(p, 4, y, 12,
             "No supported addons detected (Bartender4, DynamicCam, Masque, Chattynator).")
         table.insert(p._list, fs)
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshPage2 MyCustomFrames/Setup.lua:449:6"); return
     end
     for _, addon in ipairs(list) do
         -- Default OFF (opt-in) -- ver la nota larga en BuildPage2.
         if selected[addon] == nil then selected[addon] = false end
         local label = (ns.ProfilesInfo and ns.ProfilesInfo[addon]) or addon
         local cb = Toggle(p, label, 4, y,
-            function() return selected[addon] end,
-            function(v) selected[addon] = v end)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:467:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Setup.lua:467:12", selected[addon]) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:468:12"); selected[addon] = v Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:468:12"); end)
         table.insert(p._list, cb)
         -- Check "detectado" (addon cargado + con copia de SavedVariables lista para inyectar),
         -- independiente del tilde interactivo de la izquierda. COLUMNA FIJA a x=380 (2026-07-16,
@@ -484,12 +484,12 @@ local function RefreshPage2(p)
         table.insert(p._list, detected)
         y = y - 26
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshPage2 MyCustomFrames/Setup.lua:449:6"); end
 
 -- ---------------- Pagina 3: opciones globales (subset reducido, con tooltips) ----------------
 -- Solo las 3 mas relevantes para alguien recien instalando (el resto sigue disponible
 -- en el panel de opciones principal, seccion "Global options").
-local function BuildPage3(content)
+local function BuildPage3(content) Perfy_Trace(Perfy_GetTime(), "Enter", "BuildPage3 MyCustomFrames/Setup.lua:492:6");
     local p = CreateFrame("Frame", nil, content)
     p:SetAllPoints()
     Header(p, "Global options", 0, -2)
@@ -512,14 +512,14 @@ local function BuildPage3(content)
     end
 
     local y = -56
-    local function row(label, key, tip, onSet)
-        TooltipToggle(p, label, 4, y, function() return ns.GetDB() and ns.GetDB()[key] end, function(v)
-            local d = ns.GetDB(); if not d then return end
+    local function row(label, key, tip, onSet) Perfy_Trace(Perfy_GetTime(), "Enter", "row MyCustomFrames/Setup.lua:515:10");
+        TooltipToggle(p, label, 4, y, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:516:38"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Setup.lua:516:38", ns.GetDB() and ns.GetDB()[key]) end, function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:516:92");
+            local d = ns.GetDB(); if not d then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:516:92"); return end
             d[key] = v
             if onSet then onSet(v) end
-        end, tip)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:516:92"); end, tip)
         y = y - 26
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "row MyCustomFrames/Setup.lua:515:10"); end
 
     row("Mouselook (right-click drag)" .. REC, "mouselook",
         "Holding the right mouse button turns the camera AND your character together, like most modern " ..
@@ -527,13 +527,13 @@ local function BuildPage3(content)
     row("Hide Blizzard unit frames" .. REC, "hideBlizzard",
         "Hides the default Blizzard player/pet/target/target-of-target/boss/party frames and cast bars, " ..
         "since this addon draws its own. Turning this OFF requires a /reload to bring them back.",
-        function(v) if v and ns.HideBlizzardFrames then ns.HideBlizzardFrames() end end)
+        function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:530:8"); if v and ns.HideBlizzardFrames then ns.HideBlizzardFrames() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:530:8"); end)
     row("DynamicCam camera fix" .. REC, "dcFix",
         "Fixes DialogueUI's compatibility with DynamicCam: opening DialogueUI's panel calls a method " ..
         "that freezes DynamicCam's camera and never releases it, breaking its custom camera situations. " ..
         "This neutralizes that call. Only matters if you use BOTH DialogueUI and DynamicCam — and " ..
         "DialogueUI's own \"Camera Movement\" option must be turned OFF for this to work.",
-        function() if ns.ApplyDcFix then ns.ApplyDcFix() end end)
+        function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:536:8"); if ns.ApplyDcFix then ns.ApplyDcFix() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:536:8"); end)
 
     -- Cierre visual (2026-07-16, prolijidad pedida por el usuario): esta pagina solo tiene 3
     -- toggles y dejaba un vacio grande hasta el final — un divisor + nota, igual que las paginas
@@ -546,7 +546,7 @@ local function BuildPage3(content)
     Paragraph(p, 0, -166, 11,
         "The full options panel (Interface Options > AddOns > this addon) has many more settings " ..
         "beyond these 3 — this page only surfaces the ones most people want to decide on day one.")
-    return p
+    Perfy_Trace(Perfy_GetTime(), "Leave", "BuildPage3 MyCustomFrames/Setup.lua:492:6"); return p
 end
 
 -- ---------------- Pagina 4: Explorer Mode (simple: on/off + descripcion) ----------------
@@ -555,7 +555,7 @@ end
 -- Elements/Conditions del menu principal, redundante y larga para un wizard de
 -- onboarding). Elegir QUE elementos gestiona y sus condiciones queda 100% para
 -- despues, desde el menu principal (seccion Explorer).
-local function BuildPage4(content)
+local function BuildPage4(content) Perfy_Trace(Perfy_GetTime(), "Enter", "BuildPage4 MyCustomFrames/Setup.lua:558:6");
     local p = CreateFrame("Frame", nil, content)
     p:SetAllPoints()
     Header(p, "Explorer Mode", 0, -2)
@@ -573,12 +573,12 @@ local function BuildPage4(content)
     end
 
     local enableToggle = Toggle(p, "Enable Explorer Mode", 4, -110,
-        function() local d = ns.GetDB(); return d and d.explorerEnabled ~= false end,
-        function(v)
-            local d = ns.GetDB(); if not d then return end
+        function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:576:8"); local d = ns.GetDB(); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Setup.lua:576:8", d and d.explorerEnabled ~= false) end,
+        function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:577:8");
+            local d = ns.GetDB(); if not d then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:577:8"); return end
             d.explorerEnabled = v and true or false
             if not v and ns.ExplorerResetAll then ns.ExplorerResetAll() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:577:8"); end)
 
     -- Perfiles rapidos (2026-07-27, pedido del usuario): mismos 3 botones que la
     -- pestaña "Quick profiles" del panel principal (Explorer.lua ->
@@ -603,14 +603,14 @@ local function BuildPage4(content)
             local btn = ns.MakeButton and ns.MakeButton(p, prof.label, 110, 22)
             if btn then
                 btn:SetPoint("TOPLEFT", 4, yy)
-                btn:SetScript("OnClick", function()
+                btn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:606:41");
                     if ns.ApplyExplorerQuickProfile then ns.ApplyExplorerQuickProfile(name) end
                     -- Aplicar un perfil prende db.explorerEnabled solo (ver
                     -- Explorer.lua) -- sincroniza el tilde del toggle de arriba,
                     -- que si no quedaria mostrando "apagado" con Explorer ya
                     -- activo hasta que el usuario lo tocara a mano.
                     if enableToggle.refresh then enableToggle.refresh() end
-                end)
+                Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:606:41"); end)
                 local desc = p:CreateFontString(nil, "ARTWORK")
                 SF(desc, 10)
                 desc:SetPoint("LEFT", btn, "RIGHT", 10, 0)
@@ -631,7 +631,7 @@ local function BuildPage4(content)
         "Nothing is chosen to fade yet -- enabling this alone (or picking a preset above) won't change " ..
         "anything else until you fine-tune it later. All of this stays editable from the main options " ..
         "panel.")
-    return p
+    Perfy_Trace(Perfy_GetTime(), "Leave", "BuildPage4 MyCustomFrames/Setup.lua:558:6"); return p
 end
 
 -- ---------------- Pagina 6: aplicar el preset (+ HUD de Edit Mode, MANUAL) ----------------
@@ -640,7 +640,7 @@ end
 -- "Apply now" solo reemplaza el SavedVariables de los addons tildados; el HUD se muestra como
 -- codigo copiable (boton propio) para que el usuario lo importe A MANO desde el Edit Mode nativo
 -- de Blizzard, sin pasar por codigo tainted por MyCustomFrames.
-local function BuildPage5(content)
+local function BuildPage5(content) Perfy_Trace(Perfy_GetTime(), "Enter", "BuildPage5 MyCustomFrames/Setup.lua:643:6");
     local p = CreateFrame("Frame", nil, content)
     p:SetAllPoints()
     Header(p, "Apply the Gonkast preset", 0, -2)
@@ -662,7 +662,7 @@ local function BuildPage5(content)
 
     local hudBtn = TexButton(p, CUSTOM.NAVBTN, 180, 40, "Edit Mode Code", 14)
     hudBtn:SetPoint("LEFT", applyBtn, "RIGHT", 14, 0)
-    hudBtn:SetScript("OnClick", function() ns.ShowBlizzardHUDCode() end)
+    hudBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:665:32"); ns.ShowBlizzardHUDCode() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:665:32"); end)
     Paragraph(p, 4, -150, 10,
         "The HUD layout (\"Gonkast Preset\", Bartender4/portrait positions etc) is a separate, MANUAL " ..
         "step: the button above shows a copyable code — paste it yourself via Esc > Edit Mode > Import " ..
@@ -675,7 +675,7 @@ local function BuildPage5(content)
     resultFs:SetWidth(CONTENT_W); resultFs:SetJustifyH("LEFT"); resultFs:SetWordWrap(true)
     resultFs:SetTextColor(0.6, 0.9, 0.6)
 
-    applyBtn:SetScript("OnClick", function()
+    applyBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:678:34");
         local applied = ns.ApplyProfilesFiltered(selected)
         local names = {}
         for a in pairs(applied) do names[#names + 1] = (ns.ProfilesInfo and ns.ProfilesInfo[a]) or a end
@@ -707,8 +707,8 @@ local function BuildPage5(content)
             msg = msg .. "\nType /reload now."
         end
         resultFs:SetText(msg)
-    end)
-    return p
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:678:34"); end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "BuildPage5 MyCustomFrames/Setup.lua:643:6"); return p
 end
 
 -- ---------------- Pagina 7: perfil de Bartender4 (el unico que a veces no persiste tras /reload) ----------------
@@ -717,7 +717,7 @@ end
 -- pero en la practica a veces no ocurre. Esto fuerza la asociacion profileKeys[personaje] =
 -- perfil elegido DIRECTAMENTE, sin depender de ese fallback.
 local selectedBTProfile = "Default"
-local function GetBartenderProfiles()
+local function GetBartenderProfiles() Perfy_Trace(Perfy_GetTime(), "Enter", "GetBartenderProfiles MyCustomFrames/Setup.lua:720:6");
     local list = {}
     local src = ns.Profiles and ns.Profiles["Bartender4DB"]
     if src and type(src.profiles) == "table" then
@@ -725,10 +725,10 @@ local function GetBartenderProfiles()
         table.sort(list)
     end
     if #list == 0 then list[1] = "Default" end
-    return list
+    Perfy_Trace(Perfy_GetTime(), "Leave", "GetBartenderProfiles MyCustomFrames/Setup.lua:720:6"); return list
 end
 
-local function BuildPage6(content)
+local function BuildPage6(content) Perfy_Trace(Perfy_GetTime(), "Enter", "BuildPage6 MyCustomFrames/Setup.lua:731:6");
     local p = CreateFrame("Frame", nil, content)
     p:SetAllPoints()
     Header(p, "Bartender4 profile", 0, -2)
@@ -756,7 +756,7 @@ local function BuildPage6(content)
     listFrame:SetPoint("TOPLEFT", dropBtn, "BOTTOMLEFT", 0, -2)
     listFrame:Hide()
     local rows = {}
-    local function RebuildList()
+    local function RebuildList() Perfy_Trace(Perfy_GetTime(), "Enter", "RebuildList MyCustomFrames/Setup.lua:759:10");
         for _, r in ipairs(rows) do r:Hide() end
         wipe(rows)
         local profiles = GetBartenderProfiles()
@@ -764,19 +764,19 @@ local function BuildPage6(content)
         for _, name in ipairs(profiles) do
             local rb = DropdownButton(listFrame, 240, 24, name, 12)
             rb:SetPoint("TOPLEFT", 0, yy)
-            rb:SetScript("OnClick", function()
+            rb:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:767:36");
                 selectedBTProfile = name
                 dropBtn.text:SetText(name)
                 listFrame:Hide()
-            end)
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:767:36"); end)
             rows[#rows + 1] = rb
             yy = yy - 28
         end
         listFrame:SetSize(240, math.max(#profiles * 28, 4))
-    end
-    dropBtn:SetScript("OnClick", function()
+    Perfy_Trace(Perfy_GetTime(), "Leave", "RebuildList MyCustomFrames/Setup.lua:759:10"); end
+    dropBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:777:33");
         if listFrame:IsShown() then listFrame:Hide() else RebuildList(); listFrame:Show() end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:777:33"); end)
 
     -- 2026-07-16: "usar este perfil para cualquier personaje NUEVO de la cuenta" — distinto del
     -- boton de abajo (que solo fuerza ESTE personaje). Guardado en db.bartenderAutoProfile;
@@ -789,11 +789,11 @@ local function BuildPage6(content)
     -- dropdown -> checkbox "any new char" -> boton Apply -> resultado.
     local autoCB = Toggle(p, "Also use this profile for any NEW character on this account",
         4, -122,
-        function() local d = ns.GetDB(); return d and d.bartenderAutoProfile == selectedBTProfile and d.bartenderAutoProfile ~= nil end,
-        function(v)
-            local d = ns.GetDB(); if not d then return end
+        function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:792:8"); local d = ns.GetDB(); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Setup.lua:792:8", d and d.bartenderAutoProfile == selectedBTProfile and d.bartenderAutoProfile ~= nil) end,
+        function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:793:8");
+            local d = ns.GetDB(); if not d then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:793:8"); return end
             d.bartenderAutoProfile = v and selectedBTProfile or nil
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:793:8"); end)
 
     local applyBtn = TexButton(p, CUSTOM.APPLY, 240, 40, "Apply to this character", 13)
     applyBtn:SetPoint("TOPLEFT", 2, -156)
@@ -805,12 +805,12 @@ local function BuildPage6(content)
     resultFs:SetWidth(CONTENT_W); resultFs:SetJustifyH("LEFT"); resultFs:SetWordWrap(true)
     resultFs:SetTextColor(0.6, 0.9, 0.6)
 
-    applyBtn:SetScript("OnClick", function()
+    applyBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:808:34");
         local charKey = (UnitName("player") or "?") .. " - " .. (GetRealmName() or "?")
         local bt = _G.Bartender4DB
         if type(bt) ~= "table" then
             resultFs:SetText("|cffff5555Bartender4DB not found — is Bartender4 loaded?|r")
-            return
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:808:34"); return
         end
         bt.profileKeys = bt.profileKeys or {}
         bt.profileKeys[charKey] = selectedBTProfile
@@ -823,8 +823,8 @@ local function BuildPage6(content)
             msg = msg .. "\nFuture new characters will also default to \"" .. selectedBTProfile .. "\" (no /reload needed for that part)."
         end
         resultFs:SetText(msg)
-    end)
-    return p
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:808:34"); end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "BuildPage6 MyCustomFrames/Setup.lua:731:6"); return p
 end
 
 -- ---------------- Pagina 8: Nameplates (pedido del usuario 2026-07-19, "que salga esta
@@ -832,7 +832,7 @@ end
 -- No duplica los controles finos (esos viven en el Nameplate Designer, /mcfnpdesigner) -- esta
 -- pagina es solo el punto de entrada: encender el reskin, y un boton grande para abrir el
 -- Designer directo desde el wizard, asi el usuario no tiene que buscarlo despues en el menu.
-local function BuildPage7(content)
+local function BuildPage7(content) Perfy_Trace(Perfy_GetTime(), "Enter", "BuildPage7 MyCustomFrames/Setup.lua:835:6");
     local p = CreateFrame("Frame", nil, content)
     p:SetAllPoints()
     Header(p, "Nameplates", 0, -2)
@@ -842,13 +842,13 @@ local function BuildPage7(content)
         "and coloring logic stay 100% Blizzard's own, no oUF, no addon replacement.")
 
     local enableCB = Toggle(p, "Enable nameplate reskin", 4, -74,
-        function() local d = ns.GetDB(); return d and d.nameplates and d.nameplates.enabled end,
-        function(v)
-            local d = ns.GetDB(); if not d then return end
+        function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:845:8"); local d = ns.GetDB(); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Setup.lua:845:8", d and d.nameplates and d.nameplates.enabled) end,
+        function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:846:8");
+            local d = ns.GetDB(); if not d then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:846:8"); return end
             d.nameplates = d.nameplates or {}
             d.nameplates.enabled = v
             if ns.RefreshNameplateStyle then ns.RefreshNameplateStyle() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:846:8"); end)
 
     Paragraph(p, 4, -104, 11,
         "Position, size, colors, aura categories, classification/raid mark icons — everything " ..
@@ -857,7 +857,7 @@ local function BuildPage7(content)
 
     local designBtn = TexButton(p, CUSTOM.APPLY, 220, 40, "Nameplate Designer", 14)
     designBtn:SetPoint("TOPLEFT", 2, -148)
-    designBtn:SetScript("OnClick", function()
+    designBtn:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:860:35");
         -- Pedido del usuario 2026-07-19: abrir el Designer desde el Setup NO
         -- debe quedar superpuesto/detras del wizard -- corre el wizard a la
         -- izquierda y el Designer a la derecha (960+480 de ancho con margen
@@ -873,17 +873,17 @@ local function BuildPage7(content)
             designer:ClearAllPoints()
             designer:SetPoint("CENTER", UIParent, "CENTER", 380, 60)
         end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:860:35"); end)
 
     Paragraph(p, 4, -204, 10,
         "Max render distance, non-target fade opacity, and colors also live in the full menu " ..
         "(|cffffff00/mcfmenu|r > NAMEPLATES) if you'd rather type exact numbers than drag.")
-    return p
+    Perfy_Trace(Perfy_GetTime(), "Leave", "BuildPage7 MyCustomFrames/Setup.lua:835:6"); return p
 end
 
 -- ---------------- Navegacion ----------------
-function ns.SetupGoTo(page)
-    if not frame then return end
+function ns.SetupGoTo(page) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.SetupGoTo MyCustomFrames/Setup.lua:885:0");
+    if not frame then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.SetupGoTo MyCustomFrames/Setup.lua:885:0"); return end
     page = math.max(1, math.min(PAGE_COUNT, page))
     curPage = page
     for i, f in ipairs(contentPages) do
@@ -896,7 +896,7 @@ function ns.SetupGoTo(page)
     backBtn:SetShown(page > 1)
     nextBtn.text:SetText(page < PAGE_COUNT and "Next >" or "Finish")
     if page == 2 then RefreshPage2(contentPages[2]) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.SetupGoTo MyCustomFrames/Setup.lua:885:0"); end
 
 -- ReloadUI() es una funcion PROTEGIDA: Blizzard NO deja que ningun addon la llame, ni
 -- diferida ni en pcall (confirmado en juego: ADDON_ACTION_BLOCKED), y da igual COMO se
@@ -910,22 +910,22 @@ StaticPopupDialogs["MCF_SETUP_FINISH_RELOAD"] = {
     timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
 }
 
-function ns.SetupFinish()
+function ns.SetupFinish() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.SetupFinish MyCustomFrames/Setup.lua:913:0");
     local db = ns.GetDB and ns.GetDB()
     if db then db.setupSeen = true end
     if frame then frame:Hide() end
     if StaticPopup_Show then StaticPopup_Show("MCF_SETUP_FINISH_RELOAD") end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.SetupFinish MyCustomFrames/Setup.lua:913:0"); end
 
-function ns.CloseSetupWizard(markSeen)
+function ns.CloseSetupWizard(markSeen) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.CloseSetupWizard MyCustomFrames/Setup.lua:920:0");
     if markSeen then
         local db = ns.GetDB and ns.GetDB()
         if db then db.setupSeen = true end
     end
     if frame then frame:Hide() end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.CloseSetupWizard MyCustomFrames/Setup.lua:920:0"); end
 
-function ns.ShowSetupWizard()
+function ns.ShowSetupWizard() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ShowSetupWizard MyCustomFrames/Setup.lua:928:0");
     if not frame then
         local content = BuildFrame()
         contentPages[1] = BuildPage1(content)
@@ -943,21 +943,23 @@ function ns.ShowSetupWizard()
         frame:Show()
     end
     ns.SetupGoTo(1)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ShowSetupWizard MyCustomFrames/Setup.lua:928:0"); end
 
 SLASH_MCFSETUP1 = "/mcfsetup"
-SlashCmdList["MCFSETUP"] = function() ns.ShowSetupWizard() end
+SlashCmdList["MCFSETUP"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFSETUP MyCustomFrames/Setup.lua:949:27"); ns.ShowSetupWizard() Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFSETUP MyCustomFrames/Setup.lua:949:27"); end
 
 -- Disparo automatico: solo la PRIMERA vez (db.setupSeen == false). Se espera un poco
 -- tras PLAYER_LOGIN para que el resto de addons (deteccion de perfiles) ya haya cargado.
 local trigger = CreateFrame("Frame")
 trigger:RegisterEvent("PLAYER_LOGIN")
-trigger:SetScript("OnEvent", function(self)
+trigger:SetScript("OnEvent", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:955:29");
     self:UnregisterAllEvents()
     if C_Timer and C_Timer.After then
-        C_Timer.After(1.5, function()
+        C_Timer.After(1.5, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Setup.lua:958:27");
             local db = ns.GetDB and ns.GetDB()
             if db and not db.setupSeen then ns.ShowSetupWizard() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:958:27"); end)
     end
-end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Setup.lua:955:29"); end)
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Setup.lua");

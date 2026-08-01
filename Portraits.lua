@@ -1,4 +1,4 @@
-﻿-- ==========================================================================
+﻿--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Portraits.lua"); --[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Portraits.lua"); -- ==========================================================================
 -- MyCustomFrames - Portraits.lua
 -- PORTRAITS (elementos aparte de las unidades: modelo 3D o icono de clase,
 -- badges de faccion/muerte/combate/raid-target/rol-lider, doble posicion).
@@ -10,10 +10,10 @@ local ADDON, ns = ...
 -- ==========================================================================
 -- ns.PORTRAITS: creacion y logica
 -- ==========================================================================
-local function PP(u) return ns.GetDB().portraits[u.key] end
+local function PP(u) Perfy_Trace(Perfy_GetTime(), "Enter", "PP MyCustomFrames/Portraits.lua:13:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "PP MyCustomFrames/Portraits.lua:13:6"); return Perfy_Trace_Passthrough("Leave", "PP MyCustomFrames/Portraits.lua:13:6", Perfy_Trace_Passthrough("Leave", "PP MyCustomFrames/Portraits.lua:13:6", ns.GetDB().portraits[u.key])) end
 
 -- Condicion para usar la posicion "centro" (target / combate / instancia).
-local function PortraitCenterActive(u)
+local function PortraitCenterActive(u) Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitCenterActive MyCustomFrames/Portraits.lua:16:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitCenterActive MyCustomFrames/Portraits.lua:16:6");
     local p = PP(u)
     local active = false
     if p.centerInCombat and ns.tickState.inCombat then active = true end
@@ -29,21 +29,28 @@ local function PortraitCenterActive(u)
             active = true
         end
     end
-    return active
+    Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitCenterActive MyCustomFrames/Portraits.lua:16:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitCenterActive MyCustomFrames/Portraits.lua:16:6"); return active
 end
 
 -- Coloca el portrait en la posicion que corresponda (o en la que se edita en preview).
 -- Solo los ns.portraits con feature dualPos tienen 2 posiciones; el resto usan solo "centro".
-local function PortraitUpdatePosition(u)
+local function PortraitUpdatePosition(u) Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitUpdatePosition MyCustomFrames/Portraits.lua:37:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitUpdatePosition MyCustomFrames/Portraits.lua:37:6");
     -- Si el root quedo PROTEGIDO (p.ej. un frame seguro fue anclado a el alguna vez),
     -- ClearAllPoints/SetPoint en combate = ADDON_ACTION_BLOCKED. Se salta el tick.
-    if InCombatLockdown() and u.root:IsProtected() then return end
+    if InCombatLockdown() and u.root:IsProtected() then Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePosition MyCustomFrames/Portraits.lua:37:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePosition MyCustomFrames/Portraits.lua:37:6"); return end
     local p = PP(u)
     ns.CompensateScale(p, "portrait")   -- B3: reancla offsets si la escala cambio
     local dual = u.features and u.features.dualPos
     local which = "center"
     if dual then
         if ns.IsUnlocked() then which = (p.editPos == "alt") and "alt" or "center"
+        -- Interruptor maestro (pedido del usuario: "poder activar o
+        -- desactivar lo de las posiciones alternativas"): en false, ni
+        -- siquiera se evaluan las 3 condiciones -- se queda SIEMPRE en
+        -- "centro". `== false` explicito (no solo `not`) para que el default
+        -- (nil en perfiles viejos, antes de que este campo existiera) se
+        -- comporte como true, igual que el resto de los booleanos del addon.
+        elseif p.dualPosEnabled == false then which = "center"
         elseif PortraitCenterActive(u) then which = "center"
         else which = "alt" end
     end
@@ -77,38 +84,38 @@ local function PortraitUpdatePosition(u)
     -- resuelto entra en la firma (un anchor que aparece tarde re-ancla solo). El
     -- OnDragStop invalida la firma (_posParent=nil) porque StartMoving cambia el ancla real.
     if u._posParent == parent and u._posP == point and u._posRP == relPoint
-       and u._posX == x and u._posY == y then return end
+       and u._posX == x and u._posY == y then Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePosition MyCustomFrames/Portraits.lua:37:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePosition MyCustomFrames/Portraits.lua:37:6"); return end
     u.root:ClearAllPoints()
     u.root:SetPoint(point, parent, relPoint, x, y)
     u._posParent, u._posP, u._posRP, u._posX, u._posY = parent, point, relPoint, x, y
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePosition MyCustomFrames/Portraits.lua:37:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePosition MyCustomFrames/Portraits.lua:37:6"); end
 
 -- Coordenadas del icono de clase de la unidad (nil si no tiene clase legible).
-local function PortraitClassCoords(unit)
+local function PortraitClassCoords(unit) Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitClassCoords MyCustomFrames/Portraits.lua:87:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitClassCoords MyCustomFrames/Portraits.lua:87:6");
     -- (Ruta caliente: se consulta cada tick por cada portrait de icono via
     -- PortraitShouldShow.) pcall directo; el token de clase puede ser secreto:
     -- NUNCA indexar la tabla con el sin confirmar que es legible.
     local ok, _, class = pcall(UnitClass, unit)
     if ok and type(class) == "string" and not (issecretvalue and issecretvalue(class)) then
-        return CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[class]
+        return Perfy_Trace_Passthrough("Leave", "PortraitClassCoords MyCustomFrames/Portraits.lua:87:6", Perfy_Trace_Passthrough("Leave", "PortraitClassCoords MyCustomFrames/Portraits.lua:87:6", CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[class]))
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitClassCoords MyCustomFrames/Portraits.lua:87:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitClassCoords MyCustomFrames/Portraits.lua:87:6"); end
 
 -- Color de clase de una unidad. Para "player" nunca es secreto; para "target"
 -- (mirrorTarget) se valida con issecretvalue igual que PortraitClassCoords.
-local function UnitClassColorSafe(unit)
+local function UnitClassColorSafe(unit) Perfy_Trace(Perfy_GetTime(), "Enter", "UnitClassColorSafe MyCustomFrames/Portraits.lua:99:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "UnitClassColorSafe MyCustomFrames/Portraits.lua:99:6");
     local ok, _, classFile = pcall(UnitClass, unit)
-    if not ok or type(classFile) ~= "string" or (issecretvalue and issecretvalue(classFile)) then return end
-    return (C_ClassColor and C_ClassColor.GetClassColor and C_ClassColor.GetClassColor(classFile))
-        or (RAID_CLASS_COLORS and RAID_CLASS_COLORS[classFile])
+    if not ok or type(classFile) ~= "string" or (issecretvalue and issecretvalue(classFile)) then Perfy_Trace(Perfy_GetTime(), "Leave", "UnitClassColorSafe MyCustomFrames/Portraits.lua:99:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UnitClassColorSafe MyCustomFrames/Portraits.lua:99:6"); return end
+    return Perfy_Trace_Passthrough("Leave", "UnitClassColorSafe MyCustomFrames/Portraits.lua:99:6", Perfy_Trace_Passthrough("Leave", "UnitClassColorSafe MyCustomFrames/Portraits.lua:99:6", (C_ClassColor and C_ClassColor.GetClassColor and C_ClassColor.GetClassColor(classFile))
+        or (RAID_CLASS_COLORS and RAID_CLASS_COLORS[classFile])))
 end
 
 -- Actualiza el "retrato": modelo 3D (kind=model) o icono de clase (kind=icon).
-local function PortraitUpdatePicture(u)
+local function PortraitUpdatePicture(u) Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitUpdatePicture MyCustomFrames/Portraits.lua:107:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitUpdatePicture MyCustomFrames/Portraits.lua:107:6");
     local p = PP(u)
     if u.kind == "icon" then
-        if not u.classIcon then return end
-        if not p.showModel then u.classIcon:Hide() return end
+        if not u.classIcon then Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePicture MyCustomFrames/Portraits.lua:107:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePicture MyCustomFrames/Portraits.lua:107:6"); return end
+        if not p.showModel then u.classIcon:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePicture MyCustomFrames/Portraits.lua:107:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePicture MyCustomFrames/Portraits.lua:107:6"); return end
         -- PREMATCH DE ARENA (pedido del usuario 2026-07-20): "se deberia mostrar el
         -- icono de clase/spec en el portrait de la arena" -- UnitClass(arenaN) todavia
         -- no resuelve nada util durante el prep (mismo motivo por el que Blizzard usa
@@ -122,7 +129,7 @@ local function PortraitUpdatePicture(u)
                 u.classIcon:SetTexture(prep.icon)
                 u.classIcon:SetTexCoord(0, 1, 0, 1)
                 u.classIcon:Show()
-                return
+                Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePicture MyCustomFrames/Portraits.lua:107:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePicture MyCustomFrames/Portraits.lua:107:6"); return
             end
         end
         local coords = PortraitClassCoords(u.unit)
@@ -134,10 +141,10 @@ local function PortraitUpdatePicture(u)
         else
             u.classIcon:Hide()
         end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePicture MyCustomFrames/Portraits.lua:107:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePicture MyCustomFrames/Portraits.lua:107:6"); return
     end
-    if not u.model then return end
-    if not p.showModel then u.model:Hide() return end
+    if not u.model then Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePicture MyCustomFrames/Portraits.lua:107:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePicture MyCustomFrames/Portraits.lua:107:6"); return end
+    if not p.showModel then u.model:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePicture MyCustomFrames/Portraits.lua:107:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePicture MyCustomFrames/Portraits.lua:107:6"); return end
     u.model:Show()
     -- mirrorTarget (solo portrait_player): muestra el modelo 3D del target en
     -- vez del propio, si hay target. u.unit NO se toca (sigue usandose tal cual
@@ -165,12 +172,12 @@ local function PortraitUpdatePicture(u)
     -- un tema de zoom/camara/timing. Sin causa confirmada todavia; se vuelve a
     -- la version simple (sin la complejidad extra que no ayudo en nada) y se
     -- deja el diagnostico para retomar la investigacion mas adelante.
-    local ok, err = pcall(function()
+    local ok, err = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Portraits.lua:168:26"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Portraits.lua:168:26");
         u.model:ClearModel()
         u.model:SetUnit(modelUnit)
         u.model:SetPortraitZoom(ns.clamp(p.modelZoom, 0, 1))
         u.model:SetPosition(0, 0, 0)
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Portraits.lua:168:26"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Portraits.lua:168:26"); end)
     -- DIAG TEMPORAL: sacar este bloque una vez confirmado.
     if mirroring then
         local okInst, inInst, it = pcall(IsInInstance)
@@ -208,15 +215,15 @@ local function PortraitUpdatePicture(u)
             end
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePicture MyCustomFrames/Portraits.lua:107:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdatePicture MyCustomFrames/Portraits.lua:107:6"); end
 
-local function PortraitUpdateFaction(u)
-    if not u.faction then return end
+local function PortraitUpdateFaction(u) Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitUpdateFaction MyCustomFrames/Portraits.lua:213:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitUpdateFaction MyCustomFrames/Portraits.lua:213:6");
+    if not u.faction then Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateFaction MyCustomFrames/Portraits.lua:213:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateFaction MyCustomFrames/Portraits.lua:213:6"); return end
     local p = PP(u)
-    if not p.showFaction then u.faction:Hide() return end
+    if not p.showFaction then u.faction:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateFaction MyCustomFrames/Portraits.lua:213:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateFaction MyCustomFrames/Portraits.lua:213:6"); return end
     -- En COMBATE se oculta el badge de faccion (el de combate ocupa su lugar). En
     -- preview (ns.IsUnlocked()) NO, para poder editarlo/posicionarlo.
-    if not ns.IsUnlocked() and ns.tickState.inCombat then u.faction:Hide() return end
+    if not ns.IsUnlocked() and ns.tickState.inCombat then u.faction:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateFaction MyCustomFrames/Portraits.lua:213:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateFaction MyCustomFrames/Portraits.lua:213:6"); return end
     local fac = ns.safeVal(UnitFactionGroup, "player")
     -- War Mode: usa el icono de badge de guerra segun el TOGGLE del jugador (no la zona).
     -- IsWarModeDesired = refleja el interruptor de Modo Guerra activado/desactivado (persiste entre
@@ -224,10 +231,10 @@ local function PortraitUpdateFaction(u)
     -- true en zonas de mundo con PvP → daba la sensacion de que el badge no cambiaba. Guard pcall.
     local warOn = false
     if C_PvP then
-        local ok, v = pcall(function()
-            if C_PvP.IsWarModeDesired then return C_PvP.IsWarModeDesired() end
-            if C_PvP.IsWarModeActive then return C_PvP.IsWarModeActive() end
-        end)
+        local ok, v = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Portraits.lua:227:28"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Portraits.lua:227:28");
+            if C_PvP.IsWarModeDesired then return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Portraits.lua:227:28", Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Portraits.lua:227:28", C_PvP.IsWarModeDesired())) end
+            if C_PvP.IsWarModeActive then return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Portraits.lua:227:28", Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Portraits.lua:227:28", C_PvP.IsWarModeActive())) end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Portraits.lua:227:28"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Portraits.lua:227:28"); end)
         warOn = ok and v and true or false
     end
     if fac == "Alliance" then
@@ -237,7 +244,7 @@ local function PortraitUpdateFaction(u)
     else
         u.faction:Hide()   -- neutral / sin faccion
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateFaction MyCustomFrames/Portraits.lua:213:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateFaction MyCustomFrames/Portraits.lua:213:6"); end
 
 -- Marcador de banda (raid target icon). Solo party (feature raidTarget). Usa la textura
 -- CUSTOM manteniendo los texcoords de SetRaidTargetIconTexture (grid estandar 4x4): se
@@ -245,14 +252,14 @@ end
 -- textura al asset propio (SetTexture no toca los texcoords). Igual que AzeriteUI.
 -- Muestra/oculta el marcador con FADE suave (Alpha). Solo dispara la transicion al CAMBIAR de
 -- estado (no cada tick). El bounce (Translation) sigue independiente del alpha.
-local function RaidTargetSetVisible(u, show)
+local function RaidTargetSetVisible(u, show) Perfy_Trace(Perfy_GetTime(), "Enter", "RaidTargetSetVisible MyCustomFrames/Portraits.lua:248:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "RaidTargetSetVisible MyCustomFrames/Portraits.lua:248:6");
     local rt, fade = u.raidtarget, u.raidtargetFade
-    if u._rtVisible == show then return end
+    if u._rtVisible == show then Perfy_Trace(Perfy_GetTime(), "Leave", "RaidTargetSetVisible MyCustomFrames/Portraits.lua:248:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "RaidTargetSetVisible MyCustomFrames/Portraits.lua:248:6"); return end
     u._rtVisible = show
     local target = PP(u).raidTargetAlpha or 1
     if not fade or not fade.anim then
         if show then rt:SetAlpha(target); rt:Show() else rt:Hide() end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "RaidTargetSetVisible MyCustomFrames/Portraits.lua:248:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "RaidTargetSetVisible MyCustomFrames/Portraits.lua:248:6"); return
     end
     fade:Stop()
     if show then
@@ -264,18 +271,18 @@ local function RaidTargetSetVisible(u, show)
         fade.anim:SetFromAlpha(0); fade.anim:SetToAlpha(target)
         fade:Play()
     else
-        fade:SetScript("OnFinished", function() rt:Hide() end)
+        fade:SetScript("OnFinished", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Portraits.lua:267:37"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Portraits.lua:267:37"); rt:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Portraits.lua:267:37"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Portraits.lua:267:37"); end)
         fade.anim:SetFromAlpha(rt:GetAlpha()); fade.anim:SetToAlpha(0)
         fade:Play()
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RaidTargetSetVisible MyCustomFrames/Portraits.lua:248:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "RaidTargetSetVisible MyCustomFrames/Portraits.lua:248:6"); end
 
-local function PortraitUpdateRaidTarget(u)
+local function PortraitUpdateRaidTarget(u) Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitUpdateRaidTarget MyCustomFrames/Portraits.lua:273:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitUpdateRaidTarget MyCustomFrames/Portraits.lua:273:6");
     local rt = u.raidtarget
-    if not rt then return end
+    if not rt then Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateRaidTarget MyCustomFrames/Portraits.lua:273:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateRaidTarget MyCustomFrames/Portraits.lua:273:6"); return end
     local p = PP(u)
     if not (u.features and u.features.raidTarget and p.showRaidTarget) then
-        rt:Hide(); u._rtVisible = false; return
+        rt:Hide(); u._rtVisible = false; Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateRaidTarget MyCustomFrames/Portraits.lua:273:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateRaidTarget MyCustomFrames/Portraits.lua:273:6"); return
     end
     local index
     if ns.IsUnlocked() then
@@ -300,13 +307,13 @@ local function PortraitUpdateRaidTarget(u)
         RaidTargetSetVisible(u, false)  -- fade-out suave y luego oculta
         if u.raidtargetAnim then u.raidtargetAnim:Stop() end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateRaidTarget MyCustomFrames/Portraits.lua:273:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateRaidTarget MyCustomFrames/Portraits.lua:273:6"); end
 
 -- Icono de ROL (tank/heal/dps) + LIDER. Solo party (feature roleLeader).
 -- UnitGroupRolesAssigned devuelve "TANK"/"HEALER"/"DAMAGER"/"NONE"; UnitIsGroupLeader booleano.
 -- Ambos legibles (no secretos). Texturas CUSTOM por rol (una textura completa cada una).
-local function PortraitUpdateRoleLeader(u)
-    if not (u.roleicon and u.leader) then return end
+local function PortraitUpdateRoleLeader(u) Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitUpdateRoleLeader MyCustomFrames/Portraits.lua:308:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitUpdateRoleLeader MyCustomFrames/Portraits.lua:308:6");
+    if not (u.roleicon and u.leader) then Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateRoleLeader MyCustomFrames/Portraits.lua:308:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateRoleLeader MyCustomFrames/Portraits.lua:308:6"); return end
     local p = PP(u)
     local feats = u.features or {}
     -- Rol: SOLO party (feature roleLeader).
@@ -330,7 +337,7 @@ local function PortraitUpdateRoleLeader(u)
     else
         u.leader:Hide()
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateRoleLeader MyCustomFrames/Portraits.lua:308:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateRoleLeader MyCustomFrames/Portraits.lua:308:6"); end
 
 -- Estado dinamico: descanso (flipbook), muerte, badge de combate.
 -- Performance Fase 2 (2026-07-15): `skipBadges` (opcional, default nil/false = actualiza los
@@ -339,7 +346,7 @@ end
 -- tocar rest/death/combat (necesitan reaccionar cada tick para verse fluidos). El OTRO call site
 -- (aplicar config / SetUnlocked, linea ~2188) NO pasa este parametro -> sigue actualizando los
 -- badges siempre, para que un cambio de configuracion se vea al instante.
-local function PortraitUpdateState(u, preview, skipBadges)
+local function PortraitUpdateState(u, preview, skipBadges) Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitUpdateState MyCustomFrames/Portraits.lua:342:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitUpdateState MyCustomFrames/Portraits.lua:342:6");
     local p = PP(u)
     local resting, dead, inCombat
     if preview then
@@ -386,43 +393,43 @@ local function PortraitUpdateState(u, preview, skipBadges)
         if lh.badges and u.faction then u.faction:Hide() end
         if lh.raid and u.raidtarget then u.raidtarget:Hide(); u._rtVisible = false end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateState MyCustomFrames/Portraits.lua:342:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitUpdateState MyCustomFrames/Portraits.lua:342:6"); end
 
 -- Contenido donde tienen sentido los PARTY ns.portraits: mundo abierto, grupo normal y
 -- mazmorra ("party"). Fuera (raid, arena, BG/cualquier pvp, escenario/delve, o grupo
 -- de RAID aunque sea en mundo abierto): ocultos. Secret-safe: issecretvalue antes de
 -- testear/comparar. El ticker lo cachea en ns.tickState.partyOK (cambia solo por zona/grupo).
-local function PartyContentAllowed()
+local function PartyContentAllowed() Perfy_Trace(Perfy_GetTime(), "Enter", "PartyContentAllowed MyCustomFrames/Portraits.lua:395:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "PartyContentAllowed MyCustomFrames/Portraits.lua:395:6");
     local ok, inInst, it = pcall(IsInInstance)
     if ok and not (issecretvalue and (issecretvalue(inInst) or issecretvalue(it))) then
-        if inInst and it ~= "party" then return false end
+        if inInst and it ~= "party" then Perfy_Trace(Perfy_GetTime(), "Leave", "PartyContentAllowed MyCustomFrames/Portraits.lua:395:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PartyContentAllowed MyCustomFrames/Portraits.lua:395:6"); return false end
     end
-    if ns.safeBool(IsInRaid) then return false end
-    return true
+    if ns.safeBool(IsInRaid) then Perfy_Trace(Perfy_GetTime(), "Leave", "PartyContentAllowed MyCustomFrames/Portraits.lua:395:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PartyContentAllowed MyCustomFrames/Portraits.lua:395:6"); return false end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "PartyContentAllowed MyCustomFrames/Portraits.lua:395:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PartyContentAllowed MyCustomFrames/Portraits.lua:395:6"); return true
 end
 
 -- ARENA (pedido del usuario 2026-07-19): "solo debe aparecer en arenas" -- mismo
 -- patron que PartyContentAllowed, para los portraits portrait_arena_* (ver
 -- PortraitShouldShow mas abajo). Poblado en el tick central (core.lua, tickState.arenaOK).
-local function ArenaContentAllowed()
+local function ArenaContentAllowed() Perfy_Trace(Perfy_GetTime(), "Enter", "ArenaContentAllowed MyCustomFrames/Portraits.lua:407:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "ArenaContentAllowed MyCustomFrames/Portraits.lua:407:6");
     local ok, inInst, it = pcall(IsInInstance)
-    if not ok or (issecretvalue and (issecretvalue(inInst) or issecretvalue(it))) then return false end
-    return inInst and it == "arena"
+    if not ok or (issecretvalue and (issecretvalue(inInst) or issecretvalue(it))) then Perfy_Trace(Perfy_GetTime(), "Leave", "ArenaContentAllowed MyCustomFrames/Portraits.lua:407:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "ArenaContentAllowed MyCustomFrames/Portraits.lua:407:6"); return false end
+    return Perfy_Trace_Passthrough("Leave", "ArenaContentAllowed MyCustomFrames/Portraits.lua:407:6", Perfy_Trace_Passthrough("Leave", "ArenaContentAllowed MyCustomFrames/Portraits.lua:407:6", inInst and it == "arena"))
 end
 
 -- Debe mostrarse el portrait? (activado; unidad existe/muerta segun flags; clase legible si icono).
-local function PortraitShouldShow(u)
-    if not PP(u).enabled then return false end
+local function PortraitShouldShow(u) Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitShouldShow MyCustomFrames/Portraits.lua:414:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitShouldShow MyCustomFrames/Portraits.lua:414:6");
+    if not PP(u).enabled then Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitShouldShow MyCustomFrames/Portraits.lua:414:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitShouldShow MyCustomFrames/Portraits.lua:414:6"); return false end
     -- Party ns.portraits: gating por tipo de contenido (ns.tickState.partyOK, por tick).
-    if ns.tickState.partyOK == false and u.key:sub(1, 14) == "portrait_party" then return false end
+    if ns.tickState.partyOK == false and u.key:sub(1, 14) == "portrait_party" then Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitShouldShow MyCustomFrames/Portraits.lua:414:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitShouldShow MyCustomFrames/Portraits.lua:414:6"); return false end
     -- portrait_party5 usa unit="player" (ver nota en UNITS/PartyDriverString): UnitExists("player")
     -- siempre es true, asi que "requireExists" no alcanza para ocultarlo estando SOLO (sin grupo).
     -- Mismo criterio que el driver del unitframe: solo visible si estas agrupado.
-    if u.key == "portrait_party5" and not ns.safeBool(IsInGroup) then return false end
+    if u.key == "portrait_party5" and not ns.safeBool(IsInGroup) then Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitShouldShow MyCustomFrames/Portraits.lua:414:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitShouldShow MyCustomFrames/Portraits.lua:414:6"); return false end
     -- ARENA (pedido del usuario 2026-07-19): "solo debe aparecer en arenas". Sin esto,
     -- portrait_arena_player (unit="player") mostraria SIEMPRE, ya que UnitExists("player")
     -- es siempre true -- mismo problema de fondo que portrait_party5 arriba.
-    if u.key:sub(1, 14) == "portrait_arena" and ns.tickState.arenaOK == false then return false end
+    if u.key:sub(1, 14) == "portrait_arena" and ns.tickState.arenaOK == false then Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitShouldShow MyCustomFrames/Portraits.lua:414:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitShouldShow MyCustomFrames/Portraits.lua:414:6"); return false end
     -- FIX (2026-07-20, prematch de arena): UnitExists("arenaN") tambien es FALSE
     -- durante el prep (mismo motivo por el que Blizzard usa un frame aparte,
     -- PreMatchFramesContainer, en vez de reusar su ArenaEnemyMatchFrame real) --
@@ -431,11 +438,11 @@ local function PortraitShouldShow(u)
     if u.requireExists and not UnitExists(u.unit) then
         local hasPrepIcon = u.key:sub(1, 14) == "portrait_arena" and ns.ArenaPrepSpecState
             and ns.ArenaPrepSpecState[u.unit]
-        if not hasPrepIcon then return false end
+        if not hasPrepIcon then Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitShouldShow MyCustomFrames/Portraits.lua:414:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitShouldShow MyCustomFrames/Portraits.lua:414:6"); return false end
     end
     if u.deadOnly then
         local dead = ns.safeBool(UnitExists, u.unit) and ns.safeBool(UnitIsDeadOrGhost, u.unit)
-        if not dead then return false end
+        if not dead then Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitShouldShow MyCustomFrames/Portraits.lua:414:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitShouldShow MyCustomFrames/Portraits.lua:414:6"); return false end
     end
     -- FIX (2026-07-20, reportado por el usuario: "el portrait en el prematch con la
     -- clase no esta saliendo"): PortraitClassCoords usa UnitClass(unit), que durante
@@ -446,9 +453,9 @@ local function PortraitShouldShow(u)
     if u.kind == "icon" and not PortraitClassCoords(u.unit) then
         local hasPrepIcon = u.key:sub(1, 14) == "portrait_arena" and ns.ArenaPrepSpecState
             and ns.ArenaPrepSpecState[u.unit]
-        if not hasPrepIcon then return false end
+        if not hasPrepIcon then Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitShouldShow MyCustomFrames/Portraits.lua:414:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitShouldShow MyCustomFrames/Portraits.lua:414:6"); return false end
     end
-    return true
+    Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitShouldShow MyCustomFrames/Portraits.lua:414:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitShouldShow MyCustomFrames/Portraits.lua:414:6"); return true
 end
 
 -- Muestra/oculta el root de un portrait respetando las restricciones de Blizzard:
@@ -457,7 +464,7 @@ end
 -- (ADDON_ACTION_BLOCKED:...:Hide()). En ese caso: alpha 0 como sustituto visual y el
 -- Show/Hide REAL se difiere a PLAYER_REGEN_ENABLED (_pendingShown). El flag
 -- _mcfCombatHidden en el root avisa al Explorer de que no toque ese alpha.
-local function PortraitSetShown(u, shown)
+local function PortraitSetShown(u, shown) Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitSetShown MyCustomFrames/Portraits.lua:460:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitSetShown MyCustomFrames/Portraits.lua:460:6");
     shown = shown and true or false
     local root = u.root
     if InCombatLockdown() and root:IsProtected() then
@@ -470,7 +477,7 @@ local function PortraitSetShown(u, shown)
             -- El modelo 3D no hereda el alpha del padre: ocultarlo/restaurarlo a mano.
             if u.model then u.model:SetAlpha(shown and (PP(u).modelAlpha or 1) or 0) end
         end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitSetShown MyCustomFrames/Portraits.lua:460:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitSetShown MyCustomFrames/Portraits.lua:460:6"); return
     end
     if u._pendingShown ~= nil then
         u._pendingShown = nil
@@ -479,9 +486,9 @@ local function PortraitSetShown(u, shown)
         if u.model then u.model:SetAlpha(PP(u).modelAlpha or 1) end
     end
     root:SetShown(shown)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitSetShown MyCustomFrames/Portraits.lua:460:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitSetShown MyCustomFrames/Portraits.lua:460:6"); end
 
-local function PortraitApplyAppearance(u)
+local function PortraitApplyAppearance(u) Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitApplyAppearance MyCustomFrames/Portraits.lua:484:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitApplyAppearance MyCustomFrames/Portraits.lua:484:6");
     local p = PP(u)
     local s = p.size
     u.root:SetSize(s, s)
@@ -566,27 +573,27 @@ local function PortraitApplyAppearance(u)
     -- portraits SOLO mientras se edita, sin tocar su showEnabled real.
     if ns.IsUnlocked() and ns.GetDB().lockHide and ns.GetDB().lockHide.portraits then
         u.root:Hide()
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitApplyAppearance MyCustomFrames/Portraits.lua:484:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitApplyAppearance MyCustomFrames/Portraits.lua:484:6"); return
     end
     PortraitSetShown(u, ns.IsUnlocked() or PortraitShouldShow(u))
     -- Captura mouse en preview (arrastrar) o fuera de preview si abre el panel (clickOpenChar).
     u.root:EnableMouse(ns.IsUnlocked() or (p.clickOpenChar and true or false))
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitApplyAppearance MyCustomFrames/Portraits.lua:484:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitApplyAppearance MyCustomFrames/Portraits.lua:484:6"); end
 
-local function RefreshPortrait(key)
+local function RefreshPortrait(key) Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshPortrait MyCustomFrames/Portraits.lua:576:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshPortrait MyCustomFrames/Portraits.lua:576:6");
     local u = ns.portraits[key]
-    if not u then return end
+    if not u then Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshPortrait MyCustomFrames/Portraits.lua:576:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshPortrait MyCustomFrames/Portraits.lua:576:6"); return end
     PortraitApplyAppearance(u)
     if key == "portrait_player" and ns.LayoutPortraitCharButtons then ns.LayoutPortraitCharButtons(u) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshPortrait MyCustomFrames/Portraits.lua:576:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshPortrait MyCustomFrames/Portraits.lua:576:6"); end
 ns.RefreshPortrait = RefreshPortrait
 
-local function RefreshAllPortraits()
+local function RefreshAllPortraits() Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshAllPortraits MyCustomFrames/Portraits.lua:584:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshAllPortraits MyCustomFrames/Portraits.lua:584:6");
     for _, u in pairs(ns.portraits) do PortraitApplyAppearance(u) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshAllPortraits MyCustomFrames/Portraits.lua:584:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshAllPortraits MyCustomFrames/Portraits.lua:584:6"); end
 ns.RefreshAllPortraits = RefreshAllPortraits
 
-local function CreatePortrait(def)
+local function CreatePortrait(def) Perfy_Trace(Perfy_GetTime(), "Enter", "CreatePortrait MyCustomFrames/Portraits.lua:589:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "CreatePortrait MyCustomFrames/Portraits.lua:589:6");
     local u = {
         key = def.key, unit = def.unit, label = def.label,
         kind = def.kind or "model", deadOnly = def.deadOnly,
@@ -704,13 +711,13 @@ local function CreatePortrait(def)
     u.combatAnim = combatAnim
     u.raidtarget = raidtarget
 
-    root:SetScript("OnDragStart", function(self)
+    root:SetScript("OnDragStart", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Portraits.lua:707:34"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Portraits.lua:707:34");
         if ns.IsUnlocked() and not InCombatLockdown() then
             u._dragStart = { self:GetCenter() }   -- centro al empezar (para mover seguidores)
             self:StartMoving()
         end
-    end)
-    root:SetScript("OnDragStop", function(self)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Portraits.lua:707:34"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Portraits.lua:707:34"); end)
+    root:SetScript("OnDragStop", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Portraits.lua:713:33"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Portraits.lua:713:33");
         self:StopMovingOrSizing()
         if ns.SnapFrameToGrid then ns.SnapFrameToGrid(self) end
         local p = PP(u)
@@ -741,7 +748,7 @@ local function CreatePortrait(def)
         u._dragStart = nil
         PortraitUpdatePosition(u)
         if ns.OnDragStopped then ns.OnDragStopped(u.key) end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Portraits.lua:713:33"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Portraits.lua:713:33"); end)
 
     -- El click que abre el panel de personaje lo manejan los botones SEGUROS estaticos
     -- `u.charBtnCenter`/`u.charBtnAlt` (ver "Abrir el panel de PERSONAJE" mas abajo). Es la UNICA
@@ -749,20 +756,20 @@ local function CreatePortrait(def)
     -- ToggleCharacter desde codigo inseguro se BLOQUEA en combate ("Interface action failed
     -- because of an AddOn"). El tooltip de aqui es la red para cuando esos botones estan ocultos
     -- (preview / clickOpenChar off).
-    root:SetScript("OnEnter", function(self)
-        if ns.IsUnlocked() then return end
+    root:SetScript("OnEnter", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Portraits.lua:752:30"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Portraits.lua:752:30");
+        if ns.IsUnlocked() then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Portraits.lua:752:30"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Portraits.lua:752:30"); return end
         local p = PP(u)
         if p and p.clickOpenChar then
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:SetText("Character Info", 1, 1, 1)
             GameTooltip:Show()
         end
-    end)
-    root:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Portraits.lua:752:30"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Portraits.lua:752:30"); end)
+    root:SetScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Portraits.lua:761:30"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Portraits.lua:761:30"); GameTooltip:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Portraits.lua:761:30"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Portraits.lua:761:30"); end)
 
-    ns.AttachScaleWheel(u.root, function() return PP(u) end, function() RefreshPortrait(u.key) end)
+    ns.AttachScaleWheel(u.root, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Portraits.lua:763:32"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Portraits.lua:763:32"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Portraits.lua:763:32", Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Portraits.lua:763:32", PP(u))) end, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Portraits.lua:763:236"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Portraits.lua:763:61"); RefreshPortrait(u.key) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Portraits.lua:763:61"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Portraits.lua:763:236"); end)
     ns.portraits[def.key] = u
-    return u
+    Perfy_Trace(Perfy_GetTime(), "Leave", "CreatePortrait MyCustomFrames/Portraits.lua:589:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "CreatePortrait MyCustomFrames/Portraits.lua:589:6"); return u
 end
 
 for _, def in ipairs(ns.PORTRAITS) do CreatePortrait(def) end
@@ -779,7 +786,7 @@ ns.ArenaContentAllowed = ArenaContentAllowed
 ns.PortraitShouldShow = PortraitShouldShow
 
 -- Tick por-portrait (badges/posicion/estado), llamado desde el ticker principal de core.
-ns.TickPortraits = function()
+ns.TickPortraits = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.TickPortraits MyCustomFrames/Portraits.lua:782:19"); Perfy_Trace(Perfy_GetTime(), "Enter", "ns.TickPortraits MyCustomFrames/Portraits.lua:782:19");
     local slowTier = (ns.tickState.n % 3 == 0)
     for _, u in pairs(ns.portraits) do
         if ns.Prof.Time("     . PortraitShouldShow", PortraitShouldShow, u) then
@@ -808,19 +815,22 @@ ns.TickPortraits = function()
             u._wasShown = false
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.TickPortraits MyCustomFrames/Portraits.lua:782:19"); Perfy_Trace(Perfy_GetTime(), "Leave", "ns.TickPortraits MyCustomFrames/Portraits.lua:782:19"); end
 
 -- DIAG TEMPORAL (ver comentario en PortraitUpdatePicture): imprime el ultimo
 -- intento de mirrorTarget (SetUnit("target") sobre portrait_player). Sacar
 -- junto con el bloque que llena ns._mirrorTargetDiag una vez resuelto.
 SLASH_MCFMIRRORTARGETDIAG1 = "/mcfmirrortargetdiag"
-SlashCmdList["MCFMIRRORTARGETDIAG"] = function()
+SlashCmdList["MCFMIRRORTARGETDIAG"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFMIRRORTARGETDIAG MyCustomFrames/Portraits.lua:817:38"); Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFMIRRORTARGETDIAG MyCustomFrames/Portraits.lua:817:38");
     local d = ns._mirrorTargetDiag
     if not d then
         print("|cff00ff00[MCF diag]|r sin datos todavia -- necesitas tener mirrorTarget activo y un target puesto al menos una vez.")
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFMIRRORTARGETDIAG MyCustomFrames/Portraits.lua:817:38"); Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFMIRRORTARGETDIAG MyCustomFrames/Portraits.lua:817:38"); return
     end
     print("|cff00ff00[MCF diag]|r mirrorTarget hace " .. string.format("%.1f", GetTime() - d.time) .. "s:")
     print("  unit=" .. tostring(d.modelUnit) .. "  pcall ok=" .. tostring(d.ok) .. "  err=" .. tostring(d.err))
     print("  inInstance=" .. tostring(d.inInst) .. "  instanceType=" .. tostring(d.instType))
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFMIRRORTARGETDIAG MyCustomFrames/Portraits.lua:817:38"); Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFMIRRORTARGETDIAG MyCustomFrames/Portraits.lua:817:38"); end
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Portraits.lua");
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Portraits.lua");

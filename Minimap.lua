@@ -1,4 +1,4 @@
--- ==========================================================================
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Minimap.lua"); -- ==========================================================================
 -- MyCustomFrames - Minimap.lua
 -- Minimapa estilo AzeriteUI: mascara redonda + borde decorativo + brujula +
 -- coordenadas + indicador de correo + icono de LFG (eye) + anillo circular de
@@ -29,8 +29,8 @@ local DISMOUNT_TEX       = A .. "icon_exit_flight.tga"
 -- "... or BORDER_TEX") -- a diferencia de units/portraits, que hornean la
 -- ruta concreta en el db en vez de dejarla vacia. Sin este setter, ApplySkin
 -- no tenia forma de tocarlos: son locals de ESTE archivo, no expuestos.
-ns.ApplyMinimapSkin = function()
-    if not ns.SkinResolve then return end
+ns.ApplyMinimapSkin = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ApplyMinimapSkin MyCustomFrames/Minimap.lua:32:22");
+    if not ns.SkinResolve then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ApplyMinimapSkin MyCustomFrames/Minimap.lua:32:22"); return end
     MASK_OPAQUE = ns.SkinResolve("minimap-mask-opaque.tga")
     BORDER_TEX = ns.SkinResolve("minimap-border.tga")
     EYE_TEX = ns.SkinResolve("group-finder-eye-orange.tga")
@@ -46,7 +46,7 @@ ns.ApplyMinimapSkin = function()
     if _G.Minimap and _G.Minimap.SetMaskTexture then
         pcall(_G.Minimap.SetMaskTexture, _G.Minimap, MASK_TRANSPARENT)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ApplyMinimapSkin MyCustomFrames/Minimap.lua:32:22"); end
 
 -- ---- Colores (extraidos de AzeriteUI Core/Common/Colors.lua) ----
 local UI_COLOR           = { 192/255, 192/255, 192/255 }
@@ -61,19 +61,19 @@ local GRAY_COLOR         = { 0.6, 0.6, 0.6 }
 -- Gradiente rojo->amarillo->verde segun % de progreso (0..1). Usado para las
 -- facciones tipo "amistad" (Acquaintance/Preferred/Anomaly/etc, sin reaction
 -- numerico para usar el color nativo FACTION_BAR_COLORS de Blizzard).
-local function ProgressGradientColor(pct)
+local function ProgressGradientColor(pct) Perfy_Trace(Perfy_GetTime(), "Enter", "ProgressGradientColor MyCustomFrames/Minimap.lua:64:6");
     pct = math.max(0, math.min(1, pct or 0))
     if pct < 0.5 then
         local t = pct * 2
-        return 0.85, 0.25 + t * 0.55, 0.15   -- rojo -> amarillo
+        return Perfy_Trace_Passthrough("Leave", "ProgressGradientColor MyCustomFrames/Minimap.lua:64:6", 0.85, 0.25 + t * 0.55, 0.15)   -- rojo -> amarillo
     else
         local t = (pct - 0.5) * 2
-        return 0.85 - t * 0.65, 0.80, 0.15 + t * 0.15   -- amarillo -> verde
+        return Perfy_Trace_Passthrough("Leave", "ProgressGradientColor MyCustomFrames/Minimap.lua:64:6", 0.85 - t * 0.65, 0.80, 0.15 + t * 0.15)   -- amarillo -> verde
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ProgressGradientColor MyCustomFrames/Minimap.lua:64:6"); end
 
-local function MinimapDefaults()
-    return {
+local function MinimapDefaults() Perfy_Trace(Perfy_GetTime(), "Enter", "MinimapDefaults MyCustomFrames/Minimap.lua:75:6");
+    return Perfy_Trace_Passthrough("Leave", "MinimapDefaults MyCustomFrames/Minimap.lua:75:6", {
         enabled = true,
         scale = 1,
         point = "BOTTOMRIGHT", relativePoint = "BOTTOMRIGHT", anchorFrame = "UIParent",
@@ -105,16 +105,16 @@ local function MinimapDefaults()
         -- buffs, barras de faccion, etc).
         showBelowMinimapWidget = true,
         widgetOffsetX = 0, widgetOffsetY = -6,
-    }
+    })
 end
 ns.MinimapDefaults = MinimapDefaults
 
 local mm = {}   -- referencias internas del modulo
 ns.minimap = mm
 
-local function P() return ns.GetDB() and ns.GetDB().minimap end
+local function P() Perfy_Trace(Perfy_GetTime(), "Enter", "P MyCustomFrames/Minimap.lua:115:6"); return Perfy_Trace_Passthrough("Leave", "P MyCustomFrames/Minimap.lua:115:6", ns.GetDB() and ns.GetDB().minimap) end
 ns.MINIMAP_KEY = "minimap"
-ns.IsMinimap = function(key) return key == ns.MINIMAP_KEY end
+ns.IsMinimap = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.IsMinimap MyCustomFrames/Minimap.lua:117:15"); return Perfy_Trace_Passthrough("Leave", "ns.IsMinimap MyCustomFrames/Minimap.lua:117:15", key == ns.MINIMAP_KEY) end
 
 -- ==========================================================================
 -- FORMA: mascara redonda + fondo opaco + borde decorativo
@@ -130,9 +130,9 @@ ns.IsMinimap = function(key) return key == ns.MINIMAP_KEY end
 -- proporcion 398/198 de los valores originales de AzeriteUI).
 local BORDER_RATIO = 398 / 198
 
-local function LayoutShape()
+local function LayoutShape() Perfy_Trace(Perfy_GetTime(), "Enter", "LayoutShape MyCustomFrames/Minimap.lua:133:6");
     local root = mm.root
-    if not root then return end
+    if not root then Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutShape MyCustomFrames/Minimap.lua:133:6"); return end
     local mapW = Minimap:GetWidth() or 198
     if not mapW or mapW <= 0 then mapW = 198 end
     local borderSize = mapW * BORDER_RATIO
@@ -146,10 +146,10 @@ local function LayoutShape()
         root.backdrop:SetTexture((p.backdropTexture and p.backdropTexture ~= "" and p.backdropTexture) or MASK_OPAQUE)
         root.border:SetTexture((p.borderTexture and p.borderTexture ~= "" and p.borderTexture) or BORDER_TEX)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutShape MyCustomFrames/Minimap.lua:133:6"); end
 ns.LayoutMinimapShape = LayoutShape
 
-local function CreateShape()
+local function CreateShape() Perfy_Trace(Perfy_GetTime(), "Enter", "CreateShape MyCustomFrames/Minimap.lua:152:6");
     local root = CreateFrame("Frame", "MyCF_MinimapRoot", UIParent)
     root:SetSize(408, 408)
     root:SetPoint("CENTER")
@@ -205,14 +205,14 @@ local function CreateShape()
     -- "flotando" detras/encima del nuestro. Minimap ya NO es hijo de ninguna de
     -- estas, asi que ocultarlas no nos afecta. HookScript OnShow por si Blizzard
     -- las vuelve a mostrar (p.ej. al cambiar de zona).
-    local function HideForever(f)
-        if not f then return end
+    local function HideForever(f) Perfy_Trace(Perfy_GetTime(), "Enter", "HideForever MyCustomFrames/Minimap.lua:208:10");
+        if not f then Perfy_Trace(Perfy_GetTime(), "Leave", "HideForever MyCustomFrames/Minimap.lua:208:10"); return end
         f:Hide()
         if not f._mcfHideHooked then
             f._mcfHideHooked = true
-            f:HookScript("OnShow", function(self) self:Hide() end)
+            f:HookScript("OnShow", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:213:35"); self:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:213:35"); end)
         end
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "HideForever MyCustomFrames/Minimap.lua:208:10"); end
     HideForever(MinimapCluster)
     HideForever(_G.MinimapBackdrop)
     HideForever(_G.MinimapBorder)
@@ -252,14 +252,14 @@ local function CreateShape()
     mm.root = root
     LayoutShape()
 
-    local function StartDrag(self)
+    local function StartDrag(self) Perfy_Trace(Perfy_GetTime(), "Enter", "StartDrag MyCustomFrames/Minimap.lua:255:10");
         if ns.IsUnlocked() and not InCombatLockdown() and not self.isMoving then
             self.isMoving = true
             self:StartMoving()
         end
-    end
-    local function FinishDrag(self)
-        if not self.isMoving then return end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "StartDrag MyCustomFrames/Minimap.lua:255:10"); end
+    local function FinishDrag(self) Perfy_Trace(Perfy_GetTime(), "Enter", "FinishDrag MyCustomFrames/Minimap.lua:261:10");
+        if not self.isMoving then Perfy_Trace(Perfy_GetTime(), "Leave", "FinishDrag MyCustomFrames/Minimap.lua:261:10"); return end
         self.isMoving = false
         self:StopMovingOrSizing()
         if ns.SnapFrameToGrid then ns.SnapFrameToGrid(self) end
@@ -275,11 +275,11 @@ local function CreateShape()
             p.offsetY = (fy * s - py * ps) / s
         end
         if ns.OnDragStopped then ns.OnDragStopped("minimap") end
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "FinishDrag MyCustomFrames/Minimap.lua:261:10"); end
 
     root:SetScript("OnDragStart", StartDrag)
     root:SetScript("OnDragStop", FinishDrag)
-    root:SetScript("OnHide", function(self) FinishDrag(self) end)
+    root:SetScript("OnHide", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:282:29"); FinishDrag(self) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:282:29"); end)
 
     -- El Minimap real (hijo, mouse propio) no propaga el drag de "root" -- por
     -- eso en Lock solo se podia mover agarrando el marco/fondo, no el circulo
@@ -289,18 +289,18 @@ local function CreateShape()
     -- recibir el click/rueda dentro del circulo. Los hooks sobre Minimap son
     -- un respaldo (por si editBG esta oculto por "hideEditOutline"); en juego
     -- normal, bloqueado, ninguno de los dos interfiere con el click/zoom nativo.
-    Minimap:HookScript("OnMouseDown", function(_, button)
+    Minimap:HookScript("OnMouseDown", function(_, button) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:292:38");
         if button == "LeftButton" then StartDrag(root) end
-    end)
-    Minimap:HookScript("OnMouseUp", function(_, button)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:292:38"); end)
+    Minimap:HookScript("OnMouseUp", function(_, button) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:295:36");
         if button == "LeftButton" then FinishDrag(root) end
-    end)
-    editBG:SetScript("OnMouseDown", function(_, button)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:295:36"); end)
+    editBG:SetScript("OnMouseDown", function(_, button) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:298:36");
         if button == "LeftButton" then StartDrag(root) end
-    end)
-    editBG:SetScript("OnMouseUp", function(_, button)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:298:36"); end)
+    editBG:SetScript("OnMouseUp", function(_, button) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:301:34");
         if button == "LeftButton" then FinishDrag(root) end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:301:34"); end)
 
     -- Red de seguridad (2026-07-18): si el boton se suelta fuera de root/Minimap
     -- (o el click nativo del mapa consume el evento y OnMouseUp nunca llega),
@@ -309,24 +309,24 @@ local function CreateShape()
     -- fisico del mouse y corta el movimiento apenas se suelta.
     local moveWatcher = CreateFrame("Frame")
     moveWatcher:Hide()
-    moveWatcher:SetScript("OnUpdate", function()
+    moveWatcher:SetScript("OnUpdate", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:312:38");
         if root.isMoving and not IsMouseButtonDown("LeftButton") then FinishDrag(root) end
         if not root.isMoving then moveWatcher:Hide() end
-    end)
-    hooksecurefunc(root, "StartMoving", function() moveWatcher:Show() end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:312:38"); end)
+    hooksecurefunc(root, "StartMoving", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:316:40"); moveWatcher:Show() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:316:40"); end)
 
     -- La rueda se ata a `editBG` (no a `root`): root nunca queda ARRIBA de
     -- Minimap en nivel de frame, asi que la rueda pasaba de largo a traves de
     -- el hacia el zoom nativo de camara del mapa. editBG si esta arriba, y
     -- solo tiene el mouse habilitado en Lock (ver RefreshMinimap), asi que
     -- fuera de Lock el zoom nativo de camara sigue intacto.
-    ns.AttachScaleWheel(editBG, function() return P() end, function() if ns.RefreshMinimap then ns.RefreshMinimap() end end)
-end
+    ns.AttachScaleWheel(editBG, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:323:32"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Minimap.lua:323:32", P()) end, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:323:59"); if ns.RefreshMinimap then ns.RefreshMinimap() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:323:59"); end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "CreateShape MyCustomFrames/Minimap.lua:152:6"); end
 
 -- ==========================================================================
 -- BRUJULA (N que rota con la camara si "rotateMinimap" esta activo)
 -- ==========================================================================
-local function CreateCompass()
+local function CreateCompass() Perfy_Trace(Perfy_GetTime(), "Enter", "CreateCompass MyCustomFrames/Minimap.lua:329:6");
     local f = CreateFrame("Frame", nil, mm.root)
     f:SetFrameLevel(Minimap:GetFrameLevel() + 5)
     -- Anclado al MINIMAP real (no a los bordes de "root", que es mucho mas grande
@@ -350,9 +350,9 @@ local function CreateCompass()
     -- + cache del ultimo estado aplicado para saltar el relayout si no cambio.
     local compassAcc = 0
     f._mcfLastMode, f._mcfLastAngle, f._mcfLastAlpha = nil, nil, nil
-    f:SetScript("OnUpdate", function(self, elapsed)
+    f:SetScript("OnUpdate", function(self, elapsed) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:353:28");
         compassAcc = compassAcc + elapsed
-        if compassAcc < 0.05 then return end
+        if compassAcc < 0.05 then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:353:28"); return end
         compassAcc = 0
         local p = P()
         if not (p and p.showCompass) then
@@ -360,7 +360,7 @@ local function CreateCompass()
                 self._mcfLastMode = "off"
                 self.north:SetAlpha(0)
             end
-            return
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:353:28"); return
         end
         local rotate = GetCVarBool and GetCVarBool("rotateMinimap")
         if not rotate then
@@ -370,7 +370,7 @@ local function CreateCompass()
                 self.north:SetPoint("TOP", self, "TOP", 0, 0)
                 self.north:SetAlpha(0.75)
             end
-            return
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:353:28"); return
         end
         local facing = GetPlayerFacing and ns.safeVal(GetPlayerFacing)
         if type(facing) ~= "number" then
@@ -378,61 +378,61 @@ local function CreateCompass()
                 self._mcfLastMode = "off"
                 self.north:SetAlpha(0)
             end
-            return
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:353:28"); return
         end
         local angle = -facing + halfPi
-        if self._mcfLastMode == "rotate" and self._mcfLastAngle == angle then return end
+        if self._mcfLastMode == "rotate" and self._mcfLastAngle == angle then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:353:28"); return end
         self._mcfLastMode, self._mcfLastAngle = "rotate", angle
         local radius = self:GetWidth() / 2
         self.north:ClearAllPoints()
         self.north:SetPoint("CENTER", self, "CENTER", radius * math.cos(angle), radius * math.sin(angle))
         self.north:SetAlpha(0.75)
-    end)
-end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:353:28"); end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "CreateCompass MyCustomFrames/Minimap.lua:329:6"); end
 
 -- ==========================================================================
 -- COORDENADAS
 -- ==========================================================================
-local function CreateCoordinates()
+local function CreateCoordinates() Perfy_Trace(Perfy_GetTime(), "Enter", "CreateCoordinates MyCustomFrames/Minimap.lua:396:6");
     local fs = mm.root:CreateFontString(nil, "OVERLAY", nil, 1)
     fs:SetFont("Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
     fs:SetTextColor(0.77, 0.77, 0.77, 0.75)
     mm.coords = fs
-    mm.LayoutCoords = function()
+    mm.LayoutCoords = function() Perfy_Trace(Perfy_GetTime(), "Enter", "mm.LayoutCoords MyCustomFrames/Minimap.lua:401:22");
         local p = P()
         fs:ClearAllPoints()
         fs:SetPoint("BOTTOM", (p and p.coordsOffsetX or 3), (p and p.coordsOffsetY or 23))
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "mm.LayoutCoords MyCustomFrames/Minimap.lua:401:22"); end
     mm.LayoutCoords()
 
     -- FontString no admite SetScript: el ticker va en un Frame "driver" aparte.
     local driver = CreateFrame("Frame", nil, mm.root)
     local acc = 0
-    driver:SetScript("OnUpdate", function(self, elapsed)
+    driver:SetScript("OnUpdate", function(self, elapsed) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:411:33");
         acc = acc + elapsed
-        if acc < 0.2 then return end
+        if acc < 0.2 then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:411:33"); return end
         acc = 0
         local p = P()
-        if not (p and p.showCoordinates) then fs:SetText("") return end
-        local ok, x, y = pcall(function()
+        if not (p and p.showCoordinates) then fs:SetText("") Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:411:33"); return end
+        local ok, x, y = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:417:31");
             local mapID = C_Map.GetBestMapForUnit("player")
-            if not mapID then return nil end
+            if not mapID then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:417:31"); return nil end
             local pos = C_Map.GetPlayerMapPosition(mapID, "player")
-            if not pos then return nil end
-            return pos:GetXY()
+            if not pos then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:417:31"); return nil end
+            return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Minimap.lua:417:31", pos:GetXY())
         end)
         if ok and x and y then
             fs:SetFormattedText("%.1f, %.1f", x * 100, y * 100)
         else
             fs:SetText("")
         end
-    end)
-end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:411:33"); end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "CreateCoordinates MyCustomFrames/Minimap.lua:396:6"); end
 
 -- ==========================================================================
 -- CORREO (icono/texto + tooltip)
 -- ==========================================================================
-local function CreateMail()
+local function CreateMail() Perfy_Trace(Perfy_GetTime(), "Enter", "CreateMail MyCustomFrames/Minimap.lua:435:6");
     local btn = CreateFrame("Button", nil, mm.root)
     btn:SetSize(90, 20)
     btn:SetFrameLevel(Minimap:GetFrameLevel() + 5)
@@ -464,32 +464,32 @@ local function CreateMail()
     reminderFlip:SetAtlas("UI-HUD-Minimap-Mail-Reminder-Flipbook")
     reminderFlip:SetAlpha(0)
 
-    local function MakeMailAnim(flipTex, duration, rows, cols, frames)
+    local function MakeMailAnim(flipTex, duration, rows, cols, frames) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeMailAnim MyCustomFrames/Minimap.lua:467:10");
         local ag = flipTex:CreateAnimationGroup()
         local a = ag:CreateAnimation("Alpha")
         a:SetDuration(0); a:SetFromAlpha(1); a:SetToAlpha(1); a:SetOrder(1)
         local fb = ag:CreateAnimation("FlipBook")
         fb:SetDuration(duration); fb:SetOrder(2); fb:SetSmoothing("NONE")
         fb:SetFlipBookRows(rows); fb:SetFlipBookColumns(cols); fb:SetFlipBookFrames(frames)
-        ag:SetScript("OnPlay", function() icon:SetShown(false) end)
-        ag:SetScript("OnFinished", function()
+        ag:SetScript("OnPlay", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:474:31"); icon:SetShown(false) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:474:31"); end)
+        ag:SetScript("OnFinished", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:475:35");
             flipTex:SetAlpha(0)
             icon:SetShown((HasNewMail and HasNewMail()) and true or false)
-        end)
-        return ag
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:475:35"); end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "MakeMailAnim MyCustomFrames/Minimap.lua:467:10"); return ag
     end
     local newMailAnim = MakeMailAnim(newFlip, 0.5, 5, 4, 20)
     local reminderAnim = MakeMailAnim(reminderFlip, 0.4, 3, 4, 12)
 
-    local function PlayMailNotification()
-        if newMailAnim:IsPlaying() or reminderAnim:IsPlaying() then return end
+    local function PlayMailNotification() Perfy_Trace(Perfy_GetTime(), "Enter", "PlayMailNotification MyCustomFrames/Minimap.lua:484:10");
+        if newMailAnim:IsPlaying() or reminderAnim:IsPlaying() then Perfy_Trace(Perfy_GetTime(), "Leave", "PlayMailNotification MyCustomFrames/Minimap.lua:484:10"); return end
         if GetCVarBool and GetCVarBool("notifiedOfNewMail") then
             reminderAnim:Play()
         else
             newMailAnim:Play()
             if SetCVar then SetCVar("notifiedOfNewMail", true) end
         end
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "PlayMailNotification MyCustomFrames/Minimap.lua:484:10"); end
     mm.PlayMailNotification = PlayMailNotification
 
     -- fs se ancla a btn (su propio padre), NUNCA al reves: btn:SetAllPoints(fs)
@@ -513,13 +513,13 @@ local function CreateMail()
     btn.editBG = ns.MakeEditHighlight(btn, "Mail")
     btn:SetMovable(true)
     btn:RegisterForDrag("LeftButton")
-    btn:SetScript("OnDragStart", function(self)
+    btn:SetScript("OnDragStart", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:516:33");
         if ns.IsUnlocked() and not InCombatLockdown() then self:StartMoving() end
-    end)
-    btn:SetScript("OnDragStop", function(self)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:516:33"); end)
+    btn:SetScript("OnDragStop", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:519:32");
         self:StopMovingOrSizing()
         local p = P()
-        if not p then return end
+        if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:519:32"); return end
         local s, ps = self:GetEffectiveScale(), mm.root:GetEffectiveScale()
         local l, r, b = self:GetLeft(), self:GetRight(), self:GetBottom()
         local pl, pr, pb = mm.root:GetLeft(), mm.root:GetRight(), mm.root:GetBottom()
@@ -528,7 +528,7 @@ local function CreateMail()
             p.mailOffsetY = (b * s - pb * ps) / s
         end
         if mm.LayoutMail then mm.LayoutMail() end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:519:32"); end)
 
     -- Pedido del usuario 2026-07-21: "que solo salga [el icono del minimapa] si
     -- el header desaparecio" -- pero la supresion por combate/dungeon/raid/pvp
@@ -536,7 +536,7 @@ local function CreateMail()
     -- en dungeon o raids etc, no el header") -- este icono NO consulta
     -- ns.IsMailNotificationSuppressed. MailBanner.lua expone ns.IsMailBannerShown;
     -- nil-safe por si ese archivo no cargo.
-    local function Update()
+    local function Update() Perfy_Trace(Perfy_GetTime(), "Enter", "Update MyCustomFrames/Minimap.lua:539:10");
         local p = P()
         local hasMail = HasNewMail and HasNewMail()
         local bannerShown = ns.IsMailBannerShown and ns.IsMailBannerShown()
@@ -544,11 +544,11 @@ local function CreateMail()
         fs:SetShown(show and true or false)
         icon:SetShown(show and true or false)
         btn:SetShown(show and true or false)
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "Update MyCustomFrames/Minimap.lua:539:10"); end
     mm.UpdateMail = Update
     ns.RefreshMailIndicator = Update
 
-    mm.LayoutMail = function()
+    mm.LayoutMail = function() Perfy_Trace(Perfy_GetTime(), "Enter", "mm.LayoutMail MyCustomFrames/Minimap.lua:551:20");
         local p = P()
         btn:ClearAllPoints()
         btn:SetPoint("BOTTOM", mm.root, "BOTTOM", (p and p.mailOffsetX) or 0, (p and p.mailOffsetY) or 30)
@@ -556,10 +556,10 @@ local function CreateMail()
         if btn.editBG then
             btn.editBG:SetShown(locked_edit and not (ns.GetDB() and ns.GetDB().hideEditOutline))
         end
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "mm.LayoutMail MyCustomFrames/Minimap.lua:551:20"); end
     mm.LayoutMail()
 
-    btn:SetScript("OnEnter", function(self)
+    btn:SetScript("OnEnter", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:562:29");
         GameTooltip_SetDefaultAnchor(GameTooltip, self)
         if HasNewMail and HasNewMail() then
             local senders = { GetLatestThreeSenders and GetLatestThreeSenders() }
@@ -571,13 +571,13 @@ local function CreateMail()
             end
         end
         GameTooltip:Show()
-    end)
-    btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:562:29"); end)
+    btn:SetScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:575:29"); GameTooltip:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:575:29"); end)
 
     local f = CreateFrame("Frame")
     f:RegisterEvent("UPDATE_PENDING_MAIL")
     f:RegisterEvent("PLAYER_ENTERING_WORLD")
-    f:SetScript("OnEvent", function(_, event)
+    f:SetScript("OnEvent", function(_, event) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:580:27");
         Update()
         -- Solo dispara la animacion en UPDATE_PENDING_MAIL (mismo evento que usa
         -- Blizzard para esto), nunca en PLAYER_ENTERING_WORLD -- asi no aparece un
@@ -585,8 +585,8 @@ local function CreateMail()
         if event == "UPDATE_PENDING_MAIL" and HasNewMail and HasNewMail() and P() and P().showMail then
             PlayMailNotification()
         end
-    end)
-end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:580:27"); end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "CreateMail MyCustomFrames/Minimap.lua:435:6"); end
 
 -- ==========================================================================
 -- TRACKING (icono + menu propio, pedido del usuario 2026-07-21 -- ya se habia
@@ -604,7 +604,7 @@ end
 -- "ui-hud-minimap-tracking-up" (el mismo binocular que usa Blizzard), sin
 -- necesitar arte propio.
 -- ==========================================================================
-local function CreateTracking()
+local function CreateTracking() Perfy_Trace(Perfy_GetTime(), "Enter", "CreateTracking MyCustomFrames/Minimap.lua:607:6");
     local btn = CreateFrame("DropdownButton", nil, mm.root)
     btn:SetSize(20, 20)
     btn:SetFrameLevel(Minimap:GetFrameLevel() + 5)
@@ -622,13 +622,13 @@ local function CreateTracking()
     btn.editBG = ns.MakeEditHighlight(btn, "Tracking")
     btn:SetMovable(true)
     btn:RegisterForDrag("LeftButton")
-    btn:SetScript("OnDragStart", function(self)
+    btn:SetScript("OnDragStart", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:625:33");
         if ns.IsUnlocked() and not InCombatLockdown() then self:StartMoving() end
-    end)
-    btn:SetScript("OnDragStop", function(self)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:625:33"); end)
+    btn:SetScript("OnDragStop", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:628:32");
         self:StopMovingOrSizing()
         local p = P()
-        if not p then return end
+        if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:628:32"); return end
         local s, ps = self:GetEffectiveScale(), mm.root:GetEffectiveScale()
         local fx, fy = self:GetCenter()
         local px, py = mm.root:GetCenter()
@@ -637,7 +637,7 @@ local function CreateTracking()
             p.trackingOffsetY = (fy * s - py * ps) / s
         end
         if mm.LayoutTracking then mm.LayoutTracking() end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:628:32"); end)
 
     -- Estado OPTIMISTA: medido en juego (ver mensajes de debug ya sacados), el build del
     -- menu tardaba <1.1ms -- el "no se activan/se demora" que reporto el usuario era
@@ -647,10 +647,10 @@ local function CreateTracking()
     -- muestra de una, hasta que la API real confirme lo mismo (ahi se limpia solo).
     local predicted = {}
 
-    btn:SetupMenu(function(dropdown, rootDescription)
+    btn:SetupMenu(function(dropdown, rootDescription) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:650:18");
         rootDescription:SetTag("MCF_MINIMAP_TRACKING")
 
-        if not (C_Minimap and C_Minimap.GetNumTrackingTypes) then return end
+        if not (C_Minimap and C_Minimap.GetNumTrackingTypes) then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:650:18"); return end
         local class = select(2, UnitClass("player"))
         local isHunter = class == "HUNTER"
         local hunterInfo, otherInfo = {}, {}
@@ -671,11 +671,11 @@ local function CreateTracking()
             end
         end
 
-        local function AddEntry(parentDesc, info)
+        local function AddEntry(parentDesc, info) Perfy_Trace(Perfy_GetTime(), "Enter", "AddEntry MyCustomFrames/Minimap.lua:674:14");
             local desc = parentDesc:CreateCheckbox(
                 info.name,
-                function(data) return data.active end,
-                function(data)
+                function(data) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:677:16"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Minimap.lua:677:16", data.active) end,
+                function(data) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:678:16");
                     -- FIX (bug real encontrado 2026-07-21, "tengo que salir del panel y
                     -- volver a entrar para que se actualice"): isSelectedFn (arriba) leia
                     -- SIEMPRE data.active, el snapshot congelado de cuando se armo el menu
@@ -687,34 +687,34 @@ local function CreateTracking()
                     predicted[data.index] = newVal
                     data.active = newVal
                     pcall(C_Minimap.SetTracking, data.index, newVal)
-                end,
+                Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:678:16"); end,
                 info)
             if info.texture then
-                desc:AddInitializer(function(button)
+                desc:AddInitializer(function(button) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:693:36");
                     local icon = button:AttachTexture()
                     icon:SetSize(16, 16)
                     icon:SetPoint("RIGHT")
                     icon:SetTexture(info.texture)
                     if info.type == "spell" then icon:SetTexCoord(0.0625, 0.9, 0.0625, 0.9) end
-                end)
+                Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:693:36"); end)
             end
-        end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "AddEntry MyCustomFrames/Minimap.lua:674:14"); end
 
         if #hunterInfo > 0 then
             local hunterMenu = (#hunterInfo > 1) and rootDescription:CreateButton(HUNTER_TRACKING_TEXT or "Hunter Tracking") or rootDescription
             for _, info in ipairs(hunterInfo) do AddEntry(hunterMenu, info) end
         end
         for _, info in ipairs(otherInfo) do AddEntry(rootDescription, info) end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:650:18"); end)
 
-    btn:SetScript("OnEnter", function(self)
+    btn:SetScript("OnEnter", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:710:29");
         GameTooltip_SetDefaultAnchor(GameTooltip, self)
         GameTooltip:SetText(TRACKING or "Tracking")
         GameTooltip:Show()
-    end)
-    btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:710:29"); end)
+    btn:SetScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:715:29"); GameTooltip:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:715:29"); end)
 
-    local function Layout()
+    local function Layout() Perfy_Trace(Perfy_GetTime(), "Enter", "Layout MyCustomFrames/Minimap.lua:717:10");
         local p = P()
         btn:SetShown(p and p.showTracking and true or false)
         btn:ClearAllPoints()
@@ -725,10 +725,10 @@ local function CreateTracking()
         if btn.editBG then
             btn.editBG:SetShown(locked_edit and not (ns.GetDB() and ns.GetDB().hideEditOutline))
         end
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "Layout MyCustomFrames/Minimap.lua:717:10"); end
     mm.LayoutTracking = Layout
     Layout()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "CreateTracking MyCustomFrames/Minimap.lua:607:6"); end
 
 -- ==========================================================================
 -- EYE (icono de cola de LFG) — se reparenta el boton nativo de Blizzard y se le
@@ -739,11 +739,11 @@ end
 local UIHider = CreateFrame("Frame")
 UIHider:Hide()
 
-local function LayoutEye()
+local function LayoutEye() Perfy_Trace(Perfy_GetTime(), "Enter", "LayoutEye MyCustomFrames/Minimap.lua:742:6");
     local p = P()
     local eye = _G.QueueStatusButton
-    if not eye then return end
-    if not (p and p.showEye) then return end
+    if not eye then Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutEye MyCustomFrames/Minimap.lua:742:6"); return end
+    if not (p and p.showEye) then Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutEye MyCustomFrames/Minimap.lua:742:6"); return end
 
     -- 2026-07-18: reparentar el boton NATIVO/protegido de Blizzard adentro de
     -- `root` contaminaba ("taint") ese frame de forma PERMANENTE -- root
@@ -802,22 +802,22 @@ local function LayoutEye()
         -- fondo: no llamar SetScale ACA para nada -- este hook solo necesita
         -- reacomodar al ojo, asi que llama solo LayoutEye() (que no toca
         -- root:SetScale en absoluto), nunca RefreshMinimap completo.
-        eye:HookScript("OnShow", function() LayoutEye() end)
+        eye:HookScript("OnShow", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:805:33"); LayoutEye() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:805:33"); end)
 
         -- Blizzard tambien llama SetPoint directo sobre el boton (fuera de
         -- OnShow) cuando cambia de estado de cola -- guard contra recursion
         -- infinita (nuestro propio SetPoint mas abajo dispara este mismo hook).
         local reasserting = false
-        hooksecurefunc(eye, "SetPoint", function()
-            if reasserting or not mm.root then return end
+        hooksecurefunc(eye, "SetPoint", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:811:40");
+            if reasserting or not mm.root then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:811:40"); return end
             reasserting = true
             LayoutEye()
             reasserting = false
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:811:40"); end)
     end
     mm.eyeTex:SetSize(64, 64)
     mm.eyeTex:SetTexture((p.eyeTexture and p.eyeTexture ~= "" and p.eyeTexture) or EYE_TEX)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutEye MyCustomFrames/Minimap.lua:742:6"); end
 
 -- ==========================================================================
 -- OCULTADO POR POSICION de los pines nativos (2026-07-27, reportado con
@@ -853,12 +853,12 @@ end
 -- sigue siendo `root`, quieto en su lugar de siempre.
 local minimapPinsHidden = false
 local pendingPinsShown = nil   -- nil = nada diferido; true/false = ultimo pedido, esperando salir de combate
-local function ApplyMinimapPinsShown(shown)
-    if not mm.root then return end
-    if shown == not minimapPinsHidden then return end   -- ya esta en ese estado
+local function ApplyMinimapPinsShown(shown) Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyMinimapPinsShown MyCustomFrames/Minimap.lua:856:6");
+    if not mm.root then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyMinimapPinsShown MyCustomFrames/Minimap.lua:856:6"); return end
+    if shown == not minimapPinsHidden then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyMinimapPinsShown MyCustomFrames/Minimap.lua:856:6"); return end   -- ya esta en ese estado
     if InCombatLockdown() then
         pendingPinsShown = shown
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyMinimapPinsShown MyCustomFrames/Minimap.lua:856:6"); return
     end
     pendingPinsShown = nil
     minimapPinsHidden = not shown
@@ -870,14 +870,14 @@ local function ApplyMinimapPinsShown(shown)
         -- (no un punto fijo que pudiera coincidir con otra UI).
         Minimap:SetPoint("CENTER", UIParent, "BOTTOMLEFT", -2000, -2000)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyMinimapPinsShown MyCustomFrames/Minimap.lua:856:6"); end
 ns.SetMinimapPinsShown = ApplyMinimapPinsShown
 
 local minimapPinsCombatFrame = CreateFrame("Frame")
 minimapPinsCombatFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-minimapPinsCombatFrame:SetScript("OnEvent", function()
+minimapPinsCombatFrame:SetScript("OnEvent", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:878:44");
     if pendingPinsShown ~= nil then ApplyMinimapPinsShown(pendingPinsShown) end
-end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:878:44"); end)
 
 -- ==========================================================================
 -- WIDGET "below minimap" NATIVO de Blizzard (UIWidgetBelowMinimapContainerFrame
@@ -889,11 +889,11 @@ end)
 -- ancla visualmente a mm.root, y el frame nativo se reparenta a ESE holder.
 -- No se le toca el arte (a diferencia del ojo) -- solo se reposiciona.
 -- ==========================================================================
-local function LayoutBelowMinimapWidget()
+local function LayoutBelowMinimapWidget() Perfy_Trace(Perfy_GetTime(), "Enter", "LayoutBelowMinimapWidget MyCustomFrames/Minimap.lua:892:6");
     local p = P()
     local w = _G.UIWidgetBelowMinimapContainerFrame
-    if not w then return end
-    if not (p and p.showBelowMinimapWidget ~= false) then return end
+    if not w then Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutBelowMinimapWidget MyCustomFrames/Minimap.lua:892:6"); return end
+    if not (p and p.showBelowMinimapWidget ~= false) then Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutBelowMinimapWidget MyCustomFrames/Minimap.lua:892:6"); return end
 
     if not mm.widgetHolder then
         local holder = CreateFrame("Frame", nil, UIParent)
@@ -905,12 +905,12 @@ local function LayoutBelowMinimapWidget()
     holder:ClearAllPoints()
     holder:SetPoint("TOP", mm.root, "BOTTOM", (p.widgetOffsetX or 0), (p.widgetOffsetY or -6))
 
-    local ok = pcall(function()
+    local ok = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:908:21");
         w:SetParent(holder)
         w:ClearAllPoints()
         w:SetPoint("TOP", holder, "TOP", 0, 0)
-    end)
-    if not ok then return end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:908:21"); end)
+    if not ok then Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutBelowMinimapWidget MyCustomFrames/Minimap.lua:892:6"); return end
 
     if not mm._widgetHooked then
         mm._widgetHooked = true
@@ -919,22 +919,22 @@ local function LayoutBelowMinimapWidget()
         -- guard anti-recursion que el ojo (nuestro propio SetPoint de arriba
         -- dispara este mismo hook).
         local reasserting = false
-        local ok2 = pcall(hooksecurefunc, w, "SetPoint", function()
-            if reasserting or not mm.root then return end
+        local ok2 = pcall(hooksecurefunc, w, "SetPoint", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:922:57");
+            if reasserting or not mm.root then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:922:57"); return end
             reasserting = true
             LayoutBelowMinimapWidget()
             reasserting = false
-        end)
-        if ok2 then w:HookScript("OnShow", function() LayoutBelowMinimapWidget() end) end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:922:57"); end)
+        if ok2 then w:HookScript("OnShow", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:928:43"); LayoutBelowMinimapWidget() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:928:43"); end) end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutBelowMinimapWidget MyCustomFrames/Minimap.lua:892:6"); end
 
 -- ==========================================================================
 -- BOTON DE DESMONTAR / SALIR DE VEHICULO (accion protegida -> frame seguro,
 -- mismo patron que el overlay de cancelar buff de Auras.lua: SecureActionButtonTemplate
 -- + macrotext + RegisterStateDriver para mostrar/ocultar sin taint).
 -- ==========================================================================
-local function CreateDismountButton()
+local function CreateDismountButton() Perfy_Trace(Perfy_GetTime(), "Enter", "CreateDismountButton MyCustomFrames/Minimap.lua:937:6");
     local btn = CreateFrame("Button", "MyCF_MinimapDismount", mm.root, "SecureActionButtonTemplate")
     btn:SetFrameStrata("MEDIUM")
     btn:SetFrameLevel(mm.root:GetFrameLevel() + 10)
@@ -944,12 +944,12 @@ local function CreateDismountButton()
     -- offset del menu se refleje EN VIVO via RefreshMinimap, igual que el eye.
     -- SetPoint en un frame SECURE fuera de combate es seguro; se salta si
     -- InCombatLockdown (igual que el resto de los frames movibles del addon).
-    mm.LayoutDismount = function()
-        if InCombatLockdown() then return end
+    mm.LayoutDismount = function() Perfy_Trace(Perfy_GetTime(), "Enter", "mm.LayoutDismount MyCustomFrames/Minimap.lua:947:24");
+        if InCombatLockdown() then Perfy_Trace(Perfy_GetTime(), "Leave", "mm.LayoutDismount MyCustomFrames/Minimap.lua:947:24"); return end
         local p = P()
         btn:ClearAllPoints()
         btn:SetPoint("TOP", Minimap, "TOP", (p and p.dismountOffsetX or 0), (p and p.dismountOffsetY or 42))
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "mm.LayoutDismount MyCustomFrames/Minimap.lua:947:24"); end
     mm.LayoutDismount()
 
     btn:SetAttribute("type", "macro")
@@ -965,7 +965,7 @@ local function CreateDismountButton()
     btn.tex = tex
     mm.dismountTex = tex
 
-    btn:SetScript("OnEnter", function(self)
+    btn:SetScript("OnEnter", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:968:29");
         GameTooltip_SetDefaultAnchor(GameTooltip, self)
         if UnitOnTaxi and UnitOnTaxi("player") then
             GameTooltip:AddLine(TAXI_CANCEL or "Cancel Flight")
@@ -975,11 +975,11 @@ local function CreateDismountButton()
             GameTooltip:AddLine(BINDING_NAME_VEHICLEEXIT or "Leave Vehicle")
         end
         GameTooltip:Show()
-    end)
-    btn:SetScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:968:29"); end)
+    btn:SetScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:979:29"); if not GameTooltip:IsForbidden() then GameTooltip:Hide() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:979:29"); end)
 
     mm.dismountBtn = btn
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "CreateDismountButton MyCustomFrames/Minimap.lua:937:6"); end
 
 -- ==========================================================================
 -- ANILLO DE XP / REPUTACION / HONOR / RENOWN (LibSpinBar)
@@ -1003,8 +1003,8 @@ end
 -- Separado en LayoutRing() (recalcula k y reaplica todo lo que depende de el)
 -- vs CreateRing() (crea los frames una sola vez). LayoutRing corre desde
 -- RefreshMinimap, igual que el resto de las piezas del minimapa.
-local function LayoutRing()
-    if not (LSB and mm.ringFrame and mm.ringButton and mm.ringBar) then return end
+local function LayoutRing() Perfy_Trace(Perfy_GetTime(), "Enter", "LayoutRing MyCustomFrames/Minimap.lua:1006:6");
+    if not (LSB and mm.ringFrame and mm.ringButton and mm.ringBar) then Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutRing MyCustomFrames/Minimap.lua:1006:6"); return end
     local k = (Minimap:GetWidth() or 198) / 198
     local frame, button, ring = mm.ringFrame, mm.ringButton, mm.ringBar
     frame:SetSize(213 * k, 213 * k)
@@ -1018,11 +1018,11 @@ local function LayoutRing()
     ring:SetPoint("CENTER", 0, 2 * k)
     ring:SetSparkInset((24 * 208 / 256) * k)
     ring:SetSparkSize(34 * 208 / 256 * k, 30 * k)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutRing MyCustomFrames/Minimap.lua:1006:6"); end
 mm.LayoutRing = LayoutRing
 
-local function CreateRing()
-    if not LSB then return end
+local function CreateRing() Perfy_Trace(Perfy_GetTime(), "Enter", "CreateRing MyCustomFrames/Minimap.lua:1024:6");
+    if not LSB then Perfy_Trace(Perfy_GetTime(), "Leave", "CreateRing MyCustomFrames/Minimap.lua:1024:6"); return end
 
     -- "frame" (el anillo/backdrop) va parentado a mm.root con un nivel base propio;
     -- "button" (el icono/toggle) se pone POR ENCIMA sumando, nunca restando del nivel
@@ -1107,7 +1107,7 @@ local function CreateRing()
     -- asi que aunque el anillo tape visualmente, el mapa seguiria ganando el
     -- z-order -> hay que Hide()/Show() el Minimap real, no solo la alpha del anillo.
     local FADE_IN, FADE_OUT = 0.4, 0.4
-    button:SetScript("OnUpdate", function(self, elapsed)
+    button:SetScript("OnUpdate", function(self, elapsed) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:1110:33");
         -- SOLO el boton chico ("49") activa el hover -- self.frame (el anillo
         -- grande) ocupa casi todo el minimapa, si tambien contara aca se activaria
         -- con el mouse en cualquier parte del mapa, no solo en el boton.
@@ -1124,7 +1124,7 @@ local function CreateRing()
                 if self.frame:IsShown() then self.frame:Hide() end
                 if Minimap:GetAlpha() < 1 then Minimap:SetAlpha(1) end
             end
-            return
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:1110:33"); return
         end
         local speed = (target > cur) and (1 / FADE_IN) or (1 / FADE_OUT)
         cur = cur + (target - cur >= 0 and 1 or -1) * speed * elapsed
@@ -1133,9 +1133,9 @@ local function CreateRing()
         if cur > 0 and not self.frame:IsShown() then self.frame:Show() end
         self.frame:SetAlpha(cur)
         if cur == 0 and Minimap:GetAlpha() < 1 then Minimap:SetAlpha(1) end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:1110:33"); end)
 
-    button:SetScript("OnEnter", function(self)
+    button:SetScript("OnEnter", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:1138:32");
         GameTooltip_SetDefaultAnchor(GameTooltip, self)
         if self._mode == "xp" then
             GameTooltip:AddLine(COMBAT_XP_GAIN or "Experience", 1, 0.82, 0)
@@ -1149,21 +1149,21 @@ local function CreateRing()
             if self._desc2 and self._desc2 ~= "" then GameTooltip:AddLine(self._desc2, 1, 0.82, 0) end
         end
         GameTooltip:Show()
-    end)
-    button:SetScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:1138:32"); end)
+    button:SetScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:1153:32"); if not GameTooltip:IsForbidden() then GameTooltip:Hide() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:1153:32"); end)
     button:EnableMouse(true)
     button:SetMouseClickEnabled(false)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "CreateRing MyCustomFrames/Minimap.lua:1024:6"); end
 
 -- Diagnostico de la "zona muerta" reportada 2026-07-18: imprime el estado real
 -- de mouse/lock del minimapa para confirmar si root/editBG quedaron prendidos
 -- fuera de Lock, o si el bloqueo viene de otro frame flotando encima (ej. un
 -- popup del menu que no se cerro).
 SLASH_MCFMMDIAG1 = "/mcfmmdiag"
-SlashCmdList["MCFMMDIAG"] = function()
+SlashCmdList["MCFMMDIAG"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFMMDIAG MyCustomFrames/Minimap.lua:1163:28");
     local root = mm.root
     print("|cff00ff00[MCF diag]|r IsUnlocked=" .. tostring(ns.IsUnlocked and ns.IsUnlocked()))
-    if not root then print("  root=nil"); return end
+    if not root then print("  root=nil"); Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFMMDIAG MyCustomFrames/Minimap.lua:1163:28"); return end
     print(("  root: mouse=%s w=%.0f h=%.0f strata=%s"):format(
         tostring(root:IsMouseEnabled()), root:GetWidth() or -1, root:GetHeight() or -1, root:GetFrameStrata()))
     if root.editBG then
@@ -1174,7 +1174,7 @@ SlashCmdList["MCFMMDIAG"] = function()
     x, y = x / scale, y / scale
     local f = GetMouseFocus and GetMouseFocus()
     print(("  cursor screen=(%.0f,%.0f)  mouseFocus=%s"):format(x, y, f and (f:GetName() or "<anon>") or "nil"))
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFMMDIAG MyCustomFrames/Minimap.lua:1163:28"); end
 
 -- Diagnostico 2026-07-19 (pedido del usuario: "el backdrop del ring sale por
 -- debajo de otros iconos") -- recorre TODOS los frames visibles cuyo CENTRO
@@ -1183,16 +1183,16 @@ end
 -- hijos reales de el, y por eso HideForever(MinimapCluster) no los alcanza).
 -- Imprime nombre/strata/nivel de cada uno para identificar cual es cual.
 SLASH_MCFMAPICONSDIAG1 = "/mcfmapiconsdiag"
-SlashCmdList["MCFMAPICONSDIAG"] = function()
-    if not mm.root then print("|cff00ff00[MCF]|r minimap no inicializado"); return end
+SlashCmdList["MCFMAPICONSDIAG"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFMAPICONSDIAG MyCustomFrames/Minimap.lua:1186:34");
+    if not mm.root then print("|cff00ff00[MCF]|r minimap no inicializado"); Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFMAPICONSDIAG MyCustomFrames/Minimap.lua:1186:34"); return end
     local rx, ry = mm.root:GetCenter()
-    if not rx then print("|cff00ff00[MCF]|r root sin centro (oculto?)"); return end
+    if not rx then print("|cff00ff00[MCF]|r root sin centro (oculto?)"); Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFMAPICONSDIAG MyCustomFrames/Minimap.lua:1186:34"); return end
     local radius = (mm.root:GetWidth() or 200)
     print(("|cff00ff00[MCF mapicons diag]|r root strata=%s level=%d centro=(%.0f,%.0f) radio~%.0f"):format(
         mm.root:GetFrameStrata(), mm.root:GetFrameLevel(), rx, ry, radius))
     local seen, count = {}, 0
-    local function scan(frame, depth)
-        if depth > 6 or type(frame) ~= "table" or seen[frame] then return end
+    local function scan(frame, depth) Perfy_Trace(Perfy_GetTime(), "Enter", "scan MyCustomFrames/Minimap.lua:1194:10");
+        if depth > 6 or type(frame) ~= "table" or seen[frame] then Perfy_Trace(Perfy_GetTime(), "Leave", "scan MyCustomFrames/Minimap.lua:1194:10"); return end
         seen[frame] = true
         local okShown, shown = pcall(frame.IsShown, frame)
         if okShown and shown and frame ~= mm.root then
@@ -1222,15 +1222,15 @@ SlashCmdList["MCFMAPICONSDIAG"] = function()
                 for _, c in ipairs({ frame:GetChildren() }) do scan(c, depth + 1) end
             end
         end
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "scan MyCustomFrames/Minimap.lua:1194:10"); end
     scan(UIParent, 0)
     print(("|cff00ff00[MCF mapicons diag]|r %d frames visibles dentro del radio"):format(count))
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFMAPICONSDIAG MyCustomFrames/Minimap.lua:1186:34"); end
 
 -- Actualiza el anillo: prioridad reputacion vigilada > paragon > major
 -- faction/renown > friendship > reputacion normal > XP (igual que AzeriteUI).
 SLASH_MCFRINGDIAG1 = "/mcfringdiag"
-SlashCmdList["MCFRINGDIAG"] = function()
+SlashCmdList["MCFRINGDIAG"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFRINGDIAG MyCustomFrames/Minimap.lua:1233:30");
     print("|cff00ff00[MCF diag]|r GetWatchedFactionInfo=" .. tostring(GetWatchedFactionInfo ~= nil))
     if GetWatchedFactionInfo then
         local ok, name, reaction, minv, maxv, curv, factionID = pcall(GetWatchedFactionInfo)
@@ -1278,13 +1278,13 @@ SlashCmdList["MCFRINGDIAG"] = function()
         print("  ring frame:IsShown()=" .. tostring(mm.ringButton.frame:IsShown()) .. " alpha=" .. tostring(mm.ringButton.frame:GetAlpha()))
         print("  ring:GetSize()=" .. tostring(select(1, ring:GetSize())) .. "x" .. tostring(select(2, ring:GetSize())))
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFRINGDIAG MyCustomFrames/Minimap.lua:1233:30"); end
 
-local function UpdateRing()
+local function UpdateRing() Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateRing MyCustomFrames/Minimap.lua:1283:6");
     local btn = mm.ringButton
-    if not btn then return end
+    if not btn then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateRing MyCustomFrames/Minimap.lua:1283:6"); return end
     local p = P()
-    if not (p and p.showRing) then btn:Hide() return end
+    if not (p and p.showRing) then btn:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateRing MyCustomFrames/Minimap.lua:1283:6"); return end
 
     -- /mcfringdiag confirmo: GetWatchedFactionInfo NO existe en este cliente, el
     -- reemplazo es C_Reputation.GetWatchedFactionData() (devuelve UNA tabla, no
@@ -1349,7 +1349,7 @@ local function UpdateRing()
     if not mode then
         if (IsPlayerAtEffectiveMaxLevel and IsPlayerAtEffectiveMaxLevel()) or (IsXPUserDisabled and IsXPUserDisabled()) then
             btn:Hide()
-            return
+            Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateRing MyCustomFrames/Minimap.lua:1283:6"); return
         end
         mode = "xp"
         barMin, barMax = 0, UnitXPMax("player") or 1
@@ -1422,7 +1422,7 @@ local function UpdateRing()
     btn.desc:SetText(desc)
     btn._mode, btn._label, btn._desc2 = mode, label, desc
     btn._barMin, btn._barMax, btn._barVal, btn._restedXP = barMin, barMax, barVal, restedXP
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateRing MyCustomFrames/Minimap.lua:1283:6"); end
 ns.UpdateMinimapRing = UpdateRing
 
 -- ==========================================================================
@@ -1432,14 +1432,14 @@ ns.UpdateMinimapRing = UpdateRing
 -- PLAYER_REGEN_ENABLED. Mismo patron que pendingPinsShown mas abajo en este
 -- archivo.
 local pendingRefresh = false
-local function RefreshMinimap()
+local function RefreshMinimap() Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshMinimap MyCustomFrames/Minimap.lua:1435:6");
     local p = P()
-    if not p then return end
+    if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshMinimap MyCustomFrames/Minimap.lua:1435:6"); return end
     local root = mm.root
     -- Puede llamarse desde core.lua (RefreshAll en ADDON_LOADED) ANTES de que
     -- Init() de este archivo haya corrido (su frame de eventos se registra
     -- despues del de core.lua, asi que ese ADDON_LOADED le llega segundo).
-    if not root then return end
+    if not root then Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshMinimap MyCustomFrames/Minimap.lua:1435:6"); return end
     -- EN COMBATE NO SE TOCA NADA (2026-07-29, ADDON_ACTION_BLOCKED reportado:
     -- "MyCustomFrames tried to call the protected function
     -- 'MyCF_MinimapRoot:SetScale()'", disparado por el ticker de housing de
@@ -1457,7 +1457,7 @@ local function RefreshMinimap()
     -- offsets del perfil en una pasada que despues no va a poder aplicarlos.
     if InCombatLockdown() then
         pendingRefresh = true
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshMinimap MyCustomFrames/Minimap.lua:1435:6"); return
     end
     pendingRefresh = false
     -- B3 (mismo fix que unidades/portraits/auras, ver CompensateScale en core.lua):
@@ -1512,23 +1512,23 @@ local function RefreshMinimap()
     end
     if mm.LayoutRing then mm.LayoutRing() end
     UpdateRing()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshMinimap MyCustomFrames/Minimap.lua:1435:6"); end
 ns.RefreshMinimap = RefreshMinimap
 
 local minimapRefreshCombatFrame = CreateFrame("Frame")
 minimapRefreshCombatFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-minimapRefreshCombatFrame:SetScript("OnEvent", function()
+minimapRefreshCombatFrame:SetScript("OnEvent", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:1520:47");
     if pendingRefresh then RefreshMinimap() end
-end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:1520:47"); end)
 
 -- ==========================================================================
 -- INICIALIZACION
 -- ==========================================================================
 local initialized = false
-local function Init()
-    if initialized then return end
-    if not ns.GetDB() then return end
-    if not (ns.GetDB().minimap) then return end
+local function Init() Perfy_Trace(Perfy_GetTime(), "Enter", "Init MyCustomFrames/Minimap.lua:1528:6");
+    if initialized then Perfy_Trace(Perfy_GetTime(), "Leave", "Init MyCustomFrames/Minimap.lua:1528:6"); return end
+    if not ns.GetDB() then Perfy_Trace(Perfy_GetTime(), "Leave", "Init MyCustomFrames/Minimap.lua:1528:6"); return end
+    if not (ns.GetDB().minimap) then Perfy_Trace(Perfy_GetTime(), "Leave", "Init MyCustomFrames/Minimap.lua:1528:6"); return end
     initialized = true
 
     -- Migracion puntual (2026-07-21): el boton de tracking se guardo con su primer
@@ -1559,13 +1559,15 @@ local function Init()
     f:RegisterEvent("UPDATE_FACTION")
     f:RegisterEvent("HONOR_XP_UPDATE")
     f:RegisterEvent("MAJOR_FACTION_RENOWN_LEVEL_CHANGED")
-    f:SetScript("OnEvent", function() UpdateRing() end)
-end
+    f:SetScript("OnEvent", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:1562:27"); UpdateRing() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:1562:27"); end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "Init MyCustomFrames/Minimap.lua:1528:6"); end
 
 local ev = CreateFrame("Frame")
 ev:RegisterEvent("ADDON_LOADED")
 ev:RegisterEvent("PLAYER_ENTERING_WORLD")
-ev:SetScript("OnEvent", function(self, event, arg1)
-    if event == "ADDON_LOADED" and arg1 ~= ADDON then return end
+ev:SetScript("OnEvent", function(self, event, arg1) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Minimap.lua:1568:24");
+    if event == "ADDON_LOADED" and arg1 ~= ADDON then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:1568:24"); return end
     Init()
-end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Minimap.lua:1568:24"); end)
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Minimap.lua");

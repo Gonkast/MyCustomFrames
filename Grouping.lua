@@ -1,4 +1,4 @@
--- ==========================================================================
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Grouping.lua"); -- ==========================================================================
 -- MyCustomFrames - Grouping.lua
 -- AGRUPAMIENTO DE ARRASTRE (drag-linking) en modo edicion: al mover el elemento
 -- LIDER, sus SEGUIDORES se mueven con la MISMA delta. Cada elemento conserva sus
@@ -32,17 +32,17 @@ local PARTY_PORTRAITS = {
     "portrait_party1", "portrait_party2", "portrait_party3", "portrait_party4", "portrait_party5",
 }
 
-local function nudgeUnit(db, key, dx, dy)
+local function nudgeUnit(db, key, dx, dy) Perfy_Trace(Perfy_GetTime(), "Enter", "nudgeUnit MyCustomFrames/Grouping.lua:35:6");
     local p = db.units and db.units[key]
-    if not p then return end
+    if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "nudgeUnit MyCustomFrames/Grouping.lua:35:6"); return end
     p.offsetX = (p.offsetX or 0) + dx
     p.offsetY = (p.offsetY or 0) + dy
     if ns.RefreshUnit then ns.RefreshUnit(key) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "nudgeUnit MyCustomFrames/Grouping.lua:35:6"); end
 
-local function nudgePortrait(db, key, dx, dy)
+local function nudgePortrait(db, key, dx, dy) Perfy_Trace(Perfy_GetTime(), "Enter", "nudgePortrait MyCustomFrames/Grouping.lua:43:6");
     local p = db.portraits and db.portraits[key]
-    if not p then return end
+    if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "nudgePortrait MyCustomFrames/Grouping.lua:43:6"); return end
     -- Mueve la posicion que se esta editando (center/alt). Los portraits sin dualPos
     -- solo tienen "center".
     if p.editPos == "alt" then
@@ -53,13 +53,13 @@ local function nudgePortrait(db, key, dx, dy)
         p.centerY = (p.centerY or 0) + dy
     end
     if ns.RefreshPortrait then ns.RefreshPortrait(key) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "nudgePortrait MyCustomFrames/Grouping.lua:43:6"); end
 
 -- Mueve los seguidores del LIDER por la delta (dx, dy) en unidades del frame lider.
-function ns.MoveFollowers(leaderKey, dx, dy)
-    if not (dx and dy) or (dx == 0 and dy == 0) then return end
+function ns.MoveFollowers(leaderKey, dx, dy) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.MoveFollowers MyCustomFrames/Grouping.lua:59:0");
+    if not (dx and dy) or (dx == 0 and dy == 0) then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.MoveFollowers MyCustomFrames/Grouping.lua:59:0"); return end
     local db = ns.GetDB()
-    if not db then return end
+    if not db then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.MoveFollowers MyCustomFrames/Grouping.lua:59:0"); return end
     local list = DRAG_FOLLOW[leaderKey]
     if list then
         for _, e in ipairs(list) do
@@ -70,4 +70,6 @@ function ns.MoveFollowers(leaderKey, dx, dy)
     if leaderKey:sub(1, 5) == "party" and db.groupMoveParty then
         for _, pk in ipairs(PARTY_PORTRAITS) do nudgePortrait(db, pk, dx, dy) end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.MoveFollowers MyCustomFrames/Grouping.lua:59:0"); end
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Grouping.lua");

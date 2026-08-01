@@ -1,4 +1,4 @@
-DynamicCamDB = {
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Profiles/DynamicCam/DynamicCam.lua"); DynamicCamDB = {
 ["global"] = {
 ["popOutFrame"] = {
 ["height"] = 720,
@@ -1025,3 +1025,5 @@ DynamicCamDB = {
 }
 minZoomValues = {
 }
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Profiles/DynamicCam/DynamicCam.lua");

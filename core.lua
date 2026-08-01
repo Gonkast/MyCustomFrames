@@ -1,4 +1,4 @@
--- ==========================================================================
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/core.lua"); -- ==========================================================================
 -- MyCustomFrames - core.lua
 -- Logica de las unidades: definiciones, DB, relleno, textos, cage, eventos,
 -- modo edicion/preview, presets. La UI del menu va en Options.lua.
@@ -11,12 +11,12 @@
 
 local ADDON, ns = ...
 
-local function hexcol(h)
-    return {
+local function hexcol(h) Perfy_Trace(Perfy_GetTime(), "Enter", "hexcol MyCustomFrames/core.lua:14:6");
+    return Perfy_Trace_Passthrough("Leave", "hexcol MyCustomFrames/core.lua:14:6", {
         r = tonumber(h:sub(1, 2), 16) / 255,
         g = tonumber(h:sub(3, 4), 16) / 255,
         b = tonumber(h:sub(5, 6), 16) / 255,
-    }
+    })
 end
 ns.hexcol = hexcol
 
@@ -194,17 +194,17 @@ for _, f in ipairs({
 }) do SKINNABLE[f] = true end
 ns.SKINNABLE = SKINNABLE
 
-local function SkinResolve(filename)
+local function SkinResolve(filename) Perfy_Trace(Perfy_GetTime(), "Enter", "SkinResolve MyCustomFrames/core.lua:197:6");
     -- No esta en la lista blanca -> SIEMPRE el asset del addon principal.
-    if not SKINNABLE[filename] then return A .. filename end
+    if not SKINNABLE[filename] then return Perfy_Trace_Passthrough("Leave", "SkinResolve MyCustomFrames/core.lua:197:6", A .. filename) end
     -- ActiveSkinBasePath (addon-skin SEPARADO, ej. MyCustomFrames_Charcoal) tiene
     -- prioridad sobre ActiveSkinFolder (subcarpeta interna de Assets\, ej. el
     -- ejemplo "Neon"): son dos formas de declarar una skin, mutuamente excluyentes.
     local base = ns.ActiveSkinBasePath
-    if base then return base .. filename end
+    if base then return Perfy_Trace_Passthrough("Leave", "SkinResolve MyCustomFrames/core.lua:197:6", base .. filename) end
     local folder = ns.ActiveSkinFolder or ""
-    if folder ~= "" then return A .. folder .. filename end
-    return A .. filename
+    if folder ~= "" then return Perfy_Trace_Passthrough("Leave", "SkinResolve MyCustomFrames/core.lua:197:6", A .. folder .. filename) end
+    return Perfy_Trace_Passthrough("Leave", "SkinResolve MyCustomFrames/core.lua:197:6", A .. filename)
 end
 ns.SkinResolve = SkinResolve
 
@@ -225,13 +225,13 @@ ns.SkinResolve = SkinResolve
 -- detectar si un archivo existe (SetTexture miente, ver el FIX CRITICO en
 -- SkinResolve), asi que un archivo faltante de esa lista se renderiza INVISIBLE.
 -- ==========================================================================
-_G.MCF_RegisterSkin = function(label, basePath, msqSkin)
-    if type(label) ~= "string" or label == "" or type(basePath) ~= "string" then return end
+_G.MCF_RegisterSkin = function(label, basePath, msqSkin) Perfy_Trace(Perfy_GetTime(), "Enter", "_G.MCF_RegisterSkin MyCustomFrames/core.lua:228:22");
+    if type(label) ~= "string" or label == "" or type(basePath) ~= "string" then Perfy_Trace(Perfy_GetTime(), "Leave", "_G.MCF_RegisterSkin MyCustomFrames/core.lua:228:22"); return end
     for _, skin in ipairs(ns.TEX_SKINS) do
-        if skin.label == label then return end   -- ya registrado (ej. /reload), no duplicar
+        if skin.label == label then Perfy_Trace(Perfy_GetTime(), "Leave", "_G.MCF_RegisterSkin MyCustomFrames/core.lua:228:22"); return end   -- ya registrado (ej. /reload), no duplicar
     end
     table.insert(ns.TEX_SKINS, { folder = "", label = label, basePath = basePath, msqSkin = msqSkin })
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "_G.MCF_RegisterSkin MyCustomFrames/core.lua:228:22"); end
 
 -- (domain, dbKey, category): la lista completa de "slots" de textura que ya
 -- expone el selector manual de Options.lua (MakeTexturePicker) -- reusada
@@ -256,36 +256,36 @@ local SKIN_SLOTS = {
     { domain = "minimap",   dbKey = "ringButtonTexture",   category = "ringbutton" },
 }
 
-local function BasenameOf(path)
-    if type(path) ~= "string" or path == "" then return nil end
-    return path:match("([^\\]+)$")
+local function BasenameOf(path) Perfy_Trace(Perfy_GetTime(), "Enter", "BasenameOf MyCustomFrames/core.lua:259:6");
+    if type(path) ~= "string" or path == "" then Perfy_Trace(Perfy_GetTime(), "Leave", "BasenameOf MyCustomFrames/core.lua:259:6"); return nil end
+    return Perfy_Trace_Passthrough("Leave", "BasenameOf MyCustomFrames/core.lua:259:6", path:match("([^\\]+)$"))
 end
 
 -- Solo reescribe el campo si su valor actual (sin importar que carpeta/skin
 -- tenga puesta ahora) es uno de los archivos CONOCIDOS de esa categoria --
 -- una ruta totalmente custom que el usuario escribio a mano se deja intacta.
-local function ApplySkinToTable(t, slot)
-    if not t then return end
+local function ApplySkinToTable(t, slot) Perfy_Trace(Perfy_GetTime(), "Enter", "ApplySkinToTable MyCustomFrames/core.lua:267:6");
+    if not t then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplySkinToTable MyCustomFrames/core.lua:267:6"); return end
     local base = BasenameOf(t[slot.dbKey])
-    if not base then return end
+    if not base then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplySkinToTable MyCustomFrames/core.lua:267:6"); return end
     for _, f in ipairs(ns.TEX_LIB[slot.category] or {}) do
-        if f == base then t[slot.dbKey] = SkinResolve(base); return end
+        if f == base then t[slot.dbKey] = SkinResolve(base); Perfy_Trace(Perfy_GetTime(), "Leave", "ApplySkinToTable MyCustomFrames/core.lua:267:6"); return end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ApplySkinToTable MyCustomFrames/core.lua:267:6"); end
 
 -- Aplica una skin a TODO el addon: cambia tanto los campos ya guardados
 -- (baked-in en cada unidad/portrait/aura) como las constantes "vacio =
 -- default" (aura border/info bar) que se leen en vivo en cada refresh.
 -- `skin` acepta: la tabla completa de ns.TEX_SKINS (preferido), o por
 -- compatibilidad un string suelto = folder (uso viejo, subcarpeta interna).
-ns.ApplySkin = function(skin)
+ns.ApplySkin = function(skin) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ApplySkin MyCustomFrames/core.lua:281:15");
     if type(skin) == "string" or skin == nil then
         skin = { folder = skin or "", label = (skin and skin ~= "") and skin or "Default" }
     end
     ns.ActiveSkinFolder = skin.folder or ""
     ns.ActiveSkinBasePath = skin.basePath   -- nil para skins internas (folder) o Default
     local db = ns.GetDB and ns.GetDB()
-    if not db then return end
+    if not db then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ApplySkin MyCustomFrames/core.lua:281:15"); return end
     db.activeSkinLabel = skin.label
     for _, slot in ipairs(SKIN_SLOTS) do
         if slot.domain == "units" or slot.domain == "portraits" or slot.domain == "auras" then
@@ -321,7 +321,7 @@ ns.ApplySkin = function(skin)
     if ns.RefreshTooltipSkin then ns.RefreshTooltipSkin() end
     if ns.ApplyMasqueSkinAll then ns.ApplyMasqueSkinAll(skin) end
     print("|cff00ff00[MCF]|r Skin applied: " .. skin.label)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ApplySkin MyCustomFrames/core.lua:281:15"); end
 
 -- Rutas antiguas (AzeriteUI) -> copias locales, para migrar configs guardadas.
 local PATH_REMAP = {
@@ -412,24 +412,24 @@ ns.UNITS = UNITS
 local ARENA_KEYS = { "arena_player", "arena_party1", "arena_party2", "arena_enemy1", "arena_enemy2", "arena_enemy3" }
 ns.ARENA_KEYS = ARENA_KEYS
 
-local function HasNameByKey(key)
-    return key ~= "playerpower" and key ~= "targetpower"
+local function HasNameByKey(key) Perfy_Trace(Perfy_GetTime(), "Enter", "HasNameByKey MyCustomFrames/core.lua:415:6");
+    return Perfy_Trace_Passthrough("Leave", "HasNameByKey MyCustomFrames/core.lua:415:6", key ~= "playerpower" and key ~= "targetpower")
 end
 ns.HasNameByKey = HasNameByKey
 
-local function CageDefault(key)
-    if key == "target" then return CAGE_TARGET end
-    if key == "player" then return CAGE_PLAYER end
-    if key == "playerpower" or key == "targetpower" then return CAGE_POWER end
-    if key == "pet" or key == "targettarget" or key == "focus" then return CAGE_PETTOT end
-    if key:sub(1, 4) == "boss" then return CAGE_BOSS end
-    if key:sub(1, 5) == "party" then return CAGE_PETTOT end
+local function CageDefault(key) Perfy_Trace(Perfy_GetTime(), "Enter", "CageDefault MyCustomFrames/core.lua:420:6");
+    if key == "target" then Perfy_Trace(Perfy_GetTime(), "Leave", "CageDefault MyCustomFrames/core.lua:420:6"); return CAGE_TARGET end
+    if key == "player" then Perfy_Trace(Perfy_GetTime(), "Leave", "CageDefault MyCustomFrames/core.lua:420:6"); return CAGE_PLAYER end
+    if key == "playerpower" or key == "targetpower" then Perfy_Trace(Perfy_GetTime(), "Leave", "CageDefault MyCustomFrames/core.lua:420:6"); return CAGE_POWER end
+    if key == "pet" or key == "targettarget" or key == "focus" then Perfy_Trace(Perfy_GetTime(), "Leave", "CageDefault MyCustomFrames/core.lua:420:6"); return CAGE_PETTOT end
+    if key:sub(1, 4) == "boss" then Perfy_Trace(Perfy_GetTime(), "Leave", "CageDefault MyCustomFrames/core.lua:420:6"); return CAGE_BOSS end
+    if key:sub(1, 5) == "party" then Perfy_Trace(Perfy_GetTime(), "Leave", "CageDefault MyCustomFrames/core.lua:420:6"); return CAGE_PETTOT end
     -- Arena (pedido del usuario: "visualmente identicas al ToT") -- mismo cage que ToT/pet/focus.
-    if key:sub(1, 6) == "arena_" then return CAGE_PETTOT end
-    return ""
+    if key:sub(1, 6) == "arena_" then Perfy_Trace(Perfy_GetTime(), "Leave", "CageDefault MyCustomFrames/core.lua:420:6"); return CAGE_PETTOT end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "CageDefault MyCustomFrames/core.lua:420:6"); return ""
 end
 
-local function DefaultsFor(key)
+local function DefaultsFor(key) Perfy_Trace(Perfy_GetTime(), "Enter", "DefaultsFor MyCustomFrames/core.lua:432:6");
     local defY = {
         player = -150, target = -180, targettarget = -210, pet = -240, focus = -270,
         playerpower = -330, targetpower = -360,
@@ -460,7 +460,7 @@ local function DefaultsFor(key)
     elseif boss then tex = BOSS_TEXTURE
     else tex = TEXTURE_DEFAULT end
     local wantValue = not power
-    return {
+    return Perfy_Trace_Passthrough("Leave", "DefaultsFor MyCustomFrames/core.lua:432:6", {
         anchorFrame = "", point = "CENTER", relativePoint = "CENTER",
         offsetX = defX[key] or 0, offsetY = defY[key] or -150, strata = "MEDIUM",
         width = 250, height = 20, scale = 1.0,
@@ -474,7 +474,11 @@ local function DefaultsFor(key)
         -- Cage
         cageTexture = CageDefault(key),
         cageWidth = 250, cageHeight = 20, cageOffsetX = 0, cageOffsetY = 0, cageAlpha = 1.0,
-        cageHideDead = (key == "target" or key == "player"),   -- oculta el cage si la unidad esta muerta
+        -- Solo target (2026-07-29, "quita lo de hide on death en bar y cage
+        -- del player, que siempre se muestren en death"): el player traia
+        -- esto encendido por defecto, ahora queda apagado -- el cage del
+        -- player ya no desaparece al morir.
+        cageHideDead = (key == "target"),   -- oculta el cage si la unidad esta muerta
         -- Highlight de "unidad seleccionada" (si la unidad es tu target actual)
         showHighlight = false, highlightTexture = HIGHLIGHT_TEX,
         highlightWidth = 250, highlightHeight = 20, highlightScale = 1.0,
@@ -521,7 +525,7 @@ local function DefaultsFor(key)
         -- claves; el resto de las unidades simplemente no usan estos campos.
         showTrinket = (key:sub(1, 11) == "arena_enemy"),
         trinketSize = 24, trinketOffsetX = 0, trinketOffsetY = -30,
-    }
+    })
 end
 ns.DefaultsFor = DefaultsFor
 
@@ -586,11 +590,11 @@ ns.PORTRAITS = PORTRAITS
 
 local PORTRAIT_SET, PORTRAIT_DEF = {}, {}
 for _, def in ipairs(PORTRAITS) do PORTRAIT_SET[def.key] = true; PORTRAIT_DEF[def.key] = def end
-ns.IsPortrait = function(key) return PORTRAIT_SET[key] == true end
-ns.PortraitFeatures = function(key) local d = PORTRAIT_DEF[key]; return (d and d.features) or {} end
-ns.PortraitKind = function(key) local d = PORTRAIT_DEF[key]; return (d and d.kind) or "model" end
+ns.IsPortrait = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.IsPortrait MyCustomFrames/core.lua:589:16"); return Perfy_Trace_Passthrough("Leave", "ns.IsPortrait MyCustomFrames/core.lua:589:16", PORTRAIT_SET[key] == true) end
+ns.PortraitFeatures = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.PortraitFeatures MyCustomFrames/core.lua:590:22"); local d = PORTRAIT_DEF[key]; return Perfy_Trace_Passthrough("Leave", "ns.PortraitFeatures MyCustomFrames/core.lua:590:22", (d and d.features) or {}) end
+ns.PortraitKind = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.PortraitKind MyCustomFrames/core.lua:591:18"); local d = PORTRAIT_DEF[key]; return Perfy_Trace_Passthrough("Leave", "ns.PortraitKind MyCustomFrames/core.lua:591:18", (d and d.kind) or "model") end
 
-local function PortraitDefaultsFor(key)
+local function PortraitDefaultsFor(key) Perfy_Trace(Perfy_GetTime(), "Enter", "PortraitDefaultsFor MyCustomFrames/core.lua:593:6");
     local d = {
         enabled = true,
         clickOpenChar = (key == "portrait_player"),   -- click abre el panel de personaje (solo player)
@@ -602,6 +606,12 @@ local function PortraitDefaultsFor(key)
         -- Posicion "alterna" (solo dualPos)
         altAnchor = "", altPoint = "CENTER", altRelPoint = "CENTER",
         altX = -320, altY = -120,
+        -- Interruptor maestro (2026-07-29, pedido del usuario: "poder activar
+        -- o desactivar lo de las posiciones alternativas") -- con esto en
+        -- false, PortraitUpdatePosition ignora las 3 condiciones de abajo y
+        -- SIEMPRE usa la posicion "centro". true por defecto: nadie que ya
+        -- tuviera esto configurado pierde su comportamiento actual.
+        dualPosEnabled = true,
         -- Condiciones que fuerzan la posicion "centro" (solo dualPos)
         centerOnTarget = true, centerInCombat = true, centerInInstance = true,
         editPos = "center",   -- cual posicion se edita/arrastra en preview
@@ -661,7 +671,7 @@ local function PortraitDefaultsFor(key)
     -- `cond and false or nil` para esto -- se rompe porque el "true branch" es `false`
     -- (el `or` siempre gana), por eso el if explicito.
     if key == "portrait_player" then d.mirrorTarget = false end
-    return d
+    Perfy_Trace(Perfy_GetTime(), "Leave", "PortraitDefaultsFor MyCustomFrames/core.lua:593:6"); return d
 end
 ns.PortraitDefaultsFor = PortraitDefaultsFor
 
@@ -696,8 +706,8 @@ ns.AURAS = AURAS
 
 local AURA_SET, AURA_DEF = {}, {}
 for _, def in ipairs(AURAS) do AURA_SET[def.key] = true; AURA_DEF[def.key] = def end
-ns.IsAura = function(key) return AURA_SET[key] == true end
-ns.AuraIsDual = function(key) local d = AURA_DEF[key]; return d and d.dualPos and true or false end
+ns.IsAura = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.IsAura MyCustomFrames/core.lua:699:12"); return Perfy_Trace_Passthrough("Leave", "ns.IsAura MyCustomFrames/core.lua:699:12", AURA_SET[key] == true) end
+ns.AuraIsDual = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.AuraIsDual MyCustomFrames/core.lua:700:16"); local d = AURA_DEF[key]; return Perfy_Trace_Passthrough("Leave", "ns.AuraIsDual MyCustomFrames/core.lua:700:16", d and d.dualPos and true or false) end
 
 -- "priority" (2026-07-27, pedido del usuario): debuffs primero, buffs despues
 -- -- empate por tiempo restante (logica real en Auras.lua, AURA_SORTS). Sirve
@@ -705,7 +715,7 @@ ns.AuraIsDual = function(key) local d = AURA_DEF[key]; return d and d.dualPos an
 -- llenar el grid entero y dejar afuera un debuff mas importante.
 ns.AURA_SORTS_VALUES = { "priority", "index", "timeUp", "timeDown", "name" }
 
-local function AuraDefaultsFor(key)
+local function AuraDefaultsFor(key) Perfy_Trace(Perfy_GetTime(), "Enter", "AuraDefaultsFor MyCustomFrames/core.lua:708:6");
     local d = {
         enabled = true, strata = "MEDIUM", scale = 1.0,
         -- Ancla / posicion principal (el grid crece hacia abajo desde este punto).
@@ -758,7 +768,7 @@ local function AuraDefaultsFor(key)
     }
     if key == "aura_player"     then d.offsetX, d.offsetY = 0, 300
     elseif key == "aura_target" then d.offsetX, d.offsetY = 0, -280 end
-    return d
+    Perfy_Trace(Perfy_GetTime(), "Leave", "AuraDefaultsFor MyCustomFrames/core.lua:708:6"); return d
 end
 ns.AuraDefaultsFor = AuraDefaultsFor
 
@@ -769,20 +779,20 @@ local INFOBAR_KEY = "infobar"
 local INFOBAR_BG_TEX   = A .. "info_bg.tga"   -- fondo custom del info bar
 ns.INFOBAR_BG_TEX = INFOBAR_BG_TEX   -- expuesta para InfoBar.lua (subsistema extraido de core)
 ns.INFOBAR_KEY = INFOBAR_KEY
-ns.IsInfoBar = function(key) return key == INFOBAR_KEY end
+ns.IsInfoBar = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.IsInfoBar MyCustomFrames/core.lua:772:15"); return Perfy_Trace_Passthrough("Leave", "ns.IsInfoBar MyCustomFrames/core.lua:772:15", key == INFOBAR_KEY) end
 
 -- Declarados temprano para que ns.CurrentProfile (mas abajo) los vea como upvalue.
 local MICROMENU_KEY = "micromenu"
 local CHATBUBBLE_KEY = "chatbubble"
 local TRACKER_KEY = "tracker"
 ns.TRACKER_KEY = TRACKER_KEY
-ns.IsTracker = function(key) return key == TRACKER_KEY end
+ns.IsTracker = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.IsTracker MyCustomFrames/core.lua:779:15"); return Perfy_Trace_Passthrough("Leave", "ns.IsTracker MyCustomFrames/core.lua:779:15", key == TRACKER_KEY) end
 local GLOW_KEY = "glow"   -- glow custom sobre el "assisted highlight" (rotacion asistida)
 ns.GLOW_KEY = GLOW_KEY
-ns.IsGlow = function(key) return key == GLOW_KEY end
+ns.IsGlow = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.IsGlow MyCustomFrames/core.lua:782:12"); return Perfy_Trace_Passthrough("Leave", "ns.IsGlow MyCustomFrames/core.lua:782:12", key == GLOW_KEY) end
 
-local function InfoBarDefaults()
-    return {
+local function InfoBarDefaults() Perfy_Trace(Perfy_GetTime(), "Enter", "InfoBarDefaults MyCustomFrames/core.lua:784:6");
+    return Perfy_Trace_Passthrough("Leave", "InfoBarDefaults MyCustomFrames/core.lua:784:6", {
         enabled = true, strata = "MEDIUM", scale = 1.0,
         anchor = "", point = "TOP", relPoint = "TOP", offsetX = 0, offsetY = -4,
         fontSize = 14, textColor = { r = 1, g = 0.82, b = 0.0 },   -- globales (fallback por elemento)
@@ -796,7 +806,7 @@ local function InfoBarDefaults()
         -- (Botones de calendario y mochila eliminados; el calendario se abre clickeando el reloj.)
         -- Fondo decorativo (atlas).
         showBg = true, bgTexture = INFOBAR_BG_TEX, bgWidth = 360, bgHeight = 82, bgAlpha = 1.0, bgOffsetX = 0, bgOffsetY = -10,
-    }
+    })
 end
 ns.InfoBarDefaults = InfoBarDefaults
 
@@ -823,37 +833,37 @@ ns.currentEdit = "player"
 -- Solucion: un AnimationGroup con animacion Alpha (0→1) que solo anima el alpha, sin
 -- llamar Show(). El frame ya esta visible (OnShow ya disparo). Gated por db.fadeIn.
 -- El fade-OUT no es viable en frames seguros (el driver los oculta al instante).
-local function AttachFadeIn(frame)
-    if not frame or frame._mcfFadeHooked then return end
+local function AttachFadeIn(frame) Perfy_Trace(Perfy_GetTime(), "Enter", "AttachFadeIn MyCustomFrames/core.lua:826:6");
+    if not frame or frame._mcfFadeHooked then Perfy_Trace(Perfy_GetTime(), "Leave", "AttachFadeIn MyCustomFrames/core.lua:826:6"); return end
     frame._mcfFadeHooked = true
     local ag = frame:CreateAnimationGroup()
     local a = ag:CreateAnimation("Alpha")
     a:SetFromAlpha(0); a:SetToAlpha(1); a:SetSmoothing("OUT")
     frame._mcfFadeAnim, frame._mcfFadeA = ag, a
-    frame:HookScript("OnShow", function(self)
-        if not (db and db.fadeIn) or unlocked then return end
+    frame:HookScript("OnShow", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/core.lua:833:31");
+        if not (db and db.fadeIn) or unlocked then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:833:31"); return end
         local grp = self._mcfFadeAnim
         if grp and not grp:IsPlaying() then
             self._mcfFadeA:SetDuration(db.fadeDuration or 0.25)
             grp:Play()
         end
-    end)
-end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:833:31"); end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "AttachFadeIn MyCustomFrames/core.lua:826:6"); end
 ns.AttachFadeIn = AttachFadeIn
 
 -- Grupos que se pueden mover juntos (opcional).
 local PARTY_KEYS = { "party1", "party2", "party3", "party4", "party5" }
 local BOSS_KEYS  = { "boss1", "boss2", "boss3", "boss4", "boss5" }
 ns.PARTY_KEYS = PARTY_KEYS
-local function GetMoveGroup(key)
-    if not db then return nil end
-    if key:sub(1, 5) == "party" and db.groupMoveParty then return PARTY_KEYS end
-    if key:sub(1, 4) == "boss" and db.groupMoveBoss then return BOSS_KEYS end
-    return nil
+local function GetMoveGroup(key) Perfy_Trace(Perfy_GetTime(), "Enter", "GetMoveGroup MyCustomFrames/core.lua:848:6");
+    if not db then Perfy_Trace(Perfy_GetTime(), "Leave", "GetMoveGroup MyCustomFrames/core.lua:848:6"); return nil end
+    if key:sub(1, 5) == "party" and db.groupMoveParty then Perfy_Trace(Perfy_GetTime(), "Leave", "GetMoveGroup MyCustomFrames/core.lua:848:6"); return PARTY_KEYS end
+    if key:sub(1, 4) == "boss" and db.groupMoveBoss then Perfy_Trace(Perfy_GetTime(), "Leave", "GetMoveGroup MyCustomFrames/core.lua:848:6"); return BOSS_KEYS end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "GetMoveGroup MyCustomFrames/core.lua:848:6"); return nil
 end
 ns.GetMoveGroup = GetMoveGroup
 
-local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
+local function clamp(v, lo, hi) Perfy_Trace(Perfy_GetTime(), "Enter", "clamp MyCustomFrames/core.lua:856:6"); return Perfy_Trace_Passthrough("Leave", "clamp MyCustomFrames/core.lua:856:6", math.max(lo, math.min(hi, v))) end
 ns.clamp = clamp
 
 -- Llamada segura SIN crear una closure por invocacion (a diferencia de
@@ -864,12 +874,12 @@ ns.clamp = clamp
 -- crashea ("boolean test on secret boolean value"). Por eso se chequea issecretvalue ANTES
 -- de coercer; si es secreto se devuelve false (mismo resultado que el pcall-closure original,
 -- donde la coercion crasheaba dentro del pcall y la variable quedaba en su valor inicial false).
-local function safeBool(fn, ...)
+local function safeBool(fn, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "safeBool MyCustomFrames/core.lua:867:6");
     local ok, r = pcall(fn, ...)
-    if not ok or (issecretvalue and issecretvalue(r)) then return false end
-    return r and true or false
+    if not ok or (issecretvalue and issecretvalue(r)) then Perfy_Trace(Perfy_GetTime(), "Leave", "safeBool MyCustomFrames/core.lua:867:6"); return false end
+    return Perfy_Trace_Passthrough("Leave", "safeBool MyCustomFrames/core.lua:867:6", r and true or false)
 end
-local function safeVal(fn, ...) local ok, r = pcall(fn, ...); if ok then return r end end
+local function safeVal(fn, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "safeVal MyCustomFrames/core.lua:872:6"); local ok, r = pcall(fn, ...); if ok then Perfy_Trace(Perfy_GetTime(), "Leave", "safeVal MyCustomFrames/core.lua:872:6"); return r end Perfy_Trace(Perfy_GetTime(), "Leave", "safeVal MyCustomFrames/core.lua:872:6"); end
 ns.safeBool = safeBool
 ns.safeVal = safeVal
 
@@ -885,7 +895,7 @@ ns.tickState = tickState   -- misma tabla por referencia; el ticker principal mu
 -- encima del contenido (borde visible, no lo tapa). Reemplaza los editBG verdes de todas las
 -- unidades/portraits/auras/infobar/micromenu. SetShown/Hide siguen funcionando igual.
 local EDIT_HL = { r = 0.35, g = 0.78, b = 1.0 }   -- color del recuadro de edicion
-local function MakeEditHighlight(parent, label)
+local function MakeEditHighlight(parent, label) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeEditHighlight MyCustomFrames/core.lua:888:6");
     local f = CreateFrame("Frame", nil, parent)
     f:SetAllPoints(parent)
     f:SetFrameLevel(parent:GetFrameLevel() + 12)
@@ -895,11 +905,11 @@ local function MakeEditHighlight(parent, label)
     local t = 1
     -- Cada borde = rectangulo fino definido por esquinas OPUESTAS (TOPLEFT + BOTTOMRIGHT)
     -- ancladas a los lados de f (mismo metodo que GlowDrawBorder).
-    local function edge(rp1, x1, y1, rp2, x2, y2)
+    local function edge(rp1, x1, y1, rp2, x2, y2) Perfy_Trace(Perfy_GetTime(), "Enter", "edge MyCustomFrames/core.lua:898:10");
         local b = f:CreateTexture(nil, "ARTWORK")
         b:SetColorTexture(EDIT_HL.r, EDIT_HL.g, EDIT_HL.b, 0.9)
         b:SetPoint("TOPLEFT", f, rp1, x1, y1); b:SetPoint("BOTTOMRIGHT", f, rp2, x2, y2)
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "edge MyCustomFrames/core.lua:898:10"); end
     edge("TOPLEFT", 0, 0, "TOPRIGHT", 0, -t)          -- arriba
     edge("BOTTOMLEFT", 0, t, "BOTTOMRIGHT", 0, 0)     -- abajo
     edge("TOPLEFT", 0, 0, "BOTTOMLEFT", t, 0)         -- izquierda
@@ -914,15 +924,15 @@ local function MakeEditHighlight(parent, label)
         f.label = lbl
     end
     f:Hide()
-    return f
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeEditHighlight MyCustomFrames/core.lua:888:6"); return f
 end
 ns.MakeEditHighlight = MakeEditHighlight   -- expuesto para subsistemas en archivos aparte
 
 -- B4 — Outline configurable por unidad: tamaño propio (0 = seguir al frame) y ocultar el
 -- nombre. El editBG normalmente hace SetAllPoints(parent); con w/h > 0 se ancla al CENTRO
 -- del frame con ese tamaño. Se llama desde el apply de cada unidad.
-local function ApplyOutline(f, parent, w, h, hideName)
-    if not f then return end
+local function ApplyOutline(f, parent, w, h, hideName) Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyOutline MyCustomFrames/core.lua:924:6");
+    if not f then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyOutline MyCustomFrames/core.lua:924:6"); return end
     f:ClearAllPoints()
     if w and h and w > 0 and h > 0 then
         f:SetPoint("CENTER", parent, "CENTER", 0, 0)
@@ -931,7 +941,7 @@ local function ApplyOutline(f, parent, w, h, hideName)
         f:SetAllPoints(parent)
     end
     if f.label then f.label:SetShown(not hideName) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyOutline MyCustomFrames/core.lua:924:6"); end
 ns.ApplyOutline = ApplyOutline
 
 -- B4 — Preview del SECURE BUTTON: dibuja el AREA DE CLICK real (hit rect) como un recuadro
@@ -939,15 +949,15 @@ ns.ApplyOutline = ApplyOutline
 -- overlay decorativo (no captura mouse); refleja btnWidth/btnHeight/btnOffset (o el tamaño de
 -- la barra si son 0). Se crea una vez por unidad y se actualiza en el apply.
 local HIT_HL = { r = 1.0, g = 0.55, b = 0.10 }
-local function MakeHitPreview(parent)
+local function MakeHitPreview(parent) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeHitPreview MyCustomFrames/core.lua:942:6");
     local f = CreateFrame("Frame", nil, parent)
     f:SetFrameLevel(parent:GetFrameLevel() + 13)
     local t = 1
-    local function edge(rp1, x1, y1, rp2, x2, y2)
+    local function edge(rp1, x1, y1, rp2, x2, y2) Perfy_Trace(Perfy_GetTime(), "Enter", "edge MyCustomFrames/core.lua:946:10");
         local b = f:CreateTexture(nil, "OVERLAY")
         b:SetColorTexture(HIT_HL.r, HIT_HL.g, HIT_HL.b, 0.9)
         b:SetPoint("TOPLEFT", f, rp1, x1, y1); b:SetPoint("BOTTOMRIGHT", f, rp2, x2, y2)
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "edge MyCustomFrames/core.lua:946:10"); end
     edge("TOPLEFT", 0, 0, "TOPRIGHT", 0, -t)
     edge("BOTTOMLEFT", 0, t, "BOTTOMRIGHT", 0, 0)
     edge("TOPLEFT", 0, 0, "BOTTOMLEFT", t, 0)
@@ -958,21 +968,21 @@ local function MakeHitPreview(parent)
     lbl:SetTextColor(HIT_HL.r, HIT_HL.g, HIT_HL.b, 1)
     lbl:SetText("click")
     f:Hide()
-    return f
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeHitPreview MyCustomFrames/core.lua:942:6"); return f
 end
 ns.MakeHitPreview = MakeHitPreview
 
-local function DeepCopy(t)
-    if type(t) ~= "table" then return t end
+local function DeepCopy(t) Perfy_Trace(Perfy_GetTime(), "Enter", "DeepCopy MyCustomFrames/core.lua:965:6");
+    if type(t) ~= "table" then Perfy_Trace(Perfy_GetTime(), "Leave", "DeepCopy MyCustomFrames/core.lua:965:6"); return t end
     local r = {}
     for k, v in pairs(t) do r[k] = DeepCopy(v) end
-    return r
+    Perfy_Trace(Perfy_GetTime(), "Leave", "DeepCopy MyCustomFrames/core.lua:965:6"); return r
 end
 ns.DeepCopy = DeepCopy
 
-ns.IsUnlocked = function() return unlocked end
-ns.GetDB = function() return db end
-ns.SetUnlockedFlag = function(v) unlocked = v end   -- setter para SetUnlocked (Editing.lua)
+ns.IsUnlocked = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.IsUnlocked MyCustomFrames/core.lua:973:16"); Perfy_Trace(Perfy_GetTime(), "Leave", "ns.IsUnlocked MyCustomFrames/core.lua:973:16"); return unlocked end
+ns.GetDB = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.GetDB MyCustomFrames/core.lua:974:11"); Perfy_Trace(Perfy_GetTime(), "Leave", "ns.GetDB MyCustomFrames/core.lua:974:11"); return db end
+ns.SetUnlockedFlag = function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.SetUnlockedFlag MyCustomFrames/core.lua:975:21"); unlocked = v Perfy_Trace(Perfy_GetTime(), "Leave", "ns.SetUnlockedFlag MyCustomFrames/core.lua:975:21"); end   -- setter para SetUnlocked (Editing.lua)
 
 -- Rueda del raton en modo Lock (preview) ajusta la escala del elemento. getP devuelve el
 -- perfil (con campo .scale); refresh re-aplica. EnableMouseWheel se activa/desactiva en
@@ -986,18 +996,18 @@ ns.SetUnlockedFlag = function(v) unlocked = v end   -- setter para SetUnlocked (
 -- keys, runtime-only → nunca se serializa; un preset nuevo = tabla nueva = ancla nueva sin
 -- compensar). Idempotente: solo muta cuando scale != ancla, venga de slider/rueda/import.
 local scaleAnchors = setmetatable({}, { __mode = "k" })
-local function CompensateScale(p, kind)
-    if not p then return end
+local function CompensateScale(p, kind) Perfy_Trace(Perfy_GetTime(), "Enter", "CompensateScale MyCustomFrames/core.lua:989:6");
+    if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "CompensateScale MyCustomFrames/core.lua:989:6"); return end
     local scale = p.scale or 1
     local anchor = scaleAnchors[p]
-    if anchor == nil then scaleAnchors[p] = scale; return end
-    if anchor == scale or scale == 0 then return end
+    if anchor == nil then scaleAnchors[p] = scale; Perfy_Trace(Perfy_GetTime(), "Leave", "CompensateScale MyCustomFrames/core.lua:989:6"); return end
+    if anchor == scale or scale == 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "CompensateScale MyCustomFrames/core.lua:989:6"); return end
     local k = anchor / scale
     scaleAnchors[p] = scale
-    local function mul(a, b)
+    local function mul(a, b) Perfy_Trace(Perfy_GetTime(), "Enter", "mul MyCustomFrames/core.lua:997:10");
         if type(p[a]) == "number" then p[a] = p[a] * k end
         if type(p[b]) == "number" then p[b] = p[b] * k end
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "mul MyCustomFrames/core.lua:997:10"); end
     if kind == "portrait" then
         mul("centerX", "centerY"); mul("altX", "altY")
     elseif kind == "aura" then
@@ -1005,41 +1015,41 @@ local function CompensateScale(p, kind)
     else
         mul("offsetX", "offsetY")
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "CompensateScale MyCustomFrames/core.lua:989:6"); end
 ns.CompensateScale = CompensateScale
 
-local function AttachScaleWheel(frame, getP, reposition)
+local function AttachScaleWheel(frame, getP, reposition) Perfy_Trace(Perfy_GetTime(), "Enter", "AttachScaleWheel MyCustomFrames/core.lua:1011:6");
     frame:EnableMouseWheel(false)
-    frame:SetScript("OnMouseWheel", function(self, dir)
-        if not unlocked or InCombatLockdown() then return end
-        local p = getP(); if not p then return end
+    frame:SetScript("OnMouseWheel", function(self, dir) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/core.lua:1013:36");
+        if not unlocked or InCombatLockdown() then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:1013:36"); return end
+        local p = getP(); if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:1013:36"); return end
         p.scale = math.max(0.3, math.min(3.0, (p.scale or 1) + (dir > 0 and 0.05 or -0.05)))
         -- reposition (layout del elemento) compensa el offset por el cambio de escala y
         -- reancla, evitando el salto. Fallback: solo SetScale (comportamiento antiguo).
         if reposition then reposition() else self:SetScale(p.scale) end
         if ns.OnScaleWheel then ns.OnScaleWheel() end   -- refresca el slider del menu si esta abierto
-    end)
-end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:1013:36"); end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "AttachScaleWheel MyCustomFrames/core.lua:1011:6"); end
 ns.AttachScaleWheel = AttachScaleWheel   -- expuesto para subsistemas en archivos aparte
 -- Tabla vacia reusada como fallback nil-safe: widgets OCULTOS de otras secciones (ej. "Anchor to"
 -- de la pestaña General) igual corren su refresher via RefreshControls() sin importar que seccion
 -- este visible — necesitan que getP() devuelva ALGO indexable, no nil, o `getP()[dbKey]` explota.
 local EMPTY_PROFILE = {}
-ns.CurrentProfile = function()
-    if ns.currentEdit == INFOBAR_KEY then return db.infobar end
-    if ns.currentEdit == MICROMENU_KEY then return db.micromenu end
-    if ns.currentEdit == CHATBUBBLE_KEY then return db.chatbubble end
-    if ns.currentEdit == TRACKER_KEY then return db.tracker end
-    if ns.currentEdit == GLOW_KEY then return db.glow end
+ns.CurrentProfile = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.CurrentProfile MyCustomFrames/core.lua:1028:20");
+    if ns.currentEdit == INFOBAR_KEY then return Perfy_Trace_Passthrough("Leave", "ns.CurrentProfile MyCustomFrames/core.lua:1028:20", db.infobar) end
+    if ns.currentEdit == MICROMENU_KEY then return Perfy_Trace_Passthrough("Leave", "ns.CurrentProfile MyCustomFrames/core.lua:1028:20", db.micromenu) end
+    if ns.currentEdit == CHATBUBBLE_KEY then return Perfy_Trace_Passthrough("Leave", "ns.CurrentProfile MyCustomFrames/core.lua:1028:20", db.chatbubble) end
+    if ns.currentEdit == TRACKER_KEY then return Perfy_Trace_Passthrough("Leave", "ns.CurrentProfile MyCustomFrames/core.lua:1028:20", db.tracker) end
+    if ns.currentEdit == GLOW_KEY then return Perfy_Trace_Passthrough("Leave", "ns.CurrentProfile MyCustomFrames/core.lua:1028:20", db.glow) end
     -- 2026-07-16: "aura_party" (PartyAuraPreview.lua) es un elemento SINGLETON como Tracker/Glow,
     -- pero sus settings son GLOBALES (db.partyAuraDirection/partyAuraIconSize, no una tabla propia
     -- por-elemento) — sus widgets reales usan getTbl/onChange, nunca getP(). Sin este branch caia
     -- en `db.units["aura_party"]` (nil) y crasheaba ("attempt to index a nil value") apenas se
     -- abria el menu, porque OTROS widgets ocultos (de la pestaña General) llaman getP() siempre.
-    if ns.IsPartyAura and ns.IsPartyAura(ns.currentEdit) then return EMPTY_PROFILE end
+    if ns.IsPartyAura and ns.IsPartyAura(ns.currentEdit) then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.CurrentProfile MyCustomFrames/core.lua:1028:20"); return EMPTY_PROFILE end
     -- "aura_arena" (ArenaAuraPreview.lua) es SINGLETON como aura_party -- mismo
     -- motivo/bug ("attempt to index a nil value") si falta este branch.
-    if ns.IsArenaAura and ns.IsArenaAura(ns.currentEdit) then return EMPTY_PROFILE end
+    if ns.IsArenaAura and ns.IsArenaAura(ns.currentEdit) then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.CurrentProfile MyCustomFrames/core.lua:1028:20"); return EMPTY_PROFILE end
     -- "aura_focus"/"aura_player"/"aura_target" (AuraHoverPreview.lua, 2026-07-27):
     -- MISMO bug, otra vez -- reportado en vivo (Options.lua:555, dbKey=
     -- "anchorFrame", un widget OCULTO de una pestaña sin relacion con auras).
@@ -1050,22 +1060,22 @@ ns.CurrentProfile = function()
     -- `db.units[ns.currentEdit]` (nil, nunca fueron una unidad real) y
     -- crasheaban CUALQUIER widget oculto de CUALQUIER otra pestaña, no solo
     -- los de auras.
-    if ns.IsFocusAura and ns.IsFocusAura(ns.currentEdit) then return EMPTY_PROFILE end
-    if ns.IsPlayerAura and ns.IsPlayerAura(ns.currentEdit) then return EMPTY_PROFILE end
-    if ns.IsTargetAura and ns.IsTargetAura(ns.currentEdit) then return EMPTY_PROFILE end
-    if ns.IsMinimap and ns.IsMinimap(ns.currentEdit) then return db.minimap end
-    if ns.IsNameplates and ns.IsNameplates(ns.currentEdit) then return db.nameplates end
+    if ns.IsFocusAura and ns.IsFocusAura(ns.currentEdit) then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.CurrentProfile MyCustomFrames/core.lua:1028:20"); return EMPTY_PROFILE end
+    if ns.IsPlayerAura and ns.IsPlayerAura(ns.currentEdit) then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.CurrentProfile MyCustomFrames/core.lua:1028:20"); return EMPTY_PROFILE end
+    if ns.IsTargetAura and ns.IsTargetAura(ns.currentEdit) then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.CurrentProfile MyCustomFrames/core.lua:1028:20"); return EMPTY_PROFILE end
+    if ns.IsMinimap and ns.IsMinimap(ns.currentEdit) then return Perfy_Trace_Passthrough("Leave", "ns.CurrentProfile MyCustomFrames/core.lua:1028:20", db.minimap) end
+    if ns.IsNameplates and ns.IsNameplates(ns.currentEdit) then return Perfy_Trace_Passthrough("Leave", "ns.CurrentProfile MyCustomFrames/core.lua:1028:20", db.nameplates) end
     -- "classpower" (ClassPower.lua) es SINGLETON como los de arriba -- mismo
     -- bug ("attempt to index a nil value") que aura_party si no se agrega
     -- este branch: los widgets OCULTOS de la pestaña General llaman getP()
     -- siempre, sin importar que seccion este visible.
-    if ns.IsClassPower and ns.IsClassPower(ns.currentEdit) then return db.classpower end
-    if AURA_SET[ns.currentEdit] then return db.auras[ns.currentEdit] end
-    if PORTRAIT_SET[ns.currentEdit] then return db.portraits[ns.currentEdit] end
-    return db.units[ns.currentEdit]
+    if ns.IsClassPower and ns.IsClassPower(ns.currentEdit) then return Perfy_Trace_Passthrough("Leave", "ns.CurrentProfile MyCustomFrames/core.lua:1028:20", db.classpower) end
+    if AURA_SET[ns.currentEdit] then return Perfy_Trace_Passthrough("Leave", "ns.CurrentProfile MyCustomFrames/core.lua:1028:20", db.auras[ns.currentEdit]) end
+    if PORTRAIT_SET[ns.currentEdit] then return Perfy_Trace_Passthrough("Leave", "ns.CurrentProfile MyCustomFrames/core.lua:1028:20", db.portraits[ns.currentEdit]) end
+    return Perfy_Trace_Passthrough("Leave", "ns.CurrentProfile MyCustomFrames/core.lua:1028:20", db.units[ns.currentEdit])
 end
 
-ns.ApplyCurrent = function()
+ns.ApplyCurrent = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ApplyCurrent MyCustomFrames/core.lua:1068:18");
     if ns.currentEdit == INFOBAR_KEY then
         if ns.RefreshInfoBar then ns.RefreshInfoBar() end
     elseif ns.currentEdit == MICROMENU_KEY then
@@ -1091,12 +1101,12 @@ ns.ApplyCurrent = function()
     else
         ns.RefreshUnit(ns.currentEdit)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ApplyCurrent MyCustomFrames/core.lua:1068:18"); end
 
 -- Muestra/oculta los NOMBRES de los outlines (etiquetas encima del recuadro de edicion) de
 -- TODOS los elementos, segun db.lockHide.names (toggle "Names" del Editing). Para units respeta
 -- ademas su outlineHideName individual. Se llama al cambiar el toggle y en RefreshAll.
-local function RefreshOutlineNames()
+local function RefreshOutlineNames() Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshOutlineNames MyCustomFrames/core.lua:1099:6");
     local hideAll = db and db.lockHide and db.lockHide.names
     for _, u in pairs(frames) do
         if u.editBG and u.editBG.label then
@@ -1113,7 +1123,7 @@ local function RefreshOutlineNames()
     if ns.micromenu and ns.micromenu.editBG and ns.micromenu.editBG.label then
         ns.micromenu.editBG.label:SetShown(not hideAll)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshOutlineNames MyCustomFrames/core.lua:1099:6"); end
 ns.RefreshOutlineNames = RefreshOutlineNames
 
 -- ==========================================================================
@@ -1132,24 +1142,24 @@ ns.RefreshOutlineNames = RefreshOutlineNames
 -- (1.70-1.86); en otras proporciones (ultrawide 21:9, etc.) el factor vuelve
 -- 1 -- ahi no hay forma generica y segura de adivinar el reescalado correcto.
 local MCF_REFERENCE_HEIGHT = 1080
-local function ComputeResScale()
+local function ComputeResScale() Perfy_Trace(Perfy_GetTime(), "Enter", "ComputeResScale MyCustomFrames/core.lua:1135:6");
     local w, h = UIParent:GetWidth(), UIParent:GetHeight()
-    if not w or not h or h == 0 then return 1 end
+    if not w or not h or h == 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "ComputeResScale MyCustomFrames/core.lua:1135:6"); return 1 end
     local aspect = w / h
-    if aspect < 1.70 or aspect > 1.86 then return 1 end
-    return h / MCF_REFERENCE_HEIGHT
+    if aspect < 1.70 or aspect > 1.86 then Perfy_Trace(Perfy_GetTime(), "Leave", "ComputeResScale MyCustomFrames/core.lua:1135:6"); return 1 end
+    return Perfy_Trace_Passthrough("Leave", "ComputeResScale MyCustomFrames/core.lua:1135:6", h / MCF_REFERENCE_HEIGHT)
 end
 local resScaleCache = ComputeResScale()
 local resScaleLastW, resScaleLastH = UIParent:GetWidth(), UIParent:GetHeight()
-function ns.ResScale()
-    return resScaleCache
+function ns.ResScale() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ResScale MyCustomFrames/core.lua:1144:0");
+    Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResScale MyCustomFrames/core.lua:1144:0"); return resScaleCache
 end
-local function RecomputeResScale()
+local function RecomputeResScale() Perfy_Trace(Perfy_GetTime(), "Enter", "RecomputeResScale MyCustomFrames/core.lua:1147:6");
     resScaleCache = ComputeResScale()
     resScaleLastW, resScaleLastH = UIParent:GetWidth(), UIParent:GetHeight()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RecomputeResScale MyCustomFrames/core.lua:1147:6"); end
 
-local function RefreshAll()
+local function RefreshAll() Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshAll MyCustomFrames/core.lua:1152:6");
     if ns.RefreshAllUnits then ns.RefreshAllUnits() end
     if ns.RefreshAllPortraits then ns.RefreshAllPortraits() end
     -- (ns.RefreshAllAuras quitado 2026-07-27: se fue con el grid de Auras.lua.)
@@ -1175,7 +1185,7 @@ local function RefreshAll()
     if ns.RefreshMinimapButtons then ns.RefreshMinimapButtons() end
     if ns.RefreshBartenderScale then ns.RefreshBartenderScale() end
     RefreshOutlineNames()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshAll MyCustomFrames/core.lua:1152:6"); end
 ns.RefreshAll = RefreshAll
 
 
@@ -1203,15 +1213,15 @@ ns.RefreshAll = RefreshAll
 -- necesitar seguir nada en vivo.
 do
     local charHost
-    local function EnsureCharHost()
+    local function EnsureCharHost() Perfy_Trace(Perfy_GetTime(), "Enter", "EnsureCharHost MyCustomFrames/core.lua:1206:10");
         if not charHost then
             charHost = CreateFrame("Frame", "MyCF_PortraitCharHost", UIParent)
             charHost:SetFrameStrata("HIGH")
         end
-        return charHost
+        Perfy_Trace(Perfy_GetTime(), "Leave", "EnsureCharHost MyCustomFrames/core.lua:1206:10"); return charHost
     end
 
-    local function MakeCharButton(name)
+    local function MakeCharButton(name) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeCharButton MyCustomFrames/core.lua:1214:10");
         local b = CreateFrame("Button", name, EnsureCharHost(), "SecureActionButtonTemplate")
         b:SetFrameStrata("HIGH")
         b:SetToplevel(true)
@@ -1223,41 +1233,41 @@ do
         b:RegisterForClicks("LeftButtonDown", "LeftButtonUp")
         b:SetAttribute("type1", "macro")
         b:SetAttribute("macrotext1", "/click CharacterMicroButton")
-        b:SetScript("OnEnter", function(self)
-            if GameTooltip:IsForbidden() then return end
+        b:SetScript("OnEnter", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/core.lua:1226:31");
+            if GameTooltip:IsForbidden() then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:1226:31"); return end
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:SetText("Character Info", 1, 1, 1)
             GameTooltip:Show()
-        end)
-        b:SetScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:1226:31"); end)
+        b:SetScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/core.lua:1232:31"); if not GameTooltip:IsForbidden() then GameTooltip:Hide() end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:1232:31"); end)
         b:Hide()
-        return b
+        Perfy_Trace(Perfy_GetTime(), "Leave", "MakeCharButton MyCustomFrames/core.lua:1214:10"); return b
     end
 
     -- Coloca un boton EXACTAMENTE con el mismo metodo que PortraitUpdatePosition usa para el root
     -- del portrait (mismo parent/point/relPoint/offset + SetScale(p.scale)) → cae en el MISMO sitio
     -- en pantalla que ocuparia el portrait en esa posicion, sin necesitar coords absolutas ni
     -- seguimiento en vivo.
-    local function PlaceStatic(btn, anchorName, point, relPoint, x, y, size, scale)
+    local function PlaceStatic(btn, anchorName, point, relPoint, x, y, size, scale) Perfy_Trace(Perfy_GetTime(), "Enter", "PlaceStatic MyCustomFrames/core.lua:1241:10");
         local parent = _G[anchorName]
         if type(parent) ~= "table" or type(parent.GetObjectType) ~= "function" then parent = UIParent end
         btn:SetScale(scale or 1)
         btn:SetSize(size or 90, size or 90)
         btn:ClearAllPoints()
         btn:SetPoint(point or "CENTER", parent, relPoint or "CENTER", x or 0, y or 0)
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "PlaceStatic MyCustomFrames/core.lua:1241:10"); end
 
     -- Crea/reubica los 2 botones estaticos del portrait_player. Solo fuera de combate; si la
     -- config no cambio no pasa nada por llamarlo de mas (SetPoint/SetSize son baratos y no
     -- corren por tick, solo en estos puntos de entrada puntuales).
-    local function LayoutPortraitCharButtons(u)
-        if not u or u.key ~= "portrait_player" or InCombatLockdown() then return end
+    local function LayoutPortraitCharButtons(u) Perfy_Trace(Perfy_GetTime(), "Enter", "LayoutPortraitCharButtons MyCustomFrames/core.lua:1253:10");
+        if not u or u.key ~= "portrait_player" or InCombatLockdown() then Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutPortraitCharButtons MyCustomFrames/core.lua:1253:10"); return end
         local p = ns.PP(u)
-        if not p then return end
+        if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutPortraitCharButtons MyCustomFrames/core.lua:1253:10"); return end
         if unlocked or not p.clickOpenChar then
             if u.charBtnCenter then u.charBtnCenter:Hide() end
             if u.charBtnAlt then u.charBtnAlt:Hide() end
-            return
+            Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutPortraitCharButtons MyCustomFrames/core.lua:1253:10"); return
         end
         if not u.charBtnCenter then u.charBtnCenter = MakeCharButton("MyCF_PortraitCharBtnCenter") end
         if not u.charBtnAlt then u.charBtnAlt = MakeCharButton("MyCF_PortraitCharBtnAlt") end
@@ -1272,12 +1282,12 @@ do
         else
             u.charBtnAlt:Hide()
         end
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "LayoutPortraitCharButtons MyCustomFrames/core.lua:1253:10"); end
     ns.LayoutPortraitCharButtons = LayoutPortraitCharButtons
 
-    ns.LayoutPortraitCharButtonsAll = function()
+    ns.LayoutPortraitCharButtonsAll = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.LayoutPortraitCharButtonsAll MyCustomFrames/core.lua:1278:38");
         if portraits and portraits["portrait_player"] then LayoutPortraitCharButtons(portraits["portrait_player"]) end
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "ns.LayoutPortraitCharButtonsAll MyCustomFrames/core.lua:1278:38"); end
 end
 
 -- NOTA: el subsistema MICRO MENU vive en MicroMenu.lua (extraido de aqui por el
@@ -1300,66 +1310,66 @@ end
 -- el layout horneado (ns.BUILTIN / export del autor) cuando existe. Asi el reset INDIVIDUAL
 -- usa el mismo layout que una instalacion limpia / "Reset ALL" (no valores de fabrica),
 -- pero sin perder campos nuevos que el export no tuviera.
-local function ResetDefault(domain, key, fallback)
+local function ResetDefault(domain, key, fallback) Perfy_Trace(Perfy_GetTime(), "Enter", "ResetDefault MyCustomFrames/core.lua:1303:6");
     local base = DeepCopy(fallback())
     local b = ns.BUILTIN and ns.BUILTIN[domain]
     local src = b and (key and b[key] or (not key and b)) or nil
     if type(src) == "table" then
         for k, v in pairs(src) do base[k] = DeepCopy(v) end
     end
-    return base
+    Perfy_Trace(Perfy_GetTime(), "Leave", "ResetDefault MyCustomFrames/core.lua:1303:6"); return base
 end
 
-ns.ResetUnit = function(key)
-    if not db then return end
+ns.ResetUnit = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ResetUnit MyCustomFrames/core.lua:1313:15");
+    if not db then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetUnit MyCustomFrames/core.lua:1313:15"); return end
     if key == INFOBAR_KEY then
         db.infobar = ResetDefault("infobar", nil, InfoBarDefaults)
         if ns.RefreshInfoBar then ns.RefreshInfoBar() end
         if ns.OnProfilePasted then ns.OnProfilePasted() end
         print("|cff00ff00[MCF]|r Info bar reset.")
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetUnit MyCustomFrames/core.lua:1313:15"); return
     end
     if key == MICROMENU_KEY then
         db.micromenu = ResetDefault("micromenu", nil, ns.MicroMenuDefaults)
         if ns.RefreshMicroMenu then ns.RefreshMicroMenu() end
         if ns.OnProfilePasted then ns.OnProfilePasted() end
         print("|cff00ff00[MCF]|r Micro menu reset.")
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetUnit MyCustomFrames/core.lua:1313:15"); return
     end
     if key == CHATBUBBLE_KEY then
         db.chatbubble = ResetDefault("chatbubble", nil, ns.ChatBubbleDefaults)
         if ns.RefreshChatBubble then ns.RefreshChatBubble() end
         if ns.OnProfilePasted then ns.OnProfilePasted() end
         print("|cff00ff00[MCF]|r Chat bubble reset.")
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetUnit MyCustomFrames/core.lua:1313:15"); return
     end
     if key == ns.TOPWIDGET_KEY then
         if ns.TopWidgetDefaults then db.topwidget = ResetDefault("topwidget", nil, ns.TopWidgetDefaults) end
         if ns.RefreshTopWidget then ns.RefreshTopWidget() end
         if ns.OnProfilePasted then ns.OnProfilePasted() end
         print("|cff00ff00[MCF]|r Top Widget position reset.")
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetUnit MyCustomFrames/core.lua:1313:15"); return
     end
     if key == ns.MINIMAPBUTTONS_KEY then
         if ns.MinimapButtonsDefaults then db.minimapbuttons = ResetDefault("minimapbuttons", nil, ns.MinimapButtonsDefaults) end
         if ns.RefreshMinimapButtons then ns.RefreshMinimapButtons() end
         if ns.OnProfilePasted then ns.OnProfilePasted() end
         print("|cff00ff00[MCF]|r Minimap Buttons position reset.")
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetUnit MyCustomFrames/core.lua:1313:15"); return
     end
     if key == GLOW_KEY then
         if ns.GlowDefaults then db.glow = ResetDefault("glow", nil, ns.GlowDefaults) end
         if ns.RefreshGlow then ns.RefreshGlow(true) end
         if ns.OnProfilePasted then ns.OnProfilePasted() end
         print("|cff00ff00[MCF]|r Assisted glow reset.")
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetUnit MyCustomFrames/core.lua:1313:15"); return
     end
     if ns.IsMinimap and ns.IsMinimap(key) then
         if ns.MinimapDefaults then db.minimap = ResetDefault("minimap", nil, ns.MinimapDefaults) end
         if ns.RefreshMinimap then ns.RefreshMinimap() end
         if ns.OnProfilePasted then ns.OnProfilePasted() end
         print("|cff00ff00[MCF]|r Minimap reset.")
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetUnit MyCustomFrames/core.lua:1313:15"); return
     end
     if ns.IsNameplates and ns.IsNameplates(key) then
         -- Pedido del usuario: "opcion para tener la configuracion actual
@@ -1374,37 +1384,37 @@ ns.ResetUnit = function(key)
         if ns.RefreshNameplateStyle then ns.RefreshNameplateStyle() end
         if ns.OnProfilePasted then ns.OnProfilePasted() end
         print("|cff00ff00[MCF]|r Nameplates reset.")
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetUnit MyCustomFrames/core.lua:1313:15"); return
     end
     if AURA_SET[key] then
         db.auras = db.auras or {}
-        db.auras[key] = ResetDefault("auras", key, function() return AuraDefaultsFor(key) end)
+        db.auras[key] = ResetDefault("auras", key, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/core.lua:1381:51"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/core.lua:1381:51", AuraDefaultsFor(key)) end)
         if ns.RefreshAura then ns.RefreshAura(key) end
         if ns.OnProfilePasted then ns.OnProfilePasted() end
         print("|cff00ff00[MCF]|r Auras reset: " .. key)
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetUnit MyCustomFrames/core.lua:1313:15"); return
     end
     if PORTRAIT_SET[key] then
         db.portraits = db.portraits or {}
-        db.portraits[key] = ResetDefault("portraits", key, function() return PortraitDefaultsFor(key) end)
+        db.portraits[key] = ResetDefault("portraits", key, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/core.lua:1389:59"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/core.lua:1389:59", PortraitDefaultsFor(key)) end)
         if ns.RefreshPortrait then ns.RefreshPortrait(key) end
         if ns.OnProfilePasted then ns.OnProfilePasted() end
         print("|cff00ff00[MCF]|r Portrait reset: " .. key)
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetUnit MyCustomFrames/core.lua:1313:15"); return
     end
     if ns.IsRaid and ns.IsRaid(key) then
         if ns.RaidUnitDefaults then db.units.raid = ResetDefault("units", "raid", ns.RaidUnitDefaults) end
         if ns.RefreshRaid then ns.RefreshRaid() end
         if ns.OnProfilePasted then ns.OnProfilePasted() end
         print("|cff00ff00[MCF]|r Raid frames reset.")
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetUnit MyCustomFrames/core.lua:1313:15"); return
     end
-    if not db.units then return end
-    db.units[key] = ResetDefault("units", key, function() return DefaultsFor(key) end)
+    if not db.units then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetUnit MyCustomFrames/core.lua:1313:15"); return end
+    db.units[key] = ResetDefault("units", key, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/core.lua:1403:47"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/core.lua:1403:47", DefaultsFor(key)) end)
     ns.RefreshUnit(key)
     if ns.OnProfilePasted then ns.OnProfilePasted() end
     print("|cff00ff00[MCF]|r Unit reset: " .. key)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetUnit MyCustomFrames/core.lua:1313:15"); end
 
 -- Sub-tablas incluidas en cada preset (export/save/load/reset). Lista
 -- CENTRALIZADA (2026-07-19, pedido del usuario: "el export esta
@@ -1433,16 +1443,16 @@ local PRESET_TABLE_KEYS = {
 -- participa en presets" -- un falso positivo generalizado, peor que no tener
 -- el chequeo. Una copia simple es correcta en cualquier version de Lua y no
 -- depende de comportamiento sin verificar.
-function ns.GetPresetTableKeys()
+function ns.GetPresetTableKeys() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.GetPresetTableKeys MyCustomFrames/core.lua:1436:0");
     local copy = {}
     for i, k in ipairs(PRESET_TABLE_KEYS) do copy[i] = k end
-    return copy
+    Perfy_Trace(Perfy_GetTime(), "Leave", "ns.GetPresetTableKeys MyCustomFrames/core.lua:1436:0"); return copy
 end
 
 -- Restablece TODO. Si hay un preset marcado como Default, "Reset ALL" carga
 -- ESE preset (tu default pasa a ser el "por defecto" del addon); si no, valores de fabrica.
-ns.ResetAll = function()
-    if not (db and db.units) then return end
+ns.ResetAll = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ResetAll MyCustomFrames/core.lua:1444:14");
+    if not (db and db.units) then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetAll MyCustomFrames/core.lua:1444:14"); return end
     -- Punto de restauracion antes de pisar TODO (2026-07-25) -- recuperable con
     -- /mcfundo o cargando el preset "~ Auto-backup". Ver ns.SaveAutoBackup.
     if ns.SaveAutoBackup then ns.SaveAutoBackup() end
@@ -1450,7 +1460,7 @@ ns.ResetAll = function()
         ns.LoadPreset(db.defaultPreset)
         if ns.OnProfilePasted then ns.OnProfilePasted() end
         print("|cff00ff00[MCF]|r Reset to your default preset: " .. db.defaultPreset)
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetAll MyCustomFrames/core.lua:1444:14"); return
     end
     -- Sin preset default: volver al layout NATIVO del addon (BUILTIN), no a
     -- fabrica. FIX 2026-07-19: antes solo restauraba units/portraits/auras/
@@ -1464,7 +1474,7 @@ ns.ResetAll = function()
         RefreshAll()
         if ns.OnProfilePasted then ns.OnProfilePasted() end
         print("|cff00ff00[MCF]|r Reset to the addon's native layout.")
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetAll MyCustomFrames/core.lua:1444:14"); return
     end
     for _, def in ipairs(UNITS) do
         db.units[def.key] = DeepCopy(DefaultsFor(def.key))
@@ -1481,7 +1491,7 @@ ns.ResetAll = function()
     RefreshAll()
     if ns.OnProfilePasted then ns.OnProfilePasted() end
     print("|cff00ff00[MCF]|r Everything reset (units, portraits, auras, info bar).")
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ResetAll MyCustomFrames/core.lua:1444:14"); end
 
 -- ARENA (pedido del usuario 2026-07-19: "que copien visualmente los mismos
 -- valores y texturas del tot y tot portrait, incluso el portrait del player
@@ -1527,7 +1537,7 @@ local ARENA_PORTRAIT_POSITION_FIELDS = {
 -- nada que el usuario ya tenga), prueba primero el valor horneado
 -- (ns.BUILTIN[domain][key] o ns.BUILTIN[domain] para los singleton), y recien
 -- si BUILTIN tampoco lo tiene cae en el default generico de codigo.
-local function FillProfile(prof, builtinTable, defaultsTable)
+local function FillProfile(prof, builtinTable, defaultsTable) Perfy_Trace(Perfy_GetTime(), "Enter", "FillProfile MyCustomFrames/core.lua:1530:6");
     if type(builtinTable) == "table" then
         for k, v in pairs(builtinTable) do
             -- Estas dos claves pertenecian al antiguo "reveal on low HP".
@@ -1543,9 +1553,9 @@ local function FillProfile(prof, builtinTable, defaultsTable)
             if prof[k] == nil then prof[k] = v end
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "FillProfile MyCustomFrames/core.lua:1530:6"); end
 
-local function FillDefaults()
+local function FillDefaults() Perfy_Trace(Perfy_GetTime(), "Enter", "FillDefaults MyCustomFrames/core.lua:1548:6");
     for _, def in ipairs(UNITS) do
         local isNewUnit = db.units[def.key] == nil
         db.units[def.key] = db.units[def.key] or {}
@@ -1720,12 +1730,12 @@ local function FillDefaults()
         db.units.raid = db.units.raid or {}
         FillProfile(db.units.raid, ns.BUILTIN and ns.BUILTIN.units and ns.BUILTIN.units.raid, ns.RaidUnitDefaults())
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "FillDefaults MyCustomFrames/core.lua:1548:6"); end
 ns.FillDefaults = FillDefaults
 
 -- Migra rutas de textura antiguas (AzeriteUI) a las copias locales.
-local function RemapPaths(units)
-    if type(units) ~= "table" then return end
+local function RemapPaths(units) Perfy_Trace(Perfy_GetTime(), "Enter", "RemapPaths MyCustomFrames/core.lua:1727:6");
+    if type(units) ~= "table" then Perfy_Trace(Perfy_GetTime(), "Leave", "RemapPaths MyCustomFrames/core.lua:1727:6"); return end
     for _, prof in pairs(units) do
         if type(prof) == "table" then
             for _, k in ipairs({ "texture", "cageTexture", "castTexture" }) do
@@ -1733,7 +1743,7 @@ local function RemapPaths(units)
             end
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RemapPaths MyCustomFrames/core.lua:1727:6"); end
 
 -- ==========================================================================
 -- Campos GLOBALES (no por-unidad) que un preset/export debe guardar. Lista unica
@@ -1778,28 +1788,28 @@ local GLOBAL_FLAT_KEYS = {
 }
 local GLOBAL_TABLE_KEYS = { "lockHide", "explorer", "explorerZones", "explorerElementAlpha", "nameplateUserDefault", "nameplateProfiles" }
 
-local function CollectGlobals()
+local function CollectGlobals() Perfy_Trace(Perfy_GetTime(), "Enter", "CollectGlobals MyCustomFrames/core.lua:1781:6");
     local g = {}
     for _, k in ipairs(GLOBAL_FLAT_KEYS) do g[k] = db[k] end
     for _, k in ipairs(GLOBAL_TABLE_KEYS) do
         if type(db[k]) == "table" then g[k] = DeepCopy(db[k]) end
     end
-    return g
+    Perfy_Trace(Perfy_GetTime(), "Leave", "CollectGlobals MyCustomFrames/core.lua:1781:6"); return g
 end
 
-local function ApplyGlobals(g)
-    if type(g) ~= "table" then return end
+local function ApplyGlobals(g) Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyGlobals MyCustomFrames/core.lua:1790:6");
+    if type(g) ~= "table" then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyGlobals MyCustomFrames/core.lua:1790:6"); return end
     for _, k in ipairs(GLOBAL_FLAT_KEYS) do
         if g[k] ~= nil then db[k] = g[k] end
     end
     for _, k in ipairs(GLOBAL_TABLE_KEYS) do
         if type(g[k]) == "table" then db[k] = DeepCopy(g[k]) end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyGlobals MyCustomFrames/core.lua:1790:6"); end
 
 -- Un preset = perfil de TODO el addon (todas las unidades + globales + tracker).
-ns.SavePreset = function(name, silent)
-    if not name or name == "" then return end
+ns.SavePreset = function(name, silent) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.SavePreset MyCustomFrames/core.lua:1801:16");
+    if not name or name == "" then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.SavePreset MyCustomFrames/core.lua:1801:16"); return end
     db.presets = db.presets or {}
     local pr = { globals = CollectGlobals() }
     for _, k in ipairs(PRESET_TABLE_KEYS) do
@@ -1807,7 +1817,7 @@ ns.SavePreset = function(name, silent)
     end
     db.presets[name] = pr
     if not silent then print("|cff00ff00[MCF]|r Profile saved: " .. name) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.SavePreset MyCustomFrames/core.lua:1801:16"); end
 
 -- ==========================================================================
 -- RESPALDO AUTOMATICO antes de acciones DESTRUCTIVAS (2026-07-25, QoL).
@@ -1821,24 +1831,24 @@ end
 -- guardar un historial completo haria crecer los SavedVariables sin techo).
 -- ==========================================================================
 ns.AUTOBACKUP_NAME = "~ Auto-backup (before reset)"
-ns.SaveAutoBackup = function()
-    if not (db and db.units) then return end
+ns.SaveAutoBackup = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.SaveAutoBackup MyCustomFrames/core.lua:1824:20");
+    if not (db and db.units) then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.SaveAutoBackup MyCustomFrames/core.lua:1824:20"); return end
     ns.SavePreset(ns.AUTOBACKUP_NAME, true)
-end
-ns.RestoreAutoBackup = function()
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.SaveAutoBackup MyCustomFrames/core.lua:1824:20"); end
+ns.RestoreAutoBackup = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.RestoreAutoBackup MyCustomFrames/core.lua:1828:23");
     if not (db and db.presets and db.presets[ns.AUTOBACKUP_NAME]) then
         print("|cffff5555[MCF]|r No hay respaldo automatico guardado todavia.")
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.RestoreAutoBackup MyCustomFrames/core.lua:1828:23"); return
     end
     ns.LoadPreset(ns.AUTOBACKUP_NAME)
     if ns.OnProfilePasted then ns.OnProfilePasted() end
     print("|cff00ff00[MCF]|r Restaurado el respaldo previo a la ultima accion destructiva.")
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.RestoreAutoBackup MyCustomFrames/core.lua:1828:23"); end
 SLASH_MCFUNDO1 = "/mcfundo"
-SlashCmdList["MCFUNDO"] = function() ns.RestoreAutoBackup() end
-ns.LoadPreset = function(name)
+SlashCmdList["MCFUNDO"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFUNDO MyCustomFrames/core.lua:1838:26"); ns.RestoreAutoBackup() Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFUNDO MyCustomFrames/core.lua:1838:26"); end
+ns.LoadPreset = function(name) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.LoadPreset MyCustomFrames/core.lua:1839:16");
     local pr = db.presets and db.presets[name]
-    if not pr then return end
+    if not pr then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.LoadPreset MyCustomFrames/core.lua:1839:16"); return end
     if pr.units then
         for _, k in ipairs(PRESET_TABLE_KEYS) do
             if pr[k] then db[k] = DeepCopy(pr[k]) end
@@ -1858,33 +1868,33 @@ ns.LoadPreset = function(name)
     if ns.RefreshTopWidget then ns.RefreshTopWidget() end
     if ns.RefreshMinimapButtons then ns.RefreshMinimapButtons() end
     print("|cff00ff00[MCF]|r Profile loaded: " .. name)
-end
-ns.DeletePreset = function(name)
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.LoadPreset MyCustomFrames/core.lua:1839:16"); end
+ns.DeletePreset = function(name) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.DeletePreset MyCustomFrames/core.lua:1862:18");
     if db.presets then db.presets[name] = nil end
     if db.defaultPreset == name then db.defaultPreset = nil end
-end
-ns.GetPresetNames = function()
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.DeletePreset MyCustomFrames/core.lua:1862:18"); end
+ns.GetPresetNames = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.GetPresetNames MyCustomFrames/core.lua:1866:20");
     local t = {}
     if db.presets then for n in pairs(db.presets) do t[#t + 1] = n end end
     table.sort(t)
-    return t
+    Perfy_Trace(Perfy_GetTime(), "Leave", "ns.GetPresetNames MyCustomFrames/core.lua:1866:20"); return t
 end
-ns.SetDefaultPreset = function(name)
+ns.SetDefaultPreset = function(name) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.SetDefaultPreset MyCustomFrames/core.lua:1872:22");
     db.defaultPreset = name
     print("|cff00ff00[MCF]|r Default preset: " .. tostring(name))
-end
-ns.GetDefaultPreset = function() return db.defaultPreset end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.SetDefaultPreset MyCustomFrames/core.lua:1872:22"); end
+ns.GetDefaultPreset = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.GetDefaultPreset MyCustomFrames/core.lua:1876:22"); return Perfy_Trace_Passthrough("Leave", "ns.GetDefaultPreset MyCustomFrames/core.lua:1876:22", db.defaultPreset) end
 
 -- ---- Exportar / Importar perfiles (string copiable) ----
-local function Serialize(v)
+local function Serialize(v) Perfy_Trace(Perfy_GetTime(), "Enter", "Serialize MyCustomFrames/core.lua:1879:6");
     local t = type(v)
-    if t == "string" then return string.format("%q", v) end
+    if t == "string" then return Perfy_Trace_Passthrough("Leave", "Serialize MyCustomFrames/core.lua:1879:6", string.format("%q", v)) end
     if t == "number" then
         -- notacion segura para reimportar (evita %g con precision rara)
-        if v == math.floor(v) and math.abs(v) < 1e15 then return string.format("%d", v) end
-        return string.format("%.9g", v)
+        if v == math.floor(v) and math.abs(v) < 1e15 then return Perfy_Trace_Passthrough("Leave", "Serialize MyCustomFrames/core.lua:1879:6", string.format("%d", v)) end
+        return Perfy_Trace_Passthrough("Leave", "Serialize MyCustomFrames/core.lua:1879:6", string.format("%.9g", v))
     end
-    if t == "boolean" then return tostring(v) end
+    if t == "boolean" then return Perfy_Trace_Passthrough("Leave", "Serialize MyCustomFrames/core.lua:1879:6", tostring(v)) end
     if t == "table" then
         local parts = {}
         for k, val in pairs(v) do
@@ -1893,16 +1903,16 @@ local function Serialize(v)
             elseif type(k) == "number" then key = "[" .. tostring(k) .. "]" end
             if key then parts[#parts + 1] = key .. "=" .. Serialize(val) end
         end
-        return "{" .. table.concat(parts, ",") .. "}"
+        return Perfy_Trace_Passthrough("Leave", "Serialize MyCustomFrames/core.lua:1879:6", "{" .. table.concat(parts, ",") .. "}")
     end
-    return "nil"
+    Perfy_Trace(Perfy_GetTime(), "Leave", "Serialize MyCustomFrames/core.lua:1879:6"); return "nil"
 end
 
 -- Exporta un preset (o el layout actual si name==nil) a un string "MCF1:{...}". Incluye
 -- `tracker` + TODOS los globales (ver GLOBAL_FLAT_KEYS/GLOBAL_TABLE_KEYS) — antes solo se
 -- exportaba `hideEditOutline`, perdiendo Move Party/Boss, Mouselook, Hide Blizzard, fade-in,
 -- grid/snap, Sync Edit Mode y Explorer al exportar/importar.
-ns.ExportPreset = function(name)
+ns.ExportPreset = function(name) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ExportPreset MyCustomFrames/core.lua:1905:18");
     local src = { name = name and db.presets and db.presets[name] and name or "Actual" }
     local from = (name and db.presets and db.presets[name]) or db
     for _, k in ipairs(PRESET_TABLE_KEYS) do
@@ -1917,21 +1927,21 @@ ns.ExportPreset = function(name)
     -- tocar el contenido -- Lua ignora espacios/saltos entre tokens.
     local out = Serialize(src)
     out = out:gsub(",%[", ",\n[")
-    return "MCF1:" .. out
+    return Perfy_Trace_Passthrough("Leave", "ns.ExportPreset MyCustomFrames/core.lua:1905:18", "MCF1:" .. out)
 end
 
 -- Importa un string a un preset nuevo. Devuelve (ok, nombreOMensaje).
-ns.ImportPreset = function(str)
-    if type(str) ~= "string" then return false, "vacio" end
+ns.ImportPreset = function(str) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ImportPreset MyCustomFrames/core.lua:1924:18");
+    if type(str) ~= "string" then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ImportPreset MyCustomFrames/core.lua:1924:18"); return false, "vacio" end
     str = str:gsub("^%s+", ""):gsub("%s+$", ""):gsub("^MCF1:%s*", "")
-    if str == "" then return false, "vacio" end
+    if str == "" then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ImportPreset MyCustomFrames/core.lua:1924:18"); return false, "vacio" end
     local loader = loadstring or load
     local f = loader("return " .. str, "mcf_import")
-    if not f then return false, "formato invalido" end
+    if not f then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ImportPreset MyCustomFrames/core.lua:1924:18"); return false, "formato invalido" end
     if setfenv then setfenv(f, {}) end   -- sandbox: sin acceso a globals
     local ok, data = pcall(f)
     if not ok or type(data) ~= "table" or type(data.units) ~= "table" then
-        return false, "datos invalidos"
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ImportPreset MyCustomFrames/core.lua:1924:18"); return false, "datos invalidos"
     end
     db.presets = db.presets or {}
     local base = (type(data.name) == "string" and data.name ~= "") and data.name or "Importado"
@@ -1944,13 +1954,13 @@ ns.ImportPreset = function(str)
     pr.globals = type(data.globals) == "table" and DeepCopy(data.globals) or nil
     db.presets[name] = pr
     print("|cff00ff00[MCF]|r Profile imported: " .. name)
-    return true, name
+    Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ImportPreset MyCustomFrames/core.lua:1924:18"); return true, name
 end
 
 -- ==========================================================================
 -- EVENTOS + TICKER
 -- ==========================================================================
-local function InitDB()
+local function InitDB() Perfy_Trace(Perfy_GetTime(), "Enter", "InitDB MyCustomFrames/core.lua:1953:6");
     -- Instalacion LIMPIA (sin SavedVariables): aplicar el layout NATIVO (ns.BUILTIN),
     -- que es la config horneada del autor, para que salga todo organizado igual.
     local freshInstall = (MyCustomFramesDB == nil)
@@ -2210,7 +2220,7 @@ local function InitDB()
     if db.presets then
         for _, pr in pairs(db.presets) do RemapPaths(pr.units or pr) end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "InitDB MyCustomFrames/core.lua:1953:6"); end
 
 -- Fix DialogueUI + DynamicCam: DialogueUI llama a BlockShoulderOffsetZoom() al abrir su
 -- panel, lo que congela CvarUpdateFunction y evita que las custom situations de DynamicCam
@@ -2218,8 +2228,8 @@ end
 -- false). TOGGLEABLE via db.dcFix: al apagarlo RESTAURA los metodos originales (guardados 1
 -- vez en ns.dcOrig antes de sobrescribir). Se re-aplica en cada PLAYER_ENTERING_WORLD y al
 -- cambiar el toggle.
-ns.ApplyDcFix = function()
-    if not DynamicCam then return end
+ns.ApplyDcFix = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ApplyDcFix MyCustomFrames/core.lua:2221:16");
+    if not DynamicCam then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ApplyDcFix MyCustomFrames/core.lua:2221:16"); return end
     if not ns.dcOrig then
         ns.dcOrig = {
             block = DynamicCam.BlockShoulderOffsetZoom,
@@ -2227,14 +2237,14 @@ ns.ApplyDcFix = function()
         }
     end
     if db and db.dcFix then
-        DynamicCam.BlockShoulderOffsetZoom = function(s) s.shoulderOffsetZoomTmpDisable = false end
-        DynamicCam.AllowShoulderOffsetZoom = function(s) s.shoulderOffsetZoomTmpDisable = false end
+        DynamicCam.BlockShoulderOffsetZoom = function(s) Perfy_Trace(Perfy_GetTime(), "Enter", "DynamicCam.BlockShoulderOffsetZoom MyCustomFrames/core.lua:2230:45"); s.shoulderOffsetZoomTmpDisable = false Perfy_Trace(Perfy_GetTime(), "Leave", "DynamicCam.BlockShoulderOffsetZoom MyCustomFrames/core.lua:2230:45"); end
+        DynamicCam.AllowShoulderOffsetZoom = function(s) Perfy_Trace(Perfy_GetTime(), "Enter", "DynamicCam.AllowShoulderOffsetZoom MyCustomFrames/core.lua:2231:45"); s.shoulderOffsetZoomTmpDisable = false Perfy_Trace(Perfy_GetTime(), "Leave", "DynamicCam.AllowShoulderOffsetZoom MyCustomFrames/core.lua:2231:45"); end
         DynamicCam.shoulderOffsetZoomTmpDisable = false
     else
         DynamicCam.BlockShoulderOffsetZoom = ns.dcOrig.block
         DynamicCam.AllowShoulderOffsetZoom = ns.dcOrig.allow
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ApplyDcFix MyCustomFrames/core.lua:2221:16"); end
 
 -- PERF (2026-07-19, "arregla todo"): antes era una tabla LITERAL nueva
 -- creada en cada PLAYER_TARGET_CHANGED (dispara muy seguido en combate/
@@ -2275,7 +2285,7 @@ events:RegisterEvent("UNIT_PORTRAIT_UPDATE")
 events:RegisterEvent("ARENA_OPPONENT_UPDATE")
 events:RegisterEvent("DISPLAY_SIZE_CHANGED")
 
-events:SetScript("OnEvent", function(self, event, arg1)
+events:SetScript("OnEvent", function(self, event, arg1) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/core.lua:2278:28");
     if event == "ADDON_LOADED" and arg1 == ADDON then
         InitDB()
         RefreshAll()
@@ -2391,13 +2401,13 @@ events:SetScript("OnEvent", function(self, event, arg1)
         -- (Bloque de auras del target quitado 2026-07-27 -- ver nota en
         -- PLAYER_REGEN_ENABLED mas arriba.)
     end
-end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:2278:28"); end)
 
 -- EXPLORER (#11): extraido a Explorer.lua (2026-07-22) -- GetElementFrame/
 -- explorerDriver/ExplorerReset/ExplorerResetAll/ExplorerZoneAllowed/TickExplorer.
 
-C_Timer.NewTicker(0.1, ns.Prof.Wrap("core: tick principal 0.1s", function()
-    if not db or unlocked then return end
+C_Timer.NewTicker(0.1, ns.Prof.Wrap("core: tick principal 0.1s", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/core.lua:2399:65");
+    if not db or unlocked then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:2399:65"); return end
     -- Snapshot de estados seguros del tick (booleanos, jamas secretos): antes se
     -- consultaban decenas de veces por pasada con la misma respuesta.
     tickState.n = (tickState.n or 0) + 1
@@ -2489,7 +2499,7 @@ C_Timer.NewTicker(0.1, ns.Prof.Wrap("core: tick principal 0.1s", function()
     -- Explorer: la ANIMACION corre por frame en explorerDriver (OnUpdate, Explorer.lua);
     -- el ticker solo refresca el estado de combate/target/casteo y enciende/apaga el driver.
     if ns.TickExplorer then ns.TickExplorer() end
-end))
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:2399:65"); end))
 
 -- ==========================================================================
 -- MOUSELOOK (global, opcional): clic-derecho + ARRASTRAR rota la camara, incluso
@@ -2508,7 +2518,7 @@ do
     -- sobre un frame protegido AJENO, ese click le pertenece (no rotamos camara);
     -- NUESTROS unit buttons (marcados _mcfOwnButton, sin WrapScript) siguen permitiendo
     -- el mouselook. pcall de cinturon en Start/Stop.
-    local function ForeignProtectedUnderMouse()
+    local function ForeignProtectedUnderMouse() Perfy_Trace(Perfy_GetTime(), "Enter", "ForeignProtectedUnderMouse MyCustomFrames/core.lua:2511:10");
         local foci
         if GetMouseFoci then
             local ok, r = pcall(GetMouseFoci)
@@ -2517,29 +2527,29 @@ do
             local ok, r = pcall(GetMouseFocus)
             if ok and r then foci = { r } end
         end
-        if type(foci) ~= "table" then return false end
+        if type(foci) ~= "table" then Perfy_Trace(Perfy_GetTime(), "Leave", "ForeignProtectedUnderMouse MyCustomFrames/core.lua:2511:10"); return false end
         for _, fr in ipairs(foci) do
             if type(fr) == "table" and not fr._mcfOwnButton and fr.IsProtected then
                 local ok, prot = pcall(fr.IsProtected, fr)
-                if ok and prot then return true end
+                if ok and prot then Perfy_Trace(Perfy_GetTime(), "Leave", "ForeignProtectedUnderMouse MyCustomFrames/core.lua:2511:10"); return true end
             end
         end
-        return false
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ForeignProtectedUnderMouse MyCustomFrames/core.lua:2511:10"); return false
     end
-    local function OnUpdate()
+    local function OnUpdate() Perfy_Trace(Perfy_GetTime(), "Enter", "OnUpdate MyCustomFrames/core.lua:2529:10");
         if not IsMouseButtonDown(2) then
             f:SetScript("OnUpdate", nil)
             if ML.inLook then pcall(MouselookStop); ML.inLook = false end
-            return
+            Perfy_Trace(Perfy_GetTime(), "Leave", "OnUpdate MyCustomFrames/core.lua:2529:10"); return
         end
-        if ML.inLook or ML.foreign then return end
+        if ML.inLook or ML.foreign then Perfy_Trace(Perfy_GetTime(), "Leave", "OnUpdate MyCustomFrames/core.lua:2529:10"); return end
         local x, y = GetCursorPosition()
         if abs(x - ML.lastX) > 1 or abs(y - ML.lastY) > 1 then
             if pcall(MouselookStart) then ML.inLook = true end
         end
-    end
-    f:SetScript("OnEvent", function(_, event, button)
-        if not (db and db.mouselook) then return end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "OnUpdate MyCustomFrames/core.lua:2529:10"); end
+    f:SetScript("OnEvent", function(_, event, button) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/core.lua:2541:27");
+        if not (db and db.mouselook) then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:2541:27"); return end
         if event == "GLOBAL_MOUSE_DOWN" and button == "RightButton" then
             ML.inLook = false
             ML.foreign = ForeignProtectedUnderMouse()   -- evaluado UNA vez por click
@@ -2549,7 +2559,7 @@ do
             f:SetScript("OnUpdate", nil)
             if ML.inLook then pcall(MouselookStop); ML.inLook = false end
         end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:2541:27"); end)
     f:RegisterEvent("GLOBAL_MOUSE_DOWN")
     f:RegisterEvent("GLOBAL_MOUSE_UP")
 end
@@ -2589,10 +2599,10 @@ local blizzShowHooked = setmetatable({}, { __mode = "k" })
 -- Guard de reentrancia para el hook de SetAlpha de mas abajo -- por FRAME, no global
 -- (2 frames distintos disparando su hook al mismo tiempo no deben pisarse entre si).
 local blizzAlphaReentrant = setmetatable({}, { __mode = "k" })
-local function HB_HookShowAlpha(frame)
-    if not frame or blizzShowHooked[frame] then return end
+local function HB_HookShowAlpha(frame) Perfy_Trace(Perfy_GetTime(), "Enter", "HB_HookShowAlpha MyCustomFrames/core.lua:2592:6");
+    if not frame or blizzShowHooked[frame] then Perfy_Trace(Perfy_GetTime(), "Leave", "HB_HookShowAlpha MyCustomFrames/core.lua:2592:6"); return end
     blizzShowHooked[frame] = true
-    pcall(hooksecurefunc, frame, "Show", function(self) self:SetAlpha(0) end)
+    pcall(hooksecurefunc, frame, "Show", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/core.lua:2595:41"); self:SetAlpha(0) Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:2595:41"); end)
     -- FIX (2026-07-20, reportado por el usuario con /fstack: "CompactArenaFrameMemberN
     -- SelectionHighlight" seguia visible en pantalla, confirmado SIN /fstack abierto):
     -- el hook de Show no alcanza si algo anima el alpha DIRECTO (ej. un glow/pulso de
@@ -2605,13 +2615,13 @@ local function HB_HookShowAlpha(frame)
     -- sirve para leerlo con seguridad. Se evita LEER el valor por completo: en vez de
     -- decidir segun 'a', se usa un guard de reentrancia por-frame (el propio SetAlpha(0)
     -- de aca abajo re-dispara este mismo hook -- sin el guard seria un loop infinito).
-    pcall(hooksecurefunc, frame, "SetAlpha", function(self)
-        if blizzAlphaReentrant[self] then return end
+    pcall(hooksecurefunc, frame, "SetAlpha", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/core.lua:2608:45");
+        if blizzAlphaReentrant[self] then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:2608:45"); return end
         blizzAlphaReentrant[self] = true
         self:SetAlpha(0)
         blizzAlphaReentrant[self] = false
-    end)
-end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:2608:45"); end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "HB_HookShowAlpha MyCustomFrames/core.lua:2592:6"); end
 -- FIX (2026-07-19, reportado por el usuario: "el player y cast de Blizzard
 -- reaparecieron, sin ningun error"): el guard blizzHidden[frame] hacia que
 -- RegisterStateDriver se llamara UNA SOLA VEZ por frame, para siempre -- si
@@ -2623,12 +2633,12 @@ end
 -- nuevo (no tainta, mismo patron que el resto del addon ya reaplica en cada
 -- evento) -- se saca el guard, reasertando SIEMPRE que HideBlizzardFramesNow
 -- corre.
-local function HB_Handle(frame)
-    if not frame then return end
-    pcall(function() RegisterStateDriver(frame, "visibility", "hide") end)
+local function HB_Handle(frame) Perfy_Trace(Perfy_GetTime(), "Enter", "HB_Handle MyCustomFrames/core.lua:2626:6");
+    if not frame then Perfy_Trace(Perfy_GetTime(), "Leave", "HB_Handle MyCustomFrames/core.lua:2626:6"); return end
+    pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/core.lua:2628:10"); RegisterStateDriver(frame, "visibility", "hide") Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:2628:10"); end)
     if frame.SetAlpha then frame:SetAlpha(0) end
     HB_HookShowAlpha(frame)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "HB_Handle MyCustomFrames/core.lua:2626:6"); end
 
 -- 2026-07-15: FIX "la cast bar nativa aparece un instante al castear". Causa: el
 -- RegisterStateDriver de arriba usa una condicion CONSTANTE ("hide") — solo se evalua UNA vez al
@@ -2642,24 +2652,24 @@ end
 -- secretos (el taint reportado era especificamente en TextStatusBar/UpdateHealthColor, funciones
 -- que la cast bar nunca ejecuta). Se mantiene TAMBIEN el RegisterStateDriver como red de
 -- seguridad (por si algo mas la muestra).
-local function HB_HandleCastBar(frame)
-    if not frame then return end
+local function HB_HandleCastBar(frame) Perfy_Trace(Perfy_GetTime(), "Enter", "HB_HandleCastBar MyCustomFrames/core.lua:2645:6");
+    if not frame then Perfy_Trace(Perfy_GetTime(), "Leave", "HB_HandleCastBar MyCustomFrames/core.lua:2645:6"); return end
     -- Mismo fix que HB_Handle -- sin el guard "ya hecho para siempre", que
     -- impedia reaplicar si el driver se perdia externamente.
-    pcall(function()
+    pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/core.lua:2649:10");
         frame:UnregisterAllEvents()
         frame:Hide()
         RegisterStateDriver(frame, "visibility", "hide")
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:2649:10"); end)
     -- Aca SI podemos enganchar Show->Hide (no solo SetAlpha) -- UnregisterAllEvents/Hide
     -- ya se prueban seguros en estas 3 cast bars especificamente (ver comentario de arriba,
     -- nunca tocan TextStatusBar/UpdateHealthColor). Cierra el mismo hueco que HB_HookShowAlpha
     -- pero con Hide() real en vez de solo alpha, mismo criterio ya usado en este archivo.
     if not blizzShowHooked[frame] then
         blizzShowHooked[frame] = true
-        pcall(hooksecurefunc, frame, "Show", function(self) self:Hide() end)
+        pcall(hooksecurefunc, frame, "Show", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/core.lua:2660:45"); self:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:2660:45"); end)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "HB_HandleCastBar MyCustomFrames/core.lua:2645:6"); end
 
 -- Ocultar por ALPHA (sin Hide/UnregisterAllEvents/RegisterStateDriver): puramente cosmetico,
 -- no toca nada que el sistema de "secret numbers" de salud vigile. Tecnica confirmada en el
@@ -2669,8 +2679,8 @@ end
 -- bar embebida) sin llamar nada sobre ellos. No es "una vez" como RegisterStateDriver: hay que
 -- reaplicar cada vez por si Blizzard resetea el alpha al reconstruir el frame (por eso se llama
 -- sin guard de blizzHidden, desde los mismos puntos de entrada que ya reaplican HideBlizzardFrames).
-local function HB_HideAlpha(frame)
-    if not frame then return end
+local function HB_HideAlpha(frame) Perfy_Trace(Perfy_GetTime(), "Enter", "HB_HideAlpha MyCustomFrames/core.lua:2672:6");
+    if not frame then Perfy_Trace(Perfy_GetTime(), "Leave", "HB_HideAlpha MyCustomFrames/core.lua:2672:6"); return end
     if frame.SetAlpha then frame:SetAlpha(0) end
     -- FIX (2026-07-24, reportado por el usuario via /fstack: el frame nativo de arena
     -- seguia apareciendo BAJO el cursor pese al alpha=0): SetAlpha(0) esconde
@@ -2693,7 +2703,7 @@ local function HB_HideAlpha(frame)
         pcall(frame.EnableMouse, frame, false)
     end
     HB_HookShowAlpha(frame)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "HB_HideAlpha MyCustomFrames/core.lua:2672:6"); end
 
 -- FIX (2026-07-20, pedido del usuario: "confirma que el 100% de unitframe de arena
 -- nativa este ocultada" -- vio un castbar suelto que no llego a identificar con
@@ -2708,17 +2718,17 @@ end
 -- nivel de hijos no alcanzaba -- se agrega un 2do nivel (nietos) para cubrir highlight/
 -- selection textures anidadas mas adentro (ej. dentro de la healthBar del member, no
 -- directo del member). depth por defecto 2 (frame + hijos + nietos).
-local function HB_HideAlphaDeep(frame, depth)
-    if not frame then return end
+local function HB_HideAlphaDeep(frame, depth) Perfy_Trace(Perfy_GetTime(), "Enter", "HB_HideAlphaDeep MyCustomFrames/core.lua:2711:6");
+    if not frame then Perfy_Trace(Perfy_GetTime(), "Leave", "HB_HideAlphaDeep MyCustomFrames/core.lua:2711:6"); return end
     depth = depth or 2
     HB_HideAlpha(frame)
-    if depth <= 0 then return end
-    local ok, children = pcall(function() return { frame:GetChildren() } end)
-    if not ok then return end
+    if depth <= 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "HB_HideAlphaDeep MyCustomFrames/core.lua:2711:6"); return end
+    local ok, children = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/core.lua:2716:31"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/core.lua:2716:31", { frame:GetChildren() }) end)
+    if not ok then Perfy_Trace(Perfy_GetTime(), "Leave", "HB_HideAlphaDeep MyCustomFrames/core.lua:2711:6"); return end
     for _, child in ipairs(children) do
         HB_HideAlphaDeep(child, depth - 1)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "HB_HideAlphaDeep MyCustomFrames/core.lua:2711:6"); end
 
 -- FIX (2026-07-20, reportado por el usuario: "esto fue en una partida nueva despues de
 -- hacer reload" -- seguian apareciendo elementos nuevos del arena nativo, ej. un icono
@@ -2729,8 +2739,8 @@ end
 -- reaplicar nada nuevo durante el partido real. Se separa el hide de arena a su PROPIA
 -- funcion, SIN ese guard -- es 100% alpha (HB_HideAlphaDeep), tecnica ya confirmada
 -- segura en combate en todo este archivo, no necesita esperar a salir de combate.
-local function HideArenaFramesNow()
-    if not (db and db.hideBlizzard) then return end
+local function HideArenaFramesNow() Perfy_Trace(Perfy_GetTime(), "Enter", "HideArenaFramesNow MyCustomFrames/core.lua:2732:6");
+    if not (db and db.hideBlizzard) then Perfy_Trace(Perfy_GetTime(), "Leave", "HideArenaFramesNow MyCustomFrames/core.lua:2732:6"); return end
     -- FIX (2026-07-24, reportado por el usuario: "el highlight de seleccion de
     -- las unitframes de arena nativas aun sigue apareciendo"): depth=2 (frame +
     -- hijos + nietos) no alcanzaba a cubrir un SelectionHighlight anidado un
@@ -2745,12 +2755,12 @@ local function HideArenaFramesNow()
         HB_HideAlphaDeep(_G["ArenaEnemyMatchFrame" .. i], 4)
         HB_HideAlphaDeep(_G["CompactArenaFrameMember" .. i], 4)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "HideArenaFramesNow MyCustomFrames/core.lua:2732:6"); end
 ns.HideArenaFramesNow = HideArenaFramesNow
 
-local function HideBlizzardFramesNow()
-    if not (db and db.hideBlizzard) then return end
-    if InCombatLockdown() then blizzNeedsApply = true; return end
+local function HideBlizzardFramesNow() Perfy_Trace(Perfy_GetTime(), "Enter", "HideBlizzardFramesNow MyCustomFrames/core.lua:2751:6");
+    if not (db and db.hideBlizzard) then Perfy_Trace(Perfy_GetTime(), "Leave", "HideBlizzardFramesNow MyCustomFrames/core.lua:2751:6"); return end
+    if InCombatLockdown() then blizzNeedsApply = true; Perfy_Trace(Perfy_GetTime(), "Leave", "HideBlizzardFramesNow MyCustomFrames/core.lua:2751:6"); return end
     blizzNeedsApply = false
     HB_Handle(_G.PlayerFrame)
     HB_Handle(_G.PetFrame)
@@ -2804,11 +2814,11 @@ local function HideBlizzardFramesNow()
     -- cliente (Midnight 12.0.7) tiene reportes de otros addons de que
     -- CompactRaidFrameManager puede comportarse raro; si la llamada fallara
     -- el alpha-hide de arriba sigue cubriendo igual.
-    pcall(function()
+    pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/core.lua:2807:10");
         if CompactRaidFrameManager_SetSetting then
             CompactRaidFrameManager_SetSetting("IsShown", "0")
         end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:2807:10"); end)
     -- OverrideActionBar (pedido del usuario 2026-07-20): la barra nativa que
     -- aparece en vehiculos/monturas con habilidades/algunos items de racial.
     -- Por ALPHA (no HB_Handle/RegisterStateDriver): tiene botones de accion
@@ -2836,7 +2846,7 @@ local function HideBlizzardFramesNow()
     -- quedan cubiertos solo con ocultar el contenedor de arriba si Blizzard les toca el
     -- alpha aparte en su propio refresh nativo).
     HideArenaFramesNow()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "HideBlizzardFramesNow MyCustomFrames/core.lua:2751:6"); end
 -- GROUP_ROSTER_UPDATE dispara TANTO nuestro handler como el refresh nativo de
 -- CompactPartyFrame/CompactRaidFrameContainer (CompactUnitFrame_UpdateAll -> UpdateHealthColor,
 -- que compara "secret numbers"). Tocar esos frames (UnregisterAllEvents/Hide/RegisterStateDriver)
@@ -2845,15 +2855,15 @@ end
 -- frame con C_Timer.After(0, ...) alcanza para que nuestro toque nunca coincida con el pase de
 -- Blizzard sobre esos mismos frames, sin cambiar nada del comportamiento (side-effects idempotentes
 -- via blizzHidden). Confirmado por el error reportado en juego con CompactPartyFrameMember.
-local function HideBlizzardFrames()
+local function HideBlizzardFrames() Perfy_Trace(Perfy_GetTime(), "Enter", "HideBlizzardFrames MyCustomFrames/core.lua:2848:6");
     if C_Timer and C_Timer.After then
         C_Timer.After(0, HideBlizzardFramesNow)
     else
         HideBlizzardFramesNow()
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "HideBlizzardFrames MyCustomFrames/core.lua:2848:6"); end
 ns.HideBlizzardFrames = HideBlizzardFrames
-ns.BlizzardNeedsApply = function() return blizzNeedsApply end
+ns.BlizzardNeedsApply = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.BlizzardNeedsApply MyCustomFrames/core.lua:2856:24"); Perfy_Trace(Perfy_GetTime(), "Leave", "ns.BlizzardNeedsApply MyCustomFrames/core.lua:2856:24"); return blizzNeedsApply end
 
 -- ==========================================================================
 -- DIAGNOSTICO: /mcfscaledump — vuelca la posicion de cada widget raiz como
@@ -2865,7 +2875,7 @@ ns.BlizzardNeedsApply = function() return blizzNeedsApply end
 -- iguales = quedo bien proporcionalmente, distintas = ese widget se corrio),
 -- sin necesitar screenshots ni adivinar a ojo cual elemento se desplazo.
 -- ==========================================================================
-local function MCF_ScaleDumpBox(text)
+local function MCF_ScaleDumpBox(text) Perfy_Trace(Perfy_GetTime(), "Enter", "MCF_ScaleDumpBox MyCustomFrames/core.lua:2868:6");
     local f = _G.MCFScaleDumpFrame
     if not f then
         f = CreateFrame("Frame", "MCFScaleDumpFrame", UIParent, "BackdropTemplate")
@@ -2887,7 +2897,7 @@ local function MCF_ScaleDumpBox(text)
         local eb = CreateFrame("EditBox", nil, sf)
         eb:SetMultiLine(true); eb:SetFontObject(ChatFontNormal)
         eb:SetWidth(500); eb:SetAutoFocus(false)
-        eb:SetScript("OnEscapePressed", function() f:Hide() end)
+        eb:SetScript("OnEscapePressed", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/core.lua:2890:40"); f:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/core.lua:2890:40"); end)
         sf:SetScrollChild(eb)
         f.eb = eb
     end
@@ -2895,12 +2905,12 @@ local function MCF_ScaleDumpBox(text)
     f.eb:HighlightText()
     f:Show()
     f.eb:SetFocus()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "MCF_ScaleDumpBox MyCustomFrames/core.lua:2868:6"); end
 
-local function MCF_DumpFrameLine(lines, label, frame)
-    if not frame then lines[#lines + 1] = label .. " | (no existe)"; return end
+local function MCF_DumpFrameLine(lines, label, frame) Perfy_Trace(Perfy_GetTime(), "Enter", "MCF_DumpFrameLine MyCustomFrames/core.lua:2900:6");
+    if not frame then lines[#lines + 1] = label .. " | (no existe)"; Perfy_Trace(Perfy_GetTime(), "Leave", "MCF_DumpFrameLine MyCustomFrames/core.lua:2900:6"); return end
     local ok, cx, cy = pcall(frame.GetCenter, frame)
-    if not ok or not cx or not cy then lines[#lines + 1] = label .. " | (sin GetCenter, oculto/sin posicion)"; return end
+    if not ok or not cx or not cy then lines[#lines + 1] = label .. " | (sin GetCenter, oculto/sin posicion)"; Perfy_Trace(Perfy_GetTime(), "Leave", "MCF_DumpFrameLine MyCustomFrames/core.lua:2900:6"); return end
     -- FIX: GetCenter() devuelve coordenadas en el espacio propio del frame
     -- (divididas por SU PROPIO GetEffectiveScale()), no en el espacio de
     -- UIParent -- hay que reconvertir a pixeles "reales" (screenX = cx *
@@ -2915,9 +2925,9 @@ local function MCF_DumpFrameLine(lines, label, frame)
     local w, h = frame.GetSize and frame:GetSize() or 0, 0
     lines[#lines + 1] = string.format("%-22s | x=%.4f y=%.4f | scale=%.3f | w=%.1f h=%.1f | shown=%s",
         label, fx, fy, scale, w, h, tostring(frame:IsShown()))
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "MCF_DumpFrameLine MyCustomFrames/core.lua:2900:6"); end
 
-local function MCF_ScaleDump()
+local function MCF_ScaleDump() Perfy_Trace(Perfy_GetTime(), "Enter", "MCF_ScaleDump MyCustomFrames/core.lua:2920:6");
     local sw, sh = GetPhysicalScreenSize()
     local uw, uh = UIParent:GetWidth(), UIParent:GetHeight()
     local lines = {
@@ -2945,7 +2955,9 @@ local function MCF_ScaleDump()
         if _G[name] then MCF_DumpFrameLine(lines, name, _G[name]) end
     end
     MCF_ScaleDumpBox(table.concat(lines, "\n"))
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "MCF_ScaleDump MyCustomFrames/core.lua:2920:6"); end
 
 SLASH_MCFSCALEDUMP1 = "/mcfscaledump"
 SlashCmdList["MCFSCALEDUMP"] = MCF_ScaleDump
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/core.lua");

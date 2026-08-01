@@ -1,4 +1,4 @@
--- ==========================================================================
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Nameplates.lua"); -- ==========================================================================
 -- MyCustomFrames - Nameplates.lua
 -- Reskin de los nameplates NATIVOS de Blizzard (CompactUnitFrame) para que
 -- se vean como los de AzeriteUI: NO se reemplaza el frame, NO se usa oUF --
@@ -60,15 +60,15 @@ local DEFAULT_HIGHLIGHT_COLOR = { r = 255/255, g = 239/255, b = 169/255 }
 -- w/h aceptan un NUMERO fijo o una funcion `() -> w, h` (leida EN VIVO en cada
 -- Reassert) -- el Designer/menu cambian tamaño en caliente sin tener que
 -- recrear los hooks, misma idea que P() para offsets/colores.
-local function LockSize(region, w, h)
-    if not region then return end
+local function LockSize(region, w, h) Perfy_Trace(Perfy_GetTime(), "Enter", "LockSize MyCustomFrames/Nameplates.lua:63:6");
+    if not region then Perfy_Trace(Perfy_GetTime(), "Leave", "LockSize MyCustomFrames/Nameplates.lua:63:6"); return end
     local locking = false
-    local function GetWH()
-        if type(w) == "function" then return w() end
-        return w, h
+    local function GetWH() Perfy_Trace(Perfy_GetTime(), "Enter", "GetWH MyCustomFrames/Nameplates.lua:66:10");
+        if type(w) == "function" then return Perfy_Trace_Passthrough("Leave", "GetWH MyCustomFrames/Nameplates.lua:66:10", w()) end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "GetWH MyCustomFrames/Nameplates.lua:66:10"); return w, h
     end
-    local function Reassert()
-        if locking then return end
+    local function Reassert() Perfy_Trace(Perfy_GetTime(), "Enter", "Reassert MyCustomFrames/Nameplates.lua:70:10");
+        if locking then Perfy_Trace(Perfy_GetTime(), "Leave", "Reassert MyCustomFrames/Nameplates.lua:70:10"); return end
         local tw, th = GetWH()
         -- FIX (2026-07-19, reportado por el usuario): region:GetSize() para
         -- ciertas regiones nativas del nameplate (ej. selectionHighlight)
@@ -80,17 +80,17 @@ local function LockSize(region, w, h)
         local okGet, cw, ch = pcall(region.GetSize, region)
         local readable = okGet and type(cw) == "number" and type(ch) == "number"
             and not (issecretvalue and (issecretvalue(cw) or issecretvalue(ch)))
-        if readable and cw == tw and ch == th then return end
+        if readable and cw == tw and ch == th then Perfy_Trace(Perfy_GetTime(), "Leave", "Reassert MyCustomFrames/Nameplates.lua:70:10"); return end
         locking = true
         region:SetSize(tw, th)
         locking = false
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "Reassert MyCustomFrames/Nameplates.lua:70:10"); end
     hooksecurefunc(region, "SetSize", Reassert)
     if region.SetWidth then hooksecurefunc(region, "SetWidth", Reassert) end
     if region.SetHeight then hooksecurefunc(region, "SetHeight", Reassert) end
     region._mcfReassertSize = Reassert
     Reassert()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "LockSize MyCustomFrames/Nameplates.lua:63:6"); end
 
 -- /mcfnpdiag en vivo confirmo el motivo real de la barra estirada: Blizzard
 -- NO usa SetSize para dimensionar healthBar/castBar -- las ancla con DOS
@@ -100,45 +100,45 @@ end
 -- UN SOLO punto de anclaje (relativo al nameplate) + tamaño fijo, reafirmado
 -- cada vez que Blizzard vuelve a llamar SetPoint.
 -- w/h aceptan numero fijo o funcion `() -> w, h` (ver LockSize).
-local function LockBar(region, parent, point, relPoint, x, y, w, h)
-    if not region then return end
+local function LockBar(region, parent, point, relPoint, x, y, w, h) Perfy_Trace(Perfy_GetTime(), "Enter", "LockBar MyCustomFrames/Nameplates.lua:103:6");
+    if not region then Perfy_Trace(Perfy_GetTime(), "Leave", "LockBar MyCustomFrames/Nameplates.lua:103:6"); return end
     local locking = false
-    local function GetWH()
-        if type(w) == "function" then return w() end
-        return w, h
+    local function GetWH() Perfy_Trace(Perfy_GetTime(), "Enter", "GetWH MyCustomFrames/Nameplates.lua:106:10");
+        if type(w) == "function" then return Perfy_Trace_Passthrough("Leave", "GetWH MyCustomFrames/Nameplates.lua:106:10", w()) end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "GetWH MyCustomFrames/Nameplates.lua:106:10"); return w, h
     end
-    local function Reassert()
-        if locking then return end
+    local function Reassert() Perfy_Trace(Perfy_GetTime(), "Enter", "Reassert MyCustomFrames/Nameplates.lua:110:10");
+        if locking then Perfy_Trace(Perfy_GetTime(), "Leave", "Reassert MyCustomFrames/Nameplates.lua:110:10"); return end
         locking = true
         local tw, th = GetWH()
         region:ClearAllPoints()
         region:SetPoint(point, parent, relPoint, x, y)
         region:SetSize(tw, th)
         locking = false
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "Reassert MyCustomFrames/Nameplates.lua:110:10"); end
     hooksecurefunc(region, "SetPoint", Reassert)
     hooksecurefunc(region, "SetSize", Reassert)
     if region.SetWidth then hooksecurefunc(region, "SetWidth", Reassert) end
     if region.SetHeight then hooksecurefunc(region, "SetHeight", Reassert) end
     region._mcfReassertBar = Reassert
     Reassert()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "LockBar MyCustomFrames/Nameplates.lua:103:6"); end
 
 -- El highlight de seleccion (target/focus) y el glow de amenaza los sigue
 -- coloreando Blizzard SOLO -- CompactUnitFrame_UpdateSelectionHighlight ya
 -- les pone el vertex color correcto (focus celeste, target dorado, etc);
 -- aca solo se cambia la TEXTURA de base, sin tocar esa logica de color.
 
-local function P() return ns.GetDB() and ns.GetDB().nameplates end
+local function P() Perfy_Trace(Perfy_GetTime(), "Enter", "P MyCustomFrames/Nameplates.lua:132:6"); return Perfy_Trace_Passthrough("Leave", "P MyCustomFrames/Nameplates.lua:132:6", ns.GetDB() and ns.GetDB().nameplates) end
 -- Tamaños: los resuelve ns.NPLayout, la MISMA fuente que consulta el Designer
 -- (2026-07-28). Antes cada lado tenia su cuenta con su propio fallback, y los
 -- fallbacks ni siquiera coincidian entre si.
-local function GetHealthSize()    return ns.NPLayout.HealthSize(P()) end
-local function GetCastSize()      return ns.NPLayout.CastSize(P()) end
-local function GetHighlightSize() return ns.NPLayout.HighlightSize(P()) end
-local function GetAuraIconSize()  return ns.NPLayout.AuraIconSize(P()) end
+local function GetHealthSize() Perfy_Trace(Perfy_GetTime(), "Enter", "GetHealthSize MyCustomFrames/Nameplates.lua:136:6");    return Perfy_Trace_Passthrough("Leave", "GetHealthSize MyCustomFrames/Nameplates.lua:136:6", ns.NPLayout.HealthSize(P())) end
+local function GetCastSize() Perfy_Trace(Perfy_GetTime(), "Enter", "GetCastSize MyCustomFrames/Nameplates.lua:137:6");      return Perfy_Trace_Passthrough("Leave", "GetCastSize MyCustomFrames/Nameplates.lua:137:6", ns.NPLayout.CastSize(P())) end
+local function GetHighlightSize() Perfy_Trace(Perfy_GetTime(), "Enter", "GetHighlightSize MyCustomFrames/Nameplates.lua:138:6"); return Perfy_Trace_Passthrough("Leave", "GetHighlightSize MyCustomFrames/Nameplates.lua:138:6", ns.NPLayout.HighlightSize(P())) end
+local function GetAuraIconSize() Perfy_Trace(Perfy_GetTime(), "Enter", "GetAuraIconSize MyCustomFrames/Nameplates.lua:139:6");  return Perfy_Trace_Passthrough("Leave", "GetAuraIconSize MyCustomFrames/Nameplates.lua:139:6", ns.NPLayout.AuraIconSize(P())) end
 ns.NAMEPLATES_KEY = "nameplates"
-ns.IsNameplates = function(key) return key == ns.NAMEPLATES_KEY end
+ns.IsNameplates = function(key) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.IsNameplates MyCustomFrames/Nameplates.lua:141:18"); return Perfy_Trace_Passthrough("Leave", "ns.IsNameplates MyCustomFrames/Nameplates.lua:141:18", key == ns.NAMEPLATES_KEY) end
 
 -- CAMBIADO (2026-07-19, pedido del usuario: primero "solo jugadores
 -- amistosos", despues "agregame tambien NPCs amistosos (vendedores, guardias,
@@ -147,17 +147,17 @@ ns.IsNameplates = function(key) return key == ns.NAMEPLATES_KEY end
 -- un jugador (color preestablecido del perfil). UnitReaction(unit,"player")
 -- NO es un valor secreto (info basica de reaccion, no de combate/vida) --
 -- devuelve 1-8: <=3 hostil, 4 neutral, >=5 amistoso.
-local function ShouldHideExceptName(unit)
+local function ShouldHideExceptName(unit) Perfy_Trace(Perfy_GetTime(), "Enter", "ShouldHideExceptName MyCustomFrames/Nameplates.lua:150:6");
     local p = P()
-    if not (p and p.nameOnlyFriendlyNeutral) then return false end
-    if not unit then return false end
+    if not (p and p.nameOnlyFriendlyNeutral) then Perfy_Trace(Perfy_GetTime(), "Leave", "ShouldHideExceptName MyCustomFrames/Nameplates.lua:150:6"); return false end
+    if not unit then Perfy_Trace(Perfy_GetTime(), "Leave", "ShouldHideExceptName MyCustomFrames/Nameplates.lua:150:6"); return false end
     local okP, isPlayer = pcall(UnitIsPlayer, unit)
-    if not okP then return false end
+    if not okP then Perfy_Trace(Perfy_GetTime(), "Leave", "ShouldHideExceptName MyCustomFrames/Nameplates.lua:150:6"); return false end
     if not isPlayer then
         -- NPC: excluir mascotas/totems/guardianes con dueño jugador (pedido
         -- del usuario: "pero no pets").
         local okC, playerControlled = pcall(UnitPlayerControlled, unit)
-        if okC and playerControlled then return false end
+        if okC and playerControlled then Perfy_Trace(Perfy_GetTime(), "Leave", "ShouldHideExceptName MyCustomFrames/Nameplates.lua:150:6"); return false end
     end
     local okR, reaction = pcall(UnitReaction, unit, "player")
     -- REVERTIDO 2026-07-19: el intento de incluir reaction==4 (neutral,
@@ -166,26 +166,26 @@ local function ShouldHideExceptName(unit)
     -- dungeon que SI atacan igual devuelven reaction 4 (no son "neutral"
     -- de verdad en el sentido de UnitReaction que uno esperaria). Vuelve al
     -- comportamiento original y probado: solo reaction>=5 (amistoso puro).
-    return okR and type(reaction) == "number" and reaction >= 5
+    return Perfy_Trace_Passthrough("Leave", "ShouldHideExceptName MyCustomFrames/Nameplates.lua:150:6", okR and type(reaction) == "number" and reaction >= 5)
 end
 
 -- Color de clase del NOMBRE cuando esta en modo "solo nombre" (pedido del
 -- usuario 2026-07-19: "si esta tachado, los nombres tengan el color de la
 -- clase"). UnitClass da el token de clase (info basica, no secreta) --
 -- C_ClassColor.GetClassColor es la fuente oficial de color por clase.
-local function GetClassColorForUnit(unit)
+local function GetClassColorForUnit(unit) Perfy_Trace(Perfy_GetTime(), "Enter", "GetClassColorForUnit MyCustomFrames/Nameplates.lua:176:6");
     local okC, _, classToken = pcall(UnitClass, unit)
-    if not okC or not classToken then return nil end
-    local okCol, col = pcall(function()
-        return (C_ClassColor and C_ClassColor.GetClassColor and C_ClassColor.GetClassColor(classToken))
-            or RAID_CLASS_COLORS and RAID_CLASS_COLORS[classToken]
+    if not okC or not classToken then Perfy_Trace(Perfy_GetTime(), "Leave", "GetClassColorForUnit MyCustomFrames/Nameplates.lua:176:6"); return nil end
+    local okCol, col = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Nameplates.lua:179:29");
+        return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Nameplates.lua:179:29", (C_ClassColor and C_ClassColor.GetClassColor and C_ClassColor.GetClassColor(classToken))
+            or RAID_CLASS_COLORS and RAID_CLASS_COLORS[classToken])
     end)
-    if okCol and col and col.r then return col end
-    return nil
+    if okCol and col and col.r then Perfy_Trace(Perfy_GetTime(), "Leave", "GetClassColorForUnit MyCustomFrames/Nameplates.lua:176:6"); return col end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "GetClassColorForUnit MyCustomFrames/Nameplates.lua:176:6"); return nil
 end
 
-local function NameplateDefaults()
-    return {
+local function NameplateDefaults() Perfy_Trace(Perfy_GetTime(), "Enter", "NameplateDefaults MyCustomFrames/Nameplates.lua:187:6");
+    return Perfy_Trace_Passthrough("Leave", "NameplateDefaults MyCustomFrames/Nameplates.lua:187:6", {
         enabled = true,
         -- Pedido del usuario 2026-07-19: "que solo se vea el name en npc
         -- amistosos y neutrales" -- oculta barra/valor de vida, cast bar,
@@ -312,7 +312,7 @@ local function NameplateDefaults()
         alphaTarget = 1,
         alphaNotSelected = 1,
         alphaOccluded = 0,
-    }
+    })
 end
 ns.NameplateDefaults = NameplateDefaults
 
@@ -324,46 +324,46 @@ ns.NameplateDefaults = NameplateDefaults
 -- core.lua). Todo vive en el MISMO SavedVariable de siempre (MyCustomFramesDB),
 -- no hay un sistema de perfiles nuevo por separado.
 -- ==========================================================================
-ns.SetNameplateUserDefault = function()
+ns.SetNameplateUserDefault = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.SetNameplateUserDefault MyCustomFrames/Nameplates.lua:327:29");
     local d = ns.GetDB()
-    if not d then return end
+    if not d then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.SetNameplateUserDefault MyCustomFrames/Nameplates.lua:327:29"); return end
     d.nameplateUserDefault = ns.DeepCopy(d.nameplates)
     print("|cff00ff00[MCF]|r Current nameplate settings saved as your default (Reset will use this).")
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.SetNameplateUserDefault MyCustomFrames/Nameplates.lua:327:29"); end
 
-ns.SaveNameplateProfile = function(name)
+ns.SaveNameplateProfile = function(name) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.SaveNameplateProfile MyCustomFrames/Nameplates.lua:334:26");
     local d = ns.GetDB()
-    if not d or not name or name == "" then return end
+    if not d or not name or name == "" then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.SaveNameplateProfile MyCustomFrames/Nameplates.lua:334:26"); return end
     d.nameplateProfiles = d.nameplateProfiles or {}
     d.nameplateProfiles[name] = ns.DeepCopy(d.nameplates)
     print(("|cff00ff00[MCF]|r Saved nameplate profile: %s"):format(name))
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.SaveNameplateProfile MyCustomFrames/Nameplates.lua:334:26"); end
 
-ns.LoadNameplateProfile = function(name)
+ns.LoadNameplateProfile = function(name) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.LoadNameplateProfile MyCustomFrames/Nameplates.lua:342:26");
     local d = ns.GetDB()
     local p = d and d.nameplateProfiles and d.nameplateProfiles[name]
-    if not p then return end
+    if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.LoadNameplateProfile MyCustomFrames/Nameplates.lua:342:26"); return end
     d.nameplates = ns.DeepCopy(p)
     if ns.RefreshNameplateStyle then ns.RefreshNameplateStyle() end
     print(("|cff00ff00[MCF]|r Loaded nameplate profile: %s"):format(name))
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.LoadNameplateProfile MyCustomFrames/Nameplates.lua:342:26"); end
 
-ns.DeleteNameplateProfile = function(name)
+ns.DeleteNameplateProfile = function(name) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.DeleteNameplateProfile MyCustomFrames/Nameplates.lua:351:28");
     local d = ns.GetDB()
     if d and d.nameplateProfiles then
         d.nameplateProfiles[name] = nil
         print(("|cff00ff00[MCF]|r Deleted nameplate profile: %s"):format(name))
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.DeleteNameplateProfile MyCustomFrames/Nameplates.lua:351:28"); end
 
-ns.ListNameplateProfiles = function()
+ns.ListNameplateProfiles = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ListNameplateProfiles MyCustomFrames/Nameplates.lua:359:27");
     local d = ns.GetDB()
     local list = {}
     if d and d.nameplateProfiles then
         for name in pairs(d.nameplateProfiles) do list[#list + 1] = name end
         table.sort(list)
     end
-    return list
+    Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ListNameplateProfiles MyCustomFrames/Nameplates.lua:359:27"); return list
 end
 
 -- Todo esto son CVars NATIVOS de Blizzard (nameplateMaxDistance/MinAlpha/
@@ -383,14 +383,14 @@ local pendingMaxDistanceApply = false
 local ApplyMaxDistanceNow
 local combatWatcher = CreateFrame("Frame")
 combatWatcher:RegisterEvent("PLAYER_REGEN_ENABLED")
-combatWatcher:SetScript("OnEvent", function()
+combatWatcher:SetScript("OnEvent", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Nameplates.lua:386:35");
     if pendingMaxDistanceApply then
         pendingMaxDistanceApply = false
         ApplyMaxDistanceNow()
     end
-end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:386:35"); end)
 
-ApplyMaxDistanceNow = function()
+ApplyMaxDistanceNow = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyMaxDistanceNow MyCustomFrames/Nameplates.lua:393:22");
     local p = P()
     local dist = (p and p.maxDistance) or 40
     local minAlpha = (p and p.fadeMinAlpha) or 0.4
@@ -459,15 +459,15 @@ ApplyMaxDistanceNow = function()
             end
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyMaxDistanceNow MyCustomFrames/Nameplates.lua:393:22"); end
 
-local function ApplyMaxDistance()
+local function ApplyMaxDistance() Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyMaxDistance MyCustomFrames/Nameplates.lua:464:6");
     if InCombatLockdown and InCombatLockdown() then
         pendingMaxDistanceApply = true
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyMaxDistance MyCustomFrames/Nameplates.lua:464:6"); return
     end
     ApplyMaxDistanceNow()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyMaxDistance MyCustomFrames/Nameplates.lua:464:6"); end
 
 -- ==========================================================================
 -- SKIN de un nameplate individual (se aplica UNA vez por frame; Blizzard
@@ -479,15 +479,15 @@ end
 -- ancha -- se oculta (no se puede quitar del template, asi que Hide() + un
 -- guard por si Blizzard la vuelve a mostrar, mismo patron que MinimapCluster
 -- en Minimap.lua).
-local function HideNativeBorder(region)
-    if not region then return end
+local function HideNativeBorder(region) Perfy_Trace(Perfy_GetTime(), "Enter", "HideNativeBorder MyCustomFrames/Nameplates.lua:482:6");
+    if not region then Perfy_Trace(Perfy_GetTime(), "Leave", "HideNativeBorder MyCustomFrames/Nameplates.lua:482:6"); return end
     region:Hide()
     if not region._mcfHideHooked then
         region._mcfHideHooked = true
         -- hooksecurefunc en vez de HookScript("OnShow"): esta region suele
         -- ser una Texture, que no soporta ese script (mismo motivo que
         -- LockSize usa hooksecurefunc en vez de OnSizeChanged).
-        hooksecurefunc(region, "Show", function(self) self:Hide() end)
+        hooksecurefunc(region, "Show", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Nameplates.lua:490:39"); self:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:490:39"); end)
         -- Blizzard (CompactUnitFrame_UpdateSelectionHighlight y similares)
         -- suele togglear estas overlays con SetShown(bool), NO con Show() --
         -- un hook solo en "Show" no alcanza a interceptar eso (confirmado en
@@ -498,14 +498,14 @@ local function HideNativeBorder(region)
             -- ("boolean test on secret boolean value", confirmado en vivo).
             -- No hace falta mirarlo: la intencion siempre es "quedate oculto"
             -- sin importar que haya pasado Blizzard.
-            hooksecurefunc(region, "SetShown", function(self) self:Hide() end)
+            hooksecurefunc(region, "SetShown", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Nameplates.lua:501:47"); self:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:501:47"); end)
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "HideNativeBorder MyCustomFrames/Nameplates.lua:482:6"); end
 
-local function SkinHealthBar(uf)
+local function SkinHealthBar(uf) Perfy_Trace(Perfy_GetTime(), "Enter", "SkinHealthBar MyCustomFrames/Nameplates.lua:506:6");
     local hp = uf.healthBar
-    if not hp or hp._mcfSkinned then return end
+    if not hp or hp._mcfSkinned then Perfy_Trace(Perfy_GetTime(), "Leave", "SkinHealthBar MyCustomFrames/Nameplates.lua:506:6"); return end
     hp._mcfSkinned = true
 
     -- Punto/offset desde ns.NPLayout, no escritos a mano: el editor dibuja su
@@ -562,7 +562,7 @@ local function SkinHealthBar(uf)
         bg:SetTexture(BACKDROP_TEX)
         hp.mcfBackdrop = bg
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SkinHealthBar MyCustomFrames/Nameplates.lua:506:6"); end
 
 -- 2026-07-18: dejamos de intentar reskinear la cast bar NATIVA. Analizando
 -- Platynator (fork de Plater, ya adaptado a este cliente) se confirma el
@@ -573,10 +573,10 @@ end
 -- -- son datos necesarios para cualquier addon de interrupts). Se oculta la
 -- nativa por completo y se dibuja una barra 100% propia con la MISMA
 -- textura/tamaño/backdrop que la de vida.
-local function HideNativeCastBar(uf)
+local function HideNativeCastBar(uf) Perfy_Trace(Perfy_GetTime(), "Enter", "HideNativeCastBar MyCustomFrames/Nameplates.lua:576:6");
     local cb = uf.castBar or uf.CastBar or uf.castbar or uf.Castbar or uf.CastingBarFrame
     if cb then HideNativeBorder(cb) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "HideNativeCastBar MyCustomFrames/Nameplates.lua:576:6"); end
 
 -- 2026-07-19 (pedido del usuario: "volvamos al metodo de controlar
 -- posicion, escala y apariencia de mis auras... separadas como habia dicho
@@ -593,12 +593,12 @@ end
 --      (potencialmente secretos) INTERNAMENTE sin exponernoslos.
 -- Se oculta el AurasFrame nativo (HideNativeBorder, mismo patron que
 -- cast bar) y se dibujan iconos propios encima.
-local function HideNativeAuras(uf)
+local function HideNativeAuras(uf) Perfy_Trace(Perfy_GetTime(), "Enter", "HideNativeAuras MyCustomFrames/Nameplates.lua:596:6");
     if uf.AurasFrame then HideNativeBorder(uf.AurasFrame) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "HideNativeAuras MyCustomFrames/Nameplates.lua:596:6"); end
 
-local function CreateCustomCastBar(uf)
-    if uf.mcfCast then return uf.mcfCast end
+local function CreateCustomCastBar(uf) Perfy_Trace(Perfy_GetTime(), "Enter", "CreateCustomCastBar MyCustomFrames/Nameplates.lua:600:6");
+    if uf.mcfCast then return Perfy_Trace_Passthrough("Leave", "CreateCustomCastBar MyCustomFrames/Nameplates.lua:600:6", uf.mcfCast) end
     local cb = CreateFrame("StatusBar", nil, uf)
     cb:Hide()
     cb:SetStatusBarTexture(BAR_TEX)
@@ -620,12 +620,12 @@ local function CreateCustomCastBar(uf)
     cb.text = text
 
     uf.mcfCast = cb
-    return cb
+    Perfy_Trace(Perfy_GetTime(), "Leave", "CreateCustomCastBar MyCustomFrames/Nameplates.lua:600:6"); return cb
 end
 
-local function ReassertCastGeometry(uf)
+local function ReassertCastGeometry(uf) Perfy_Trace(Perfy_GetTime(), "Enter", "ReassertCastGeometry MyCustomFrames/Nameplates.lua:626:6");
     local cb = uf.mcfCast
-    if not cb then return end
+    if not cb then Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertCastGeometry MyCustomFrames/Nameplates.lua:626:6"); return end
     local p = P()
     -- Colocada por ns.NPBuild.Place, la MISMA funcion que usa el editor.
     ns.NPBuild.Place(cb, uf.healthBar or uf, ns.NPLayout.Cast(p), uf:GetEffectiveScale())
@@ -643,7 +643,7 @@ local function ReassertCastGeometry(uf)
     end
     cb.text:SetTextColor(tc.r, tc.g, tc.b, (p and p.castTextAlpha) or 1)
     ns.NPBuild.Place(cb.text, cb, ns.NPLayout.CastText(p), cb:GetEffectiveScale())
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertCastGeometry MyCustomFrames/Nameplates.lua:626:6"); end
 
 -- Se llama desde el ticker de mas abajo (no por evento): UnitCastingInfo/
 -- UnitChannelInfo se pueden pedir en cualquier momento, no hace falta
@@ -661,15 +661,15 @@ end
 --      (funciones NUEVAS de este cliente) que devuelven un objeto Duration
 --      seguro, y se lo pasa DIRECTO a StatusBar:SetTimerDuration() -- nunca
 --      tocamos un numero de tiempo crudo nosotros mismos.
-local function UpdateCastBar(uf, unit, verbose)
+local function UpdateCastBar(uf, unit, verbose) Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateCastBar MyCustomFrames/Nameplates.lua:664:6");
     unit = unit or uf.unit
-    if not unit then return end
+    if not unit then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateCastBar MyCustomFrames/Nameplates.lua:664:6"); return end
     local cb = uf.mcfCast
     -- No pisar el flash rojo de interrupcion (ver interruptWatch mas abajo) --
     -- sin esto, el proximo tick de 0.2s escondia la barra antes de que se
     -- alcance a ver el flash (el cast ya termino, name vuelve nil de inmediato).
-    if cb and cb.mcfFlashTicker then return end
-    local ok, err = pcall(function()
+    if cb and cb.mcfFlashTicker then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateCastBar MyCustomFrames/Nameplates.lua:664:6"); return end
+    local ok, err = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Nameplates.lua:672:26");
         local name, _, _, _, _, _, _, notInterruptible = UnitCastingInfo(unit)
         local isChannel = false
         if not name then
@@ -682,7 +682,7 @@ local function UpdateCastBar(uf, unit, verbose)
         end
         if not name then
             if cb then cb:Hide() end
-            return
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:672:26"); return
         end
         if not cb then cb = CreateCustomCastBar(uf); ReassertCastGeometry(uf) end
         cb.text:SetText(name)
@@ -709,12 +709,12 @@ local function UpdateCastBar(uf, unit, verbose)
             cb:SetTimerDuration(duration, nil, direction)
         end
         cb:Show()
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:672:26"); end)
     if not ok then
         if cb then cb:Hide() end
         ns._mcfLastCastErr = err
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateCastBar MyCustomFrames/Nameplates.lua:664:6"); end
 
 -- /mcfnpdiag en vivo confirmo que setear font/color/punto UNA vez no alcanza:
 -- Blizzard repinta el nombre (color de clase/reaccion) y lo reancla en cada
@@ -733,8 +733,8 @@ end
 -- cada momento -- asi su escala efectiva final siempre da 1 (texto nunca
 -- distorsionado), sin salir de la jerarquia: sigue heredando alpha/mostrar-
 -- ocultar del nameplate automaticamente, gratis.
-local function CreateNameHolder(uf)
-    if uf.mcfNameHolder then return uf.mcfNameHolder end
+local function CreateNameHolder(uf) Perfy_Trace(Perfy_GetTime(), "Enter", "CreateNameHolder MyCustomFrames/Nameplates.lua:736:6");
+    if uf.mcfNameHolder then return Perfy_Trace_Passthrough("Leave", "CreateNameHolder MyCustomFrames/Nameplates.lua:736:6", uf.mcfNameHolder) end
     local holder = CreateFrame("Frame", nil, uf)
     holder:SetSize(ns.NPBuild.NAME_HOLDER_W, ns.NPBuild.NAME_HOLDER_H)
     local fs = holder:CreateFontString(nil, "OVERLAY")
@@ -742,12 +742,12 @@ local function CreateNameHolder(uf)
     fs:SetJustifyH("CENTER")
     holder.text = fs
     uf.mcfNameHolder = holder
-    return holder
+    Perfy_Trace(Perfy_GetTime(), "Leave", "CreateNameHolder MyCustomFrames/Nameplates.lua:736:6"); return holder
 end
 
-local function ReassertNameGeometry(uf)
+local function ReassertNameGeometry(uf) Perfy_Trace(Perfy_GetTime(), "Enter", "ReassertNameGeometry MyCustomFrames/Nameplates.lua:748:6");
     local holder = uf.mcfNameHolder
-    if not holder then return end
+    if not holder then Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertNameGeometry MyCustomFrames/Nameplates.lua:748:6"); return end
     local p = P()
     local size = (p and p.nameFontSize) or 16
     local c = (p and p.nameColor) or DEFAULT_TEXT_COLOR
@@ -822,7 +822,7 @@ local function ReassertNameGeometry(uf)
     -- cambia continuamente con la distancia) para dejarlo exactamente donde ya
     -- estaba. Ahora solo corre cuando cambian los offsets de verdad.
     if holder._mcfLastOffX == offX and holder._mcfLastOffY == offY then
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertNameGeometry MyCustomFrames/Nameplates.lua:748:6"); return
     end
     holder._mcfLastOffX, holder._mcfLastOffY = offX, offY
     -- (La escala y el ClearAllPoints los hace ns.NPBuild.Place segun el regimen.
@@ -840,38 +840,38 @@ local function ReassertNameGeometry(uf)
     -- tabla BASE: el nombre volvia a +16 en vez de quedarse donde estaba
     -- horneado. `offX/offY` de arriba siguen usandose, pero SOLO para el dedupe.
     ns.NPBuild.Place(holder, uf, ns.NPLayout.Name(p, uf.mcfNameOnlyMode), effScale)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertNameGeometry MyCustomFrames/Nameplates.lua:748:6"); end
 
 -- El nombre de la unidad NO es secreto (es informacion basica de UI, igual
 -- que el nombre de un hechizo) -- UnitName funciona normal. Al ser `holder`
 -- hijo de `uf` (ver ReassertNameGeometry), hereda alpha/mostrar-ocultar del
 -- nameplate automaticamente -- no hace falta sincronizar nada de eso a mano.
-local function UpdateNameText(uf, unit)
+local function UpdateNameText(uf, unit) Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateNameText MyCustomFrames/Nameplates.lua:849:6");
     local holder = uf.mcfNameHolder
-    if not holder or not unit then return end
+    if not holder or not unit then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateNameText MyCustomFrames/Nameplates.lua:849:6"); return end
     local ok, nm = pcall(UnitName, unit)
     if ok and nm then holder.text:SetText(nm) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateNameText MyCustomFrames/Nameplates.lua:849:6"); end
 
-local function SkinName(uf)
+local function SkinName(uf) Perfy_Trace(Perfy_GetTime(), "Enter", "SkinName MyCustomFrames/Nameplates.lua:856:6");
     local name = uf.name
-    if not name or name._mcfSkinned then return end
+    if not name or name._mcfSkinned then Perfy_Trace(Perfy_GetTime(), "Leave", "SkinName MyCustomFrames/Nameplates.lua:856:6"); return end
     name._mcfSkinned = true
     HideNativeBorder(name)
     CreateNameHolder(uf)
     ReassertNameGeometry(uf)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SkinName MyCustomFrames/Nameplates.lua:856:6"); end
 
 -- Texto de vida ABAJO del nameplate (ej "66%" -- ver el ticker mas abajo por
 -- que es porcentaje y no un numero absoluto). Es un FontString propio (no de
 -- Blizzard), asi que no hace falta reafirmar contra el -- solo releer el
 -- perfil cada vez que se llama Reassert (al crearse, o desde el menu via
 -- ns.RefreshNameplateStyle()).
-local function SkinHealthValue(uf)
+local function SkinHealthValue(uf) Perfy_Trace(Perfy_GetTime(), "Enter", "SkinHealthValue MyCustomFrames/Nameplates.lua:870:6");
     local hp = uf.healthBar
-    if not hp or hp.mcfValue then return end
+    if not hp or hp.mcfValue then Perfy_Trace(Perfy_GetTime(), "Leave", "SkinHealthValue MyCustomFrames/Nameplates.lua:870:6"); return end
     local fs = hp:CreateFontString(nil, "OVERLAY")
-    local function Reassert()
+    local function Reassert() Perfy_Trace(Perfy_GetTime(), "Enter", "Reassert MyCustomFrames/Nameplates.lua:874:10");
         local p = P()
         local size = (p and p.healthValueFontSize) or 12
         local c = (p and p.healthValueColor) or DEFAULT_TEXT_COLOR
@@ -882,11 +882,11 @@ local function SkinHealthValue(uf)
         end
         fs:SetTextColor(c.r, c.g, c.b, (p and p.healthValueAlpha) or 1)
         ns.NPBuild.Place(fs, hp, ns.NPLayout.HealthValue(p), hp:GetEffectiveScale())
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "Reassert MyCustomFrames/Nameplates.lua:874:10"); end
     Reassert()
     fs._mcfReassert = Reassert
     hp.mcfValue = fs
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SkinHealthValue MyCustomFrames/Nameplates.lua:870:6"); end
 
 -- Pedido del usuario (2026-07-19): "usa los iconos del AzeriteUI" -- Blizzard
 -- decide la clasificacion (boss/elite/rare/rareelite) via un ATLAS propio
@@ -910,8 +910,8 @@ local CLASS_TEX = {
 -- DETRAS de otros hijos (barra de cast, iconos de aura) segun orden de
 -- creacion. Frame PROPIO con strata elevada (igual que RaidTargetFrame mas
 -- abajo) garantiza que siempre dibuje encima, sin importar que mas haya.
-local function CreateCustomClassification(uf)
-    if uf.mcfClass then return uf.mcfClass end
+local function CreateCustomClassification(uf) Perfy_Trace(Perfy_GetTime(), "Enter", "CreateCustomClassification MyCustomFrames/Nameplates.lua:913:6");
+    if uf.mcfClass then return Perfy_Trace_Passthrough("Leave", "CreateCustomClassification MyCustomFrames/Nameplates.lua:913:6", uf.mcfClass) end
     local holder = CreateFrame("Frame", nil, uf)
     holder:SetFrameStrata("TOOLTIP")
     holder:SetFrameLevel(200)
@@ -920,21 +920,21 @@ local function CreateCustomClassification(uf)
     holder.tex = tex
     holder:Hide()
     uf.mcfClass = holder
-    return holder
+    Perfy_Trace(Perfy_GetTime(), "Leave", "CreateCustomClassification MyCustomFrames/Nameplates.lua:913:6"); return holder
 end
 
-local function ReassertClassification(uf)
+local function ReassertClassification(uf) Perfy_Trace(Perfy_GetTime(), "Enter", "ReassertClassification MyCustomFrames/Nameplates.lua:926:6");
     local holder = uf.mcfClass
-    if not holder then return end
+    if not holder then Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertClassification MyCustomFrames/Nameplates.lua:926:6"); return end
     local p = P()
     local sz = (p and p.classificationSize) or 40
     holder:SetSize(sz, sz)
     ns.NPBuild.Place(holder, uf.healthBar or uf, ns.NPLayout.Classification(p), uf:GetEffectiveScale())
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertClassification MyCustomFrames/Nameplates.lua:926:6"); end
 
-local function UpdateClassification(uf, unit)
+local function UpdateClassification(uf, unit) Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateClassification MyCustomFrames/Nameplates.lua:935:6");
     unit = unit or uf.unit
-    if not unit then return end
+    if not unit then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateClassification MyCustomFrames/Nameplates.lua:935:6"); return end
     local holder = uf.mcfClass or CreateCustomClassification(uf)
     if not uf.mcfClassGeoSet then ReassertClassification(uf); uf.mcfClassGeoSet = true end
     local ok, c = pcall(UnitClassification, unit)
@@ -961,19 +961,19 @@ local function UpdateClassification(uf, unit)
     else
         holder:Hide()
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateClassification MyCustomFrames/Nameplates.lua:935:6"); end
 
-local function ReassertRaidMark(uf)
+local function ReassertRaidMark(uf) Perfy_Trace(Perfy_GetTime(), "Enter", "ReassertRaidMark MyCustomFrames/Nameplates.lua:966:6");
     local rt = uf.RaidTargetFrame
-    if not rt then return end
+    if not rt then Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertRaidMark MyCustomFrames/Nameplates.lua:966:6"); return end
     local p = P()
     local sz = (p and p.raidMarkSize) or 64
     rt:SetSize(sz, sz)
     ns.NPBuild.Place(rt, uf.healthBar or uf, ns.NPLayout.RaidMark(p), uf:GetEffectiveScale())
-end
-local function LockRaidMark(uf)
+Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertRaidMark MyCustomFrames/Nameplates.lua:966:6"); end
+local function LockRaidMark(uf) Perfy_Trace(Perfy_GetTime(), "Enter", "LockRaidMark MyCustomFrames/Nameplates.lua:974:6");
     local rt = uf.RaidTargetFrame
-    if not rt or rt._mcfAuraLocked then return end
+    if not rt or rt._mcfAuraLocked then Perfy_Trace(Perfy_GetTime(), "Leave", "LockRaidMark MyCustomFrames/Nameplates.lua:974:6"); return end
     rt._mcfAuraLocked = true
     -- Pedido del usuario 2026-07-19: "deberian estar encima de todo" -- es
     -- un frame NATIVO de Blizzard (no una textura nuestra), asi que se puede
@@ -981,23 +981,23 @@ local function LockRaidMark(uf)
     rt:SetFrameStrata("TOOLTIP")
     rt:SetFrameLevel(200)
     local locking = false
-    local function Reassert()
-        if locking then return end
+    local function Reassert() Perfy_Trace(Perfy_GetTime(), "Enter", "Reassert MyCustomFrames/Nameplates.lua:984:10");
+        if locking then Perfy_Trace(Perfy_GetTime(), "Leave", "Reassert MyCustomFrames/Nameplates.lua:984:10"); return end
         locking = true
         ReassertRaidMark(uf)
         locking = false
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "Reassert MyCustomFrames/Nameplates.lua:984:10"); end
     hooksecurefunc(rt, "SetPoint", Reassert)
     hooksecurefunc(rt, "SetSize", Reassert)
-    hooksecurefunc(rt, "SetFrameStrata", function(self)
+    hooksecurefunc(rt, "SetFrameStrata", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Nameplates.lua:992:41");
         if self:GetFrameStrata() ~= "TOOLTIP" then self:SetFrameStrata("TOOLTIP") end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:992:41"); end)
     Reassert()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "LockRaidMark MyCustomFrames/Nameplates.lua:974:6"); end
 
-local function SkinHighlight(uf)
+local function SkinHighlight(uf) Perfy_Trace(Perfy_GetTime(), "Enter", "SkinHighlight MyCustomFrames/Nameplates.lua:998:6");
     local hl = uf.selectionHighlight
-    if not hl or hl._mcfSkinned then return end
+    if not hl or hl._mcfSkinned then Perfy_Trace(Perfy_GetTime(), "Leave", "SkinHighlight MyCustomFrames/Nameplates.lua:998:6"); return end
     hl._mcfSkinned = true
     hl:SetTexture(OUTLINE_TEX)
     -- Color FIJO (configurable en el menu, "dorado opaco" por defecto) en vez
@@ -1006,13 +1006,13 @@ local function SkinHighlight(uf)
     -- cada vez que Blizzard le vuelve a poner SU color
     -- (CompactUnitFrame_UpdateSelectionHighlight).
     local colorLocking = false
-    local function ReassertColor()
-        if colorLocking then return end
+    local function ReassertColor() Perfy_Trace(Perfy_GetTime(), "Enter", "ReassertColor MyCustomFrames/Nameplates.lua:1009:10");
+        if colorLocking then Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertColor MyCustomFrames/Nameplates.lua:1009:10"); return end
         colorLocking = true
         local c = (P() and P().highlightColor) or DEFAULT_HIGHLIGHT_COLOR
         hl:SetVertexColor(c.r, c.g, c.b)
         colorLocking = false
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertColor MyCustomFrames/Nameplates.lua:1009:10"); end
     ReassertColor()
     hl._mcfReassertColor = ReassertColor
     hooksecurefunc(hl, "SetVertexColor", ReassertColor)
@@ -1026,21 +1026,21 @@ local function SkinHighlight(uf)
     -- fijo que usa AzeriteUI para este mismo marco.
     LockSize(hl, GetHighlightSize)
     local hp = uf.healthBar
-    if not hp then return end
+    if not hp then Perfy_Trace(Perfy_GetTime(), "Leave", "SkinHighlight MyCustomFrames/Nameplates.lua:998:6"); return end
     local reasserting = false
-    local function Reanchor()
-        if reasserting then return end
+    local function Reanchor() Perfy_Trace(Perfy_GetTime(), "Enter", "Reanchor MyCustomFrames/Nameplates.lua:1031:10");
+        if reasserting then Perfy_Trace(Perfy_GetTime(), "Leave", "Reanchor MyCustomFrames/Nameplates.lua:1031:10"); return end
         reasserting = true
         hl:ClearAllPoints()
         hl:SetPoint("CENTER", hp, "CENTER", 0, 0)
         reasserting = false
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "Reanchor MyCustomFrames/Nameplates.lua:1031:10"); end
     -- Blizzard reancla esto solo cada vez que cambia el estado de seleccion
     -- (CompactUnitFrame_UpdateSelectionHighlight) usando el tamaño NATIVO de
     -- healthBar -- sin reafirmar aca quedaba corrido apenas cambiaba target.
     Reanchor()
     hooksecurefunc(hl, "SetPoint", Reanchor)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SkinHighlight MyCustomFrames/Nameplates.lua:998:6"); end
 
 -- QUITADO (2026-07-27, pedido del usuario: "no parece esta funcionando, mejor quita
 -- eso"): un indicador de amenaza/agro paso por 4 versiones el mismo dia (glow nativo
@@ -1053,13 +1053,13 @@ end
 -- PRE-EXISTENTE de antes de esta sesion) se queda igual que siempre, sin nada
 -- adicional encima. Si se retoma mas adelante, el historial de git tiene las 4
 -- versiones intentadas como referencia de que NO funciono.
-local function SkinThreat(uf)
+local function SkinThreat(uf) Perfy_Trace(Perfy_GetTime(), "Enter", "SkinThreat MyCustomFrames/Nameplates.lua:1056:6");
     local th = uf.aggroHighlight
     if th and not th._mcfSkinned then
         th._mcfSkinned = true
         th:SetTexture(GLOW_TEX)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SkinThreat MyCustomFrames/Nameplates.lua:1056:6"); end
 
 -- ==========================================================================
 -- AURAS (2026-07-19, REESCRITO DE NUEVO): 3 grupos (Big Debuff / Personal
@@ -1108,28 +1108,28 @@ local AURA_SLOT_ORDER = {
     center = { 2, 1, 3 },
 }
 
-local function GetAuraPadding() return ns.NPLayout.AuraPadding(P()) end
+local function GetAuraPadding() Perfy_Trace(Perfy_GetTime(), "Enter", "GetAuraPadding MyCustomFrames/Nameplates.lua:1111:6"); return Perfy_Trace_Passthrough("Leave", "GetAuraPadding MyCustomFrames/Nameplates.lua:1111:6", ns.NPLayout.AuraPadding(P())) end
 
 -- Engancha uf.AurasFrame.RefreshAuras UNA VEZ por frame (guard con
 -- _mcfImportantHooked) -- vuelca buffList/debuffList (ya calculados por
 -- Blizzard) a uf.mcfKnownImportant[auraInstanceID] = true. hooksecurefunc
 -- sobre un metodo NATIVO leido despues (nunca escrito) no tainta nada --
 -- mismo principio que el resto de HideNativeBorder en este archivo.
-local function HookAurasImportance(uf)
+local function HookAurasImportance(uf) Perfy_Trace(Perfy_GetTime(), "Enter", "HookAurasImportance MyCustomFrames/Nameplates.lua:1118:6");
     local af = uf.AurasFrame
-    if not af or af._mcfImportantHooked then return end
-    if not (af.buffList and af.buffList.Iterate and af.debuffList and af.debuffList.Iterate) then return end
+    if not af or af._mcfImportantHooked then Perfy_Trace(Perfy_GetTime(), "Leave", "HookAurasImportance MyCustomFrames/Nameplates.lua:1118:6"); return end
+    if not (af.buffList and af.buffList.Iterate and af.debuffList and af.debuffList.Iterate) then Perfy_Trace(Perfy_GetTime(), "Leave", "HookAurasImportance MyCustomFrames/Nameplates.lua:1118:6"); return end
     af._mcfImportantHooked = true
     uf.mcfKnownImportant = uf.mcfKnownImportant or {}
-    local function Refresh()
+    local function Refresh() Perfy_Trace(Perfy_GetTime(), "Enter", "Refresh MyCustomFrames/Nameplates.lua:1124:10");
         local known = uf.mcfKnownImportant
         for k in pairs(known) do known[k] = nil end
-        pcall(af.buffList.Iterate, af.buffList, function(id) known[id] = true end)
-        pcall(af.debuffList.Iterate, af.debuffList, function(id) known[id] = true end)
-    end
+        pcall(af.buffList.Iterate, af.buffList, function(id) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Nameplates.lua:1127:48"); known[id] = true Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1127:48"); end)
+        pcall(af.debuffList.Iterate, af.debuffList, function(id) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Nameplates.lua:1128:52"); known[id] = true Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1128:52"); end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "Refresh MyCustomFrames/Nameplates.lua:1124:10"); end
     hooksecurefunc(af, "RefreshAuras", Refresh)
     Refresh()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "HookAurasImportance MyCustomFrames/Nameplates.lua:1118:6"); end
 
 -- CORREGIDO (2026-07-19, "Freezing Trap/Harpoon salen en Personal, deberian
 -- ser Big; Wildfire Bomb al reves"): el intento anterior (buffList/debuffList
@@ -1143,30 +1143,30 @@ end
 -- Ni tuyo ni CC pero Blizzard igual lo marco importante (buffList/debuffList
 -- nativos, ver HookAurasImportance) -> Big (catch-all, boss mechanics
 -- ajenos). Resto -> no se muestra.
-local function ClassifyAura(data, isHarmful, unit, uf)
+local function ClassifyAura(data, isHarmful, unit, uf) Perfy_Trace(Perfy_GetTime(), "Enter", "ClassifyAura MyCustomFrames/Nameplates.lua:1146:6");
     if not (data.auraInstanceID and unit and C_UnitAuras and C_UnitAuras.IsAuraFilteredOutByInstanceID) then
-        return nil
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ClassifyAura MyCustomFrames/Nameplates.lua:1146:6"); return nil
     end
     local id = data.auraInstanceID
-    local function passes(filterToken)
+    local function passes(filterToken) Perfy_Trace(Perfy_GetTime(), "Enter", "passes MyCustomFrames/Nameplates.lua:1151:10");
         local ok, filteredOut = pcall(C_UnitAuras.IsAuraFilteredOutByInstanceID, unit, id, filterToken)
-        return ok and filteredOut == false
+        return Perfy_Trace_Passthrough("Leave", "passes MyCustomFrames/Nameplates.lua:1151:10", ok and filteredOut == false)
     end
-    local ok, group = pcall(function()
+    local ok, group = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Nameplates.lua:1155:28");
         if isHarmful then
-            if not passes("HARMFUL|INCLUDE_NAME_PLATE_ONLY") then return nil end
-            if passes("HARMFUL|INCLUDE_NAME_PLATE_ONLY|CROWD_CONTROL") then return "big" end
-            if passes("HARMFUL|INCLUDE_NAME_PLATE_ONLY|PLAYER") then return "personal" end
-            if uf.mcfKnownImportant and uf.mcfKnownImportant[id] then return "big" end
-            return nil
+            if not passes("HARMFUL|INCLUDE_NAME_PLATE_ONLY") then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1155:28"); return nil end
+            if passes("HARMFUL|INCLUDE_NAME_PLATE_ONLY|CROWD_CONTROL") then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1155:28"); return "big" end
+            if passes("HARMFUL|INCLUDE_NAME_PLATE_ONLY|PLAYER") then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1155:28"); return "personal" end
+            if uf.mcfKnownImportant and uf.mcfKnownImportant[id] then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1155:28"); return "big" end
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1155:28"); return nil
         end
-        if passes("HELPFUL|INCLUDE_NAME_PLATE_ONLY") then return "enemy" end
-        return nil
+        if passes("HELPFUL|INCLUDE_NAME_PLATE_ONLY") then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1155:28"); return "enemy" end
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1155:28"); return nil
     end)
-    if not ok then return nil end
+    if not ok then Perfy_Trace(Perfy_GetTime(), "Leave", "ClassifyAura MyCustomFrames/Nameplates.lua:1146:6"); return nil end
     local p = P()
-    if group and p and p[AURA_GROUP_SHOW_KEYS[group]] == false then return nil end
-    return group
+    if group and p and p[AURA_GROUP_SHOW_KEYS[group]] == false then Perfy_Trace(Perfy_GetTime(), "Leave", "ClassifyAura MyCustomFrames/Nameplates.lua:1146:6"); return nil end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "ClassifyAura MyCustomFrames/Nameplates.lua:1146:6"); return group
 end
 
 -- Construccion y geometria de auras: DELEGADAS a ns.NPBuild (2026-07-28), que
@@ -1174,19 +1174,19 @@ end
 -- lado tenia su copia de la formula (aca ResizeAuraIcon/ResizeAuraHolder, alla
 -- LayoutAuraGroupIconsMock con el 3 y el 0.26 escritos a mano) y se
 -- desincronizaban sin aviso -- ver la cabecera de NameplateBuild.lua.
-local function CreateAuraGroup(uf, groupKey)
+local function CreateAuraGroup(uf, groupKey) Perfy_Trace(Perfy_GetTime(), "Enter", "CreateAuraGroup MyCustomFrames/Nameplates.lua:1177:6");
     uf.mcfAuraGroups = uf.mcfAuraGroups or {}
-    if uf.mcfAuraGroups[groupKey] then return uf.mcfAuraGroups[groupKey] end
+    if uf.mcfAuraGroups[groupKey] then return Perfy_Trace_Passthrough("Leave", "CreateAuraGroup MyCustomFrames/Nameplates.lua:1177:6", uf.mcfAuraGroups[groupKey]) end
     local p = P()
     local holder = ns.NPBuild.AuraGroup(uf, p, false)
     holder._mcfLastPadding = ns.NPLayout.AuraPadding(p)
     uf.mcfAuraGroups[groupKey] = holder
-    return holder
+    Perfy_Trace(Perfy_GetTime(), "Leave", "CreateAuraGroup MyCustomFrames/Nameplates.lua:1177:6"); return holder
 end
 
-local function ReassertAuraGroupGeometry(uf, groupKey)
+local function ReassertAuraGroupGeometry(uf, groupKey) Perfy_Trace(Perfy_GetTime(), "Enter", "ReassertAuraGroupGeometry MyCustomFrames/Nameplates.lua:1187:6");
     local holder = uf.mcfAuraGroups and uf.mcfAuraGroups[groupKey]
-    if not holder then return end
+    if not holder then Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertAuraGroupGeometry MyCustomFrames/Nameplates.lua:1187:6"); return end
     local effScale = uf:GetEffectiveScale()
     -- TODO el emplazamiento sale de ns.NPLayout, incluidos los offsets. Antes se
     -- recalculaban aca y del layout solo se tomaba el punto relativo -- o sea
@@ -1196,10 +1196,10 @@ local function ReassertAuraGroupGeometry(uf, groupKey)
     -- su posicion no depende de effScale y compararla solo provocaba un relayout
     -- por frame mientras te movias, para dejar todo donde ya estaba.
     local al = ns.NPLayout.AuraGroup(P(), groupKey)
-    if not al then return end
+    if not al then Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertAuraGroupGeometry MyCustomFrames/Nameplates.lua:1187:6"); return end
     if holder._mcfLastAnchor == al.point
         and holder._mcfLastOffX == al.x and holder._mcfLastOffY == al.y then
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertAuraGroupGeometry MyCustomFrames/Nameplates.lua:1187:6"); return
     end
     holder._mcfLastAnchor = al.point
     holder._mcfLastOffX, holder._mcfLastOffY = al.x, al.y
@@ -1209,15 +1209,15 @@ local function ReassertAuraGroupGeometry(uf, groupKey)
     -- dedupe de arriba nunca comparo el frame de ancla.
     -- La escala tambien la pone B.Place segun el regimen -- ya no se fija aca.
     ns.NPBuild.Place(holder, uf, al, effScale)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertAuraGroupGeometry MyCustomFrames/Nameplates.lua:1187:6"); end
 -- Reaplica offset/tamaño de fuente/color de los textos de cargas Y tiempo
 -- restante de TODOS los iconos de un grupo -- SEPARADO de
 -- ReassertAuraGroupGeometry (que solo reaplica cuando cambia la POSICION del
 -- holder) porque el usuario puede cambiar solo el tamaño de fuente del
 -- numero sin mover nada, y eso no debe quedar bloqueado por ese dedupe.
-local function ReassertAuraTextStyle(uf, groupKey)
+local function ReassertAuraTextStyle(uf, groupKey) Perfy_Trace(Perfy_GetTime(), "Enter", "ReassertAuraTextStyle MyCustomFrames/Nameplates.lua:1218:6");
     local holder = uf.mcfAuraGroups and uf.mcfAuraGroups[groupKey]
-    if not holder or not holder.icons then return end
+    if not holder or not holder.icons then Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertAuraTextStyle MyCustomFrames/Nameplates.lua:1218:6"); return end
     local p = P()
     local ccx, ccy = (p and p.auraCountOffsetX) or 2, (p and p.auraCountOffsetY) or 2
     local cSize = (p and p.auraCountFontSize) or 11
@@ -1233,7 +1233,7 @@ local function ReassertAuraTextStyle(uf, groupKey)
     end
     MCFAuraTimeFontObj:SetTextColor(tc.r, tc.g, tc.b, 1)
     if holder._mcfLastCcx == ccx and holder._mcfLastCcy == ccy and holder._mcfLastCSize == cSize then
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertAuraTextStyle MyCustomFrames/Nameplates.lua:1218:6"); return
     end
     holder._mcfLastCcx, holder._mcfLastCcy, holder._mcfLastCSize = ccx, ccy, cSize
     for _, b in ipairs(holder.icons) do
@@ -1247,20 +1247,20 @@ local function ReassertAuraTextStyle(uf, groupKey)
             b.count:SetTextColor(cc.r, cc.g, cc.b, 1)
         end
     end
-end
-local function ReassertAurasGeometry(uf)
+Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertAuraTextStyle MyCustomFrames/Nameplates.lua:1218:6"); end
+local function ReassertAurasGeometry(uf) Perfy_Trace(Perfy_GetTime(), "Enter", "ReassertAurasGeometry MyCustomFrames/Nameplates.lua:1251:6");
     for _, g in ipairs(AURA_GROUPS) do
         ReassertAuraGroupGeometry(uf, g)
         ReassertAuraTextStyle(uf, g)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ReassertAurasGeometry MyCustomFrames/Nameplates.lua:1251:6"); end
 
 local auraShown = { big = 0, personal = 0, enemy = 0 }
 local auraUsedSlots = { big = {}, personal = {}, enemy = {} }
-local function AuraShowOne(uf, unit, p0, data, isHarmful)
-    if not data then return end
+local function AuraShowOne(uf, unit, p0, data, isHarmful) Perfy_Trace(Perfy_GetTime(), "Enter", "AuraShowOne MyCustomFrames/Nameplates.lua:1260:6");
+    if not data then Perfy_Trace(Perfy_GetTime(), "Leave", "AuraShowOne MyCustomFrames/Nameplates.lua:1260:6"); return end
     local group = ClassifyAura(data, isHarmful, unit, uf)
-    if not group or auraShown[group] >= AURA_MAX_PER_CAT then return end
+    if not group or auraShown[group] >= AURA_MAX_PER_CAT then Perfy_Trace(Perfy_GetTime(), "Leave", "AuraShowOne MyCustomFrames/Nameplates.lua:1260:6"); return end
     auraShown[group] = auraShown[group] + 1
     local dir = (p0 and p0[AURA_GROUP_DIRECTION_KEYS[group]]) or "right"
     local slot = (AURA_SLOT_ORDER[dir] or AURA_SLOT_ORDER.right)[auraShown[group]]
@@ -1280,33 +1280,33 @@ local function AuraShowOne(uf, unit, p0, data, isHarmful)
         end
     end
     if not okCD then pcall(b.cd.Clear, b.cd) end
-    local okCount = pcall(function()
+    local okCount = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Nameplates.lua:1283:26");
         b.count:SetText((data.applications and data.applications > 1) and data.applications or "")
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1283:26"); end)
     if not okCount then b.count:SetText("") end
     local cc = (p0 and p0.auraCountColor) or { r = 1, g = 1, b = 1 }
     b.count:SetTextColor(cc.r, cc.g, cc.b, 1)
     pcall(b.cd.SetSwipeColor, b.cd, cc.r, cc.g, cc.b, 0.7)
     b:Show()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "AuraShowOne MyCustomFrames/Nameplates.lua:1260:6"); end
 
-local function AuraShowFilter(uf, unit, p0, filter, isHarmful)
+local function AuraShowFilter(uf, unit, p0, filter, isHarmful) Perfy_Trace(Perfy_GetTime(), "Enter", "AuraShowFilter MyCustomFrames/Nameplates.lua:1293:6");
     local ok, list = pcall(C_UnitAuras.GetUnitAuras, unit, filter)
-    if not ok or type(list) ~= "table" then return end
+    if not ok or type(list) ~= "table" then Perfy_Trace(Perfy_GetTime(), "Leave", "AuraShowFilter MyCustomFrames/Nameplates.lua:1293:6"); return end
     for _, data in ipairs(list) do
         AuraShowOne(uf, unit, p0, data, isHarmful)
         if auraShown.big + auraShown.personal + auraShown.enemy >= AURA_MAX_PER_CAT * 3 then break end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "AuraShowFilter MyCustomFrames/Nameplates.lua:1293:6"); end
 
-local function UpdateAuras(uf, unit)
+local function UpdateAuras(uf, unit) Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateAuras MyCustomFrames/Nameplates.lua:1302:6");
     unit = unit or uf.unit
-    if not unit then return end
+    if not unit then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateAuras MyCustomFrames/Nameplates.lua:1302:6"); return end
     if not UnitIsUnit(unit, "target") then
         if uf.mcfAuraGroups then
             for _, g in ipairs(AURA_GROUPS) do uf.mcfAuraGroups[g]:Hide() end
         end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateAuras MyCustomFrames/Nameplates.lua:1302:6"); return
     end
     HookAurasImportance(uf)
     if not uf.mcfAuraGroups then for _, g in ipairs(AURA_GROUPS) do CreateAuraGroup(uf, g) end end
@@ -1336,7 +1336,7 @@ local function UpdateAuras(uf, unit)
         end
         holder:SetShown(auraShown[g] > 0)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateAuras MyCustomFrames/Nameplates.lua:1302:6"); end
 
 -- Diagnostico 2026-07-18 (pedido del usuario: "no se ven mis debuffs y
 -- buffs"): recorre las auras de tu TARGET una por una y muestra a que grupo
@@ -1344,11 +1344,11 @@ end
 -- problema es el filtro (ninguna aura clasifica), un toggle apagado, o algo
 -- mas (holder nunca creado, etc).
 SLASH_MCFAURASDIAG1 = "/mcfaurasdiag"
-SlashCmdList["MCFAURASDIAG"] = function()
+SlashCmdList["MCFAURASDIAG"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFAURASDIAG MyCustomFrames/Nameplates.lua:1347:31");
     local unit = "target"
     if not UnitExists(unit) then
         print("|cff00ff00[MCF auras diag]|r No target selected.")
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFAURASDIAG MyCustomFrames/Nameplates.lua:1347:31"); return
     end
     local p = P()
     print(("|cff00ff00[MCF auras diag]|r target=%s  showBig=%s showPersonal=%s showEnemy=%s  auraIconSize=%s"):format(
@@ -1370,12 +1370,12 @@ SlashCmdList["MCFAURASDIAG"] = function()
     -- poblaciones distintas) -- necesitamos una señal de "importante"
     -- INDEPENDIENTE de quien la aplico para clasificar bien. Vuelca los
     -- flags candidatos (con guard de secretos) para elegir cual usar.
-    local function safeField(data, key)
-        local ok, v = pcall(function() return data[key] end)
-        if not ok then return "ERR" end
-        if v == nil then return "nil" end
-        if issecretvalue and issecretvalue(v) then return "SECRET" end
-        return tostring(v)
+    local function safeField(data, key) Perfy_Trace(Perfy_GetTime(), "Enter", "safeField MyCustomFrames/Nameplates.lua:1373:10");
+        local ok, v = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Nameplates.lua:1374:28"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1374:28", data[key]) end)
+        if not ok then Perfy_Trace(Perfy_GetTime(), "Leave", "safeField MyCustomFrames/Nameplates.lua:1373:10"); return "ERR" end
+        if v == nil then Perfy_Trace(Perfy_GetTime(), "Leave", "safeField MyCustomFrames/Nameplates.lua:1373:10"); return "nil" end
+        if issecretvalue and issecretvalue(v) then Perfy_Trace(Perfy_GetTime(), "Leave", "safeField MyCustomFrames/Nameplates.lua:1373:10"); return "SECRET" end
+        return Perfy_Trace_Passthrough("Leave", "safeField MyCustomFrames/Nameplates.lua:1373:10", tostring(v))
     end
     local plate = C_NamePlate and C_NamePlate.GetNamePlateForUnit and C_NamePlate.GetNamePlateForUnit(unit)
     local uf = plate and (plate.UnitFrame or plate)
@@ -1389,7 +1389,7 @@ SlashCmdList["MCFAURASDIAG"] = function()
     -- Clasificacion real: ClassifyAura (usa uf.mcfKnownImportant, ver
     -- HookAurasImportance mas arriba) -- muestra exactamente lo que el
     -- juego va a dibujar.
-    local function dump(filter, isHarmful)
+    local function dump(filter, isHarmful) Perfy_Trace(Perfy_GetTime(), "Enter", "dump MyCustomFrames/Nameplates.lua:1392:10");
         local ok, list = pcall(C_UnitAuras.GetUnitAuras, unit, filter)
         print(("  [%s] ok=%s count=%s"):format(filter, tostring(ok), type(list) == "table" and tostring(#list) or "n/a"))
         if ok and type(list) == "table" and uf then
@@ -1400,13 +1400,13 @@ SlashCmdList["MCFAURASDIAG"] = function()
                     i, safeField(data, "name"), tostring(important and true or false), tostring(group or "REJECTED")))
             end
         end
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "dump MyCustomFrames/Nameplates.lua:1392:10"); end
     dump("HARMFUL", true)
     dump("HELPFUL", false)
 
     if not uf then
         print("  no nameplate frame found for target (out of range / not skinned yet)")
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFAURASDIAG MyCustomFrames/Nameplates.lua:1347:31"); return
     end
     print("  uf.mcfAuraGroups=" .. tostring(uf.mcfAuraGroups ~= nil))
     -- REVERTIDO (2026-07-19): GetCenter() en frames colgados de una
@@ -1422,7 +1422,7 @@ SlashCmdList["MCFAURASDIAG"] = function()
                 tostring(p and p[AURA_GROUP_DIRECTION_KEYS[g]])))
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFAURASDIAG MyCustomFrames/Nameplates.lua:1347:31"); end
 
 -- CORREGIDO (2026-07-27, reportado con captura: nombre/barra/badges de este
 -- addon apareciendo sobre un objeto interactuable del mundo -- "Postbox
@@ -1444,13 +1444,13 @@ end
 -- nil y "secreto" son estados distintos y se pueden diferenciar sin leer
 -- nada -- UnitReaction confirma lo mismo (nil vs numero) como 2da señal,
 -- para no depender de una sola API.
-local function IsObjectNameplate(frame)
+local function IsObjectNameplate(frame) Perfy_Trace(Perfy_GetTime(), "Enter", "IsObjectNameplate MyCustomFrames/Nameplates.lua:1447:6");
     local unit = frame.namePlateUnitToken or frame.unitToken
-    if not unit then return false end
+    if not unit then Perfy_Trace(Perfy_GetTime(), "Leave", "IsObjectNameplate MyCustomFrames/Nameplates.lua:1447:6"); return false end
 
     local okG, guid = pcall(UnitGUID, unit)
     if okG and type(guid) == "string" and not (issecretvalue and issecretvalue(guid)) then
-        return guid:match("^GameObject%-") ~= nil
+        return Perfy_Trace_Passthrough("Leave", "IsObjectNameplate MyCustomFrames/Nameplates.lua:1447:6", guid:match("^GameObject%-") ~= nil)
     end
 
     -- GUID no disponible/secreto (contenido restringido) -- respaldo via
@@ -1458,11 +1458,11 @@ local function IsObjectNameplate(frame)
     -- unidades que no son criaturas.
     local okT, creatureType = pcall(UnitCreatureType, unit)
     local okR, reaction = pcall(UnitReaction, "player", unit)
-    return okT and creatureType == nil and okR and reaction == nil
+    return Perfy_Trace_Passthrough("Leave", "IsObjectNameplate MyCustomFrames/Nameplates.lua:1447:6", okT and creatureType == nil and okR and reaction == nil)
 end
 
-local function SkinNamePlate(frame)
-    if not frame then return end
+local function SkinNamePlate(frame) Perfy_Trace(Perfy_GetTime(), "Enter", "SkinNamePlate MyCustomFrames/Nameplates.lua:1464:6");
+    if not frame then Perfy_Trace(Perfy_GetTime(), "Leave", "SkinNamePlate MyCustomFrames/Nameplates.lua:1464:6"); return end
     local uf = frame.UnitFrame or frame
     -- CORREGIDO (2026-07-27, confirmado con /mcfnpobjdiag: "Wooden Chair" ya
     -- detectaba IsObjectNameplate=true pero seguia MOSTRANDOSE skineado --
@@ -1478,9 +1478,9 @@ local function SkinNamePlate(frame)
     -- una unidad real de nuevo (mismo ciclo NAME_PLATE_UNIT_ADDED).
     if IsObjectNameplate(frame) then
         if uf then uf:Hide() end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SkinNamePlate MyCustomFrames/Nameplates.lua:1464:6"); return
     end
-    if not uf or uf._mcfNPSkinned then return end
+    if not uf or uf._mcfNPSkinned then Perfy_Trace(Perfy_GetTime(), "Leave", "SkinNamePlate MyCustomFrames/Nameplates.lua:1464:6"); return end
     uf._mcfNPSkinned = true
 
     SkinHealthBar(uf)
@@ -1492,15 +1492,15 @@ local function SkinNamePlate(frame)
     LockRaidMark(uf)
     SkinHighlight(uf)
     SkinThreat(uf)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SkinNamePlate MyCustomFrames/Nameplates.lua:1464:6"); end
 
 -- Llamada desde Options.lua (ApplyCurrent) cada vez que el usuario cambia
 -- algo en el menu de Nameplates -- reaplica tamaño/color/posicion de nombre,
 -- valor de vida y highlight en TODAS las plates visibles ahora mismo (las que
 -- aparezcan despues ya nacen con el perfil actual via Skin* al crearse).
-local function RefreshNameplateStyle()
+local function RefreshNameplateStyle() Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshNameplateStyle MyCustomFrames/Nameplates.lua:1501:6");
     ApplyMaxDistance()
-    if not C_NamePlate or not C_NamePlate.GetNamePlates then return end
+    if not C_NamePlate or not C_NamePlate.GetNamePlates then Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshNameplateStyle MyCustomFrames/Nameplates.lua:1501:6"); return end
     for _, frame in ipairs(C_NamePlate.GetNamePlates()) do
         local uf = frame.UnitFrame or frame
         if uf then
@@ -1535,7 +1535,7 @@ local function RefreshNameplateStyle()
             if uf.mcfCast then ReassertCastGeometry(uf) end
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshNameplateStyle MyCustomFrames/Nameplates.lua:1501:6"); end
 ns.RefreshNameplateStyle = RefreshNameplateStyle
 
 -- Aplica (o revierte) el modo "solo nombre" para UN uf -- factoreado aparte
@@ -1544,7 +1544,7 @@ ns.RefreshNameplateStyle = RefreshNameplateStyle
 -- entrada, apenas Blizzard crea/reusa la plate (NAME_PLATE_UNIT_ADDED) --
 -- antes solo corria en el ticker, asi que la barra/cast/auras nativas
 -- alcanzaban a mostrarse un instante (hasta 200ms) antes del primer chequeo.
-local function ApplyNameOnlyMode(uf, unit)
+local function ApplyNameOnlyMode(uf, unit) Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyNameOnlyMode MyCustomFrames/Nameplates.lua:1547:6");
     local hideExceptName = ShouldHideExceptName(unit)
     if uf.mcfNameOnlyMode ~= hideExceptName then
         uf.mcfNameOnlyMode = hideExceptName
@@ -1575,7 +1575,7 @@ local function ApplyNameOnlyMode(uf, unit)
         if uf.mcfAuraGroups then for _, g in ipairs(AURA_GROUPS) do uf.mcfAuraGroups[g]:Hide() end end
         if uf.mcfClass then uf.mcfClass:Hide() end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyNameOnlyMode MyCustomFrames/Nameplates.lua:1547:6"); end
 
 -- ==========================================================================
 -- TICKER: refresca el texto de vida de abajo. UnitHealth/UnitHealthMax
@@ -1589,11 +1589,11 @@ end
 -- ==========================================================================
 local htAcc = 0
 local healthValueDriver = CreateFrame("Frame")
-healthValueDriver:SetScript("OnUpdate", ns.Prof.Wrap("Nameplates: valor de vida", function(self, elapsed)
+healthValueDriver:SetScript("OnUpdate", ns.Prof.Wrap("Nameplates: valor de vida", function(self, elapsed) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Nameplates.lua:1592:82");
     htAcc = htAcc + elapsed
-    if htAcc < 0.2 then return end
+    if htAcc < 0.2 then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1592:82"); return end
     htAcc = 0
-    if not C_NamePlate or not C_NamePlate.GetNamePlates then return end
+    if not C_NamePlate or not C_NamePlate.GetNamePlates then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1592:82"); return end
     for _, frame in ipairs(C_NamePlate.GetNamePlates()) do
         local uf = frame.UnitFrame or frame
         local hp = uf and uf.healthBar
@@ -1617,7 +1617,7 @@ healthValueDriver:SetScript("OnUpdate", ns.Prof.Wrap("Nameplates: valor de vida"
             UpdateNameText(uf, frame.namePlateUnitToken or frame.unitToken)
         end
     end
-end))
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1592:82"); end))
 
 -- BUG (reportado por el usuario, 2026-07-19): "el tamaño del nombre cambia
 -- por unos segundos cuando selecciono un target" -- Blizzard anima la
@@ -1664,22 +1664,22 @@ local activeUF = setmetatable({}, { __mode = "k" })
 local NAME_DRIVER_INTERVAL = 0.2
 local nameScaleDriver = CreateFrame("Frame")
 local nameDriverElapsed = 0
-nameScaleDriver:SetScript("OnUpdate", ns.Prof.Wrap("Nameplates: nombre/auras", function(_, dt)
+nameScaleDriver:SetScript("OnUpdate", ns.Prof.Wrap("Nameplates: nombre/auras", function(_, dt) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Nameplates.lua:1667:79");
     nameDriverElapsed = nameDriverElapsed + (dt or 0)
-    if nameDriverElapsed < NAME_DRIVER_INTERVAL then return end
+    if nameDriverElapsed < NAME_DRIVER_INTERVAL then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1667:79"); return end
     nameDriverElapsed = 0
     for uf in pairs(activeUF) do
         if uf.mcfNameHolder then ReassertNameGeometry(uf) end
         if uf.mcfAuraGroups then ReassertAurasGeometry(uf) end
     end
-end))
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1667:79"); end))
 
 -- ==========================================================================
 -- INICIALIZACION: reskin de cada nameplate cuando aparece + pasada sobre las
 -- que ya esten visibles (recarga en combate, zonas, etc).
 -- ==========================================================================
-local function SkinExistingNamePlates()
-    if not C_NamePlate or not C_NamePlate.GetNamePlates then return end
+local function SkinExistingNamePlates() Perfy_Trace(Perfy_GetTime(), "Enter", "SkinExistingNamePlates MyCustomFrames/Nameplates.lua:1681:6");
+    if not C_NamePlate or not C_NamePlate.GetNamePlates then Perfy_Trace(Perfy_GetTime(), "Leave", "SkinExistingNamePlates MyCustomFrames/Nameplates.lua:1681:6"); return end
     for _, frame in ipairs(C_NamePlate.GetNamePlates()) do
         SkinNamePlate(frame)
         -- Semilla de activeUF (ver nameScaleDriver arriba) -- cubre plates que
@@ -1688,7 +1688,7 @@ local function SkinExistingNamePlates()
         local uf = frame.UnitFrame or frame
         if uf then activeUF[uf] = true end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SkinExistingNamePlates MyCustomFrames/Nameplates.lua:1681:6"); end
 
 local ev = CreateFrame("Frame")
 -- RESET CENTRALIZADO (2026-07-19, "revisa vs Platynator" -> "implementalo"):
@@ -1704,8 +1704,8 @@ local ev = CreateFrame("Frame")
 -- idea aca: un solo lugar que oculta/resetea todo lo addon-propio, llamado
 -- TANTO en REMOVED (limpieza al liberar) COMO al principio de ADD (defensivo,
 -- por si REMOVED no llega a tiempo en un cambio muy rapido de unidad).
-local function ResetNameplateState(uf)
-    if not uf then return end
+local function ResetNameplateState(uf) Perfy_Trace(Perfy_GetTime(), "Enter", "ResetNameplateState MyCustomFrames/Nameplates.lua:1707:6");
+    if not uf then Perfy_Trace(Perfy_GetTime(), "Leave", "ResetNameplateState MyCustomFrames/Nameplates.lua:1707:6"); return end
     if uf.mcfClass then uf.mcfClass:Hide() end
     if uf.mcfCast then uf.mcfCast:Hide() end
     if uf.mcfAuraGroups then
@@ -1719,14 +1719,14 @@ local function ResetNameplateState(uf)
     -- ANTERIOR que ocupaba este frame.
     uf.mcfNameOnlyMode = nil
     if uf.healthBar and uf.healthBar.mcfValue then uf.healthBar.mcfValue:SetText("") end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ResetNameplateState MyCustomFrames/Nameplates.lua:1707:6"); end
 
 ev:RegisterEvent("NAME_PLATE_UNIT_ADDED")
 ev:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
 ev:RegisterEvent("PLAYER_ENTERING_WORLD")
-ev:SetScript("OnEvent", function(self, event, unit)
+ev:SetScript("OnEvent", function(self, event, unit) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Nameplates.lua:1727:24");
     local p = P()
-    if not (p and p.enabled ~= false) then return end
+    if not (p and p.enabled ~= false) then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1727:24"); return end
     if event == "NAME_PLATE_UNIT_ADDED" then
         if C_NamePlate and C_NamePlate.GetNamePlateForUnit then
             local plate = C_NamePlate.GetNamePlateForUnit(unit)
@@ -1750,7 +1750,7 @@ ev:SetScript("OnEvent", function(self, event, unit)
                     activeUF[objUf] = nil
                     ResetNameplateState(objUf)
                 end
-                return
+                Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1727:24"); return
             end
             SkinNamePlate(plate)
             -- Actualiza el nombre YA (no esperar el ticker de 0.2s) --
@@ -1783,7 +1783,7 @@ ev:SetScript("OnEvent", function(self, event, unit)
         ApplyMaxDistance()
         SkinExistingNamePlates()
     end
-end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1727:24"); end)
 
 -- Diagnostico 2026-07-18: en vez de que el usuario adivine el instante exacto
 -- de un cast para correr /mcfnpdiag, esto se engancha a los eventos de
@@ -1800,9 +1800,9 @@ local castWatchEnabled = false
 local castWatch = CreateFrame("Frame")
 castWatch:RegisterEvent("UNIT_SPELLCAST_START")
 castWatch:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
-castWatch:SetScript("OnEvent", function(self, event, unit)
-    if not castWatchEnabled then return end
-    if type(unit) ~= "string" or not unit:match("^nameplate") then return end
+castWatch:SetScript("OnEvent", function(self, event, unit) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Nameplates.lua:1803:31");
+    if not castWatchEnabled then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1803:31"); return end
+    if type(unit) ~= "string" or not unit:match("^nameplate") then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1803:31"); return end
     local okC, name, _, _, startMS, endMS = pcall(UnitCastingInfo, unit)
     local okCh, cname, _, _, cstart, cend = pcall(UnitChannelInfo, unit)
     print(("|cff00ff00[MCF cast-watch]|r %s en %s -- UnitCastingInfo: ok=%s name=%s start=%s end=%s | UnitChannelInfo: ok=%s name=%s start=%s end=%s"):format(
@@ -1829,13 +1829,13 @@ castWatch:SetScript("OnEvent", function(self, event, unit)
             print("  no se encontro la nameplate/UnitFrame para " .. unit)
         end
     end
-end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1803:31"); end)
 
 SLASH_MCFCASTWATCH1 = "/mcfcastwatch"
-SlashCmdList["MCFCASTWATCH"] = function()
+SlashCmdList["MCFCASTWATCH"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFCASTWATCH MyCustomFrames/Nameplates.lua:1835:31");
     castWatchEnabled = not castWatchEnabled
     print("|cff00ff00[MCF cast-watch]|r " .. (castWatchEnabled and "ACTIVADO" or "desactivado"))
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFCASTWATCH MyCustomFrames/Nameplates.lua:1835:31"); end
 
 -- Pedido del usuario 2026-07-19 ("algo relacionado sobre si interrumpo un
 -- cast?"): la cast bar nativa de Blizzard flashea en ROJO un instante cuando
@@ -1848,13 +1848,13 @@ local interruptWatch = CreateFrame("Frame")
 interruptWatch:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
 interruptWatch:RegisterEvent("UNIT_SPELLCAST_INTERRUPTIBLE")
 interruptWatch:RegisterEvent("UNIT_SPELLCAST_NOT_INTERRUPTIBLE")
-interruptWatch:SetScript("OnEvent", function(self, event, unit)
-    if type(unit) ~= "string" or not unit:match("^nameplate") then return end
-    if not C_NamePlate or not C_NamePlate.GetNamePlateForUnit then return end
+interruptWatch:SetScript("OnEvent", function(self, event, unit) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Nameplates.lua:1851:36");
+    if type(unit) ~= "string" or not unit:match("^nameplate") then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1851:36"); return end
+    if not C_NamePlate or not C_NamePlate.GetNamePlateForUnit then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1851:36"); return end
     local plate = C_NamePlate.GetNamePlateForUnit(unit)
     local uf = plate and (plate.UnitFrame or plate)
     local cb = uf and uf.mcfCast
-    if not cb then return end
+    if not cb then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1851:36"); return end
     if event == "UNIT_SPELLCAST_INTERRUPTED" then
         if cb.mcfFlashTicker then cb.mcfFlashTicker:Cancel() end
         -- Pedido del usuario: la BARRA (relleno) desaparece, solo queda el
@@ -1871,25 +1871,25 @@ interruptWatch:SetScript("OnEvent", function(self, event, unit)
         -- cliente (ver ArenaTrinket.lua, mismo hallazgo esta sesion).
         cb.text:SetText(_G.INTERRUPTED or "Interrupted")
         cb:Show()
-        cb.mcfFlashTicker = C_Timer.NewTimer(0.5, function()
+        cb.mcfFlashTicker = C_Timer.NewTimer(0.5, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Nameplates.lua:1874:50");
             cb.mcfFlashTicker = nil
             if fill then fill:Show() end
             if cb.bg then cb.bg:Show() end
             cb:Hide()
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1874:50"); end)
     else
         -- Cambio de interrumpibilidad a mitad de cast (ej. un boss se vuelve
         -- inmune al stun/kick): reaplica el color correcto de inmediato, sin
         -- esperar al proximo tick de 0.2s.
         UpdateCastBar(uf, unit)
     end
-end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Nameplates.lua:1851:36"); end)
 
 SLASH_MCFNPDIAG1 = "/mcfnpdiag"
-SlashCmdList["MCFNPDIAG"] = function()
+SlashCmdList["MCFNPDIAG"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFNPDIAG MyCustomFrames/Nameplates.lua:1889:28");
     if not C_NamePlate or not C_NamePlate.GetNamePlates then
         print("|cff00ff00[MCF diag]|r C_NamePlate.GetNamePlates no existe en este cliente")
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFNPDIAG MyCustomFrames/Nameplates.lua:1889:28"); return
     end
     local plates = C_NamePlate.GetNamePlates()
     print("|cff00ff00[MCF diag]|r nameplates visibles=" .. tostring(#plates))
@@ -2002,11 +2002,11 @@ SlashCmdList["MCFNPDIAG"] = function()
             -- regions" -- confirmado en vivo) -- NO llamarlos aca.
             local w, h = hp:GetSize()
             print(("  healthBar: w=%.1f h=%.1f"):format(w or -1, h or -1))
-            local function reg(name, r)
-                if not r then print("    " .. name .. "=nil"); return end
-                local ok, shown = pcall(function() return r:IsShown() end)
+            local function reg(name, r) Perfy_Trace(Perfy_GetTime(), "Enter", "reg MyCustomFrames/Nameplates.lua:2005:18");
+                if not r then print("    " .. name .. "=nil"); Perfy_Trace(Perfy_GetTime(), "Leave", "reg MyCustomFrames/Nameplates.lua:2005:18"); return end
+                local ok, shown = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Nameplates.lua:2007:40"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Nameplates.lua:2007:40", r:IsShown()) end)
                 print("    " .. name .. "=Texture shown=" .. tostring(ok and shown))
-            end
+            Perfy_Trace(Perfy_GetTime(), "Leave", "reg MyCustomFrames/Nameplates.lua:2005:18"); end
             reg("bgTexture", hp.bgTexture)
             reg("selectedBorder", hp.selectedBorder)
             reg("deselectedOverlay", hp.deselectedOverlay)
@@ -2020,7 +2020,7 @@ SlashCmdList["MCFNPDIAG"] = function()
             end
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFNPDIAG MyCustomFrames/Nameplates.lua:1889:28"); end
 
 -- Diagnostico (2026-07-27, reportado con captura DESPUES de agregar
 -- IsObjectNameplate: "aun sigo viendo nameplates en objetos" -- en "Hall of
@@ -2031,19 +2031,19 @@ end
 -- tercera vez. Vuelca unit/GUID(prefijo)/nombre/IsObjectNameplate para CADA
 -- plate visible ahora mismo.
 SLASH_MCFNPOBJDIAG1 = "/mcfnpobjdiag"
-SlashCmdList["MCFNPOBJDIAG"] = function()
+SlashCmdList["MCFNPOBJDIAG"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFNPOBJDIAG MyCustomFrames/Nameplates.lua:2034:31");
     if not C_NamePlate or not C_NamePlate.GetNamePlates then
         print("|cff00ff00[MCF obj diag]|r C_NamePlate.GetNamePlates no existe en este cliente")
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFNPOBJDIAG MyCustomFrames/Nameplates.lua:2034:31"); return
     end
     local plates = C_NamePlate.GetNamePlates()
     print("|cff00ff00[MCF obj diag]|r nameplates visibles=" .. tostring(#plates))
-    local function safeField(fn, ...)
+    local function safeField(fn, ...) Perfy_Trace(Perfy_GetTime(), "Enter", "safeField MyCustomFrames/Nameplates.lua:2041:10");
         local ok, v = pcall(fn, ...)
-        if not ok then return "err" end
-        if v == nil then return "nil" end
-        if issecretvalue and issecretvalue(v) then return "SECRET" end
-        return tostring(v)
+        if not ok then Perfy_Trace(Perfy_GetTime(), "Leave", "safeField MyCustomFrames/Nameplates.lua:2041:10"); return "err" end
+        if v == nil then Perfy_Trace(Perfy_GetTime(), "Leave", "safeField MyCustomFrames/Nameplates.lua:2041:10"); return "nil" end
+        if issecretvalue and issecretvalue(v) then Perfy_Trace(Perfy_GetTime(), "Leave", "safeField MyCustomFrames/Nameplates.lua:2041:10"); return "SECRET" end
+        return Perfy_Trace_Passthrough("Leave", "safeField MyCustomFrames/Nameplates.lua:2041:10", tostring(v))
     end
     for _, frame in ipairs(plates) do
         local unit = frame.namePlateUnitToken or frame.unitToken
@@ -2083,5 +2083,7 @@ SlashCmdList["MCFNPOBJDIAG"] = function()
                 safeField(UnitIsPlayer, unit), safeField(UnitLevel, unit)))
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFNPOBJDIAG MyCustomFrames/Nameplates.lua:2034:31"); end
 
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Nameplates.lua");

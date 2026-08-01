@@ -1,4 +1,4 @@
---[[
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/MainMenu.lua"); --[[
 	MainMenu.lua - Gonkast
 	A cosmetic skin for the retail Game Menu (the Escape / "Game Menu" panel).
 
@@ -39,15 +39,15 @@ local ADDON, ns = ...
 -- ns.SkinResolve mas abajo).
 local ASSETS = "Interface\\AddOns\\MyCustomFrames\\Assets\\"
 
-local function ResolveTex(filename)
-	if ns.SkinResolve then return ns.SkinResolve(filename) end
-	return ASSETS .. filename
+local function ResolveTex(filename) Perfy_Trace(Perfy_GetTime(), "Enter", "ResolveTex MyCustomFrames/MainMenu.lua:42:6");
+	if ns.SkinResolve then return Perfy_Trace_Passthrough("Leave", "ResolveTex MyCustomFrames/MainMenu.lua:42:6", ns.SkinResolve(filename)) end
+	return Perfy_Trace_Passthrough("Leave", "ResolveTex MyCustomFrames/MainMenu.lua:42:6", ASSETS .. filename)
 end
 
-local function TEX_BG()      return ResolveTex("Background border.tga") end
-local function TEX_WHITE()   return ResolveTex("button wood large.tga") end
-local function TEX_RED()     return ResolveTex("button red2 large.tga") end
-local function TEX_RED_BIG() return ResolveTex("button red2 large.tga") end
+local function TEX_BG() Perfy_Trace(Perfy_GetTime(), "Enter", "TEX_BG MyCustomFrames/MainMenu.lua:47:6");      return Perfy_Trace_Passthrough("Leave", "TEX_BG MyCustomFrames/MainMenu.lua:47:6", ResolveTex("Background border.tga")) end
+local function TEX_WHITE() Perfy_Trace(Perfy_GetTime(), "Enter", "TEX_WHITE MyCustomFrames/MainMenu.lua:48:6");   return Perfy_Trace_Passthrough("Leave", "TEX_WHITE MyCustomFrames/MainMenu.lua:48:6", ResolveTex("button wood large.tga")) end
+local function TEX_RED() Perfy_Trace(Perfy_GetTime(), "Enter", "TEX_RED MyCustomFrames/MainMenu.lua:49:6");     return Perfy_Trace_Passthrough("Leave", "TEX_RED MyCustomFrames/MainMenu.lua:49:6", ResolveTex("button red2 large.tga")) end
+local function TEX_RED_BIG() Perfy_Trace(Perfy_GetTime(), "Enter", "TEX_RED_BIG MyCustomFrames/MainMenu.lua:50:6"); return Perfy_Trace_Passthrough("Leave", "TEX_RED_BIG MyCustomFrames/MainMenu.lua:50:6", ResolveTex("button red2 large.tga")) end
 
 -- ---------------------------------------------------------------------------
 -- Tunables (tweak here if you want to re-position things)
@@ -129,10 +129,10 @@ UIHider:Hide()
 
 -- Hide Blizzard's default frame chrome. Called on every show (not just once)
 -- so the original border can't peek through when our own border is faded out.
-local function HideBlizzardChrome()
+local function HideBlizzardChrome() Perfy_Trace(Perfy_GetTime(), "Enter", "HideBlizzardChrome MyCustomFrames/MainMenu.lua:132:6");
 	local f = GameMenuFrame
 	if not f then
-		return
+		Perfy_Trace(Perfy_GetTime(), "Leave", "HideBlizzardChrome MyCustomFrames/MainMenu.lua:132:6"); return
 	end
 	if f.NineSlice then
 		f.NineSlice:SetAlpha(0)
@@ -155,7 +155,7 @@ local function HideBlizzardChrome()
 			region:SetAlpha(0)
 		end
 	end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "HideBlizzardChrome MyCustomFrames/MainMenu.lua:132:6"); end
 
 -- ---------------------------------------------------------------------------
 -- Which buttons get which texture, matched by their (localized) label.
@@ -169,12 +169,12 @@ do
 	if MAINMENU_BUTTON then RED_BIG_LABELS[MAINMENU_BUTTON] = true end
 end
 
-local function TextureForLabel(label)
+local function TextureForLabel(label) Perfy_Trace(Perfy_GetTime(), "Enter", "TextureForLabel MyCustomFrames/MainMenu.lua:172:6");
 	if label then
-		if RED_BIG_LABELS[label] then return TEX_RED_BIG() end
-		if RED_LABELS[label]     then return TEX_RED() end
+		if RED_BIG_LABELS[label] then return Perfy_Trace_Passthrough("Leave", "TextureForLabel MyCustomFrames/MainMenu.lua:172:6", TEX_RED_BIG()) end
+		if RED_LABELS[label]     then return Perfy_Trace_Passthrough("Leave", "TextureForLabel MyCustomFrames/MainMenu.lua:172:6", TEX_RED()) end
 	end
-	return TEX_WHITE()
+	return Perfy_Trace_Passthrough("Leave", "TextureForLabel MyCustomFrames/MainMenu.lua:172:6", TEX_WHITE())
 end
 
 -- ---------------------------------------------------------------------------
@@ -188,7 +188,7 @@ local SLICE_KEYS   = { "Left", "Center", "Middle", "Right" }
 -- glow is hidden; our own per-button highlight replaces it.
 local STATE_GETTERS = { "GetNormalTexture", "GetPushedTexture", "GetDisabledTexture", "GetHighlightTexture" }
 
-local function HideButtonArt(button)
+local function HideButtonArt(button) Perfy_Trace(Perfy_GetTime(), "Enter", "HideButtonArt MyCustomFrames/MainMenu.lua:191:6");
 	for _, key in ipairs(SLICE_KEYS) do
 		local region = button[key]
 		if region and region.SetAlpha then
@@ -201,7 +201,7 @@ local function HideButtonArt(button)
 			if tex then tex:SetAlpha(0) end
 		end
 	end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "HideButtonArt MyCustomFrames/MainMenu.lua:191:6"); end
 
 -- IDENTICA al addon original (Mainmenu-Gonkast/Core.lua), a proposito.
 -- 2026-07-25: se habia "arreglado" esto (sacar el chequeo de padre + exigir
@@ -211,35 +211,35 @@ end
 -- no porque el filtro fallara. El cambio ademas RECHAZABA botones que esta
 -- version aceptaba (texto ""). Revertido: si algo hay que tocar aca, primero
 -- confirmar con el menu ABIERTO.
-local function IsGameMenuButton(button)
+local function IsGameMenuButton(button) Perfy_Trace(Perfy_GetTime(), "Enter", "IsGameMenuButton MyCustomFrames/MainMenu.lua:214:6");
 	if not button or button:GetParent() ~= GameMenuFrame then
-		return false
+		Perfy_Trace(Perfy_GetTime(), "Leave", "IsGameMenuButton MyCustomFrames/MainMenu.lua:214:6"); return false
 	end
 	if button.GetObjectType and button:GetObjectType() ~= "Button" then
-		return false
+		Perfy_Trace(Perfy_GetTime(), "Leave", "IsGameMenuButton MyCustomFrames/MainMenu.lua:214:6"); return false
 	end
-	return (button.GetText and button:GetText() ~= nil) and true or false
+	return Perfy_Trace_Passthrough("Leave", "IsGameMenuButton MyCustomFrames/MainMenu.lua:214:6", (button.GetText and button:GetText() ~= nil) and true or false)
 end
 
 -- Recorre los botones del menu igual que el original (hijos DIRECTOS y
 -- visibles). Se deja como funcion sola para que el diagnostico use exactamente
 -- el mismo criterio que el skineo, sin duplicar la condicion.
-local function ForEachMenuButton(fn)
-	if not GameMenuFrame then return end
+local function ForEachMenuButton(fn) Perfy_Trace(Perfy_GetTime(), "Enter", "ForEachMenuButton MyCustomFrames/MainMenu.lua:227:6");
+	if not GameMenuFrame then Perfy_Trace(Perfy_GetTime(), "Leave", "ForEachMenuButton MyCustomFrames/MainMenu.lua:227:6"); return end
 	for _, child in ipairs({ GameMenuFrame:GetChildren() }) do
 		if child.IsShown and child:IsShown() then
 			fn(child)
 		end
 	end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ForEachMenuButton MyCustomFrames/MainMenu.lua:227:6"); end
 
 -- Recolor / outline the label. Uses the stored base font size so repeated
 -- passes stay idempotent (never keeps growing the font).
-local function StyleButtonText(button)
+local function StyleButtonText(button) Perfy_Trace(Perfy_GetTime(), "Enter", "StyleButtonText MyCustomFrames/MainMenu.lua:238:6");
 	local fs = button:GetFontString() or button.Text
 	local base = button.__gonkFont
 	if not fs or not base then
-		return
+		Perfy_Trace(Perfy_GetTime(), "Leave", "StyleButtonText MyCustomFrames/MainMenu.lua:238:6"); return
 	end
 	fs:SetDrawLayer("OVERLAY")
 	if base[1] then
@@ -247,11 +247,11 @@ local function StyleButtonText(button)
 	end
 	fs:SetTextColor(unpack(CFG.textColor))
 	fs:SetShadowColor(0, 0, 0, 0)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "StyleButtonText MyCustomFrames/MainMenu.lua:238:6"); end
 
-local function SkinButton(button)
+local function SkinButton(button) Perfy_Trace(Perfy_GetTime(), "Enter", "SkinButton MyCustomFrames/MainMenu.lua:252:6");
 	if not IsGameMenuButton(button) then
-		return
+		Perfy_Trace(Perfy_GetTime(), "Leave", "SkinButton MyCustomFrames/MainMenu.lua:252:6"); return
 	end
 
 	-- Guard on the texture itself, not a flag, so a half-initialized button
@@ -282,7 +282,7 @@ local function SkinButton(button)
 	end
 
 	if not button.__gonkBaseH then
-		return
+		Perfy_Trace(Perfy_GetTime(), "Leave", "SkinButton MyCustomFrames/MainMenu.lua:252:6"); return
 	end
 
 	-- The button pool can reuse a button for a different entry, so refresh
@@ -324,31 +324,31 @@ local function SkinButton(button)
 
 	StyleButtonText(button)
 	HideButtonArt(button)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SkinButton MyCustomFrames/MainMenu.lua:252:6"); end
 
 -- ---------------------------------------------------------------------------
 -- Frame skinning
 -- ---------------------------------------------------------------------------
-local function GetMenuTitle()
+local function GetMenuTitle() Perfy_Trace(Perfy_GetTime(), "Enter", "GetMenuTitle MyCustomFrames/MainMenu.lua:332:6");
 	local header = GameMenuFrame.Header or _G.GameMenuFrameHeader
 	if header then
 		if header.Text and header.Text.GetText then
 			local t = header.Text:GetText()
-			if t and t ~= "" then return t end
+			if t and t ~= "" then Perfy_Trace(Perfy_GetTime(), "Leave", "GetMenuTitle MyCustomFrames/MainMenu.lua:332:6"); return t end
 		end
 		for _, region in ipairs({ header:GetRegions() }) do
 			if region.GetObjectType and region:GetObjectType() == "FontString" then
 				local t = region:GetText()
-				if t and t ~= "" then return t end
+				if t and t ~= "" then Perfy_Trace(Perfy_GetTime(), "Leave", "GetMenuTitle MyCustomFrames/MainMenu.lua:332:6"); return t end
 			end
 		end
 	end
-	return "Game Menu"
+	Perfy_Trace(Perfy_GetTime(), "Leave", "GetMenuTitle MyCustomFrames/MainMenu.lua:332:6"); return "Game Menu"
 end
 
-local function BuildFrameArt()
+local function BuildFrameArt() Perfy_Trace(Perfy_GetTime(), "Enter", "BuildFrameArt MyCustomFrames/MainMenu.lua:349:6");
 	if GameMenuFrame.__gonkFrameSkinned then
-		return
+		Perfy_Trace(Perfy_GetTime(), "Leave", "BuildFrameArt MyCustomFrames/MainMenu.lua:349:6"); return
 	end
 	GameMenuFrame.__gonkFrameSkinned = true
 
@@ -465,13 +465,13 @@ local function BuildFrameArt()
 			GameMenuFrame.__gonkPortraitMask = mask
 		end
 	end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "BuildFrameArt MyCustomFrames/MainMenu.lua:349:6"); end
 
 -- Refresh the portrait (2D texture or 3D model) and the class-colored circle
 -- behind it.
-local function UpdatePortrait()
+local function UpdatePortrait() Perfy_Trace(Perfy_GetTime(), "Enter", "UpdatePortrait MyCustomFrames/MainMenu.lua:472:6");
 	if not GameMenuFrame or not CFG.showPortrait then
-		return
+		Perfy_Trace(Perfy_GetTime(), "Leave", "UpdatePortrait MyCustomFrames/MainMenu.lua:472:6"); return
 	end
 
 	-- Tint the circle behind the portrait with the class color.
@@ -492,23 +492,23 @@ local function UpdatePortrait()
 	if model then
 		model:SetUnit("player")
 		model:SetPortraitZoom(CFG.portraitZoom or 1)
-		return
+		Perfy_Trace(Perfy_GetTime(), "Leave", "UpdatePortrait MyCustomFrames/MainMenu.lua:472:6"); return
 	end
 
 	-- 2D texture portrait.
 	if GameMenuFrame.__gonkPortrait then
 		SetPortraitTexture(GameMenuFrame.__gonkPortrait, "player")
 	end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UpdatePortrait MyCustomFrames/MainMenu.lua:472:6"); end
 
 -- Reaplica las texturas resueltas por skin cada vez que se muestra el menu
 -- (2026-07-24, nuevo con el merge a MyCustomFrames): si el usuario cambio de
 -- Skin activa desde la ultima vez que se abrio el menu, `bg`/los botones
 -- deben tomar la textura NUEVA, no quedarse pegados a la de la sesion previa.
-local function RefreshSkinTextures()
+local function RefreshSkinTextures() Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshSkinTextures MyCustomFrames/MainMenu.lua:508:6");
 	local bg = GameMenuFrame.__gonkBG
 	if bg then bg:SetTexture(TEX_BG()) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshSkinTextures MyCustomFrames/MainMenu.lua:508:6"); end
 
 -- Dimensiona el fondo/borde: el ANCHO sale del ancho del frame + padding
 -- (por bgScale) y el ALTO se DERIVA de la proporcion real del .tga (944x1725),
@@ -524,16 +524,16 @@ end
 -- comportamiento es el mismo que tenia el addon original, asi que NO lo
 -- introdujo el merge. Pendiente de diagnosticar con datos reales del menu
 -- ABIERTO (/mcfmenudiag) antes de volver a tocarlo.
-local function SizeBackground()
+local function SizeBackground() Perfy_Trace(Perfy_GetTime(), "Enter", "SizeBackground MyCustomFrames/MainMenu.lua:527:6");
 	local bg = GameMenuFrame.__gonkBG
-	if not bg then return end
+	if not bg then Perfy_Trace(Perfy_GetTime(), "Leave", "SizeBackground MyCustomFrames/MainMenu.lua:527:6"); return end
 	local w = ((GameMenuFrame:GetWidth() or 200) + CFG.bgPadLeft + CFG.bgPadRight) * (CFG.bgScale or 1.0)
 	bg:SetSize(w, w * CFG.bgAspect)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SizeBackground MyCustomFrames/MainMenu.lua:527:6"); end
 
-local function SkinFrame()
+local function SkinFrame() Perfy_Trace(Perfy_GetTime(), "Enter", "SkinFrame MyCustomFrames/MainMenu.lua:534:6");
 	if not GameMenuFrame or GameMenuFrame:IsForbidden() then
-		return
+		Perfy_Trace(Perfy_GetTime(), "Leave", "SkinFrame MyCustomFrames/MainMenu.lua:534:6"); return
 	end
 
 	BuildFrameArt()
@@ -565,21 +565,21 @@ local function SkinFrame()
 	-- volver a dimensionar DESPUES. Se deja tambien la llamada de antes (barata,
 	-- idempotente) para no alterar el comportamiento en el resto de los casos.
 	SizeBackground()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SkinFrame MyCustomFrames/MainMenu.lua:534:6"); end
 ns.RefreshMainMenuSkin = SkinFrame   -- expuesto para reaccionar a un cambio de Skin en vivo
 
 -- DIAGNOSTICO (2026-07-25, reportado: "elegi la skin y los botones no se
 -- cambiaron"): vuelca QUE rutas esta resolviendo este modulo y que textura tiene
 -- puesta cada boton AHORA MISMO -- en vez de seguir teorizando sobre por que no
 -- cambio. Registrado en el router: `/mcfdiag mainmenu`.
-local function MainMenuDiag()
+local function MainMenuDiag() Perfy_Trace(Perfy_GetTime(), "Enter", "MainMenuDiag MyCustomFrames/MainMenu.lua:575:6");
     print("|cffffe19b[MCF]|r Game Menu -- rutas que resuelve este modulo:")
     print("  skin activa (db.activeSkinLabel): " .. tostring(ns.GetDB and ns.GetDB().activeSkinLabel))
     print("  ActiveSkinBasePath: " .. tostring(ns.ActiveSkinBasePath))
     print("  TEX_BG():    " .. tostring(TEX_BG()))
     print("  TEX_WHITE(): " .. tostring(TEX_WHITE()))
     print("  TEX_RED():   " .. tostring(TEX_RED()))
-    if not GameMenuFrame then print("  (GameMenuFrame no existe todavia)") return end
+    if not GameMenuFrame then print("  (GameMenuFrame no existe todavia)") Perfy_Trace(Perfy_GetTime(), "Leave", "MainMenuDiag MyCustomFrames/MainMenu.lua:575:6"); return end
     local bg = GameMenuFrame.__gonkBG
     print(("  bg: textura PUESTA=%s size=%.0fx%.0f | frameW=%.0f (de aca sale el ancho del fondo)"):format(
         tostring(bg and bg:GetTexture()),
@@ -594,9 +594,9 @@ local function MainMenuDiag()
     -- original) -- llamar b:GetText() sin filtrar reventaba en el primer hijo
     -- que no es un Button. Se filtra aca con el MISMO criterio.
     local children, found, skinned = 0, 0, 0
-    ForEachMenuButton(function(b)
+    ForEachMenuButton(function(b) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MainMenu.lua:597:22");
         children = children + 1
-        if not IsGameMenuButton(b) then return end
+        if not IsGameMenuButton(b) then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MainMenu.lua:597:22"); return end
         found = found + 1
         if b.__gonkTex then skinned = skinned + 1 end
         if found <= 5 then   -- una muestra alcanza
@@ -604,7 +604,7 @@ local function MainMenuDiag()
                 tostring(b:GetText()),
                 b.__gonkTex and tostring(b.__gonkTex:GetTexture()) or "|cffff5555SIN SKIN|r"))
         end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MainMenu.lua:597:22"); end)
     print(("  hijos visibles recorridos: %d"):format(children))
 
     -- GetTexture() devuelve un fileID (numero), no la ruta -- asi que el numero
@@ -613,10 +613,10 @@ local function MainMenuDiag()
     -- eso identifica el archivo sin ambiguedad.
     local probe = GameMenuFrame:CreateTexture(nil, "BACKGROUND")
     probe:Hide()
-    local function fileIdOf(path)
+    local function fileIdOf(path) Perfy_Trace(Perfy_GetTime(), "Enter", "fileIdOf MyCustomFrames/MainMenu.lua:616:10");
         probe:SetTexture(nil)
         probe:SetTexture(path)
-        return probe:GetTexture()
+        return Perfy_Trace_Passthrough("Leave", "fileIdOf MyCustomFrames/MainMenu.lua:616:10", probe:GetTexture())
     end
     local skinPath = (ns.ActiveSkinBasePath or "") .. "button wood large.tga"
     local mainPath = ASSETS .. "button wood large.tga"
@@ -633,12 +633,12 @@ local function MainMenuDiag()
     -- boton con su capa/sublevel/alpha: si hay alguna con alpha > 0 por encima
     -- de ARTWORK:7 (donde vive la nuestra), eso es lo que se esta viendo.
     local first
-    ForEachMenuButton(function(b)
+    ForEachMenuButton(function(b) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MainMenu.lua:636:22");
         if not first and IsGameMenuButton(b) then first = b end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MainMenu.lua:636:22"); end)
     if first then
         print(("  |cffffe19bregiones de [%s]|r (la nuestra vive en ARTWORK sublevel 7):"):format(tostring(first:GetText())))
-        local ok, regions = pcall(function() return { first:GetRegions() } end)
+        local ok, regions = pcall(function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MainMenu.lua:641:34"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/MainMenu.lua:641:34", { first:GetRegions() }) end)
         if ok then
             for _, r in ipairs(regions) do
                 if r.GetObjectType and r:GetObjectType() == "Texture" then
@@ -662,7 +662,7 @@ local function MainMenuDiag()
     print(("  botones de menu encontrados: %d | skineados: %d"):format(found, skinned))
     print("  hook GameMenuFrame_UpdateVisibleButtons: "
         .. (type(_G.GameMenuFrame_UpdateVisibleButtons) == "function" and "existe" or "|cffff5555NO existe|r"))
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "MainMenuDiag MyCustomFrames/MainMenu.lua:575:6"); end
 -- Alias directo (sin subcomando) -- ver tambien /mcfdiag mainmenu.
 SLASH_MCFMENUDIAG1 = "/mcfmenudiag"
 SlashCmdList["MCFMENUDIAG"] = MainMenuDiag
@@ -672,12 +672,12 @@ else
     -- Maintenance.lua carga DESPUES que este archivo; se registra cuando exista.
     local f = CreateFrame("Frame")
     f:RegisterEvent("PLAYER_LOGIN")
-    f:SetScript("OnEvent", function(self)
+    f:SetScript("OnEvent", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MainMenu.lua:675:27");
         self:UnregisterEvent("PLAYER_LOGIN")
         if ns.RegisterDiag then
             ns.RegisterDiag("mainmenu", "Rutas/texturas del skin del Game Menu (ESC)", MainMenuDiag)
         end
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MainMenu.lua:675:27"); end)
 end
 
 -- ---------------------------------------------------------------------------
@@ -690,9 +690,9 @@ end
 -- risk under Midnight's stricter secret/secure rules (those only apply to
 -- combat-relevant unit data, not a decorative overlay like this).
 local dimFrame
-local function EnsureDimFrame()
+local function EnsureDimFrame() Perfy_Trace(Perfy_GetTime(), "Enter", "EnsureDimFrame MyCustomFrames/MainMenu.lua:693:6");
 	if dimFrame then
-		return dimFrame
+		Perfy_Trace(Perfy_GetTime(), "Leave", "EnsureDimFrame MyCustomFrames/MainMenu.lua:693:6"); return dimFrame
 	end
 	local f = CreateFrame("Frame", "MainmenuGonkastDim", UIParent)
 	f:SetAllPoints(UIParent)
@@ -708,34 +708,34 @@ local function EnsureDimFrame()
 	f.tex = tex
 
 	dimFrame = f
-	return f
+	Perfy_Trace(Perfy_GetTime(), "Leave", "EnsureDimFrame MyCustomFrames/MainMenu.lua:693:6"); return f
 end
 
-local function ShowDim()
+local function ShowDim() Perfy_Trace(Perfy_GetTime(), "Enter", "ShowDim MyCustomFrames/MainMenu.lua:714:6");
 	if not CFG.dimEnabled then
-		return
+		Perfy_Trace(Perfy_GetTime(), "Leave", "ShowDim MyCustomFrames/MainMenu.lua:714:6"); return
 	end
 	local f = EnsureDimFrame()
 	f.tex:SetVertexColor(unpack(CFG.dimColor))
 	f:SetAlpha(CFG.dimAlpha or 0.2)
 	f:Show()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ShowDim MyCustomFrames/MainMenu.lua:714:6"); end
 
-local function HideDim()
+local function HideDim() Perfy_Trace(Perfy_GetTime(), "Enter", "HideDim MyCustomFrames/MainMenu.lua:724:6");
 	if dimFrame then
 		dimFrame:Hide()
 	end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "HideDim MyCustomFrames/MainMenu.lua:724:6"); end
 
 -- ---------------------------------------------------------------------------
 -- Hook-up
 -- ---------------------------------------------------------------------------
-local function TryHook()
+local function TryHook() Perfy_Trace(Perfy_GetTime(), "Enter", "TryHook MyCustomFrames/MainMenu.lua:733:6");
 	if not GameMenuFrame then
-		return false
+		Perfy_Trace(Perfy_GetTime(), "Leave", "TryHook MyCustomFrames/MainMenu.lua:733:6"); return false
 	end
 	if GameMenuFrame.__gonkHooked then
-		return true
+		Perfy_Trace(Perfy_GetTime(), "Leave", "TryHook MyCustomFrames/MainMenu.lua:733:6"); return true
 	end
 	GameMenuFrame.__gonkHooked = true
 
@@ -752,7 +752,7 @@ local function TryHook()
 		SkinFrame()
 		ShowDim()
 	end
-	return true
+	Perfy_Trace(Perfy_GetTime(), "Leave", "TryHook MyCustomFrames/MainMenu.lua:733:6"); return true
 end
 
 -- CONFLICTO SILENCIOSO (2026-07-25, causa real de "los botones no cambian con
@@ -764,9 +764,9 @@ end
 -- ganaba el nuestro -- por eso el fondo SI era de la skin y los botones no.)
 -- No se puede detectar por los flags __gonk* (ambos usan los mismos), asi que se
 -- avisa por nombre de addon.
-local function WarnIfLegacyAddonEnabled()
+local function WarnIfLegacyAddonEnabled() Perfy_Trace(Perfy_GetTime(), "Enter", "WarnIfLegacyAddonEnabled MyCustomFrames/MainMenu.lua:767:6");
     local isLoaded = C_AddOns and C_AddOns.IsAddOnLoaded or _G.IsAddOnLoaded
-    if not isLoaded then return end
+    if not isLoaded then Perfy_Trace(Perfy_GetTime(), "Leave", "WarnIfLegacyAddonEnabled MyCustomFrames/MainMenu.lua:767:6"); return end
     local ok, loaded = pcall(isLoaded, "Mainmenu-Gonkast")
     if ok and loaded then
         print("|cffff5555[MCF]|r El addon |cffffe19bMainmenu-Gonkast|r sigue ACTIVADO y pisa el "
@@ -774,20 +774,22 @@ local function WarnIfLegacyAddonEnabled()
         print("|cffff5555[MCF]|r Desactivalo en la lista de AddOns y haz /reload "
             .. "-- su codigo ya vive dentro de MyCustomFrames.")
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "WarnIfLegacyAddonEnabled MyCustomFrames/MainMenu.lua:767:6"); end
 
 local loader = CreateFrame("Frame")
 loader:RegisterEvent("PLAYER_LOGIN")
 loader:RegisterEvent("ADDON_LOADED")
-loader:SetScript("OnEvent", function(_, event, name)
+loader:SetScript("OnEvent", function(_, event, name) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MainMenu.lua:782:28");
 	if event == "ADDON_LOADED" then
 		if name == "Blizzard_GameMenu" then
 			TryHook()
 		end
-		return
+		Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MainMenu.lua:782:28"); return
 	end
 
 	-- PLAYER_LOGIN
 	TryHook()
 	WarnIfLegacyAddonEnabled()
-end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MainMenu.lua:782:28"); end)
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/MainMenu.lua");

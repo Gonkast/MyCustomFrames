@@ -1,4 +1,4 @@
--- ==========================================================================
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Glow.lua"); -- ==========================================================================
 -- MyCustomFrames - Glow.lua
 -- ASSISTED GLOW (glow custom sobre el highlight de la rotacion asistida).
 -- Extraido de core.lua (el chunk principal excedia el limite de 200 locals de Lua).
@@ -25,8 +25,8 @@ ns.HasLCG = LCG and true or false
 local GetCVarFn = (C_CVar and C_CVar.GetCVar) or GetCVar
 local SetCVarFn = (C_CVar and C_CVar.SetCVar) or SetCVar
 
-local function GlowDefaults()
-    return {
+local function GlowDefaults() Perfy_Trace(Perfy_GetTime(), "Enter", "GlowDefaults MyCustomFrames/Glow.lua:28:6");
+    return Perfy_Trace_Passthrough("Leave", "GlowDefaults MyCustomFrames/Glow.lua:28:6", {
         enabled = false,          -- opt-in (no molesta hasta activarlo)
         disableNative = true,     -- apaga el highlight de hormigas de Blizzard
         style = "Texture",        -- Texture (actionbuttonhighlight) por defecto
@@ -41,22 +41,22 @@ local function GlowDefaults()
         -- Pedido del usuario 2026-07-19: control de strata -- antes hardcodeado
         -- a "HIGH" en el overlay (ver GlowGetOverlay/GlowStart mas abajo).
         strata = "HIGH",
-    }
+    })
 end
 ns.GlowDefaults = GlowDefaults
 
 -- Descarta valores secretos ANTES de comparar (comparar un secreto crashea).
-local function SafeSid(sid)
-    if type(sid) ~= "number" then return nil end
-    if issecretvalue and issecretvalue(sid) then return nil end
-    if sid == 0 then return nil end
-    return sid
+local function SafeSid(sid) Perfy_Trace(Perfy_GetTime(), "Enter", "SafeSid MyCustomFrames/Glow.lua:49:6");
+    if type(sid) ~= "number" then Perfy_Trace(Perfy_GetTime(), "Leave", "SafeSid MyCustomFrames/Glow.lua:49:6"); return nil end
+    if issecretvalue and issecretvalue(sid) then Perfy_Trace(Perfy_GetTime(), "Leave", "SafeSid MyCustomFrames/Glow.lua:49:6"); return nil end
+    if sid == 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "SafeSid MyCustomFrames/Glow.lua:49:6"); return nil end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "SafeSid MyCustomFrames/Glow.lua:49:6"); return sid
 end
 
 -- ---- Cache de botones de accion (barras Blizzard + LibActionButton) ----
 local glowBtnCache = {}
 local glowCacheBuilt = false
-local function GlowBuildButtonCache()
+local function GlowBuildButtonCache() Perfy_Trace(Perfy_GetTime(), "Enter", "GlowBuildButtonCache MyCustomFrames/Glow.lua:59:6");
     wipe(glowBtnCache)
     -- LibActionButton estandar + el fork de AzeriteUI (-GE).
     for _, libName in ipairs({ "LibActionButton-1.0", "LibActionButton-1.0-GE" }) do
@@ -72,21 +72,21 @@ local function GlowBuildButtonCache()
         for i = 1, 12 do local b = _G[pfx .. i]; if b then glowBtnCache[b] = true end end
     end
     glowCacheBuilt = true
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "GlowBuildButtonCache MyCustomFrames/Glow.lua:59:6"); end
 
-local function GlowActionSpell(action)
-    if not action or action == 0 then return nil end
+local function GlowActionSpell(action) Perfy_Trace(Perfy_GetTime(), "Enter", "GlowActionSpell MyCustomFrames/Glow.lua:77:6");
+    if not action or action == 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "GlowActionSpell MyCustomFrames/Glow.lua:77:6"); return nil end
     local t, id = GetActionInfo(action)
-    if t == "spell" then return id
-    elseif t == "macro" then return (GetMacroSpell(id)) end
-    return nil
+    if t == "spell" then Perfy_Trace(Perfy_GetTime(), "Leave", "GlowActionSpell MyCustomFrames/Glow.lua:77:6"); return id
+    elseif t == "macro" then return Perfy_Trace_Passthrough("Leave", "GlowActionSpell MyCustomFrames/Glow.lua:77:6", (GetMacroSpell(id))) end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "GlowActionSpell MyCustomFrames/Glow.lua:77:6"); return nil
 end
 
 -- Encuentra el/los botones que tienen 'sid' (sid ya es legible via SafeSid).
 local glowSlots = {}
-local function GlowFindButtons(sid, out)
+local function GlowFindButtons(sid, out) Perfy_Trace(Perfy_GetTime(), "Enter", "GlowFindButtons MyCustomFrames/Glow.lua:87:6");
     wipe(out)
-    if not sid then return out end
+    if not sid then Perfy_Trace(Perfy_GetTime(), "Leave", "GlowFindButtons MyCustomFrames/Glow.lua:87:6"); return out end
     wipe(glowSlots)
     if C_ActionBar and C_ActionBar.FindSpellActionButtons then
         local slots = C_ActionBar.FindSpellActionButtons(sid)
@@ -103,11 +103,11 @@ local function GlowFindButtons(sid, out)
             end
         end
     end
-    return out
+    Perfy_Trace(Perfy_GetTime(), "Leave", "GlowFindButtons MyCustomFrames/Glow.lua:87:6"); return out
 end
 
 -- Hechizo recomendado ahora mismo (o nil).
-local function GlowNextSpell(p)
+local function GlowNextSpell(p) Perfy_Trace(Perfy_GetTime(), "Enter", "GlowNextSpell MyCustomFrames/Glow.lua:110:6");
     local sid
     if C_AssistedCombat and C_AssistedCombat.GetNextCastSpell then
         local ok, s = pcall(C_AssistedCombat.GetNextCastSpell, p.onlyVisible and true or false)
@@ -116,19 +116,19 @@ local function GlowNextSpell(p)
     if not sid and C_AssistedCombat and C_AssistedCombat.GetActionSpell then
         sid = SafeSid(C_AssistedCombat.GetActionSpell())
     end
-    if not sid then return nil end
+    if not sid then Perfy_Trace(Perfy_GetTime(), "Leave", "GlowNextSpell MyCustomFrames/Glow.lua:110:6"); return nil end
     if p.checkUsable and C_Spell and C_Spell.IsSpellUsable then
         local _, noResource = C_Spell.IsSpellUsable(sid)
-        if noResource then return nil end
+        if noResource then Perfy_Trace(Perfy_GetTime(), "Leave", "GlowNextSpell MyCustomFrames/Glow.lua:110:6"); return nil end
     end
-    return sid
+    Perfy_Trace(Perfy_GetTime(), "Leave", "GlowNextSpell MyCustomFrames/Glow.lua:110:6"); return sid
 end
 
 -- ---- Overlays de glow (uno por boton, pool perezoso) ----
 local glowFrames = {}   -- btn -> frame overlay
 local glowActive = {}   -- btn -> true (esta brillando)
 
-local function GlowGetOverlay(btn)
+local function GlowGetOverlay(btn) Perfy_Trace(Perfy_GetTime(), "Enter", "GlowGetOverlay MyCustomFrames/Glow.lua:131:6");
     local f = glowFrames[btn]
     if not f then
         f = CreateFrame("Frame", nil, btn)
@@ -153,20 +153,20 @@ local function GlowGetOverlay(btn)
         f.glowPulse = ag
         glowFrames[btn] = f
     end
-    return f
+    Perfy_Trace(Perfy_GetTime(), "Leave", "GlowGetOverlay MyCustomFrames/Glow.lua:131:6"); return f
 end
 
 -- Glow "Border" propio (sin lib): 4 lados. t = grosor.
-local function GlowDrawBorder(f, t, r, g, b, a)
+local function GlowDrawBorder(f, t, r, g, b, a) Perfy_Trace(Perfy_GetTime(), "Enter", "GlowDrawBorder MyCustomFrames/Glow.lua:160:6");
     local B = f.borders
     for _, tex in ipairs(B) do tex:SetVertexColor(r, g, b, a); tex:Show() end
     B[1]:ClearAllPoints(); B[1]:SetPoint("TOPLEFT", f, "TOPLEFT", 0, 0);   B[1]:SetPoint("BOTTOMRIGHT", f, "TOPRIGHT", 0, -t)
     B[2]:ClearAllPoints(); B[2]:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 0, 0); B[2]:SetPoint("TOPRIGHT", f, "BOTTOMRIGHT", 0, t)
     B[3]:ClearAllPoints(); B[3]:SetPoint("TOPLEFT", f, "TOPLEFT", 0, -t);  B[3]:SetPoint("BOTTOMRIGHT", f, "BOTTOMLEFT", t, t)
     B[4]:ClearAllPoints(); B[4]:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, -t); B[4]:SetPoint("BOTTOMLEFT", f, "BOTTOMRIGHT", -t, t)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "GlowDrawBorder MyCustomFrames/Glow.lua:160:6"); end
 
-local function GlowStop(btn)
+local function GlowStop(btn) Perfy_Trace(Perfy_GetTime(), "Enter", "GlowStop MyCustomFrames/Glow.lua:169:6");
     local f = glowFrames[btn]
     if f then
         if LCG then LCG.PixelGlow_Stop(f); LCG.AutoCastGlow_Stop(f); LCG.ButtonGlow_Stop(f) end
@@ -176,9 +176,9 @@ local function GlowStop(btn)
         f:Hide()
     end
     glowActive[btn] = nil
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "GlowStop MyCustomFrames/Glow.lua:169:6"); end
 
-local function GlowStart(btn, p)
+local function GlowStart(btn, p) Perfy_Trace(Perfy_GetTime(), "Enter", "GlowStart MyCustomFrames/Glow.lua:181:6");
     local f = GlowGetOverlay(btn)
     if f:GetParent() ~= btn then f:SetParent(btn) end
     f:ClearAllPoints()
@@ -222,17 +222,17 @@ local function GlowStart(btn, p)
         GlowDrawBorder(f, p.thickness or 4, col.r, col.g, col.b, a)
     end
     glowActive[btn] = true
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "GlowStart MyCustomFrames/Glow.lua:181:6"); end
 
 -- Fuerza el CVar del highlight nativo (solo fuera de combate; no releer secretos).
-local function GlowEnforceCVar(val)
-    if InCombatLockdown() then return end
-    if not GetCVarFn then return end
+local function GlowEnforceCVar(val) Perfy_Trace(Perfy_GetTime(), "Enter", "GlowEnforceCVar MyCustomFrames/Glow.lua:228:6");
+    if InCombatLockdown() then Perfy_Trace(Perfy_GetTime(), "Leave", "GlowEnforceCVar MyCustomFrames/Glow.lua:228:6"); return end
+    if not GetCVarFn then Perfy_Trace(Perfy_GetTime(), "Leave", "GlowEnforceCVar MyCustomFrames/Glow.lua:228:6"); return end
     local cur = GetCVarFn("assistedCombatHighlight")
     if cur ~= nil and tostring(cur) ~= val and SetCVarFn then
         pcall(SetCVarFn, "assistedCombatHighlight", val)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "GlowEnforceCVar MyCustomFrames/Glow.lua:228:6"); end
 
 -- OPTIMIZACION (2026-07-16, auditoria): antes GlowFindButtons recorria TODO glowBtnCache
 -- (barras Blizzard + LibActionButton, puede ser 100+ botones, con IsVisible+GetActionInfo por
@@ -242,14 +242,14 @@ end
 local glowWanted = {}
 local glowFound = {}
 local lastSid
-local function RefreshGlow(force)
+local function RefreshGlow(force) Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshGlow MyCustomFrames/Glow.lua:245:6");
     local db = ns.GetDB and ns.GetDB()
-    if not (db and db.glow) then return end
+    if not (db and db.glow) then Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshGlow MyCustomFrames/Glow.lua:245:6"); return end
     local p = db.glow
     if not p.enabled then
         for btn in pairs(glowActive) do GlowStop(btn) end
         lastSid = nil
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshGlow MyCustomFrames/Glow.lua:245:6"); return
     end
     if p.disableNative then GlowEnforceCVar("0") end
     if force then for btn in pairs(glowActive) do GlowStop(btn) end end
@@ -271,7 +271,7 @@ local function RefreshGlow(force)
     for btn in pairs(glowWanted) do
         if not glowActive[btn] then GlowStart(btn, p) end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshGlow MyCustomFrames/Glow.lua:245:6"); end
 ns.RefreshGlow = RefreshGlow
 
 -- Invalida el cache de botones cuando cambian barras/paginacion/especializacion.
@@ -280,7 +280,7 @@ glowEvents:RegisterEvent("PLAYER_ENTERING_WORLD")
 glowEvents:RegisterEvent("ACTIONBAR_PAGE_CHANGED")
 glowEvents:RegisterEvent("UPDATE_BONUS_ACTIONBAR")
 glowEvents:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
-glowEvents:SetScript("OnEvent", function() glowCacheBuilt = false end)
+glowEvents:SetScript("OnEvent", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Glow.lua:283:32"); glowCacheBuilt = false Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Glow.lua:283:32"); end)
 
 -- Ticker propio (la rotacion cambia constantemente; corre aunque estemos en preview).
 if C_Timer and C_Timer.NewTicker then
@@ -288,8 +288,10 @@ if C_Timer and C_Timer.NewTicker then
     -- la sugerencia de rotacion asistida entera -- medido, 0.15 ms por llamada,
     -- 1.40 ms/s. Una sugerencia de rotacion no cambia 10 veces por segundo, y
     -- 0.1s extra de latencia en que aparezca el brillo es imperceptible.
-    C_Timer.NewTicker(0.2, ns.Prof.Wrap("Glow: refresco 0.2s", function()
+    C_Timer.NewTicker(0.2, ns.Prof.Wrap("Glow: refresco 0.2s", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Glow.lua:291:63");
         local db = ns.GetDB and ns.GetDB()
         if db and db.glow and db.glow.enabled then RefreshGlow(false) end
-    end))
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Glow.lua:291:63"); end))
 end
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Glow.lua");

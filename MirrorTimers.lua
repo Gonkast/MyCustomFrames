@@ -1,4 +1,4 @@
--- ==========================================================================
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/MirrorTimers.lua"); -- ==========================================================================
 -- MyCustomFrames - MirrorTimers.lua
 -- Reskin de las barras "Mirror Timer" NATIVAS de Blizzard (respiracion,
 -- descanso/exhaustion, fingir muerte) -- MirrorTimer1/2/3 en el XML de
@@ -34,12 +34,12 @@ local A = ns.ASSETS
 -- resuelven contra la skin activa en cada llamada, mismo patron que
 -- ClassPower.lua/Raid.lua -- BAR_TEX/BACKDROP_TEX eran paths horneados una
 -- sola vez al cargar el archivo, nunca se enteraban de un cambio de skin.
-local function BarTex() return (ns.SkinResolve and ns.SkinResolve("cast_bar.tga")) or (A .. "cast_bar.tga") end
-local function BackdropTex() return (ns.SkinResolve and ns.SkinResolve("cast_back.tga")) or (A .. "cast_back.tga") end
+local function BarTex() Perfy_Trace(Perfy_GetTime(), "Enter", "BarTex MyCustomFrames/MirrorTimers.lua:37:6"); return Perfy_Trace_Passthrough("Leave", "BarTex MyCustomFrames/MirrorTimers.lua:37:6", (ns.SkinResolve and ns.SkinResolve("cast_bar.tga")) or (A .. "cast_bar.tga")) end
+local function BackdropTex() Perfy_Trace(Perfy_GetTime(), "Enter", "BackdropTex MyCustomFrames/MirrorTimers.lua:38:6"); return Perfy_Trace_Passthrough("Leave", "BackdropTex MyCustomFrames/MirrorTimers.lua:38:6", (ns.SkinResolve and ns.SkinResolve("cast_back.tga")) or (A .. "cast_back.tga")) end
 local BAR_TEXCOORD = { 0, 1, 0, 1 }
 
-local function MirrorTimerDefaults()
-    return {
+local function MirrorTimerDefaults() Perfy_Trace(Perfy_GetTime(), "Enter", "MirrorTimerDefaults MyCustomFrames/MirrorTimers.lua:41:6");
+    return Perfy_Trace_Passthrough("Leave", "MirrorTimerDefaults MyCustomFrames/MirrorTimers.lua:41:6", {
         enabled = true,
         -- Mismo tamaño de barra/cage por defecto que AzeriteUI (111x12 la
         -- barra, 193x93 el cage) -- pedido del usuario 2026-07-19: "dejame
@@ -64,13 +64,13 @@ local function MirrorTimerDefaults()
         -- misma rueda-del-mouse-en-Lock que el resto del addon (ver
         -- ns.AttachScaleWheel en core.lua).
         scale = 1,
-    }
+    })
 end
 ns.MirrorTimerDefaults = MirrorTimerDefaults
 
-local function P()
+local function P() Perfy_Trace(Perfy_GetTime(), "Enter", "P MyCustomFrames/MirrorTimers.lua:71:6");
     local db = ns.GetDB and ns.GetDB()
-    return db and db.mirrortimer
+    return Perfy_Trace_Passthrough("Leave", "P MyCustomFrames/MirrorTimers.lua:71:6", db and db.mirrortimer)
 end
 
 local skinned = {}
@@ -91,24 +91,24 @@ local skinned = {}
 -- SetStatusBarColor de CADA bar, forzando de vuelta nuestro valor si
 -- Blizzard intenta cambiarlo a otra cosa.
 local hookedBars = setmetatable({}, { __mode = "k" })
-local function HookBarForced(bar, wrapper)
-    if hookedBars[bar] then return end
+local function HookBarForced(bar, wrapper) Perfy_Trace(Perfy_GetTime(), "Enter", "HookBarForced MyCustomFrames/MirrorTimers.lua:94:6");
+    if hookedBars[bar] then Perfy_Trace(Perfy_GetTime(), "Leave", "HookBarForced MyCustomFrames/MirrorTimers.lua:94:6"); return end
     hookedBars[bar] = true
-    hooksecurefunc(bar, "SetStatusBarTexture", function(self, tex)
+    hooksecurefunc(bar, "SetStatusBarTexture", function(self, tex) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MirrorTimers.lua:97:47");
         local want = wrapper._mcfLastBarTex
         if want and tex ~= want then
             self:SetStatusBarTexture(want)
             local t = self:GetStatusBarTexture()
             if t then t:SetTexCoord(unpack(BAR_TEXCOORD)) end
         end
-    end)
-    hooksecurefunc(bar, "SetStatusBarColor", function(self, r, g, b)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MirrorTimers.lua:97:47"); end)
+    hooksecurefunc(bar, "SetStatusBarColor", function(self, r, g, b) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MirrorTimers.lua:105:45");
         local want = wrapper._mcfLastBarColor
         if want and (math.abs((r or 0) - want.r) > 0.01 or math.abs((g or 0) - want.g) > 0.01 or math.abs((b or 0) - want.b) > 0.01) then
             self:SetStatusBarColor(want.r, want.g, want.b)
         end
-    end)
-end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MirrorTimers.lua:105:45"); end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "HookBarForced MyCustomFrames/MirrorTimers.lua:94:6"); end
 
 -- `standalone`: true SOLO para el preview (hijo directo de UIParent, sin
 -- contenedor que lo escale) -- los wrappers de las barras REALES son hijos
@@ -116,10 +116,10 @@ end
 -- escalarlos TAMBIEN individualmente aca duplicaba la escala (0.5 de
 -- container * 0.5 del wrapper = 0.25 visual) -- por eso el mismatch
 -- reportado por el usuario entre Lock y la barra real.
-local function SkinOne(wrapper, standalone)
-    if not wrapper then return end
+local function SkinOne(wrapper, standalone) Perfy_Trace(Perfy_GetTime(), "Enter", "SkinOne MyCustomFrames/MirrorTimers.lua:119:6");
+    if not wrapper then Perfy_Trace(Perfy_GetTime(), "Leave", "SkinOne MyCustomFrames/MirrorTimers.lua:119:6"); return end
     local bar = wrapper.StatusBar
-    if not bar then return end
+    if not bar then Perfy_Trace(Perfy_GetTime(), "Leave", "SkinOne MyCustomFrames/MirrorTimers.lua:119:6"); return end
     if not skinned[wrapper] then
         skinned[wrapper] = true
         -- Backdrop FIJO (misma textura/proporcion que AzeriteUI, sin selector
@@ -142,9 +142,9 @@ local function SkinOne(wrapper, standalone)
         for _, region in ipairs({ wrapper:GetRegions() }) do
             if region ~= wrapper.mcfBg and region ~= wrapper.Text and region.SetAlpha then
                 pcall(region.SetAlpha, region, 0)
-                hooksecurefunc(region, "SetAlpha", function(self, a) if a and a > 0 then self:SetAlpha(0) end end)
+                hooksecurefunc(region, "SetAlpha", function(self, a) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MirrorTimers.lua:145:51"); if a and a > 0 then self:SetAlpha(0) end Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MirrorTimers.lua:145:51"); end)
                 if region.Hide then
-                    hooksecurefunc(region, "Show", function(self) self:Hide() end)
+                    hooksecurefunc(region, "Show", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MirrorTimers.lua:147:51"); self:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MirrorTimers.lua:147:51"); end)
                 end
             end
         end
@@ -153,7 +153,7 @@ local function SkinOne(wrapper, standalone)
     end
 
     local p = P()
-    if not p or not p.enabled then wrapper:SetAlpha(1); return end
+    if not p or not p.enabled then wrapper:SetAlpha(1); Perfy_Trace(Perfy_GetTime(), "Leave", "SkinOne MyCustomFrames/MirrorTimers.lua:119:6"); return end
 
     if standalone then wrapper:SetScale((p.scale or 1) * ns.ResScale()) end
     local barTex = BarTex()
@@ -179,7 +179,7 @@ local function SkinOne(wrapper, standalone)
         pcall(wrapper.Text.ClearAllPoints, wrapper.Text)
         pcall(wrapper.Text.SetPoint, wrapper.Text, "CENTER", p.labelOffsetX or 0, p.labelOffsetY or 0)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SkinOne MyCustomFrames/MirrorTimers.lua:119:6"); end
 
 -- Blizzard apila MirrorTimer1/2/3 dentro de MirrorTimerContainer con su
 -- propio layout -- no lo tocamos (posicion del CONTENEDOR), solo reskineamos
@@ -192,17 +192,17 @@ end
 -- solo existe MirrorTimerContainer. Las barras viven como hijos anonimos
 -- ahi adentro. Se buscan de 3 formas, de la mas especifica a la mas generica,
 -- por si el nombre del campo tambien cambio entre parches.
-local function GetMirrorTimerBars(container)
-    if not container then return {} end
+local function GetMirrorTimerBars(container) Perfy_Trace(Perfy_GetTime(), "Enter", "GetMirrorTimerBars MyCustomFrames/MirrorTimers.lua:195:6");
+    if not container then return Perfy_Trace_Passthrough("Leave", "GetMirrorTimerBars MyCustomFrames/MirrorTimers.lua:195:6", {}) end
     if container.mirrorTimers then
         local list = {}
         for _, bar in pairs(container.mirrorTimers) do list[#list + 1] = bar end
-        if #list > 0 then return list end
+        if #list > 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "GetMirrorTimerBars MyCustomFrames/MirrorTimers.lua:195:6"); return list end
     end
     if container.timerPool and container.timerPool.EnumerateActive then
         local list = {}
         for bar in container.timerPool:EnumerateActive() do list[#list + 1] = bar end
-        if #list > 0 then return list end
+        if #list > 0 then Perfy_Trace(Perfy_GetTime(), "Leave", "GetMirrorTimerBars MyCustomFrames/MirrorTimers.lua:195:6"); return list end
     end
     -- Ultimo recurso: cualquier hijo que sea un StatusBar de verdad.
     local list = {}
@@ -211,7 +211,7 @@ local function GetMirrorTimerBars(container)
             list[#list + 1] = child
         end
     end
-    return list
+    Perfy_Trace(Perfy_GetTime(), "Leave", "GetMirrorTimerBars MyCustomFrames/MirrorTimers.lua:195:6"); return list
 end
 
 -- Pedido del usuario 2026-07-19: "desactivalo por completo el control de
@@ -229,8 +229,8 @@ end
 -- Blizzard) ANTES de nil-ear, para poder seguir posicionandolo nosotros.
 local containerFreed = false
 local origSetPoint, origClearAllPoints, origSetScale
-local function FreeContainerFromEditMode(container)
-    if containerFreed or not container then return end
+local function FreeContainerFromEditMode(container) Perfy_Trace(Perfy_GetTime(), "Enter", "FreeContainerFromEditMode MyCustomFrames/MirrorTimers.lua:232:6");
+    if containerFreed or not container then Perfy_Trace(Perfy_GetTime(), "Leave", "FreeContainerFromEditMode MyCustomFrames/MirrorTimers.lua:232:6"); return end
     containerFreed = true
     origSetPoint = container.SetPoint
     origClearAllPoints = container.ClearAllPoints
@@ -245,8 +245,8 @@ local function FreeContainerFromEditMode(container)
     -- debe romper el resto del archivo -- el nil-eo de arriba ya alcanza
     -- para el caso comun (una sola vez, al cargar).
     if EditModeManagerFrame then
-        pcall(hooksecurefunc, EditModeManagerFrame, "OnShow", function()
-            C_Timer.After(0, function()
+        pcall(hooksecurefunc, EditModeManagerFrame, "OnShow", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MirrorTimers.lua:248:62");
+            C_Timer.After(0, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MirrorTimers.lua:249:29");
                 if container.SetPoint ~= origSetPoint then
                     origSetPoint = container.SetPoint or origSetPoint
                     origClearAllPoints = container.ClearAllPoints or origClearAllPoints
@@ -255,13 +255,13 @@ local function FreeContainerFromEditMode(container)
                 container.SetPoint = nil
                 container.ClearAllPoints = nil
                 container.SetScale = nil
-            end)
-        end)
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MirrorTimers.lua:249:29"); end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MirrorTimers.lua:248:62"); end)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "FreeContainerFromEditMode MyCustomFrames/MirrorTimers.lua:232:6"); end
 
-local function PositionContainer(container, p)
-    if not container then return end
+local function PositionContainer(container, p) Perfy_Trace(Perfy_GetTime(), "Enter", "PositionContainer MyCustomFrames/MirrorTimers.lua:263:6");
+    if not container then Perfy_Trace(Perfy_GetTime(), "Leave", "PositionContainer MyCustomFrames/MirrorTimers.lua:263:6"); return end
     local setPoint = origSetPoint or container.SetPoint
     local clearAll = origClearAllPoints or container.ClearAllPoints
     local setScale = origSetScale or container.SetScale
@@ -274,11 +274,11 @@ local function PositionContainer(container, p)
     if setScale then setScale(container, (p.scale or 1) * ns.ResScale()) end
     if clearAll then clearAll(container) end
     if setPoint then setPoint(container, "TOP", UIParent, "TOP", p.offsetX or 0, p.offsetY or -80) end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "PositionContainer MyCustomFrames/MirrorTimers.lua:263:6"); end
 
-local function SkinContainer()
+local function SkinContainer() Perfy_Trace(Perfy_GetTime(), "Enter", "SkinContainer MyCustomFrames/MirrorTimers.lua:279:6");
     local p = P()
-    if not p or not p.enabled then return end
+    if not p or not p.enabled then Perfy_Trace(Perfy_GetTime(), "Leave", "SkinContainer MyCustomFrames/MirrorTimers.lua:279:6"); return end
     local container = _G.MirrorTimerContainer or _G.MirrorTimerFrame
     if container then
         FreeContainerFromEditMode(container)
@@ -287,7 +287,7 @@ local function SkinContainer()
     for _, bar in ipairs(GetMirrorTimerBars(container)) do
         SkinOne(bar)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SkinContainer MyCustomFrames/MirrorTimers.lua:279:6"); end
 
 -- Pedido del usuario 2026-07-19: "quiero que salga en el lock con un
 -- outline para poder moverlo" -- se descarta el boton/modo de prueba
@@ -299,8 +299,8 @@ end
 -- (ns.IsUnlocked()==true), y ahi se puede arrastrar -- fuera de Lock queda
 -- oculto y el contenedor real de Blizzard hace lo suyo como siempre.
 local previewFrame
-local function GetPreviewFrame()
-    if previewFrame then return previewFrame end
+local function GetPreviewFrame() Perfy_Trace(Perfy_GetTime(), "Enter", "GetPreviewFrame MyCustomFrames/MirrorTimers.lua:302:6");
+    if previewFrame then Perfy_Trace(Perfy_GetTime(), "Leave", "GetPreviewFrame MyCustomFrames/MirrorTimers.lua:302:6"); return previewFrame end
     local wrapper = CreateFrame("Frame", nil, UIParent)
     wrapper:SetSize(143, 40)
     -- FIX (2026-07-20, reportado por el usuario: "el mirror timer tiene un
@@ -319,14 +319,14 @@ local function GetPreviewFrame()
     wrapper.Text:SetText("Feign Death")
     wrapper.editBG = ns.MakeEditHighlight and ns.MakeEditHighlight(wrapper, "Mirror Timer") or nil
     if wrapper.editBG then wrapper.editBG:ClearAllPoints(); wrapper.editBG:SetAllPoints(wrapper) end
-    wrapper:SetScript("OnDragStart", function(self)
-        if not ns.IsUnlocked() or InCombatLockdown() then return end
+    wrapper:SetScript("OnDragStart", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MirrorTimers.lua:322:37");
+        if not ns.IsUnlocked() or InCombatLockdown() then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MirrorTimers.lua:322:37"); return end
         self:StartMoving()
-    end)
-    wrapper:SetScript("OnDragStop", function(self)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MirrorTimers.lua:322:37"); end)
+    wrapper:SetScript("OnDragStop", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MirrorTimers.lua:326:36");
         self:StopMovingOrSizing()
         local p = P()
-        if not p then return end
+        if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MirrorTimers.lua:326:36"); return end
         local fx, fy = self:GetCenter()
         local px, py = UIParent:GetCenter()
         if fx and px then
@@ -334,26 +334,26 @@ local function GetPreviewFrame()
             p.offsetY = fy - (py + UIParent:GetHeight() / 2)
         end
         SkinContainer()
-    end)
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MirrorTimers.lua:326:36"); end)
     -- Pedido del usuario 2026-07-19: "controlar la escala en el lock" --
     -- ns.RefreshMirrorTimerPreview se referencia DIFERIDO (closure) porque
     -- todavia no existe en este punto del archivo (se define mas abajo) --
     -- para cuando el usuario efectivamente use la rueda, el modulo ya cargo
     -- completo y esa funcion ya esta asignada.
     if ns.AttachScaleWheel then
-        ns.AttachScaleWheel(wrapper, P, function()
+        ns.AttachScaleWheel(wrapper, P, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MirrorTimers.lua:344:40");
             if ns.RefreshMirrorTimerPreview then ns.RefreshMirrorTimerPreview() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MirrorTimers.lua:344:40"); end)
     end
     wrapper:Hide()
     previewFrame = wrapper
-    return wrapper
+    Perfy_Trace(Perfy_GetTime(), "Leave", "GetPreviewFrame MyCustomFrames/MirrorTimers.lua:302:6"); return wrapper
 end
 
 -- Llamado desde SkinContainer (a su vez llamado por ns.RefreshAll(), que
 -- corre cada vez que se togglea Lock -- ver Editing.lua SetUnlocked) para
 -- que el preview aparezca/desaparezca en sync, mismo criterio que Minimap.
-local function RefreshPreview()
+local function RefreshPreview() Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshPreview MyCustomFrames/MirrorTimers.lua:356:6");
     local p = P()
     -- FIX 2026-07-19 (reportado por el usuario: "la escala lo reposiciona")
     -- -- mismo problema que ya tiene resuelto el resto del addon (ver
@@ -391,9 +391,9 @@ local function RefreshPreview()
         wrapper:Hide()
         if container then container:SetAlpha(1) end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshPreview MyCustomFrames/MirrorTimers.lua:356:6"); end
 ns.RefreshMirrorTimerPreview = RefreshPreview
-ns.RefreshMirrorTimers = function() SkinContainer(); RefreshPreview() end
+ns.RefreshMirrorTimers = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.RefreshMirrorTimers MyCustomFrames/MirrorTimers.lua:396:25"); SkinContainer(); RefreshPreview() Perfy_Trace(Perfy_GetTime(), "Leave", "ns.RefreshMirrorTimers MyCustomFrames/MirrorTimers.lua:396:25"); end
 
 -- FIX 2026-07-19 (reportado por el usuario: "no se esta actualizando en
 -- tiempo real, use fingir muerte y solo aparece hasta despues del reload")
@@ -409,19 +409,19 @@ f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:RegisterEvent("MIRROR_TIMER_START")
 f:RegisterEvent("MIRROR_TIMER_PAUSE")
 f:RegisterEvent("MIRROR_TIMER_STOP")
-f:SetScript("OnEvent", function(self, event)
+f:SetScript("OnEvent", function(self, event) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/MirrorTimers.lua:412:23");
     SkinContainer()
     if event == "MIRROR_TIMER_START" then
         C_Timer.After(0, SkinContainer)
         C_Timer.After(0.15, SkinContainer)
     end
-end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/MirrorTimers.lua:412:23"); end)
 
 -- Diagnostico (pedido implicito del usuario: "sigue saliendo la barra de
 -- blizzard" -- necesito confirmar si MirrorTimer1/2/3/Container siquiera
 -- existen con esos nombres en este cliente antes de seguir adivinando).
 SLASH_MCFMIRRORDIAG1 = "/mcfmirrordiag"
-SlashCmdList["MCFMIRRORDIAG"] = function()
+SlashCmdList["MCFMIRRORDIAG"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFMIRRORDIAG MyCustomFrames/MirrorTimers.lua:424:32");
     local p = P()
     print("|cff00ff00[MCF mirrordiag]|r db.mirrortimer=" .. tostring(p ~= nil)
         .. " enabled=" .. tostring(p and p.enabled))
@@ -448,12 +448,12 @@ SlashCmdList["MCFMIRRORDIAG"] = function()
         print(("  IsUnlocked=%s  perfil offsetX=%s offsetY=%s scale=%s"):format(
             tostring(ns.IsUnlocked and ns.IsUnlocked()), tostring(p and p.offsetX), tostring(p and p.offsetY), tostring(p and p.scale)))
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFMIRRORDIAG MyCustomFrames/MirrorTimers.lua:424:32"); end
 
 SLASH_MCFMIRROR1 = "/mcfmirror"
-SlashCmdList["MCFMIRROR"] = function(msg)
+SlashCmdList["MCFMIRROR"] = function(msg) Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFMIRROR MyCustomFrames/MirrorTimers.lua:454:28");
     local p = P()
-    if not p then return end
+    if not p then Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFMIRROR MyCustomFrames/MirrorTimers.lua:454:28"); return end
     local cmd, arg = msg:match("^(%S*)%s*(.-)$")
     cmd = (cmd or ""):lower()
     if cmd == "width" and tonumber(arg) then
@@ -470,4 +470,6 @@ SlashCmdList["MCFMIRROR"] = function(msg)
     else
         print("|cffffe19bMyCustomFrames|r: /mcfmirror toggle | width <60-400> | height <8-40> | offsetx/offsety <n> -- para moverla, entra en Lock (mismo boton de siempre) y arrastrala.")
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFMIRROR MyCustomFrames/MirrorTimers.lua:454:28"); end
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/MirrorTimers.lua");

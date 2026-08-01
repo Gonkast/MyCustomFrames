@@ -7,6 +7,17 @@ worth reading before redoing one of them).
 ## Unreleased
 
 ### Added
+- **Portrait dual position gained a master on/off toggle** (`dualPosEnabled`, "Enable alternate
+  position" in the Portrait > Position panel). Previously the only way to stop a portrait
+  (player/pet/focus) from ever moving to its alternate position was to uncheck all three
+  conditions (target/combat/instance) individually — and doing that actually left it stuck on
+  the *alternate* position, not the primary one, since "no condition met" was defined as
+  "use alt". The new toggle short-circuits the whole dual-position evaluation and always keeps
+  the primary position when off.
+- **The player's power bar and cage no longer hide on death.** Both defaulted to hiding: the
+  power bar via a `playerpower`-specific dead check added 2026-07-24 (explicitly requested at
+  the time), the cage via `cageHideDead` defaulting to `true` for both target and player. The
+  player's copy of each is reverted; target's `cageHideDead` and dead-check are untouched.
 - **The addon was profiled and its CPU cost roughly halved.** It measured **13.78 ms/s while
   playing — 50% of the CPU of every addon installed, and 4.4x the next one**, past the point
   where input lag is felt. Two tools were built to find where it went, since Blizzard's

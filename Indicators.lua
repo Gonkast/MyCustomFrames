@@ -1,4 +1,4 @@
-local ADDON, ns = ...
+--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Indicators.lua"); local ADDON, ns = ...
 
 -- ==========================================================================
 -- INDICADORES DE UTILIDAD (2026-07-27, pedido del usuario): range fade y
@@ -44,16 +44,16 @@ local INDICATOR_KEYS = {
     arena_enemy1 = true, arena_enemy2 = true, arena_enemy3 = true,
 }
 
-local function UnitProfile(u)
+local function UnitProfile(u) Perfy_Trace(Perfy_GetTime(), "Enter", "UnitProfile MyCustomFrames/Indicators.lua:47:6");
     local db = ns.GetDB and ns.GetDB()
-    return db and db.units and db.units[u.key]
+    return Perfy_Trace_Passthrough("Leave", "UnitProfile MyCustomFrames/Indicators.lua:47:6", db and db.units and db.units[u.key])
 end
 
 -- Crea los 2 elementos (ocultos) para una unitframe. Llamado desde
 -- CreateUnit() en Units.lua, SOLO para las keys de INDICATOR_KEYS (u.key,
 -- no u.unit -- party5/arena_player usan unit="player" pero son keys propias).
-function ns.CreateUnitIndicators(u)
-    if not INDICATOR_KEYS[u.key] then return end
+function ns.CreateUnitIndicators(u) Perfy_Trace(Perfy_GetTime(), "Enter", "ns.CreateUnitIndicators MyCustomFrames/Indicators.lua:55:0");
+    if not INDICATOR_KEYS[u.key] then Perfy_Trace(Perfy_GetTime(), "Leave", "ns.CreateUnitIndicators MyCustomFrames/Indicators.lua:55:0"); return end
     local button, bar = u.button, u.bar
 
     -- Range fade: overlay oscuro APARTE del alpha del frame -- Explorer/
@@ -88,7 +88,7 @@ function ns.CreateUnitIndicators(u)
     local shieldTex = shieldBar:GetStatusBarTexture()
     if shieldTex then shieldTex:SetBlendMode("ADD") end
     u.shieldBar = shieldBar
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.CreateUnitIndicators MyCustomFrames/Indicators.lua:55:0"); end
 
 -- Test mode (2026-07-27, pedido del usuario: "hay una forma en la que pueda
 -- testear sin estar en la situacion que lo requiera?") -- fuerza los
@@ -109,30 +109,30 @@ local testMode = false
 -- simplemente no se oscurece (mejor no mostrar nada que mostrar un dato
 -- adivinado). Posiblemente solo sea secreto en contenido restringido
 -- (arena/M+/raid) -- fuera de eso puede que siga funcionando normal.
-local function SafeBool(v)
-    if type(v) ~= "boolean" then return nil end
-    if issecretvalue and issecretvalue(v) then return nil end
-    return v
+local function SafeBool(v) Perfy_Trace(Perfy_GetTime(), "Enter", "SafeBool MyCustomFrames/Indicators.lua:112:6");
+    if type(v) ~= "boolean" then Perfy_Trace(Perfy_GetTime(), "Leave", "SafeBool MyCustomFrames/Indicators.lua:112:6"); return nil end
+    if issecretvalue and issecretvalue(v) then Perfy_Trace(Perfy_GetTime(), "Leave", "SafeBool MyCustomFrames/Indicators.lua:112:6"); return nil end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "SafeBool MyCustomFrames/Indicators.lua:112:6"); return v
 end
 
-local function UpdateRange(u)
+local function UpdateRange(u) Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateRange MyCustomFrames/Indicators.lua:118:6");
     local dim = u.rangeDim
-    if not dim then return end
+    if not dim then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateRange MyCustomFrames/Indicators.lua:118:6"); return end
     -- Toggle del menu (2026-07-28). `~= false` y no `== true`: la opcion nace
     -- ausente en perfiles viejos y el comportamiento previo era estar siempre
     -- encendida, asi que ausente tiene que seguir significando encendida.
     local db = ns.GetDB and ns.GetDB()
-    if db and db.indicatorRange == false then dim:Hide(); return end
-    if u.unit == "player" then dim:Hide(); return end
-    if testMode then dim:Show(); return end
+    if db and db.indicatorRange == false then dim:Hide(); Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateRange MyCustomFrames/Indicators.lua:118:6"); return end
+    if u.unit == "player" then dim:Hide(); Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateRange MyCustomFrames/Indicators.lua:118:6"); return end
+    if testMode then dim:Show(); Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateRange MyCustomFrames/Indicators.lua:118:6"); return end
     local ok, inRange, checked = pcall(UnitInRange, u.unit)
-    if not ok then dim:Hide(); return end
+    if not ok then dim:Hide(); Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateRange MyCustomFrames/Indicators.lua:118:6"); return end
     if SafeBool(checked) == true and SafeBool(inRange) == false then
         dim:Show()
     else
         dim:Hide()
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateRange MyCustomFrames/Indicators.lua:118:6"); end
 
 -- CORREGIDO (2026-07-27, reportado: "shield bar solo parece estar en el
 -- player" -- las claves basadas en unit="player" -party5, arena_player- son
@@ -142,7 +142,7 @@ end
 -- bypasear ese chequeo (igual que ya hace en AuraHoverPreview.lua, donde el
 -- modo test nunca toca datos reales de la unidad) -- estaba ANTES del
 -- chequeo de UnitExists en vez de saltarlo.
-local function ApplyShieldTexture(bar, u)
+local function ApplyShieldTexture(bar, u) Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyShieldTexture MyCustomFrames/Indicators.lua:145:6");
     local p = UnitProfile(u)
     local tex = (p and p.texture and p.texture ~= "") and p.texture or ns.TEXTURE_DEFAULT
     if bar._lastTex ~= tex then
@@ -151,13 +151,13 @@ local function ApplyShieldTexture(bar, u)
         local t = bar:GetStatusBarTexture()
         if t then t:SetBlendMode("ADD") end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyShieldTexture MyCustomFrames/Indicators.lua:145:6"); end
 
-local function UpdateShield(u)
+local function UpdateShield(u) Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateShield MyCustomFrames/Indicators.lua:156:6");
     local bar = u.shieldBar
-    if not bar then return end
+    if not bar then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateShield MyCustomFrames/Indicators.lua:156:6"); return end
     local db = ns.GetDB and ns.GetDB()
-    if db and db.indicatorShield == false then bar:Hide(); return end
+    if db and db.indicatorShield == false then bar:Hide(); Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateShield MyCustomFrames/Indicators.lua:156:6"); return end
 
     if testMode then
         ApplyShieldTexture(bar, u)
@@ -166,27 +166,27 @@ local function UpdateShield(u)
         -- visual -- no hace falta ni conviene operar sobre el numero real.
         pcall(bar.SetMinMaxValues, bar, 0, 1)
         pcall(bar.SetValue, bar, 0.35)
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateShield MyCustomFrames/Indicators.lua:156:6"); return
     end
 
-    if not (u.unit and UnitExists(u.unit)) then bar:SetValue(0); return end
+    if not (u.unit and UnitExists(u.unit)) then bar:SetValue(0); Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateShield MyCustomFrames/Indicators.lua:156:6"); return end
     ApplyShieldTexture(bar, u)
 
     local okMax, hMax = pcall(UnitHealthMax, u.unit)
     local okAbs, absorb = pcall(UnitGetTotalAbsorbs, u.unit)
-    if not (okMax and hMax and okAbs and absorb) then bar:SetValue(0); return end
+    if not (okMax and hMax and okAbs and absorb) then bar:SetValue(0); Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateShield MyCustomFrames/Indicators.lua:156:6"); return end
     pcall(bar.SetMinMaxValues, bar, 0, hMax)
     pcall(bar.SetValue, bar, absorb)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateShield MyCustomFrames/Indicators.lua:156:6"); end
 
 -- Ticker compartido (2026-07-27): misma cadencia (0.3s) ya establecida en
 -- AuraHoverPreview.lua para los grupos de auras hover.
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_LOGIN")
-f:SetScript("OnEvent", function(self)
+f:SetScript("OnEvent", function(self) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Indicators.lua:186:23");
     self:UnregisterAllEvents()
-    C_Timer.After(1, function()
-        C_Timer.NewTicker(0.3, ns.Prof.Wrap("Indicators: range/shield 0.3s", function()
+    C_Timer.After(1, function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Indicators.lua:188:21");
+        C_Timer.NewTicker(0.3, ns.Prof.Wrap("Indicators: range/shield 0.3s", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Indicators.lua:189:77");
             for key in pairs(INDICATOR_KEYS) do
                 local u = ns.frames and ns.frames[key]
                 if u then
@@ -194,28 +194,30 @@ f:SetScript("OnEvent", function(self)
                     UpdateShield(u)
                 end
             end
-        end))
-    end)
-end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Indicators.lua:189:77"); end))
+    Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Indicators.lua:188:21"); end)
+Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Indicators.lua:186:23"); end)
 
 -- Expuesto en ns (2026-07-27) para el boton "Preview" de Options.lua. Devuelve
 -- el estado NUEVO, que el boton usa para quedar marcado mientras este activo.
-function ns.ToggleIndicatorTest()
+function ns.ToggleIndicatorTest() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ToggleIndicatorTest MyCustomFrames/Indicators.lua:203:0");
     testMode = not testMode
-    return testMode
+    Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ToggleIndicatorTest MyCustomFrames/Indicators.lua:203:0"); return testMode
 end
 
 SLASH_MCFINDICATORTEST1 = "/mcfindicatortest"
-SlashCmdList["MCFINDICATORTEST"] = function()
+SlashCmdList["MCFINDICATORTEST"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFINDICATORTEST MyCustomFrames/Indicators.lua:209:35");
     print("|cff00ff00[MCF indicator test]|r " .. (ns.ToggleIndicatorTest() and "ON" or "off") ..
         " -- range/shield forced on every tracked unit that exists right now.")
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFINDICATORTEST MyCustomFrames/Indicators.lua:209:35"); end
 
 -- Reaplica los dos indicadores en todas las unidades ahora mismo. Lo llaman los
 -- toggles del menu: sin esto el cambio no se veria hasta el siguiente tick.
-function ns.RefreshIndicators()
+function ns.RefreshIndicators() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.RefreshIndicators MyCustomFrames/Indicators.lua:216:0");
     for _, u in pairs(ns.frames or {}) do
         UpdateRange(u)
         UpdateShield(u)
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.RefreshIndicators MyCustomFrames/Indicators.lua:216:0"); end
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Indicators.lua");

@@ -1,4 +1,4 @@
-﻿-- ==========================================================================
+﻿--[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Editing.lua"); --[[Perfy has instrumented this file]] local Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough = Perfy_GetTime, Perfy_Trace, Perfy_Trace_Passthrough; Perfy_Trace(Perfy_GetTime(), "Enter", "(main chunk) MyCustomFrames/Editing.lua"); -- ==========================================================================
 -- MyCustomFrames - Editing.lua
 -- MODO EDICION/PREVIEW: grid de alineacion, snap entre elementos, SetUnlocked
 -- (entra/sale de preview), integracion con el Edit Mode de Blizzard, copiar/pegar
@@ -18,27 +18,27 @@ local ADDON, ns = ...
 -- Overlay NO seguro.
 local GRID_COLS, GRID_ROWS = 64, 36
 local gridFrame
-local function UpdateGrid()
-    if not ns.GetDB() then return end
+local function UpdateGrid() Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateGrid MyCustomFrames/Editing.lua:21:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "UpdateGrid MyCustomFrames/Editing.lua:21:6");
+    if not ns.GetDB() then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateGrid MyCustomFrames/Editing.lua:21:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateGrid MyCustomFrames/Editing.lua:21:6"); return end
     local show = ns.IsUnlocked() and ns.GetDB().gridShow
     if not gridFrame then
-        if not show then return end
+        if not show then Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateGrid MyCustomFrames/Editing.lua:21:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateGrid MyCustomFrames/Editing.lua:21:6"); return end
         gridFrame = CreateFrame("Frame", nil, UIParent)
         gridFrame:SetAllPoints(UIParent)
         gridFrame:SetFrameStrata("BACKGROUND")
         gridFrame.lines = {}
     end
     for _, t in ipairs(gridFrame.lines) do t:Hide() end
-    if not show then gridFrame:Hide(); return end
+    if not show then gridFrame:Hide(); Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateGrid MyCustomFrames/Editing.lua:21:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateGrid MyCustomFrames/Editing.lua:21:6"); return end
     gridFrame:Show()
     local w = GetScreenWidth() / GRID_COLS    -- ancho de celda (unidades UIParent)
     local h = GetScreenHeight() / GRID_ROWS   -- alto de celda
     local idx = 0
-    local function getLine()
+    local function getLine() Perfy_Trace(Perfy_GetTime(), "Enter", "getLine MyCustomFrames/Editing.lua:37:10"); Perfy_Trace(Perfy_GetTime(), "Enter", "getLine MyCustomFrames/Editing.lua:37:10");
         idx = idx + 1
         local t = gridFrame.lines[idx]
         if not t then t = gridFrame:CreateTexture(nil, "BACKGROUND"); gridFrame.lines[idx] = t end
-        return t
+        Perfy_Trace(Perfy_GetTime(), "Leave", "getLine MyCustomFrames/Editing.lua:37:10"); Perfy_Trace(Perfy_GetTime(), "Leave", "getLine MyCustomFrames/Editing.lua:37:10"); return t
     end
     -- Verticales (64 columnas + borde); la central (32) en amarillo.
     for i = 0, GRID_COLS do
@@ -58,7 +58,7 @@ local function UpdateGrid()
         t:SetPoint("BOTTOMRIGHT", gridFrame, "TOPRIGHT", 0, -i * h - 1)
         t:Show()
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateGrid MyCustomFrames/Editing.lua:21:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "UpdateGrid MyCustomFrames/Editing.lua:21:6"); end
 ns.UpdateGrid = UpdateGrid
 
 -- B2 — Snap ENTRE ELEMENTOS (estilo EditMode): al soltar, si un borde/centro del frame
@@ -66,26 +66,26 @@ ns.UpdateGrid = UpdateGrid
 -- Recolecta las lineas candidatas (izq/der/centroX = verticales; abajo/arriba/centroY =
 -- horizontales) de todos los elementos movibles visibles, en pixeles de pantalla.
 local SNAP_THRESHOLD = 12   -- px de pantalla para "engancharse"
-local function CollectSnapLines(exclude)
+local function CollectSnapLines(exclude) Perfy_Trace(Perfy_GetTime(), "Enter", "CollectSnapLines MyCustomFrames/Editing.lua:69:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "CollectSnapLines MyCustomFrames/Editing.lua:69:6");
     local vx, hy = {}, {}
-    local function add(fr)
-        if not fr or fr == exclude or not fr:IsShown() then return end
-        local esc = fr:GetEffectiveScale(); if not (esc and esc > 0) then return end
+    local function add(fr) Perfy_Trace(Perfy_GetTime(), "Enter", "add MyCustomFrames/Editing.lua:71:10"); Perfy_Trace(Perfy_GetTime(), "Enter", "add MyCustomFrames/Editing.lua:71:10");
+        if not fr or fr == exclude or not fr:IsShown() then Perfy_Trace(Perfy_GetTime(), "Leave", "add MyCustomFrames/Editing.lua:71:10"); Perfy_Trace(Perfy_GetTime(), "Leave", "add MyCustomFrames/Editing.lua:71:10"); return end
+        local esc = fr:GetEffectiveScale(); if not (esc and esc > 0) then Perfy_Trace(Perfy_GetTime(), "Leave", "add MyCustomFrames/Editing.lua:71:10"); Perfy_Trace(Perfy_GetTime(), "Leave", "add MyCustomFrames/Editing.lua:71:10"); return end
         local l, r, cx = fr:GetLeft(), fr:GetRight(), fr:GetCenter()
         local b, t = fr:GetBottom(), fr:GetTop()
         local _, cy = fr:GetCenter()
         if l and r and cx then vx[#vx + 1] = l * esc; vx[#vx + 1] = r * esc; vx[#vx + 1] = cx * esc end
         if b and t and cy then hy[#hy + 1] = b * esc; hy[#hy + 1] = t * esc; hy[#hy + 1] = cy * esc end
-    end
+    Perfy_Trace(Perfy_GetTime(), "Leave", "add MyCustomFrames/Editing.lua:71:10"); Perfy_Trace(Perfy_GetTime(), "Leave", "add MyCustomFrames/Editing.lua:71:10"); end
     for _, u in pairs(ns.frames) do add(u.button) end
     for _, u in pairs(ns.portraits) do add(u.root) end
     for _, g in pairs(ns.auras) do add(g.root) end
     if ns.infobar then add(ns.infobar.root) end
     if ns.micromenu then add(ns.micromenu) end
-    return vx, hy
+    Perfy_Trace(Perfy_GetTime(), "Leave", "CollectSnapLines MyCustomFrames/Editing.lua:69:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "CollectSnapLines MyCustomFrames/Editing.lua:69:6"); return vx, hy
 end
 -- Menor delta (line - ref) en magnitud dentro del umbral, o nil.
-local function NearestLine(refs, lines, thr)
+local function NearestLine(refs, lines, thr) Perfy_Trace(Perfy_GetTime(), "Enter", "NearestLine MyCustomFrames/Editing.lua:88:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "NearestLine MyCustomFrames/Editing.lua:88:6");
     local best, bestAbs
     for i = 1, #refs do
         local ref = refs[i]
@@ -95,18 +95,18 @@ local function NearestLine(refs, lines, thr)
             if a <= thr and (not bestAbs or a < bestAbs) then best, bestAbs = d, a end
         end
     end
-    return best
+    Perfy_Trace(Perfy_GetTime(), "Leave", "NearestLine MyCustomFrames/Editing.lua:88:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "NearestLine MyCustomFrames/Editing.lua:88:6"); return best
 end
 
 -- Snap AL SOLTAR: primero entre elementos (por eje), luego grilla en los ejes sin match.
 -- Se llama en cada OnDragStop ANTES de calcular el offset guardado, asi queda alineado.
 -- Trabaja en pixeles absolutos (via EffectiveScale) para soportar elementos escalados.
-local function SnapFrameToGrid(frame)
-    if not (ns.GetDB() and ns.IsUnlocked()) then return end
+local function SnapFrameToGrid(frame) Perfy_Trace(Perfy_GetTime(), "Enter", "SnapFrameToGrid MyCustomFrames/Editing.lua:104:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "SnapFrameToGrid MyCustomFrames/Editing.lua:104:6");
+    if not (ns.GetDB() and ns.IsUnlocked()) then Perfy_Trace(Perfy_GetTime(), "Leave", "SnapFrameToGrid MyCustomFrames/Editing.lua:104:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "SnapFrameToGrid MyCustomFrames/Editing.lua:104:6"); return end
     local es = frame:GetEffectiveScale()
     local uies = UIParent:GetEffectiveScale()
     local fx, fy = frame:GetCenter()
-    if not (fx and es and uies and es > 0 and uies > 0) then return end
+    if not (fx and es and uies and es > 0 and uies > 0) then Perfy_Trace(Perfy_GetTime(), "Leave", "SnapFrameToGrid MyCustomFrames/Editing.lua:104:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "SnapFrameToGrid MyCustomFrames/Editing.lua:104:6"); return end
     local fpx, fpy = fx * es, fy * es               -- centro del frame (px abs)
     local nx, ny = fpx, fpy
     local snappedX, snappedY = false, false
@@ -134,11 +134,11 @@ local function SnapFrameToGrid(frame)
         if not snappedY and ch > 0 then ny = math.floor(fpy / ch + 0.5) * ch end
     end
 
-    if nx == fpx and ny == fpy then return end
+    if nx == fpx and ny == fpy then Perfy_Trace(Perfy_GetTime(), "Leave", "SnapFrameToGrid MyCustomFrames/Editing.lua:104:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "SnapFrameToGrid MyCustomFrames/Editing.lua:104:6"); return end
     frame:ClearAllPoints()
     -- Los offsets de SetPoint van en la escala DEL FRAME (posicion abs = offset * es).
     frame:SetPoint("CENTER", UIParent, "BOTTOMLEFT", nx / es, ny / es)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SnapFrameToGrid MyCustomFrames/Editing.lua:104:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "SnapFrameToGrid MyCustomFrames/Editing.lua:104:6"); end
 ns.SnapFrameToGrid = SnapFrameToGrid
 
 -- ==========================================================================
@@ -188,8 +188,8 @@ local LOCK_GROUPS = {
 -- otros 3 ya se leen adentro de Minimap.lua/MirrorTimers.lua/Raid.lua). Corre
 -- SOLO en Lock -- fuera de Lock nunca se toca (TickUnits/TickPortraits/
 -- TickAuras no corren en preview, asi que esto no compite con nada mas).
-local function ApplyGlobalLockHide()
-    if not ns.IsUnlocked() then return end
+local function ApplyGlobalLockHide() Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyGlobalLockHide MyCustomFrames/Editing.lua:191:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "ApplyGlobalLockHide MyCustomFrames/Editing.lua:191:6");
+    if not ns.IsUnlocked() then Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyGlobalLockHide MyCustomFrames/Editing.lua:191:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyGlobalLockHide MyCustomFrames/Editing.lua:191:6"); return end
     local lh = ns.GetDB().lockHide or {}
     for _, grp in ipairs(LOCK_GROUPS) do
         if grp.units then
@@ -208,12 +208,12 @@ local function ApplyGlobalLockHide()
             end
         end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyGlobalLockHide MyCustomFrames/Editing.lua:191:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "ApplyGlobalLockHide MyCustomFrames/Editing.lua:191:6"); end
 ns.ApplyGlobalLockHide = ApplyGlobalLockHide
 
 local ROW_H = 22
 local lockPanel
-local function MakeLockCheckbox(parent, label, y, getf, setf)
+local function MakeLockCheckbox(parent, label, y, getf, setf) Perfy_Trace(Perfy_GetTime(), "Enter", "MakeLockCheckbox MyCustomFrames/Editing.lua:216:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "MakeLockCheckbox MyCustomFrames/Editing.lua:216:6");
     local cb = CreateFrame("Button", nil, parent)
     cb:SetPoint("TOPLEFT", 8, y)
     cb:SetSize(174, ROW_H)
@@ -235,16 +235,16 @@ local function MakeLockCheckbox(parent, label, y, getf, setf)
     lbl:SetPoint("LEFT", box, "RIGHT", 4, 0)
     lbl:SetTextColor(LOCK_COLOR_OPTION[1], LOCK_COLOR_OPTION[2], LOCK_COLOR_OPTION[3])
     lbl:SetText(label)
-    local function refresh() check:SetShown(getf() and true or false) end
-    cb:SetScript("OnEnter", function() hl:Show() end)
-    cb:SetScript("OnLeave", function() hl:Hide() end)
-    cb:SetScript("OnClick", function() setf(not (getf() and true or false)); refresh() end)
+    local function refresh() Perfy_Trace(Perfy_GetTime(), "Enter", "refresh MyCustomFrames/Editing.lua:238:10"); Perfy_Trace(Perfy_GetTime(), "Enter", "refresh MyCustomFrames/Editing.lua:238:10"); check:SetShown(getf() and true or false) Perfy_Trace(Perfy_GetTime(), "Leave", "refresh MyCustomFrames/Editing.lua:238:10"); Perfy_Trace(Perfy_GetTime(), "Leave", "refresh MyCustomFrames/Editing.lua:238:10"); end
+    cb:SetScript("OnEnter", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Editing.lua:239:28"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Editing.lua:239:28"); hl:Show() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Editing.lua:239:28"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Editing.lua:239:28"); end)
+    cb:SetScript("OnLeave", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Editing.lua:240:28"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Editing.lua:240:28"); hl:Hide() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Editing.lua:240:28"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Editing.lua:240:28"); end)
+    cb:SetScript("OnClick", function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Editing.lua:241:28"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Editing.lua:241:28"); setf(not (getf() and true or false)); refresh() Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Editing.lua:241:28"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Editing.lua:241:28"); end)
     cb.refresh = refresh
-    return cb
+    Perfy_Trace(Perfy_GetTime(), "Leave", "MakeLockCheckbox MyCustomFrames/Editing.lua:216:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "MakeLockCheckbox MyCustomFrames/Editing.lua:216:6"); return cb
 end
 
-local function BuildLockPanel()
-    if lockPanel then return lockPanel end
+local function BuildLockPanel() Perfy_Trace(Perfy_GetTime(), "Enter", "BuildLockPanel MyCustomFrames/Editing.lua:246:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "BuildLockPanel MyCustomFrames/Editing.lua:246:6");
+    if lockPanel then Perfy_Trace(Perfy_GetTime(), "Leave", "BuildLockPanel MyCustomFrames/Editing.lua:246:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "BuildLockPanel MyCustomFrames/Editing.lua:246:6"); return lockPanel end
     local rows = #LOCK_GROUPS + 1   -- +1 fila del toggle "1 / 40"
     local f = CreateFrame("Frame", "MyCF_LockPanel", UIParent)
     f:SetSize(190, 40 + rows * ROW_H)
@@ -279,8 +279,8 @@ local function BuildLockPanel()
     for i, grp in ipairs(LOCK_GROUPS) do
         local key = grp.key
         local cb = MakeLockCheckbox(f, grp.label, -34 - (i - 1) * ROW_H,
-            function() return ns.GetDB().lockHide and ns.GetDB().lockHide[key] end,
-            function(v)
+            function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Editing.lua:282:12"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Editing.lua:282:12"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Editing.lua:282:12", Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Editing.lua:282:12", ns.GetDB().lockHide and ns.GetDB().lockHide[key])) end,
+            function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Editing.lua:283:12"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Editing.lua:283:12");
                 local db = ns.GetDB()
                 db.lockHide = db.lockHide or {}
                 db.lockHide[key] = v or nil
@@ -290,7 +290,7 @@ local function BuildLockPanel()
                 end
                 if key == "tracker" and ns.ApplyTrackerPreviewHide then ns.ApplyTrackerPreviewHide() end
                 ApplyGlobalLockHide()
-            end)
+            Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Editing.lua:283:12"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Editing.lua:283:12"); end)
         checks[#checks + 1] = cb
     end
 
@@ -298,32 +298,32 @@ local function BuildLockPanel()
     -- fantasma de Raid.lua cuando no hay un raid real (con raid real, se ve
     -- el roster real completo siempre).
     local raidCb = MakeLockCheckbox(f, "Raid preview: all 40", -34 - #LOCK_GROUPS * ROW_H,
-        function() return ns.GetDB().raidGhostShowAll ~= false end,
-        function(v)
+        function() Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Editing.lua:301:8"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Editing.lua:301:8"); return Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Editing.lua:301:8", Perfy_Trace_Passthrough("Leave", "(anonymous) MyCustomFrames/Editing.lua:301:8", ns.GetDB().raidGhostShowAll ~= false)) end,
+        function(v) Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Editing.lua:302:8"); Perfy_Trace(Perfy_GetTime(), "Enter", "(anonymous) MyCustomFrames/Editing.lua:302:8");
             ns.GetDB().raidGhostShowAll = v and true or false
             if ns.UpdateRaidGhosts then ns.UpdateRaidGhosts() end
-        end)
+        Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Editing.lua:302:8"); Perfy_Trace(Perfy_GetTime(), "Leave", "(anonymous) MyCustomFrames/Editing.lua:302:8"); end)
     checks[#checks + 1] = raidCb
 
     f._checks = checks
     lockPanel = f
-    return f
+    Perfy_Trace(Perfy_GetTime(), "Leave", "BuildLockPanel MyCustomFrames/Editing.lua:246:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "BuildLockPanel MyCustomFrames/Editing.lua:246:6"); return f
 end
 
-local function RefreshLockPanel(show)
+local function RefreshLockPanel(show) Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshLockPanel MyCustomFrames/Editing.lua:313:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "RefreshLockPanel MyCustomFrames/Editing.lua:313:6");
     if not show then
         if lockPanel then lockPanel:Hide() end
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshLockPanel MyCustomFrames/Editing.lua:313:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshLockPanel MyCustomFrames/Editing.lua:313:6"); return
     end
     local f = BuildLockPanel()
     for _, cb in ipairs(f._checks) do cb.refresh() end
     f:Show()
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshLockPanel MyCustomFrames/Editing.lua:313:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "RefreshLockPanel MyCustomFrames/Editing.lua:313:6"); end
 
-local function SetUnlocked(state)
+local function SetUnlocked(state) Perfy_Trace(Perfy_GetTime(), "Enter", "SetUnlocked MyCustomFrames/Editing.lua:323:6"); Perfy_Trace(Perfy_GetTime(), "Enter", "SetUnlocked MyCustomFrames/Editing.lua:323:6");
     if InCombatLockdown() then
         print("|cffff0000[MCF]|r You can't edit in combat.")
-        return
+        Perfy_Trace(Perfy_GetTime(), "Leave", "SetUnlocked MyCustomFrames/Editing.lua:323:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "SetUnlocked MyCustomFrames/Editing.lua:323:6"); return
     end
     ns.SetUnlockedFlag(state)
     local hideGreen = ns.GetDB() and ns.GetDB().hideEditOutline
@@ -429,9 +429,9 @@ local function SetUnlocked(state)
     ApplyGlobalLockHide()
     if ns.OnUnlockChanged then ns.OnUnlockChanged(state) end
     print(state and "|cff00ff00[MCF]|r Preview ON." or "|cff00ff00[MCF]|r Preview OFF.")
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SetUnlocked MyCustomFrames/Editing.lua:323:6"); Perfy_Trace(Perfy_GetTime(), "Leave", "SetUnlocked MyCustomFrames/Editing.lua:323:6"); end
 ns.SetUnlocked = SetUnlocked
-ns.ToggleEditOutline = function()
+ns.ToggleEditOutline = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ToggleEditOutline MyCustomFrames/Editing.lua:434:23"); Perfy_Trace(Perfy_GetTime(), "Enter", "ns.ToggleEditOutline MyCustomFrames/Editing.lua:434:23");
     if ns.IsUnlocked() then
         local hideGreen = ns.GetDB() and ns.GetDB().hideEditOutline
         for _, u in pairs(ns.frames) do u.editBG:SetShown(not hideGreen) end
@@ -453,18 +453,18 @@ ns.ToggleEditOutline = function()
         -- que maneja su propio editBG por separado (ver RefreshPreview alla).
         if ns.RefreshMirrorTimerPreview then ns.RefreshMirrorTimerPreview() end
     end
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ToggleEditOutline MyCustomFrames/Editing.lua:434:23"); Perfy_Trace(Perfy_GetTime(), "Leave", "ns.ToggleEditOutline MyCustomFrames/Editing.lua:434:23"); end
 
 SLASH_MYCUSTOMFRAMES1 = "/mcf"
-SlashCmdList["MYCUSTOMFRAMES"] = function() SetUnlocked(not ns.IsUnlocked()) end
+SlashCmdList["MYCUSTOMFRAMES"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MYCUSTOMFRAMES MyCustomFrames/Editing.lua:459:33"); Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MYCUSTOMFRAMES MyCustomFrames/Editing.lua:459:33"); SetUnlocked(not ns.IsUnlocked()) Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MYCUSTOMFRAMES MyCustomFrames/Editing.lua:459:33"); Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MYCUSTOMFRAMES MyCustomFrames/Editing.lua:459:33"); end
 
 -- DIAGNOSTICO: /mcfchar — vuelca el estado del boton de abrir personaje (existe/visible/
 -- tamaño/posicion + estado de CharacterMicroButton) para saber POR QUE no abre sin adivinar.
 SLASH_MCFCHAR1 = "/mcfchar"
-SlashCmdList["MCFCHAR"] = function()
+SlashCmdList["MCFCHAR"] = function() Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFCHAR MyCustomFrames/Editing.lua:464:26"); Perfy_Trace(Perfy_GetTime(), "Enter", "SlashCmdList.MCFCHAR MyCustomFrames/Editing.lua:464:26");
     local u = ns.portraits and ns.portraits["portrait_player"]
     print("|cff00ff00[MCF diag]|r portrait_player existe: " .. tostring(u ~= nil))
-    if not u then return end
+    if not u then Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFCHAR MyCustomFrames/Editing.lua:464:26"); Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFCHAR MyCustomFrames/Editing.lua:464:26"); return end
     local p = ns.PP(u)
     print("  clickOpenChar=" .. tostring(p and p.clickOpenChar) .. "  ns.IsUnlocked()=" .. tostring(ns.IsUnlocked()))
     for _, name in ipairs({ "charBtnCenter", "charBtnAlt" }) do
@@ -490,7 +490,7 @@ SlashCmdList["MCFCHAR"] = function()
             tostring(cmb:IsShown()), cmb:GetAlpha(), tostring(cmb:IsMouseEnabled())))
     end
     print("  InCombatLockdown=" .. tostring(InCombatLockdown()))
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFCHAR MyCustomFrames/Editing.lua:464:26"); Perfy_Trace(Perfy_GetTime(), "Leave", "SlashCmdList.MCFCHAR MyCustomFrames/Editing.lua:464:26"); end
 
 -- (La integracion con el EDIT MODE de Blizzard se QUITO 2026-07-28, a pedido del
 -- usuario: abrir el Edit Mode del juego abria tambien el modo edicion del addon,
@@ -502,12 +502,12 @@ end
 -- ==========================================================================
 local copyBuffer = nil
 local COPY_EXCLUDE = { texture = true, cageTexture = true, castTexture = true, anchorFrame = true }
-ns.CopySettings = function()
+ns.CopySettings = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.CopySettings MyCustomFrames/Editing.lua:505:18"); Perfy_Trace(Perfy_GetTime(), "Enter", "ns.CopySettings MyCustomFrames/Editing.lua:505:18");
     copyBuffer = ns.DeepCopy(ns.CurrentProfile())
     print("|cff00ff00[MCF]|r Copied from: " .. ns.currentEdit)
-end
-ns.PasteSettings = function()
-    if not copyBuffer then print("|cffff0000[MCF]|r Nothing copied.") return end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.CopySettings MyCustomFrames/Editing.lua:505:18"); Perfy_Trace(Perfy_GetTime(), "Leave", "ns.CopySettings MyCustomFrames/Editing.lua:505:18"); end
+ns.PasteSettings = function() Perfy_Trace(Perfy_GetTime(), "Enter", "ns.PasteSettings MyCustomFrames/Editing.lua:509:19"); Perfy_Trace(Perfy_GetTime(), "Enter", "ns.PasteSettings MyCustomFrames/Editing.lua:509:19");
+    if not copyBuffer then print("|cffff0000[MCF]|r Nothing copied.") Perfy_Trace(Perfy_GetTime(), "Leave", "ns.PasteSettings MyCustomFrames/Editing.lua:509:19"); Perfy_Trace(Perfy_GetTime(), "Leave", "ns.PasteSettings MyCustomFrames/Editing.lua:509:19"); return end
     local p = ns.CurrentProfile()
     for k, v in pairs(copyBuffer) do
         if not COPY_EXCLUDE[k] then p[k] = ns.DeepCopy(v) end
@@ -515,4 +515,7 @@ ns.PasteSettings = function()
     ns.RefreshUnit(ns.currentEdit)
     if ns.OnProfilePasted then ns.OnProfilePasted() end
     print("|cff00ff00[MCF]|r Pasted into: " .. ns.currentEdit)
-end
+Perfy_Trace(Perfy_GetTime(), "Leave", "ns.PasteSettings MyCustomFrames/Editing.lua:509:19"); Perfy_Trace(Perfy_GetTime(), "Leave", "ns.PasteSettings MyCustomFrames/Editing.lua:509:19"); end
+
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Editing.lua");
+Perfy_Trace(Perfy_GetTime(), "Leave", "(main chunk) MyCustomFrames/Editing.lua");
