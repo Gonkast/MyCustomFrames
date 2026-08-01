@@ -45,12 +45,16 @@ local function PortraitUpdatePosition(u)
     if dual then
         if ns.IsUnlocked() then which = (p.editPos == "alt") and "alt" or "center"
         -- Interruptor maestro (pedido del usuario: "poder activar o
-        -- desactivar lo de las posiciones alternativas"): en false, ni
-        -- siquiera se evaluan las 3 condiciones -- se queda SIEMPRE en
-        -- "centro". `== false` explicito (no solo `not`) para que el default
-        -- (nil en perfiles viejos, antes de que este campo existiera) se
-        -- comporte como true, igual que el resto de los booleanos del addon.
-        elseif p.dualPosEnabled == false then which = "center"
+        -- desactivar lo de las posiciones alternativas"): apagado por
+        -- defecto (2026-07-29, "off por defecto"). `~= true` (no `== false`)
+        -- a proposito: el default del campo ES false, y algunas copias
+        -- congeladas viejas (presets guardados antes de que este campo
+        -- existiera) directamente no lo tienen (nil) en vez de false
+        -- explicito -- con `== false` un Reset/LoadPreset que cargara una de
+        -- esas copias volvia a activar la posicion alterna por accidente.
+        -- `~= true` trata "ausente" igual que "false": solo un true
+        -- EXPLICITO prende la evaluacion de las 3 condiciones.
+        elseif p.dualPosEnabled ~= true then which = "center"
         elseif PortraitCenterActive(u) then which = "center"
         else which = "alt" end
     end

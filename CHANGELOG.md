@@ -15,6 +15,14 @@ worth reading before redoing one of them).
   silently diverge. New `ns.ResetNameplatesFromDefault` reads from the *same* source "Reset
   All" does (default preset → `BUILTIN` → factory) instead of a second copy, so there is
   nothing left to fall out of sync.
+- **Portrait dual position's `dualPosEnabled` default flipped from `true` to `false`.** Frozen
+  preset copies saved before this field existed had it missing entirely (`nil`) rather than
+  `false` — the check used to be `== false`, which treats `nil` as "old enabled behavior", so a
+  future Reset/`LoadPreset` against one of those copies would have silently turned the
+  alternate position back on. Changed to `~= true`, so both "explicitly off" and "field not
+  present at all" behave the same way.
+- **`cageHideDead` now defaults to `false` for every unit**, not just target/player. Was `true`
+  for target and player only.
 
 ### Added
 - **Portrait dual position gained a master on/off toggle** (`dualPosEnabled`, "Enable alternate

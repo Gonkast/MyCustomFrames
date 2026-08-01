@@ -474,11 +474,11 @@ local function DefaultsFor(key)
         -- Cage
         cageTexture = CageDefault(key),
         cageWidth = 250, cageHeight = 20, cageOffsetX = 0, cageOffsetY = 0, cageAlpha = 1.0,
-        -- Solo target (2026-07-29, "quita lo de hide on death en bar y cage
-        -- del player, que siempre se muestren en death"): el player traia
-        -- esto encendido por defecto, ahora queda apagado -- el cage del
-        -- player ya no desaparece al morir.
-        cageHideDead = (key == "target"),   -- oculta el cage si la unidad esta muerta
+        -- Apagado por defecto para TODAS las unidades (2026-07-29, "por
+        -- defecto en off en el reset" -- primero se saco solo para el player
+        -- el mismo dia, ahora la regla es general). El que lo quiera lo
+        -- prende a mano por unidad.
+        cageHideDead = false,   -- oculta el cage si la unidad esta muerta
         -- Highlight de "unidad seleccionada" (si la unidad es tu target actual)
         showHighlight = false, highlightTexture = HIGHLIGHT_TEX,
         highlightWidth = 250, highlightHeight = 20, highlightScale = 1.0,
@@ -609,9 +609,9 @@ local function PortraitDefaultsFor(key)
         -- Interruptor maestro (2026-07-29, pedido del usuario: "poder activar
         -- o desactivar lo de las posiciones alternativas") -- con esto en
         -- false, PortraitUpdatePosition ignora las 3 condiciones de abajo y
-        -- SIEMPRE usa la posicion "centro". true por defecto: nadie que ya
-        -- tuviera esto configurado pierde su comportamiento actual.
-        dualPosEnabled = true,
+        -- SIEMPRE usa la posicion "centro". false por defecto (mismo pedido,
+        -- "off por defecto"): quien quiera la posicion alterna la prende.
+        dualPosEnabled = false,
         -- Condiciones que fuerzan la posicion "centro" (solo dualPos)
         centerOnTarget = true, centerInCombat = true, centerInInstance = true,
         editPos = "center",   -- cual posicion se edita/arrastra en preview
