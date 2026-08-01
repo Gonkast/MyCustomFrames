@@ -3694,7 +3694,9 @@ local function BuildPanel()
         note:SetText("Reskins Blizzard's nameplates to match this preset. Position/size are set in the Nameplate Designer, not here.")
         local resetBtn = MakeButton(f, "Reset nameplates", 200, 22)
         resetBtn:SetPoint("TOPLEFT", L, -84)
-        resetBtn:SetScript("OnClick", function() ns.ResetUnit(ns.currentEdit) end)
+        -- Mismo botón, misma fuente que "Reset All" (2026-07-29): ver el
+        -- comentario largo en ns.ResetNameplatesFromDefault (core.lua).
+        resetBtn:SetScript("OnClick", function() if ns.ResetNameplatesFromDefault then ns.ResetNameplatesFromDefault() end end)
 
         -- Canvas de diseño (drag + rueda) -- ver NameplateDesigner.lua. TODO
         -- el control de posicion/tamaño vive aca, no en sliders de texto.

@@ -6,6 +6,16 @@ worth reading before redoing one of them).
 
 ## Unreleased
 
+### Fixed
+- **The Nameplate Designer's Reset button (and Options > Nameplates > "Reset nameplates") no
+  longer disagree with "Reset All".** Both used to read `db.nameplateUserDefault`, a snapshot
+  frozen the moment "Set as Default" was clicked — and stale the instant the user kept tuning
+  positions afterward without clicking it again, since nothing kept it in sync. "Reset All"
+  reads from an entirely different place (the default preset), so the two reset paths would
+  silently diverge. New `ns.ResetNameplatesFromDefault` reads from the *same* source "Reset
+  All" does (default preset → `BUILTIN` → factory) instead of a second copy, so there is
+  nothing left to fall out of sync.
+
 ### Added
 - **Portrait dual position gained a master on/off toggle** (`dualPosEnabled`, "Enable alternate
   position" in the Portrait > Position panel). Previously the only way to stop a portrait

@@ -611,8 +611,14 @@ local function CreateDesigner()
     local ROW1, ROW2, ROW3, ROW4 = -28, -52, -76, -112
 
     resetBtn:SetPoint("TOPLEFT", root, "TOPLEFT", 8, ROW1)
+    -- Misma fuente que "Reset All" del menu (2026-07-29, pedido del usuario:
+    -- "el reset del panel del nameplate disigner, aun no es el mismo del
+    -- reset all... ponle el mismo reset all del menu, pero que desde el
+    -- panel solo resete el nameplate") -- ver el comentario largo en
+    -- ns.ResetNameplatesFromDefault (core.lua). Ya NO pasa por ResetUnit/
+    -- nameplateUserDefault, que era la fuente que se desincronizaba.
     resetBtn:SetScript("OnClick", function()
-        if ns.ResetUnit then ns.ResetUnit(ns.NAMEPLATES_KEY) end
+        if ns.ResetNameplatesFromDefault then ns.ResetNameplatesFromDefault() end
         Reflow()
     end)
 

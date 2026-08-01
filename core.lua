@@ -1449,6 +1449,45 @@ function ns.GetPresetTableKeys()
     return copy
 end
 
+-- Reset de SOLO nameplates, con la MISMA fuente que usa "Reset All" (ver
+-- ns.ResetAll un poco mas abajo): preset default -> BUILTIN -> fabrica.
+--
+-- 2026-07-29, pedido del usuario ("el reset del panel del nameplate
+-- disigner, aun no es el mismo del reset all... quitalo ese boton... ponle
+-- el mismo reset all del menu, pero que desde el panel solo resete el
+-- nameplate"): el Reset del Designer (y el de Options.lua > Nameplates)
+-- usaban `db.nameplateUserDefault` -- una TERCERA copia de los datos, aparte
+-- de la que usa Reset All. Esa copia se congelaba en el momento de "Set as
+-- Default" y quedaba vieja apenas el usuario seguia afinando posiciones sin
+-- volver a apretar ese boton -- de ahi que el Reset del panel diera un
+-- resultado distinto al de Reset All, una y otra vez, sin importar cuantas
+-- veces se resincronizara a mano.
+--
+-- La solucion de raiz es que dejen de existir DOS fuentes: este reset lee de
+-- la MISMA que ns.ResetAll (el preset default), asi cualquier cosa que
+-- mantenga sincronizado a Reset All (guardar el preset default de nuevo)
+-- automaticamente mantiene sincronizado a esto tambien -- nada que
+-- resincronizar por separado.
+ns.ResetNameplatesFromDefault = function()
+    if not db then return end
+    if db.defaultPreset and db.presets and db.presets[db.defaultPreset]
+       and db.presets[db.defaultPreset].nameplates then
+        db.nameplates = DeepCopy(db.presets[db.defaultPreset].nameplates)
+        if ns.RefreshNameplateStyle then ns.RefreshNameplateStyle() end
+        if ns.OnProfilePasted then ns.OnProfilePasted() end
+        print("|cff00ff00[MCF]|r Nameplates reset to your default preset: " .. db.defaultPreset)
+        return
+    end
+    if ns.BUILTIN and ns.BUILTIN.nameplates then
+        db.nameplates = DeepCopy(ns.BUILTIN.nameplates)
+    elseif ns.NameplateDefaults then
+        db.nameplates = ResetDefault("nameplates", nil, ns.NameplateDefaults)
+    end
+    if ns.RefreshNameplateStyle then ns.RefreshNameplateStyle() end
+    if ns.OnProfilePasted then ns.OnProfilePasted() end
+    print("|cff00ff00[MCF]|r Nameplates reset to the addon's native layout.")
+end
+
 -- Restablece TODO. Si hay un preset marcado como Default, "Reset ALL" carga
 -- ESE preset (tu default pasa a ser el "por defecto" del addon); si no, valores de fabrica.
 ns.ResetAll = function()
