@@ -6,7 +6,17 @@ worth reading before redoing one of them).
 
 ## Unreleased
 
-### Fixed
+### Changed
+- **`ns.BUILTIN` (`Defaults.lua`) re-baked from a fresh profile export** ("estos datos son los
+  que deben salir en una cuenta nueva, nueva instalacion o resets") — this is what a brand new
+  account, a fresh install, or `Reset All` without a default preset falls back to. Every
+  module (units, portraits, glow, minimap, tooltip, etc.) and every global setting now matches
+  the current tuned profile; nameplates were left untouched on purpose (`nameplates` and
+  `nameplateUserDefault` excluded from the bake), and `bartenderAutoProfile` was carried over
+  from the old `BUILTIN` since it isn't part of a preset export at all. The export had two
+  stale `cageHideDead=true` values (target, raid) predating this session's "off for everyone"
+  change — corrected during the bake rather than shipped back in. Verified field-by-field
+  against the export before writing: zero unexpected differences.
 - **The Nameplate Designer's Reset button (and Options > Nameplates > "Reset nameplates") no
   longer disagree with "Reset All".** Both used to read `db.nameplateUserDefault`, a snapshot
   frozen the moment "Set as Default" was clicked — and stale the instant the user kept tuning
