@@ -308,7 +308,10 @@ local function ApplyBarHiding()
             end
             if hide then
                 touched[key] = true
-                bar:SetAlpha(0)
+                -- 0.2 en vez de 0 (2026-08-03, "que no esconda las barras,
+                -- mejor que les baje la opacidad a 0.2"): mismo valor que usa
+                -- Explorer.lua para el mismo caso cuando SI gestiona la barra.
+                bar:SetAlpha(0.2)
             elseif touched[key] then
                 -- Cubre TANTO "bar1 dejo de estar reemplazada" como "sigue
                 -- reemplazada pero ahora hay mouseover" (el chequeo de

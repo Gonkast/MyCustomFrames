@@ -185,8 +185,7 @@ explorerDriver:SetScript("OnUpdate", ns.Prof.Wrap("Explorer: driver", function(s
                 -- calcular `target` y lo pisa a proposito: tiene que ganarle a
                 -- combate, target y casteo -- el mouseover SIGUE revelandolas
                 -- (confirmado 2026-08-03, ver el bloque de abajo), no se ocultan
-                -- por completo. Alpha 0 y no `myLo` porque el pedido es no verlas
-                -- sin querer, no impedir verlas del todo.
+                -- por completo.
                 --
                 -- La condicion vive en ExplorerAuto y NO usa IsMounted -- a
                 -- diferencia de `overrideBar` de arriba, que si lo usa porque su
@@ -195,9 +194,10 @@ explorerDriver:SetScript("OnUpdate", ns.Prof.Wrap("Explorer: driver", function(s
                     -- Le gana a combate, target y casteo, pero NO al hover: con
                     -- la barra escondida el mouseover la sigue revelando, igual
                     -- que en el modo normal del Explorer (pedido del usuario).
-                    -- Un frame en alpha 0 sigue recibiendo eventos de mouse --
-                    -- es de hecho como funciona todo el Explorer.
-                    target = IsMouseOverElement(f, key) and 1 or 0
+                    -- Alpha 0.2 en vez de 0 (2026-08-03, "que no esconda las
+                    -- barras, mejor que les baje la opacidad a 0.2"): antes
+                    -- desaparecian del todo, ahora quedan tenues pero visibles.
+                    target = IsMouseOverElement(f, key) and 1 or 0.2
                 end
                 local cur = f._exAlpha; if cur == nil then cur = f:GetAlpha() end
                 cur = cur + (target - cur) * (target > cur and kIn or kOut)
