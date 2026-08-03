@@ -161,28 +161,40 @@ local function ShouldHideExceptName(unit)
     if not unit then return false end
     local okP, isPlayer = pcall(UnitIsPlayer, unit)
     if not okP then return false end
-    if isPlayer then
-        -- Auto-apagado SOLO PARA JUGADORES (2026-08-03, pedido del usuario:
-        -- "que se apague automaticamente para los player, en combate, o en
-        -- situaciones en las que el aliado tengan nameplate, por ejemplo en
-        -- arena"): en esos momentos importa mas ver la info completa de un
-        -- aliado real que ahorrar espacio -- las criaturas/NPCs amistosas
-        -- siguen funcionando igual que siempre, esto no las afecta.
+    if not isPlayer then
+        -- NPC (incluye tu pet, ver isOwnPet mas abajo): excluir mascotas/
+        -- totems/guardianes con dueño jugador por defecto (pedido del
+        -- usuario: "pero no pets") -- opcional desde 2026-08-03
+        -- (nameOnlyIncludePet, checkbox debajo del toggle principal): con
+        -- eso prendido, entran al mismo "solo nombre" que cualquier otro
+        -- NPC amistoso. Va ANTES del auto-apagado de abajo: si esto ya
+        -- excluyo al pet aca (checkbox apagado), nunca tiene que llegar a
+        -- evaluarse como candidato de auto-apagado.
+        if not (p and p.nameOnlyIncludePet) then
+            local okC, playerControlled = pcall(UnitPlayerControlled, unit)
+            if okC and playerControlled then return false end
+        end
+    end
+    -- Es TU PROPIO pet? (UnitIsUnit, no secreto -- compara tokens, no datos
+    -- de la unidad). Ni "isPlayer" ni un UnitPlayerControlled generico
+    -- alcanzan para distinguir esto del pet de OTRO jugador o un totem/
+    -- guardian cualquiera -- el auto-apagado de abajo es especificamente
+    -- para TU pet, no para cualquier cosa player-controlled.
+    local isOwnPet = ns.safeBool(UnitIsUnit, unit, "pet")
+    if isPlayer or isOwnPet then
+        -- Auto-apagado para JUGADORES y TU PET (2026-08-03, pedido del
+        -- usuario: primero "que se apague automaticamente para los player,
+        -- en combate... por ejemplo en arena", despues aclarado "solo me
+        -- importa con pet y jugadores aliados" al ver que con "Include
+        -- pets" prendido el pet quedaba afuera de este chequeo -- solo
+        -- miraba isPlayer). En esos momentos importa mas ver la info
+        -- completa que ahorrar espacio; el resto de NPCs amistosos sigue
+        -- funcionando igual que siempre, esto no los afecta.
         if ns.tickState and ns.tickState.inCombat then return false end
         local okInst, inInst, it = pcall(IsInInstance)
         if okInst and not (issecretvalue and (issecretvalue(inInst) or issecretvalue(it)))
            and inInst and it == "arena" then
             return false
-        end
-    else
-        -- NPC: excluir mascotas/totems/guardianes con dueño jugador por
-        -- defecto (pedido del usuario: "pero no pets") -- opcional desde
-        -- 2026-08-03 (nameOnlyIncludePet, checkbox debajo del toggle
-        -- principal): con eso prendido, el pet entra al mismo "solo
-        -- nombre" que cualquier otro NPC amistoso.
-        if not (p and p.nameOnlyIncludePet) then
-            local okC, playerControlled = pcall(UnitPlayerControlled, unit)
-            if okC and playerControlled then return false end
         end
     end
     local okR, reaction = pcall(UnitReaction, unit, "player")
