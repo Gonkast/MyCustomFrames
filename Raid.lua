@@ -137,7 +137,12 @@ function ns.RaidUnitDefaults()
     -- para caer en el mismo lugar visual: -2 + (-5.5) = -7.5.
     d.cageOffsetX, d.cageOffsetY = 1, -7.5
     d.cageAlpha = 1.0
-    d.cageHideDead = true
+    -- false (2026-07-29, "por defecto en off en el reset"): esta funcion
+    -- tiene su PROPIO set de defaults, separado del generico de core.lua --
+    -- fijar esto a mano aca era la razon real por la que "raid" seguia
+    -- volviendo a true sin importar cuantas veces se corrigiera el default
+    -- general o los datos guardados.
+    d.cageHideDead = false
 
     -- Target/focus highlight (cast_back_outline), EXACTO a
     -- TargetHighlightSize/Position de AzeriteUI: 140x90, offset (1,-2).

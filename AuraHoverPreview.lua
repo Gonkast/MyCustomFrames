@@ -934,4 +934,47 @@ SlashCmdList["MCFARENADIAG"] = function()
         tostring(ok1), tostring(isArena), tostring(ok2), tostring(isRated), tostring(ok3), tostring(isShuffle)))
     print(("  IsInInstance: ok=%s inInstance=%s instanceType=%s"):format(tostring(ok4), tostring(inInst), tostring(instanceType)))
     print("  InArenaNow() final result = " .. tostring(InArenaNow()))
+
+    -- AMPLIADO (2026-08-03, reportado: "aun siguen existiendo elementos de ui
+    -- nativos de blizzard en arenas"): lo de arriba solo dice si el addon CREE
+    -- que esta en arena -- no dice si algun frame nativo sigue visible pese al
+    -- hide. HideArenaFramesNow (core.lua) ya cubre una lista larga de nombres
+    -- conocidos (ver su comentario), pero adivinar UN nombre mas a ciegas cada
+    -- vez que aparece algo nuevo es justo el patron que ya se repitio varias
+    -- veces en este archivo/core.lua. Esto vuelca el estado REAL en vez de
+    -- seguir adivinando: los contenedores conocidos (para confirmar si el hide
+    -- esta corriendo) + un escaneo generico de CUALQUIER frame global cuyo
+    -- nombre contenga "Arena" y que este VISIBLE con alpha > 0 -- eso agarra
+    -- cualquier frame nuevo que Midnight haya agregado/renombrado sin que haga
+    -- falta conocer su nombre de antemano.
+    print("  --- contenedores conocidos (HideArenaFramesNow) ---")
+    local KNOWN = { "ArenaEnemyFrames", "CompactArenaFrame", "PreMatchFramesContainer" }
+    for i = 1, 5 do
+        KNOWN[#KNOWN + 1] = "ArenaEnemyFrame" .. i
+        KNOWN[#KNOWN + 1] = "ArenaEnemyMatchFrame" .. i
+        KNOWN[#KNOWN + 1] = "CompactArenaFrameMember" .. i
+    end
+    for _, name in ipairs(KNOWN) do
+        local f = _G[name]
+        if f then
+            local okS, shown = pcall(f.IsShown, f)
+            local okA, alpha = pcall(f.GetAlpha, f)
+            print(("    %-28s existe  shown=%s alpha=%s"):format(
+                name, okS and tostring(shown) or "?", okA and tostring(alpha) or "?"))
+        end
+    end
+    print("  --- escaneo generico: frames globales con \"Arena\" en el nombre, visibles ---")
+    local found = 0
+    for name, frame in pairs(_G) do
+        if type(name) == "string" and name:find("Arena") and type(frame) == "table"
+           and type(frame.GetObjectType) == "function" then
+            local okS, shown = pcall(frame.IsShown, frame)
+            local okA, alpha = pcall(frame.GetAlpha, frame)
+            if okS and shown and (not okA or alpha > 0) then
+                found = found + 1
+                print(("    %-32s shown=true alpha=%s"):format(name, okA and tostring(alpha) or "?"))
+            end
+        end
+    end
+    if found == 0 then print("    (ninguno visible fuera de los ya conocidos)") end
 end
