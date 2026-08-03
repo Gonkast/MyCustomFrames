@@ -107,11 +107,41 @@ local pendingPetVisibility = false
 -- script (ver nota en core.lua) -- BugGrabber lo captura igual. Mismo patron
 -- que ApplyBarScale/ApplyAllBarScales: si esta en combate, se difiere a
 -- PLAYER_REGEN_ENABLED en vez de intentar y loguear el bloqueo.
+-- FIX (2026-08-03, reportado de nuevo: "retiro la pet y la barra de pet
+-- desaparece, pero /bt lock, y reaparece aunque este vacia y no tenga pet"):
+-- el fix anterior (comentario de mas arriba) solo reaplica esto cuando pasa
+-- POR NUESTRO PROPIO camino (RefreshAll, /mcf) -- `/bt lock` es un comando
+-- de OTRO addon que no dispara nada de lo que este archivo escucha
+-- (PLAYER_ENTERING_WORLD/PLAYER_REGEN_ENABLED/UNIT_PET), asi que Bartender4
+-- fuerza la barra visible por su cuenta para poder editarla y nada la vuelve
+-- a esconder. En vez de perseguir CADA addon/camino que pueda mostrarla,
+-- mismo criterio que HideNativeBorder en Nameplates.lua: un hook permanente
+-- sobre SetAlpha que, mientras sigamos sin pet, deshace CUALQUIER intento de
+-- volverla visible venga de donde venga -- Bartender4, Blizzard Edit Mode, o
+-- lo que sea en el futuro. Guard de reentrancia (mismo patron que
+-- ApplyBarScale mas arriba en este archivo): el propio SetAlpha(0) de aca
+-- adentro dispararia el hook de nuevo si no se cortara.
+local petBarAlphaHookApplied = false
+local suppressingPetBarAlpha = false
+local function HookPetBarAlpha(bar)
+    if petBarAlphaHookApplied then return end
+    petBarAlphaHookApplied = true
+    hooksecurefunc(bar, "SetAlpha", function(self, a)
+        if suppressingPetBarAlpha then return end
+        if petBarHiddenNoPet and a and a > 0 then
+            suppressingPetBarAlpha = true
+            self:SetAlpha(0)
+            suppressingPetBarAlpha = false
+        end
+    end)
+end
+
 function UpdatePetBarVisibility()
     if InCombatLockdown() then pendingPetVisibility = true; return end
     pendingPetVisibility = false
     local bar = _G.BT4BarPetBar
     if not bar then return end
+    HookPetBarAlpha(bar)
     local hasPet = UnitExists("pet")
     if not hasPet then
         petBarHiddenNoPet = true
