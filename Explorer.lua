@@ -149,13 +149,10 @@ explorerDriver:SetScript("OnUpdate", ns.Prof.Wrap("Explorer: driver", function(s
     -- Factor por half-life: el alpha recorre la mitad de la distancia cada X segundos.
     local kIn  = 1 - 0.5 ^ (dt / 0.06)   -- revelar (half-life ~60ms)
     local kOut = 1 - 0.5 ^ (dt / 0.20)   -- ocultar (mas pausado)
-    -- Opacidad oculta CUSTOM por elemento (2026-07-24, pedido del usuario):
-    -- db.explorerElementAlpha[key] pisa el "Hidden opacity" global SOLO para
-    -- ESE key puntual -- nil/ausente = usa el default global (lo) como
-    -- siempre. Guardado por key RAW (no por grupo/label): cada companion key
-    -- de un grupo (ej. "player" y "playerpower") puede tener su propio
-    -- override independiente si hace falta, sin logica extra.
-    local eAlpha = db.explorerElementAlpha
+    -- (2026-08-03, "no quiero que tenga opcion individual, quiero que este
+    -- en conditions con el mismo slider"): el override por-elemento
+    -- (db.explorerElementAlpha) se elimino -- los 2 sliders de grupo de
+    -- arriba son ahora la unica fuente de la opacidad oculta.
     for key, on in pairs(db.explorer) do
         if on then
             local f = GetElementFrame(key)
@@ -180,8 +177,7 @@ explorerDriver:SetScript("OnUpdate", ns.Prof.Wrap("Explorer: driver", function(s
                 -- mas abajo). No hace falta condicion propia: la stance bar
                 -- sigue exactamente la misma regla que las demas.
                 local forceOverride = (key == "BT4Bar1") and self.overrideBar
-                local lo = (key:sub(1, 6) == "BT4Bar") and loBars or loUnits
-                local myLo = (eAlpha and eAlpha[key]) or lo
+                local myLo = (key:sub(1, 6) == "BT4Bar") and loBars or loUnits
                 local target = (self.combat or self.showTgt or self.casting or forceOverride or IsMouseOverElement(f, key)) and 1 or myLo
                 -- "Solo ver la barra 1" (2026-07-28, ExplorerAuto.lua): cuando la
                 -- barra 1 esta REEMPLAZADA (vehiculo/override/possess) y la opcion

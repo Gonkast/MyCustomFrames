@@ -1826,7 +1826,7 @@ local GLOBAL_FLAT_KEYS = {
     -- Indicadores (Indicators.lua): expuestos en el menu 2026-07-28.
     "indicatorRange", "indicatorShield",
 }
-local GLOBAL_TABLE_KEYS = { "lockHide", "explorer", "explorerZones", "explorerElementAlpha", "nameplateUserDefault", "nameplateProfiles" }
+local GLOBAL_TABLE_KEYS = { "lockHide", "explorer", "explorerZones", "nameplateUserDefault", "nameplateProfiles" }
 
 local function CollectGlobals()
     local g = {}
@@ -2240,7 +2240,15 @@ local function InitDB()
     -- B4: en modo Lock, ocultar SAMPLE de estos elementos (solo preview; no afecta el juego real).
     db.lockHide = db.lockHide or {}   -- {health/names/badges/raid/death = true → ocultos en preview}
     db.explorer = db.explorer or {}                      -- {elementKey=true} auto-ocultan por mouseover
-    db.explorerElementAlpha = db.explorerElementAlpha or {} -- {elementKey=0..1} opacidad oculta custom, pisa el default global
+    -- Override de opacidad POR ELEMENTO eliminado (2026-08-03, "no quiero
+    -- que tenga opcion individual, quiero que este en conditions con el
+    -- mismo slider"). db.explorerElementAlpha ya no se lee en ningun lado;
+    -- se limpia una sola vez para que datos viejos (ej. player=0 pegado) no
+    -- queden dando vueltas sin efecto.
+    if not db._explorerElementAlphaRemovedV1 then
+        db.explorerElementAlpha = nil
+        db._explorerElementAlphaRemovedV1 = true
+    end
     -- Migracion (2026-07-24): playerpower/targetpower/portrait_target se agregaron a los
     -- grupos "Player"/"Target" del Explorer -- un usuario que YA tenia "Player"/"Target"
     -- prendido de antes nunca vuelve a tocar ese checkbox, asi que su db.explorer se queda

@@ -62,31 +62,10 @@ ns.OnProfilePasted = RefreshControls
 ns.OnDragStopped = function(k) if k == ns.currentEdit then RefreshControls() end end
 ns.OnScaleWheel = RefreshControls   -- la rueda en modo Lock cambio una escala: refresca sliders
 
--- Proxy de metatable (2026-07-24, mejora #3 del Explorer: opacidad custom
--- POR UNIDAD) -- MakeSlider necesita un dbKey FIJO sobre una tabla que
--- get() devuelve, pero lo que en realidad quiero leer/escribir es
--- db.explorerElementAlpha[ns.currentEdit] (la unidad ACTUALMENTE en
--- edicion, que cambia en vivo). __index/__newindex redirige cualquier
--- clave hacia esa entrada especifica, sin importar que dbKey le pase a
--- MakeSlider. __index hace fallback al "Hidden opacity" del GRUPO
--- (explorerFadeAlphaUnits/explorerFadeAlphaBars) mientras no haya override guardado, para que el
--- slider siempre arranque mostrando un numero coherente (nunca nil).
-local explorerAlphaProxy = setmetatable({}, {
-    __index = function(_, _key)
-        local db = ns.GetDB()
-        local v = db.explorerElementAlpha and db.explorerElementAlpha[ns.currentEdit]
-        if v == nil then
-            local isBar = ns.currentEdit and ns.currentEdit:sub(1, 6) == "BT4Bar"
-            v = (isBar and db.explorerFadeAlphaBars or db.explorerFadeAlphaUnits) or 0
-        end
-        return v
-    end,
-    __newindex = function(_, _key, v)
-        local db = ns.GetDB()
-        db.explorerElementAlpha = db.explorerElementAlpha or {}
-        db.explorerElementAlpha[ns.currentEdit] = v
-    end,
-})
+-- (2026-08-03, "no quiero que tenga opcion individual, quiero que este en
+-- conditions con el mismo slider"): la opacidad custom POR UNIDAD (mejora
+-- #3, 2026-07-24) se elimino -- todo pasa a depender solo de los 2 sliders
+-- de grupo en Conditions (explorerFadeAlphaUnits/explorerFadeAlphaBars).
 
 -- Paleta LITERAL de Plumber (2026-07-16, extraida directo de su Def table en
 -- Modules/ControlCenter/SettingsPanelNew.lua:15-38 — reemplaza los valores mas
@@ -2461,24 +2440,6 @@ local function BuildPanel()
 
         MakeHeader(f, "Behavior", R, -132, 210)
         HIDEGRP.powerHidden[#HIDEGRP.powerHidden + 1] = MakeCheckbox(f, "Show tooltip", "showTooltip", R, -156)
-        -- Opacidad oculta CUSTOM del Explorer para ESTA unidad (2026-07-24,
-        -- mejora #3 pedida por el usuario: "per-element opacity override").
-        -- db.explorerElementAlpha[key] pisa el "Hidden opacity" de GRUPO
-        -- (unitframes/UI o barras, segun corresponda) SOLO para esta unidad
-        -- -- sin tocar nada, arranca igual al default del grupo (el proxy de
-        -- metatable de abajo hace fallback a explorerFadeAlphaUnits/Bars
-        -- segun el tipo de key si todavia no hay override guardado). Solo
-        -- importa mientras la unidad este ademas prendida en Explorer
-        -- (Elements tab) -- si no, este valor no se usa para nada.
-        MakeSlider(f, "Explorer opacity (this unit)", 0, 1, 0.05, "v", R, -198,
-            function() return explorerAlphaProxy end, function() end)
-        local resetAlphaBtn = MakeButton(f, "Use default", 100, 18)
-        resetAlphaBtn:SetPoint("TOPLEFT", R, -222)
-        resetAlphaBtn:SetScript("OnClick", function()
-            local db = ns.GetDB()
-            if db.explorerElementAlpha then db.explorerElementAlpha[ns.currentEdit] = nil end
-            RefreshControls()
-        end)
     end
     -- Barra: reorganizada en grupos con header (2026-07-17) — antes era una
     -- columna larga de sliders sin agrupar, dificil de escanear. Ahora:
@@ -4533,10 +4494,10 @@ local function BuildPanel()
             function() return ns.GetDB().explorerCasting end,
             function(v) ns.GetDB().explorerCasting = v end)
         -- Split (2026-08-03, "opacidad para unitframe/ui elementos y otra
-        -- para las barras de bartender4"): antes UN solo slider global. Los
-        -- overrides por-elemento (explorerAlphaProxy, panel de la unidad en
-        -- edicion) siguen ganando sobre estos dos igual que le ganaban al
-        -- viejo global.
+        -- para las barras de bartender4"): antes UN solo slider global.
+        -- (2026-08-03, mismo dia: "no quiero que tenga opcion individual" --
+        -- el override por-elemento que pisaba estos dos se elimino, ahora
+        -- estos sliders son la unica fuente de la opacidad oculta.)
         MakeSlider(conditionsGroup, "Hidden opacity (unitframes/UI)", 0, 1, 0.05, "explorerFadeAlphaUnits", L, TOP - 90,
             function() return ns.GetDB() end, function() end)
         MakeSlider(conditionsGroup, "Hidden opacity (action bars)", 0, 1, 0.05, "explorerFadeAlphaBars", L, TOP - 114,

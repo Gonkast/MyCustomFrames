@@ -177,16 +177,15 @@ Elementos nuevos en el registro: Target (+targetpower+portrait_target), Target a
 las 6 de Arena, Quest tracker, Minimap, Top widget, Class power, Raid frames, **Action Bar 1-10 +
 Pet/Stance/Bag/Extra Action Bar**.
 
-**Opacidad custom POR ELEMENTO:** `db.explorerElementAlpha[key]` (0..1) pisa el "Hidden opacity"
-de GRUPO (unitframes/UI o barras) solo para ese key. Slider en la pestaña **Behavior** de cada
-unidad (donde estaba "Hide when mounted") + boton "Use default". Implementado con un **proxy de
-metatable** (`explorerAlphaProxy` en Options.lua): `MakeSlider` exige un `dbKey` fijo, asi que
-`__index`/`__newindex` redirigen a `db.explorerElementAlpha[ns.currentEdit]` (la unidad en
-edicion, que cambia en vivo), con fallback a `explorerFadeAlphaUnits`/`explorerFadeAlphaBars`
-(segun `key:sub(1,6)=="BT4Bar"`) si no hay override. **OJO**: un override de 0 sigue siendo
-"verdadero" en Lua (`eAlpha[key] or lo`) — si alguien tiene guardado `explorerElementAlpha.player=0`
-de antes, el slider global de "Hidden opacity" para esa unidad no hace nada visible hasta que se
-use "Use default" para limpiar el override.
+**Opacidad custom POR ELEMENTO: ELIMINADA (2026-08-03,** "no quiero que tenga opcion individual,
+quiero que este en conditions con el mismo slider")**.** Existio brevemente (`db.explorerElementAlpha[key]`,
+slider "Explorer opacity (this unit)" en Behavior + boton "Use default") pero se saco por completo:
+causaba que un override viejo de 0 (verdadero en Lua, `eAlpha[key] or lo`) se quedara pegado y el
+slider de grupo no tuviera ningun efecto visible en esa unidad puntual — fue justo lo que le paso al
+"player" y motivo sacar la feature en vez de solo documentar el cuidado. Migracion self-healing
+(`db._explorerElementAlphaRemovedV1`, core.lua) limpia el campo viejo una sola vez. Ahora
+`explorerFadeAlphaUnits`/`explorerFadeAlphaBars` (2 sliders en Conditions) son la UNICA fuente de
+la opacidad oculta, sin excepciones por unidad.
 
 **BT4Bar1 forzado visible** si el player esta montado o en vehiculo/override/possess:
 `ns.safeBool(IsMounted)` **or** `HasOverrideActionBar` **or** `HasVehicleActionBar` **or**

@@ -100,9 +100,6 @@ ns.BUILTIN = {
   },
   ["explorerCasting"]=true,
   ["explorerCombat"]=true,
-  ["explorerElementAlpha"]={
-    ["player"]=0,
-  },
   ["explorerEnabled"]=false,
   ["explorerFadeAlphaBars"]=0,
   ["explorerFadeAlphaUnits"]=0,
