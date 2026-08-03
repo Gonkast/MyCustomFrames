@@ -3743,30 +3743,30 @@ local function BuildPanel()
         -- labels cortos, "Only show name on friendly players/NPCs" es demasiado largo para
         -- 226px de columna). Apilados en la misma columna (L) en vez de lado a lado.
         MakeCheckbox(f, "Only show name on friendly players/NPCs", "nameOnlyFriendlyNeutral", L, -30)
+        -- Pedido del usuario 2026-08-03: "una opcion abajo de este para
+        -- toglear si quiero que este efecto haga tambien en el pet" -- off
+        -- por default, el pet queda excluido igual que siempre.
+        MakeCheckbox(f, "Include pets", "nameOnlyIncludePet", L, -54)
         -- Pedido del usuario 2026-07-19: solo nombre para NPCs de escolta/
         -- mision EN DUNGEON, via CVars nativos (funciona incluso en
         -- ForbiddenNamePlate, confirmado en vivo -- ver ApplyMaxDistanceNow
         -- en Nameplates.lua). Independiente del checkbox de arriba.
-        MakeCheckbox(f, "Dungeon escort NPCs (native)", "showFriendlyNPCPlates", L, -54)
+        MakeCheckbox(f, "Dungeon escort NPCs (native)", "showFriendlyNPCPlates", L, -78)
         local onlyNameNote = f:CreateFontString(nil, "ARTWORK"); setFont(onlyNameNote, 10)
-        onlyNameNote:SetPoint("TOPLEFT", L, -78); onlyNameNote:SetWidth(430); onlyNameNote:SetJustifyH("LEFT")
+        onlyNameNote:SetPoint("TOPLEFT", L, -102); onlyNameNote:SetWidth(430); onlyNameNote:SetJustifyH("LEFT")
         onlyNameNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        onlyNameNote:SetText("Players: colored by class. NPCs (vendors, guards, etc): preset color. Excludes pets and hostiles.")
+        onlyNameNote:SetText("Players: colored by class. NPCs (vendors, guards, etc): preset color. Excludes hostiles (and pets, unless \"Include pets\" is on).")
 
         -- Offset PROPIO del modo de arriba (pedido del usuario): sin la barra
         -- visible, la posicion normal del nombre puede no quedar bien.
-        MakeSlider(f, "Offset X", -100, 100, 1, "nameOnlyOffsetX", L, -128)
-        MakeSlider(f, "Offset Y", -100, 100, 1, "nameOnlyOffsetY", R, -128)
+        MakeSlider(f, "Offset X", -100, 100, 1, "nameOnlyOffsetX", L, -152)
+        MakeSlider(f, "Offset Y", -100, 100, 1, "nameOnlyOffsetY", R, -152)
 
-        -- Color de clase para jugadores HOSTILES (2026-07-27, pedido del usuario, ver
-        -- Wowhead "Color-Coding Enemy Nameplates is Returning in Midnight"): distinto
-        -- del "Name-only mode" de arriba (ese es SOLO amistosos, sin barra) -- esto es
-        -- en el modo NORMAL (con barra de vida), reusando GetClassColorForUnit (ya
-        -- existe en Nameplates.lua) en vez del CVar nativo (ShowClassColorInEnemyNameplate)
-        -- -- este addon dibuja su PROPIO texto de nombre, reemplazando al nativo, asi
-        -- que ese CVar no tendria ningun efecto visible sobre lo que realmente se ve.
-        MakeHeader(f, "Enemy player class colors", L, -190, 430)
-        MakeCheckbox(f, "Color enemy player names by class", "classColorEnemyNames", L, -214)
+        -- Toggle QUITADO (2026-08-03, "los player enemigos ahora mismo tienen
+        -- el color de clase... hace que sea confuso en arena, quita la
+        -- opcion"): un jugador hostil real ahora SIEMPRE sale en rojo plano
+        -- (ver HOSTILE_PLAYER_COLOR en Nameplates.lua) -- ya no es opcional,
+        -- nada que exponer aca.
     end
 
     -- Nueva pestaña "Alpha" (2026-07-19, pedido del usuario): 5 controles

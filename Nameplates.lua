@@ -42,6 +42,14 @@ MCFAuraTimeFontObj:SetTextColor(1, 1, 1, 1)
 -- Defaults en HEX (#FFE19B, el dorado/ambar del resto del addon) usados
 -- cuando el perfil todavia no tiene el campo -- ver NameplateDefaults.
 local DEFAULT_TEXT_COLOR = { r = 0xFF/255, g = 0xE1/255, b = 0x9B/255 }
+-- Rojo plano para jugadores enemigos (2026-08-03, "que los player enemigos
+-- tenga el color rojo sin mas... quita la opcion"): reemplaza el toggle
+-- "Color enemy player names by class" -- ya no es opcional, y el color de
+-- clase se saca del todo (era la fuente del reporte "en arena es confuso
+-- ver de que clase es un enemigo con solo mirar el nombre"). Mismo rojo
+-- que colorHostile en core.lua (Units.lua), para que el nombre combine con
+-- como el resto del addon pinta hostiles.
+local HOSTILE_PLAYER_COLOR = { r = 0.85, g = 0.20, b = 0.20 }
 -- "Dorado opaco" pedido originalmente = TargetHighlightTargetColor de
 -- AzeriteUI (Layouts/Data/NamePlates.lua): 255/239/169.
 local DEFAULT_HIGHLIGHT_COLOR = { r = 255/255, g = 239/255, b = 169/255 }
@@ -167,10 +175,15 @@ local function ShouldHideExceptName(unit)
             return false
         end
     else
-        -- NPC: excluir mascotas/totems/guardianes con dueño jugador (pedido
-        -- del usuario: "pero no pets").
-        local okC, playerControlled = pcall(UnitPlayerControlled, unit)
-        if okC and playerControlled then return false end
+        -- NPC: excluir mascotas/totems/guardianes con dueño jugador por
+        -- defecto (pedido del usuario: "pero no pets") -- opcional desde
+        -- 2026-08-03 (nameOnlyIncludePet, checkbox debajo del toggle
+        -- principal): con eso prendido, el pet entra al mismo "solo
+        -- nombre" que cualquier otro NPC amistoso.
+        if not (p and p.nameOnlyIncludePet) then
+            local okC, playerControlled = pcall(UnitPlayerControlled, unit)
+            if okC and playerControlled then return false end
+        end
     end
     local okR, reaction = pcall(UnitReaction, unit, "player")
     -- REVERTIDO 2026-07-19: el intento de incluir reaction==4 (neutral,
@@ -206,6 +219,11 @@ local function NameplateDefaults()
         -- dejando SOLO el nombre (mismo color/tamaño/posicion configurados,
         -- sin tocar nada de eso). Ver ShouldHideExceptName mas abajo.
         nameOnlyFriendlyNeutral = false,
+        -- Pedido del usuario 2026-08-03: "el nameplate del pet se muestra
+        -- siempre... una opcion para toglear si quiero que este efecto haga
+        -- tambien en el pet" -- off por default, mismo comportamiento de
+        -- siempre (pets/totems/guardianes excluidos). Ver ShouldHideExceptName.
+        nameOnlyIncludePet = false,
         -- Pedido del usuario 2026-07-19: solo nombre para NPCs aliados/
         -- escolta EN DUNGEON, via los 3 CVars nativos combinados (ver
         -- ApplyMaxDistanceNow) -- confirmado en vivo que funciona incluso en
@@ -217,14 +235,10 @@ local function NameplateDefaults()
         -- name"), independiente de nameOffsetX/Y (que sigue rigiendo el modo
         -- normal, con la barra visible).
         nameOnlyOffsetX = 0, nameOnlyOffsetY = 0,
-        -- Color de clase para JUGADORES hostiles (2026-07-27, pedido del usuario,
-        -- ver Wowhead "Color-Coding Enemy Nameplates is Returning in Midnight") --
-        -- distinto de nameOnlyFriendlyNeutral (ese es SOLO amistosos, modo sin
-        -- barra); esto aplica en el modo NORMAL (con barra de vida), solo a
-        -- jugadores enemigos reales (nunca NPCs -- GetClassColorForUnit ya
-        -- devuelve nil para esos, no hace falta filtrar aparte). Off por default:
-        -- feature nueva, opt-in.
-        classColorEnemyNames = false,
+        -- classColorEnemyNames QUITADO (2026-08-03): un jugador hostil real
+        -- ahora SIEMPRE sale en rojo plano (HOSTILE_PLAYER_COLOR), sin
+        -- opcion -- confundia en arena no poder saber la clase de un
+        -- enemigo con solo mirar el color del nombre.
         -- Nombre: offset relativo al anclaje que YA usa Blizzard (TOP del
         -- nameplate), tamaño de fuente y color.
         nameOffsetX = 0, nameOffsetY = 0,
@@ -770,18 +784,17 @@ local function ReassertNameGeometry(uf)
     if uf.mcfNameOnlyMode then
         local classColor = GetClassColorForUnit(uf.unit)
         if classColor then c = classColor end
-    elseif p and p.classColorEnemyNames then
-        -- 2026-07-27: modo NORMAL (con barra), solo jugadores HOSTILES reales --
-        -- UnitIsPlayer primero (GetClassColorForUnit ya vuelve nil para NPCs, pero
-        -- esto evita hasta el intento en el 99% de las plates, que son creaturas) y
-        -- UnitIsFriend para no recolorear NPCs/jugadores amistosos por error.
+    else
+        -- 2026-08-03 ("los player enemigos ahora mismo tienen el color de
+        -- clase... hace que sea confuso en arena, quita la opcion"): ya NO
+        -- es opcional -- un jugador HOSTIL real siempre sale en rojo plano,
+        -- sin color de clase de por medio. UnitIsPlayer primero (evita el
+        -- intento en el 99% de las plates, que son creaturas), UnitIsFriend
+        -- para no recolorear jugadores amistosos por error.
         local okP, isPlayer = pcall(UnitIsPlayer, uf.unit)
         if okP and isPlayer then
             local okF, isFriend = pcall(UnitIsFriend, "player", uf.unit)
-            if okF and not isFriend then
-                local classColor = GetClassColorForUnit(uf.unit)
-                if classColor then c = classColor end
-            end
+            if okF and not isFriend then c = HOSTILE_PLAYER_COLOR end
         end
     end
     local fs = holder.text
