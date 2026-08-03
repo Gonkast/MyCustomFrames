@@ -2141,6 +2141,30 @@ local function InitDB()
         end
         db._mbStrataFixV1 = true
     end
+    -- V2 (2026-08-03, reportado de nuevo: "el minimap button se sigue viendo
+    -- encima de la mochila"): V1 de arriba solo corregia la raiz de la DB --
+    -- CUALQUIER preset guardado (incluido "~ Auto-backup") se congelo con su
+    -- PROPIA copia de minimapbuttons.strata en HIGH en su momento, y cargar
+    -- ese preset (Reset All, /mcfundo) la traia de vuelta sin que V1 volviera
+    -- a correr (ya se habia marcado hecho). Corre UNA vez mas, esta vez
+    -- tambien por cada preset -- y a diferencia de las veces que esto se
+    -- parcheo a mano en el SavedVariables durante esta sesion, este fix corre
+    -- SOLO EN EL PROPIO LOGIN DEL JUEGO -- no depende de que el archivo en
+    -- disco ya tenga el valor correcto ni de que sesion estaba corriendo
+    -- cuando se guardo por ultima vez.
+    if not db._mbStrataFixV2 then
+        if db.minimapbuttons and db.minimapbuttons.strata == "HIGH" then
+            db.minimapbuttons.strata = "MEDIUM"
+        end
+        if db.presets then
+            for _, pr in pairs(db.presets) do
+                if pr.minimapbuttons and pr.minimapbuttons.strata == "HIGH" then
+                    pr.minimapbuttons.strata = "MEDIUM"
+                end
+            end
+        end
+        db._mbStrataFixV2 = true
+    end
     if not db._npNativeBakeV1 then
         db.nameplates = ns.NameplateDefaults and ns.NameplateDefaults() or {}
         db.nameplateUserDefault = nil
