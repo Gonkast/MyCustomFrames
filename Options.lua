@@ -68,14 +68,17 @@ ns.OnScaleWheel = RefreshControls   -- la rueda en modo Lock cambio una escala: 
 -- db.explorerElementAlpha[ns.currentEdit] (la unidad ACTUALMENTE en
 -- edicion, que cambia en vivo). __index/__newindex redirige cualquier
 -- clave hacia esa entrada especifica, sin importar que dbKey le pase a
--- MakeSlider. __index hace fallback al "Hidden opacity" GLOBAL
--- (explorerFadeAlpha) mientras no haya override guardado, para que el
+-- MakeSlider. __index hace fallback al "Hidden opacity" del GRUPO
+-- (explorerFadeAlphaUnits/explorerFadeAlphaBars) mientras no haya override guardado, para que el
 -- slider siempre arranque mostrando un numero coherente (nunca nil).
 local explorerAlphaProxy = setmetatable({}, {
     __index = function(_, _key)
         local db = ns.GetDB()
         local v = db.explorerElementAlpha and db.explorerElementAlpha[ns.currentEdit]
-        if v == nil then v = db.explorerFadeAlpha or 0 end
+        if v == nil then
+            local isBar = ns.currentEdit and ns.currentEdit:sub(1, 6) == "BT4Bar"
+            v = (isBar and db.explorerFadeAlphaBars or db.explorerFadeAlphaUnits) or 0
+        end
         return v
     end,
     __newindex = function(_, _key, v)
@@ -2460,10 +2463,11 @@ local function BuildPanel()
         HIDEGRP.powerHidden[#HIDEGRP.powerHidden + 1] = MakeCheckbox(f, "Show tooltip", "showTooltip", R, -156)
         -- Opacidad oculta CUSTOM del Explorer para ESTA unidad (2026-07-24,
         -- mejora #3 pedida por el usuario: "per-element opacity override").
-        -- db.explorerElementAlpha[key] pisa el "Hidden opacity" global SOLO
-        -- para esta unidad -- sin tocar nada, arranca igual al default
-        -- global (el proxy de metatable de abajo hace fallback a
-        -- explorerFadeAlpha si todavia no hay override guardado). Solo
+        -- db.explorerElementAlpha[key] pisa el "Hidden opacity" de GRUPO
+        -- (unitframes/UI o barras, segun corresponda) SOLO para esta unidad
+        -- -- sin tocar nada, arranca igual al default del grupo (el proxy de
+        -- metatable de abajo hace fallback a explorerFadeAlphaUnits/Bars
+        -- segun el tipo de key si todavia no hay override guardado). Solo
         -- importa mientras la unidad este ademas prendida en Explorer
         -- (Elements tab) -- si no, este valor no se usa para nada.
         MakeSlider(f, "Explorer opacity (this unit)", 0, 1, 0.05, "v", R, -198,
@@ -4466,7 +4470,7 @@ local function BuildPanel()
         local elementsScroll, elementsGroup = MakeScrollGroup(500)
         -- 300 (era 260): la nota del final se movio mas abajo al arreglar el
         -- solapamiento con los toggles de zona (ver el FIX de condNote).
-        local conditionsScroll, conditionsGroup = MakeScrollGroup(300)
+        local conditionsScroll, conditionsGroup = MakeScrollGroup(330)
         local quickScroll, quickGroup = MakeScrollGroup(220)
         local function ShowExplorerTab(which)
             elementsScroll:SetShown(which == "elements")
@@ -4528,19 +4532,27 @@ local function BuildPanel()
         MakeToggle(conditionsGroup, "Always show while casting", L, TOP - 48,
             function() return ns.GetDB().explorerCasting end,
             function(v) ns.GetDB().explorerCasting = v end)
-        MakeSlider(conditionsGroup, "Hidden opacity", 0, 1, 0.05, "explorerFadeAlpha", L, TOP - 90,
+        -- Split (2026-08-03, "opacidad para unitframe/ui elementos y otra
+        -- para las barras de bartender4"): antes UN solo slider global. Los
+        -- overrides por-elemento (explorerAlphaProxy, panel de la unidad en
+        -- edicion) siguen ganando sobre estos dos igual que le ganaban al
+        -- viejo global.
+        MakeSlider(conditionsGroup, "Hidden opacity (unitframes/UI)", 0, 1, 0.05, "explorerFadeAlphaUnits", L, TOP - 90,
+            function() return ns.GetDB() end, function() end)
+        MakeSlider(conditionsGroup, "Hidden opacity (action bars)", 0, 1, 0.05, "explorerFadeAlphaBars", L, TOP - 114,
             function() return ns.GetDB() end, function() end)
         -- AUTOMATISMOS (2026-07-28, ExplorerAuto.lua). Los dos apagados por
-        -- defecto. El segundo NO depende del Explorer -- funciona con el
-        -- prendido o apagado -- pero vive aca porque tematicamente es una
-        -- condicion mas de "cuando esconder cosas".
-        MakeToggle(conditionsGroup, "Minimal while in housing", L, TOP - 132,
+        -- defecto. (2026-08-03: el segundo ahora TAMBIEN depende del master
+        -- switch del Explorer, como todo lo demas de este panel -- antes
+        -- funcionaba con Explorer prendido o apagado a proposito, cambiado
+        -- por pedido explicito del usuario.)
+        MakeToggle(conditionsGroup, "Minimal while in housing", L, TOP - 156,
             function() return ns.GetDB().explorerHousingMinimal end,
             function(v)
                 ns.GetDB().explorerHousingMinimal = v
                 if ns.UpdateExplorerHousing then ns.UpdateExplorerHousing() end
             end)
-        MakeToggle(conditionsGroup, "Hide other bars when bar 1 is replaced", L, TOP - 156,
+        MakeToggle(conditionsGroup, "Hide other bars when bar 1 is replaced", L, TOP - 180,
             function() return ns.GetDB().explorerHideBarsOnReplace end,
             function(v)
                 ns.GetDB().explorerHideBarsOnReplace = v
@@ -4549,7 +4561,7 @@ local function BuildPanel()
         -- Apagado por defecto A PROPOSITO, con el motivo en el tooltip: las
         -- formas de druida usan bonusbar, asi que encenderlo deja a un feral en
         -- forma con TODAS las barras escondidas de forma permanente.
-        local bonusBtn = MakeToggle(conditionsGroup, "...also count bonus bars", L, TOP - 180,
+        local bonusBtn = MakeToggle(conditionsGroup, "...also count bonus bars", L, TOP - 204,
             function() return ns.GetDB().explorerReplaceBonusBar end,
             function(v)
                 ns.GetDB().explorerReplaceBonusBar = v
@@ -4567,7 +4579,7 @@ local function BuildPanel()
         end)
         bonusBtn:HookScript("OnLeave", function() if not GameTooltip:IsForbidden() then GameTooltip:Hide() end end)
         local autoNote = conditionsGroup:CreateFontString(nil, "ARTWORK"); setFont(autoNote, 10)
-        autoNote:SetPoint("TOPLEFT", L, TOP - 204); autoNote:SetWidth(210); autoNote:SetJustifyH("LEFT")
+        autoNote:SetPoint("TOPLEFT", L, TOP - 228); autoNote:SetWidth(210); autoNote:SetJustifyH("LEFT")
         autoNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         autoNote:SetText("Housing restores your previous setup on the way out. Bar hiding works whether Explorer is on or off, and mouseover still reveals.")
         -- Filtro por TIPO DE CONTENIDO: donde el Explorer esta activo (B1b).
@@ -4603,8 +4615,8 @@ local function BuildPanel()
         -- columna mas BAJA de las dos, asi que agregar cosas a cualquiera de las
         -- dos la reacomoda sola.
         local zonesBottom = TOP - 22 - (#ZONES - 1) * 24 - 24
-        -- autoNote arranca en TOP-180 y ocupa ~2 lineas a 210 de ancho.
-        local leftBottom = TOP - 204 - 34
+        -- autoNote arranca en TOP-228 y ocupa ~2 lineas a 210 de ancho.
+        local leftBottom = TOP - 228 - 34
         zonesBottom = math.min(zonesBottom, leftBottom)
         local condNote = conditionsGroup:CreateFontString(nil, "ARTWORK"); setFont(condNote, 10)
         condNote:SetPoint("TOPLEFT", L, zonesBottom - 10); condNote:SetWidth(430); condNote:SetJustifyH("LEFT")

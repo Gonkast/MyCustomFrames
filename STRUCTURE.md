@@ -178,11 +178,15 @@ las 6 de Arena, Quest tracker, Minimap, Top widget, Class power, Raid frames, **
 Pet/Stance/Bag/Extra Action Bar**.
 
 **Opacidad custom POR ELEMENTO:** `db.explorerElementAlpha[key]` (0..1) pisa el "Hidden opacity"
-global solo para ese key. Slider en la pestaña **Behavior** de cada unidad (donde estaba "Hide
-when mounted") + boton "Use default". Implementado con un **proxy de metatable**
-(`explorerAlphaProxy` en Options.lua): `MakeSlider` exige un `dbKey` fijo, asi que
+de GRUPO (unitframes/UI o barras) solo para ese key. Slider en la pestaña **Behavior** de cada
+unidad (donde estaba "Hide when mounted") + boton "Use default". Implementado con un **proxy de
+metatable** (`explorerAlphaProxy` en Options.lua): `MakeSlider` exige un `dbKey` fijo, asi que
 `__index`/`__newindex` redirigen a `db.explorerElementAlpha[ns.currentEdit]` (la unidad en
-edicion, que cambia en vivo), con fallback a `explorerFadeAlpha` si no hay override.
+edicion, que cambia en vivo), con fallback a `explorerFadeAlphaUnits`/`explorerFadeAlphaBars`
+(segun `key:sub(1,6)=="BT4Bar"`) si no hay override. **OJO**: un override de 0 sigue siendo
+"verdadero" en Lua (`eAlpha[key] or lo`) — si alguien tiene guardado `explorerElementAlpha.player=0`
+de antes, el slider global de "Hidden opacity" para esa unidad no hace nada visible hasta que se
+use "Use default" para limpiar el override.
 
 **BT4Bar1 forzado visible** si el player esta montado o en vehiculo/override/possess:
 `ns.safeBool(IsMounted)` **or** `HasOverrideActionBar` **or** `HasVehicleActionBar` **or**
@@ -1388,9 +1392,12 @@ portrait, asi texto+highlight aparecen sobre el retrato.
 > opacidad custom por elemento, scrollbar en el menu. **Ver la seccion de la sesion 2026-07-24/25
 > al principio de este archivo** — lo de abajo es la base original, sigue vigente pero incompleta.
 
-Elementos que se atenuan (alpha→`db.explorerFadeAlpha`, default 0) y reaparecen (alpha 1) con MOUSEOVER
-o en combate. Config GLOBAL: `db.explorerEnabled` (toggle MAESTRO, default true), `db.explorer =
-{elementKey=true}` (que elementos), `db.explorerCombat` (forzar visibles en combate), `db.explorerFadeAlpha`.
+Elementos que se atenuan (alpha→`db.explorerFadeAlphaUnits`/`db.explorerFadeAlphaBars` segun el grupo,
+default 0 los dos) y reaparecen (alpha 1) con MOUSEOVER o en combate. **Split 2026-08-03**: antes era UN
+solo `db.explorerFadeAlpha` global para todo; ahora hay un default por grupo (barras de Bartender4, key
+`BT4Bar*`, vs. todo lo demas = unitframes/UI), migrado automaticamente (`db._explorerFadeAlphaSplitV1`).
+Config GLOBAL: `db.explorerEnabled` (toggle MAESTRO, default true), `db.explorer = {elementKey=true}`
+(que elementos), `db.explorerCombat` (forzar visibles en combate).
 `GetElementFrame(key)` mapea key→frame raiz (units.button/portraits.root/micromenu/infobar.root/auras.root).
 **El fade corre POR FRAME** en `explorerDriver` (frame con OnUpdate) con suavizado EXPONENCIAL
 independiente del framerate (half-life ~60ms al revelar, ~200ms al ocultar) — el lerp del ticker 0.1s

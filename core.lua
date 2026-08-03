@@ -1802,7 +1802,8 @@ local GLOBAL_FLAT_KEYS = {
     "hideEditOutline", "groupMoveParty", "groupMoveBoss", "mouselook", "hideBlizzard",
     "dcFix", "gridShow", "gridSnap", "snapElements",
     "previewSecureButton", "fadeIn", "fadeDuration",
-    "explorerEnabled", "explorerCombat", "explorerTarget", "explorerCasting", "explorerFadeAlpha",
+    "explorerEnabled", "explorerCombat", "explorerTarget", "explorerCasting",
+    "explorerFadeAlphaUnits", "explorerFadeAlphaBars",
     "partyAuraDirection", "partyAuraIconSize", "arenaAuraDirection", "arenaAuraIconSize",
     "focusAuraDirection", "focusAuraIconSize",
     "playerAuraDirection", "playerAuraIconSize", "targetAuraDirection", "targetAuraIconSize",
@@ -2263,7 +2264,18 @@ local function InitDB()
             if z[k] == nil then z[k] = true end
         end
     end
-    if db.explorerFadeAlpha == nil then db.explorerFadeAlpha = 0 end -- opacidad al ocultarse
+    -- Split (2026-08-03, "opacidad para unitframe/ui elementos y otra para
+    -- las barras de bartender4"): antes UNA sola opacidad global para todo.
+    -- Migracion self-healing: el valor viejo pasa a ambas la primera vez que
+    -- corre esta version (no rompe el ajuste ya hecho por nadie).
+    if not db._explorerFadeAlphaSplitV1 then
+        local old = db.explorerFadeAlpha or 0
+        if db.explorerFadeAlphaUnits == nil then db.explorerFadeAlphaUnits = old end
+        if db.explorerFadeAlphaBars == nil then db.explorerFadeAlphaBars = old end
+        db._explorerFadeAlphaSplitV1 = true
+    end
+    if db.explorerFadeAlphaUnits == nil then db.explorerFadeAlphaUnits = 0 end
+    if db.explorerFadeAlphaBars == nil then db.explorerFadeAlphaBars = 0 end
     -- Automatismos opcionales del Explorer (ExplorerAuto.lua), APAGADOS por
     -- defecto: no deben cambiarle el UI a nadie sin que lo pida.
     if db.explorerHousingMinimal == nil then db.explorerHousingMinimal = false end

@@ -269,6 +269,11 @@ end
 function ns.ExplorerBarForceHidden(key)
     local db = DB()
     if not (db and db.explorerHideBarsOnReplace) then return false end
+    -- (2026-08-03, "estas opciones solo si esta el explorer mode on, de
+    -- ahora en adelante"): antes esto funcionaba con Explorer prendido o
+    -- apagado a proposito; el usuario pidio cambiar la politica general asi
+    -- que ahora depende del master switch como todo lo demas del Explorer.
+    if db.explorerEnabled == false then return false end
     if not IsHideable(key) then return false end
     return Bar1IsReplaced()
 end

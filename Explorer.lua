@@ -140,7 +140,12 @@ explorerDriver:Hide()
 explorerDriver:SetScript("OnUpdate", ns.Prof.Wrap("Explorer: driver", function(self, dt)
     local db = ns.GetDB()
     if not (db and db.explorer and db.explorerEnabled ~= false) or ns.IsUnlocked() then return end
-    local lo = db.explorerFadeAlpha or 0
+    -- Split (2026-08-03, "opacidad para unitframe/ui elementos y otra para
+    -- las barras de bartender4"): un default por GRUPO en vez de uno solo
+    -- global. Mismo criterio de agrupacion que GetElementFrame/
+    -- IsMouseOverElement (key:sub(1,6)=="BT4Bar" = barra de Bartender4).
+    local loUnits = db.explorerFadeAlphaUnits or 0
+    local loBars = db.explorerFadeAlphaBars or 0
     -- Factor por half-life: el alpha recorre la mitad de la distancia cada X segundos.
     local kIn  = 1 - 0.5 ^ (dt / 0.06)   -- revelar (half-life ~60ms)
     local kOut = 1 - 0.5 ^ (dt / 0.20)   -- ocultar (mas pausado)
@@ -175,6 +180,7 @@ explorerDriver:SetScript("OnUpdate", ns.Prof.Wrap("Explorer: driver", function(s
                 -- mas abajo). No hace falta condicion propia: la stance bar
                 -- sigue exactamente la misma regla que las demas.
                 local forceOverride = (key == "BT4Bar1") and self.overrideBar
+                local lo = (key:sub(1, 6) == "BT4Bar") and loBars or loUnits
                 local myLo = (eAlpha and eAlpha[key]) or lo
                 local target = (self.combat or self.showTgt or self.casting or forceOverride or IsMouseOverElement(f, key)) and 1 or myLo
                 -- "Solo ver la barra 1" (2026-07-28, ExplorerAuto.lua): cuando la
