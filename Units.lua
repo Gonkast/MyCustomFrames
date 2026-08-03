@@ -1439,6 +1439,28 @@ ns.UnitUpdateDeadCage = UnitUpdateDeadCage
 ns.UnitUpdateHighlight = UnitUpdateHighlight
 ns.ReadCastMode = ReadCastMode
 ns.UpdatePetDriver = UpdatePetDriver
+
+-- Diagnostico (2026-08-03, reportado: "la barra de pet reaparece al entrar
+-- al edit mode o /bt lock de bartender, aun sin tener pet, se va solo con el
+-- reload"): no se encontro el mecanismo por lectura estatica -- UpdatePetDriver
+-- ya se reaplica al salir de /mcf (ver Editing.lua) y las dos variantes del
+-- driver EXIGEN @pet,exists en cualquier rama. Esto vuelca el estado real en
+-- el momento exacto en que se reproduce, para no seguir adivinando a ciegas.
+SLASH_MCFPETDIAG1 = "/mcfpetdiag"
+SlashCmdList["MCFPETDIAG"] = function()
+    local u = ns.frames and ns.frames["pet"]
+    if not u then print("|cffff5555[MCF pet diag]|r no existe ns.frames.pet"); return end
+    local okShown, shown = pcall(u.button.IsShown, u.button)
+    local okProt, prot = pcall(u.button.IsProtected, u.button)
+    local okAlpha, alpha = pcall(u.button.GetAlpha, u.button)
+    print(("|cff00ff00[MCF pet diag]|r hasPet=%s  shown=%s  protected=%s  alpha=%s"):format(
+        tostring(UnitExists("pet")), okShown and tostring(shown) or "?",
+        okProt and tostring(prot) or "?", okAlpha and tostring(alpha) or "?"))
+    print(("  IsUnlocked=%s  InCombatLockdown=%s  driver=%s  needsDriver=%s"):format(
+        tostring(ns.IsUnlocked()), tostring(InCombatLockdown()), tostring(u.driver), tostring(u.needsDriver)))
+    local okInst, inInst, it = pcall(IsInInstance)
+    print(("  IsInInstance: ok=%s inInstance=%s type=%s"):format(tostring(okInst), tostring(inInst), tostring(it)))
+end
 ns.UpdatePartyDrivers = UpdatePartyDrivers
 
 -- Apaga TODOS los cast bars, para llamar al SALIR del preview (2026-07-29,

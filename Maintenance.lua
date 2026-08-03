@@ -445,6 +445,7 @@ ns.RegisterDiag("mapicons",     "Iconos y pines del minimapa", Cmd("MCFMAPICONSD
 ns.RegisterDiag("minimapbtns",  "Botones de minimapa que recogio el colector", Cmd("MCFMINIMAPBTNSLIST"))
 ns.RegisterDiag("arena",        "Deteccion de arena + que frames nativos de Blizzard siguen visibles", Cmd("MCFARENADIAG"))
 ns.RegisterDiag("classpower",   "Deteccion del recurso de clase para tu clase y spec", Cmd("MCFCLASSPOWERDIAG"))
+ns.RegisterDiag("pet",          "Estado del frame de pet (shown/driver/combat) -- para el bug de reaparece sin pet", Cmd("MCFPETDIAG"))
 ns.RegisterDiag("mirror",       "Temporizadores espejo (respiracion/fatiga)", Cmd("MCFMIRRORDIAG"))
 ns.RegisterDiag("mirrortarget", "Retrato del objetivo espejado", Cmd("MCFMIRRORTARGETDIAG"))
 ns.RegisterDiag("panel",        "Zonas muertas del mouse sobre el panel de opciones", Cmd("MCFPANELDIAG"))

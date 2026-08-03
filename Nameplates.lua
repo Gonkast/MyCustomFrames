@@ -153,7 +153,20 @@ local function ShouldHideExceptName(unit)
     if not unit then return false end
     local okP, isPlayer = pcall(UnitIsPlayer, unit)
     if not okP then return false end
-    if not isPlayer then
+    if isPlayer then
+        -- Auto-apagado SOLO PARA JUGADORES (2026-08-03, pedido del usuario:
+        -- "que se apague automaticamente para los player, en combate, o en
+        -- situaciones en las que el aliado tengan nameplate, por ejemplo en
+        -- arena"): en esos momentos importa mas ver la info completa de un
+        -- aliado real que ahorrar espacio -- las criaturas/NPCs amistosas
+        -- siguen funcionando igual que siempre, esto no las afecta.
+        if ns.tickState and ns.tickState.inCombat then return false end
+        local okInst, inInst, it = pcall(IsInInstance)
+        if okInst and not (issecretvalue and (issecretvalue(inInst) or issecretvalue(it)))
+           and inInst and it == "arena" then
+            return false
+        end
+    else
         -- NPC: excluir mascotas/totems/guardianes con dueño jugador (pedido
         -- del usuario: "pero no pets").
         local okC, playerControlled = pcall(UnitPlayerControlled, unit)

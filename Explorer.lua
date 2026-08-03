@@ -157,6 +157,25 @@ explorerDriver:SetScript("OnUpdate", ns.Prof.Wrap("Explorer: driver", function(s
                 -- VEHICULOS reales, no el caso comun de estar simplemente MONTADO (una
                 -- montura normal no dispara esas API) -- se agrego IsMounted() tambien.
                 local forceOverride = (key == "BT4Bar1") and self.overrideBar
+                -- Pedido del usuario 2026-08-03: "el stance bar debe quedarse
+                -- activo incluso si tengo el explorer mode on, al igual que
+                -- el bar 1 si es en poses overdrive" -- mismo criterio que
+                -- BT4Bar1 arriba, pero la condicion analoga para la stance
+                -- bar es "hay una forma/postura activa" (GetShapeshiftForm,
+                -- generico: formas de druida, posturas de guerrero,
+                -- sigilo de pícaro, sombra de sacerdote, etc -- todo lo que
+                -- Blizzard trata como "shapeshift form" devuelve != 0 aca).
+                -- No usa self.overrideBar (eso es especifico de vehiculo/
+                -- posesion/reemplazo de la barra 1, un concepto distinto).
+                if key == "BT4BarStanceBar" then
+                    local form = ns.safeVal(GetShapeshiftForm)
+                    -- Chequeo explicito de tipo/valor (no `~= 0`): safeVal
+                    -- devuelve nil si la API fallara, y nil ~= 0 seria true
+                    -- en Lua -- forzaria la barra visible en el peor momento
+                    -- posible (justo cuando algo salio mal), al reves de lo
+                    -- que se busca.
+                    if type(form) == "number" and form ~= 0 then forceOverride = true end
+                end
                 local myLo = (eAlpha and eAlpha[key]) or lo
                 local target = (self.combat or self.showTgt or self.casting or forceOverride or IsMouseOverElement(f, key)) and 1 or myLo
                 -- "Solo ver la barra 1" (2026-07-28, ExplorerAuto.lua): cuando la
