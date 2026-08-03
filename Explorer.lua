@@ -122,6 +122,13 @@ local function IsMouseOverElement(f, key)
     end
     return false
 end
+-- Expuesta (2026-08-03, "no quiero que oculte al 100% las demas, que las
+-- pueda ver si hago mouseover"): ExplorerAuto.lua necesita el MISMO chequeo
+-- para las barras que ESTE bucle no gestiona (Explorer apagado, o esa barra
+-- sin marcar en la lista) -- su propio ApplyBarHiding hacia un SetAlpha(0)
+-- puro, sin ninguna forma de revelarlas. Una sola implementacion, no dos
+-- copias que se puedan desincronizar.
+ns.IsMouseOverElement = IsMouseOverElement
 
 -- Fade por MOUSEOVER (`IsMouseOver` funciona sin EnableMouse = geometrico). El fade corre
 -- por FRAME (OnUpdate de explorerDriver) con suavizado EXPONENCIAL independiente del
@@ -156,26 +163,18 @@ explorerDriver:SetScript("OnUpdate", ns.Prof.Wrap("Explorer: driver", function(s
                 -- FIX previo: HasOverrideActionBar/HasVehicleActionBar solo detectan
                 -- VEHICULOS reales, no el caso comun de estar simplemente MONTADO (una
                 -- montura normal no dispara esas API) -- se agrego IsMounted() tambien.
+                -- REVERTIDO (2026-08-03, "el stance bar si se debe ocultar
+                -- con el explorer, simplemente se muestra cuando tambien se
+                -- este mostrando bar 1 con posessbar, overdrive etc o bonus
+                -- bar"): el intento anterior (forzar visible con cualquier
+                -- forma/postura activa) peleaba contra un mecanismo YA
+                -- CORRECTO que ni habia notado -- HIDE_NAMED en
+                -- ExplorerAuto.lua ya incluye "BT4BarStanceBar" en el mismo
+                -- grupo que se oculta/revela junto con BT4Bar2-10 cuando la
+                -- barra 1 esta reemplazada (ver ns.ExplorerBarForceHidden
+                -- mas abajo). No hace falta condicion propia: la stance bar
+                -- sigue exactamente la misma regla que las demas.
                 local forceOverride = (key == "BT4Bar1") and self.overrideBar
-                -- Pedido del usuario 2026-08-03: "el stance bar debe quedarse
-                -- activo incluso si tengo el explorer mode on, al igual que
-                -- el bar 1 si es en poses overdrive" -- mismo criterio que
-                -- BT4Bar1 arriba, pero la condicion analoga para la stance
-                -- bar es "hay una forma/postura activa" (GetShapeshiftForm,
-                -- generico: formas de druida, posturas de guerrero,
-                -- sigilo de pícaro, sombra de sacerdote, etc -- todo lo que
-                -- Blizzard trata como "shapeshift form" devuelve != 0 aca).
-                -- No usa self.overrideBar (eso es especifico de vehiculo/
-                -- posesion/reemplazo de la barra 1, un concepto distinto).
-                if key == "BT4BarStanceBar" then
-                    local form = ns.safeVal(GetShapeshiftForm)
-                    -- Chequeo explicito de tipo/valor (no `~= 0`): safeVal
-                    -- devuelve nil si la API fallara, y nil ~= 0 seria true
-                    -- en Lua -- forzaria la barra visible en el peor momento
-                    -- posible (justo cuando algo salio mal), al reves de lo
-                    -- que se busca.
-                    if type(form) == "number" and form ~= 0 then forceOverride = true end
-                end
                 local myLo = (eAlpha and eAlpha[key]) or lo
                 local target = (self.combat or self.showTgt or self.casting or forceOverride or IsMouseOverElement(f, key)) and 1 or myLo
                 -- "Solo ver la barra 1" (2026-07-28, ExplorerAuto.lua): cuando la

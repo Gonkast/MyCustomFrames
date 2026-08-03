@@ -290,12 +290,26 @@ local function ApplyBarHiding()
         local bar = _G[key]
         if bar and not (explorerOwns and explorerOwns[key]) then
             local hide = ns.ExplorerBarForceHidden(key)
+            -- FIX (2026-08-03, "no quiero que oculte al 100% las demas, que
+            -- las pueda ver si hago mouseover"): esta rama corre cuando
+            -- Explorer no gestiona la barra (apagado, o esa barra sin
+            -- marcar en su lista) -- a diferencia del bucle de Explorer.lua,
+            -- que SI respeta el mouseover para este mismo caso, esto hacia
+            -- un SetAlpha(0) puro sin ninguna forma de revelarla. Mismo
+            -- chequeo (ns.IsMouseOverElement, expuesto por Explorer.lua)
+            -- gana sobre el ocultado forzado, igual que alla.
+            if hide and ns.IsMouseOverElement and ns.IsMouseOverElement(bar, key) then
+                hide = false
+            end
             if hide then
                 touched[key] = true
                 bar:SetAlpha(0)
             elseif touched[key] then
-                -- Solo se restaura lo que ESTA funcion escondio. Si el alpha lo
-                -- puso otro (Explorer, Bartender4), no se pisa.
+                -- Cubre TANTO "bar1 dejo de estar reemplazada" como "sigue
+                -- reemplazada pero ahora hay mouseover" (el chequeo de
+                -- arriba baja `hide` a false en ese caso) -- en los dos,
+                -- esta funcion fue quien la escondio la pasada anterior
+                -- (touched[key]=true), asi que le toca revelarla.
                 touched[key] = nil
                 bar:SetAlpha(1)
             end
