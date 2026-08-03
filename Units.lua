@@ -1324,9 +1324,15 @@ end
 
 for _, def in ipairs(ns.UNITS) do CreateUnit(def) end
 
+-- SIMPLIFICADO (2026-08-03, "el unitframe del pet tiene que aparecer aunque
+-- no tenga target"): antes, fuera de instancia, exigia combate O target
+-- ademas de que el pet existiera -- parado en el mundo con el pet afuera,
+-- sin pelear y sin nada targeteado, el frame se ocultaba. Ahora la unica
+-- condicion, dentro o fuera de instancia, es que el pet exista -- igual
+-- criterio que ya tenian los demas frames "siempre visibles si existis"
+-- de este addon (player, por ejemplo).
 local function PetDriverString()
-    if ns.safeBool(IsInInstance) then return "[@pet,exists] show; hide" end
-    return "[@pet,exists,combat] show; [@pet,exists,@target,exists] show; hide"
+    return "[@pet,exists] show; hide"
 end
 
 local function UpdatePetDriver()

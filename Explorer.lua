@@ -182,8 +182,10 @@ explorerDriver:SetScript("OnUpdate", ns.Prof.Wrap("Explorer: driver", function(s
                 -- barra 1 esta REEMPLAZADA (vehiculo/override/possess) y la opcion
                 -- esta puesta, las BT4Bar2-10 se ocultan del todo. Va DESPUES de
                 -- calcular `target` y lo pisa a proposito: tiene que ganarle a
-                -- combate, target, casteo y hover, que si no la volverian a
-                -- revelar. Alpha 0 y no `myLo` porque el pedido es no verlas.
+                -- combate, target y casteo -- el mouseover SIGUE revelandolas
+                -- (confirmado 2026-08-03, ver el bloque de abajo), no se ocultan
+                -- por completo. Alpha 0 y no `myLo` porque el pedido es no verlas
+                -- sin querer, no impedir verlas del todo.
                 --
                 -- La condicion vive en ExplorerAuto y NO usa IsMounted -- a
                 -- diferencia de `overrideBar` de arriba, que si lo usa porque su
