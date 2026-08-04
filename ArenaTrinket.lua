@@ -54,15 +54,20 @@ local function ScanUnit(unit)
         -- SECRETO en este cliente -- usarlo directo como indice de
         -- TRINKET_SPELLS[...] tira ese error. El lookup en si (no solo la
         -- lectura del campo) tiene que ir envuelto en pcall.
-        local sid = data.spellId
+        -- 12.1.0 prep: ahora TAMBIEN la lectura de data.spellId puede tirar
+        -- (auras completamente secretas en combate/arena/mythic+/PvP) --
+        -- antes solo se protegia el uso como indice, no la lectura en si.
+        local okSid, sid = pcall(function() return data.spellId end)
+        if not okSid then break end
         local dur
         if sid then
             local ok2, res = pcall(function() return TRINKET_SPELLS[sid] end)
             if ok2 then dur = res end
         end
-        if dur and data.auraInstanceID then
-            stillThere[data.auraInstanceID] = true
-            if not seen[data.auraInstanceID] then
+        local okInst, instanceID = pcall(function() return data.auraInstanceID end)
+        if dur and okInst and instanceID then
+            stillThere[instanceID] = true
+            if not seen[instanceID] then
                 -- Aparicion NUEVA de la aura -> el enemigo acaba de usar el trinket.
                 ns.ArenaTrinketState[unit] = { start = GetTime(), duration = dur }
                 if ns.RefreshArenaTrinketIcon then ns.RefreshArenaTrinketIcon(unit) end

@@ -2238,8 +2238,17 @@ local function BuildPanel()
     -- esa restriccion ya no aplica -- estas 3 pestañas se dejan como estan
     -- porque agrupan bien por tema, no porque haga falta. Una seccion larga
     -- ahora es una decision de diseño, no un limite tecnico.
-    local nameplatesSecList = { { key = "np_general", label = "Gen" }, { key = "np_alpha", label = "Alpha" },
-        { key = "np_scale", label = "Scale" }, { key = "np_names", label = "Names" } }
+    -- Tab "Friendly" agregada 2026-08-03 (pedido del usuario: nameonly/
+    -- healthbar/NPCs/class-color para NameplatesNext.lua, ver Section
+    -- "np_friendly" mas abajo).
+    -- REORGANIZADO (2026-08-04, "reorganiza el menu de nameplates"): "Gen"
+    -- (Range, 1 solo slider) y "Scale" (2 sliders) eran pestañas casi
+    -- vacias -- se fusionan en 1 sola "General" (ver Section "np_general"
+    -- mas abajo, ahora con las 2 secciones adentro). 5 pestañas -> 4, mas
+    -- parejo con el contenido real de cada una.
+    local nameplatesSecList = { { key = "np_general", label = "General" }, { key = "np_alpha", label = "Alpha" },
+        { key = "np_friendly", label = "Friendly" },
+        { key = "np_auras", label = "Auras" } }
     BuildTabRow(nameplatesSecList, 40, true)
 
     -- Pestanas de SECCION para Party Auras (singleton, 1 sola pestaña "Gen" — igual patron que
@@ -3638,101 +3647,48 @@ local function BuildPanel()
         note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         note:SetText("Only the whole grid moves as one in Lock mode — individual members are positioned by the grid itself, not draggable one by one.")
     end
-    -- Nameplates / General. 2026-07-18 (pedido del usuario): TODO el control
-    -- de posicion/tamaño (offsets, font size, width/height, icon size) vive
-    -- ahora EXCLUSIVAMENTE en el Nameplate Designer (drag + rueda) -- los
-    -- sliders equivalentes que habia aca se sacaron. Este menu de texto solo
-    -- conserva lo que el Designer NO cubre: on/off, distancia/fade (CVars
-    -- nativos), y colores (pestaña Colors).
+    -- Nameplates / General. LIMPIADO (2026-08-03, "quita las opciones del
+    -- menu en nameplates que no funcionen con lo nuevo"): "Enabled" no
+    -- gatea nada en NameplatesNext.lua (el sistema de 12.1.0 corre
+    -- incondicional, solo lee ns.IsMidnightNext a nivel de archivo), "Reset
+    -- nameplates" dependia de ns.NameplateDefaults (vive en Nameplates.lua,
+    -- deshabilitado -- el fallback queda roto) y "Open Nameplate Designer"
+    -- apuntaba a NameplateDesigner.lua (tambien deshabilitado, el boton no
+    -- hacia nada al click). Los 3 se sacan -- solo queda lo que SI aplica:
+    -- distancia (CVar nativo, ver RefreshNameplateStyle en NameplatesNext.lua).
     do
         local f = Section("np_general")
-
-        -- Grupo 1: on/off + accesos rapidos (reorganizado 2026-07-19, pedido
-        -- del usuario "organice un poco el menu de nameplates").
-        MakeHeader(f, "General", L, -6, 430)
-        MakeCheckbox(f, "Enabled", "enabled", L, -30)
-        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
-        note:SetPoint("TOPLEFT", L, -54); note:SetWidth(430); note:SetJustifyH("LEFT")
-        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        -- Acortado 2026-07-19 (pedido del usuario: "aun siento que hay mucho
-        -- texto, intenta resumirlo").
-        note:SetText("Reskins Blizzard's nameplates to match this preset. Position/size are set in the Nameplate Designer, not here.")
-        local resetBtn = MakeButton(f, "Reset nameplates", 200, 22)
-        resetBtn:SetPoint("TOPLEFT", L, -84)
-        -- Mismo botón, misma fuente que "Reset All" (2026-07-29): ver el
-        -- comentario largo en ns.ResetNameplatesFromDefault (core.lua).
-        resetBtn:SetScript("OnClick", function() if ns.ResetNameplatesFromDefault then ns.ResetNameplatesFromDefault() end end)
-
-        -- Canvas de diseño (drag + rueda) -- ver NameplateDesigner.lua. TODO
-        -- el control de posicion/tamaño vive aca, no en sliders de texto.
-        -- SetActive(true) (pedido del usuario: "que resalte mas") -- mismo
-        -- estilo dorado que StyleButton ya usa para botones "activos", asi
-        -- se distingue de Reset como la accion PRINCIPAL de esta pagina.
-        local designBtn = MakeButton(f, "Open Nameplate Designer", 200, 24)
-        designBtn:SetPoint("TOPLEFT", R, -83)
-        designBtn:SetActive(true)
-        -- Pedido del usuario 2026-07-19: "quiero que cuando abras el panel del
-        -- nameplate, se cierre el menu" -- antes quedaban superpuestos.
-        designBtn:SetScript("OnClick", function()
-            if ns.ToggleNameplateDesigner then ns.ToggleNameplateDesigner() end
-            if ns.CloseMainPanel then ns.CloseMainPanel() end
-        end)
-
-        -- Grupo 2: rango (CVar nativo de Blizzard).
-        MakeHeader(f, "Range", L, -126, 430)
-        MakeSlider(f, "Max distance", 10, 60, 1, "maxDistance", L, -176)
+        MakeHeader(f, "Range", L, -6, 430)
+        MakeSlider(f, "Max distance", 10, 60, 1, "maxDistance", L, -56)
         local distNote = f:CreateFontString(nil, "ARTWORK"); setFont(distNote, 10)
-        distNote:SetPoint("TOPLEFT", L, -220); distNote:SetWidth(210); distNote:SetJustifyH("LEFT")
+        distNote:SetPoint("TOPLEFT", L, -100); distNote:SetWidth(430); distNote:SetJustifyH("LEFT")
         distNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         distNote:SetText("How far away nameplates render.")
+
+        -- ESCALA -- fusionada aca (2026-08-04, "reorganiza el menu de
+        -- nameplates") -- antes tenia su PROPIA pestaña ("Scale", pedido
+        -- 2026-07-28: "no junto al alpha") con solo 2 sliders, quedando
+        -- muy delgada al lado de las demas. Sigue siendo CVars NATIVOS que
+        -- escalan el nameplate entero por encima de todo, sin tocar un
+        -- solo offset del perfil -- el Designer sigue trabajando en sus
+        -- propias unidades y no se entera de esto, solo cambio de pestaña.
+        MakeHeader(f, "Scale", L, -140, 430)
+        MakeSlider(f, "Global scale", 0.5, 2, 0.05, "globalScale", L, -190)
+        MakeSlider(f, "Target scale", 0.5, 2, 0.05, "selectedScale", R, -190)
+        local scaleNote = f:CreateFontString(nil, "ARTWORK"); setFont(scaleNote, 10)
+        scaleNote:SetPoint("TOPLEFT", L, -234); scaleNote:SetWidth(430); scaleNote:SetJustifyH("LEFT")
+        scaleNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        scaleNote:SetText("Global size of every nameplate, and how much bigger your current target is than the rest (1.20 = 20% larger).")
     end
 
-    -- Reacomodado (2026-07-27, pedido del usuario: "reacomoda el menu de nameplates"
-    -- -- el ultimo checkbox de "Gen" quedaba pisado por la fila de botones de abajo,
-    -- el panel no tiene scroll). "Name-only mode" + "Enemy player class colors" (los
-    -- 2 grupos mas largos, ambos sobre COLOR/VISIBILIDAD del nombre) se mudan a su
-    -- propia pestaña -- "Gen" queda corto (General + Range nomas).
-    do
-        local f = Section("np_names")
-
-        -- Modo "solo nombre" para jugadores + NPCs amistosos (sin pets).
-        MakeHeader(f, "Name-only mode (friendly)", L, -6, 430)
-        -- CAMBIADO (2026-07-19): jugadores amistosos (nombre con color de
-        -- CLASE) + NPCs amistosos como vendedores/guardias (nombre con el
-        -- color preestablecido del perfil) -- excluye mascotas/totems/
-        -- guardianes con dueño jugador. El campo interno sigue llamandose
-        -- nameOnlyFriendlyNeutral, no vale la pena migrarlo. Ver
-        -- ShouldHideExceptName/ReassertNameGeometry en Nameplates.lua.
-        -- FIX (2026-07-20, reportado por el usuario con captura: el texto largo de este
-        -- checkbox se pisaba con el de al lado en la columna R -- L/R estan pensados para
-        -- labels cortos, "Only show name on friendly players/NPCs" es demasiado largo para
-        -- 226px de columna). Apilados en la misma columna (L) en vez de lado a lado.
-        MakeCheckbox(f, "Only show name on friendly players/NPCs", "nameOnlyFriendlyNeutral", L, -30)
-        -- Pedido del usuario 2026-08-03: "una opcion abajo de este para
-        -- toglear si quiero que este efecto haga tambien en el pet" -- off
-        -- por default, el pet queda excluido igual que siempre.
-        MakeCheckbox(f, "Include pets", "nameOnlyIncludePet", L, -54)
-        -- Pedido del usuario 2026-07-19: solo nombre para NPCs de escolta/
-        -- mision EN DUNGEON, via CVars nativos (funciona incluso en
-        -- ForbiddenNamePlate, confirmado en vivo -- ver ApplyMaxDistanceNow
-        -- en Nameplates.lua). Independiente del checkbox de arriba.
-        MakeCheckbox(f, "Dungeon escort NPCs (native)", "showFriendlyNPCPlates", L, -78)
-        local onlyNameNote = f:CreateFontString(nil, "ARTWORK"); setFont(onlyNameNote, 10)
-        onlyNameNote:SetPoint("TOPLEFT", L, -102); onlyNameNote:SetWidth(430); onlyNameNote:SetJustifyH("LEFT")
-        onlyNameNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        onlyNameNote:SetText("Players: colored by class. NPCs (vendors, guards, etc): preset color. Excludes hostiles (and pets, unless \"Include pets\" is on).")
-
-        -- Offset PROPIO del modo de arriba (pedido del usuario): sin la barra
-        -- visible, la posicion normal del nombre puede no quedar bien.
-        MakeSlider(f, "Offset X", -100, 100, 1, "nameOnlyOffsetX", L, -152)
-        MakeSlider(f, "Offset Y", -100, 100, 1, "nameOnlyOffsetY", R, -152)
-
-        -- Toggle QUITADO (2026-08-03, "los player enemigos ahora mismo tienen
-        -- el color de clase... hace que sea confuso en arena, quita la
-        -- opcion"): un jugador hostil real ahora SIEMPRE sale en rojo plano
-        -- (ver HOSTILE_PLAYER_COLOR en Nameplates.lua) -- ya no es opcional,
-        -- nada que exponer aca.
-    end
+    -- Pestaña "Names" ELIMINADA (2026-08-03, "quita las opciones del menu en
+    -- nameplates que no funcionen con lo nuevo"): los 4 controles que tenia
+    -- (nameOnlyFriendlyNeutral, nameOnlyIncludePet, showFriendlyNPCPlates,
+    -- nameOnlyOffsetX/Y) pertenecian al sistema de "name-only" del
+    -- Nameplates.lua VIEJO (deshabilitado) -- NameplatesNext.lua no lee
+    -- ninguno de esos campos, tiene su PROPIO sistema equivalente y mas
+    -- granular en la pestaña "Friendly" (3 categorias independientes:
+    -- Players/NPCs/Pets, cada una con su modo nameonly/healthbar/off).
 
     -- Nueva pestaña "Alpha" (2026-07-19, pedido del usuario): 5 controles
     -- nativos de Blizzard (CVars) para la opacidad segun estado -- separados
@@ -3752,7 +3708,7 @@ local function BuildPanel()
         local minMaxNote = f:CreateFontString(nil, "ARTWORK"); setFont(minMaxNote, 10)
         minMaxNote:SetPoint("TOPLEFT", L, -124); minMaxNote:SetWidth(430); minMaxNote:SetJustifyH("LEFT")
         minMaxNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        minMaxNote:SetText("Opacity range across the max distance (see Gen tab).")
+        minMaxNote:SetText("Opacity range across the max distance (see General tab).")
 
         MakeSlider(f, "Non-selected alpha", 0, 1, 0.05, "alphaNotSelected", L, -174)
         MakeSlider(f, "Target alpha", 0, 1, 0.05, "alphaTarget", R, -174)
@@ -3766,27 +3722,193 @@ local function BuildPanel()
         occNote:SetPoint("TOPLEFT", L, -312); occNote:SetWidth(430); occNote:SetJustifyH("LEFT")
         occNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         occNote:SetText("Opacity when the plate is behind walls/objects.")
+
+        -- Pedido del usuario 2026-08-03: "que no se muestren los occluded
+        -- nameplates cuando tengo un target -- esto pasa tambien sin addon,
+        -- debe ser algo de cvars". Nativo (nameplateOccludedAlphaMult),
+        -- reevaluado en vivo en cada PLAYER_TARGET_CHANGED -- ver
+        -- EffectiveOccludedAlpha en NameplatesNext.lua.
+        MakeCheckbox(f, "Hide occluded plates while targeting", "hideOccludedWithTarget", L, -344)
+        local hideNote = f:CreateFontString(nil, "ARTWORK"); setFont(hideNote, 10)
+        hideNote:SetPoint("TOPLEFT", L, -368); hideNote:SetWidth(430); hideNote:SetJustifyH("LEFT")
+        hideNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        hideNote:SetText("Only while you have a target selected: plates behind walls/objects vanish instead of using the Occluded alpha above. No target = normal behavior.")
     end
 
-    -- ESCALA -- seccion PROPIA (2026-07-28, pedido del usuario: "no junto al
-    -- alpha, pueden tener su propia seccion"). Va aca y NO en el Designer a
-    -- proposito: son CVars NATIVOS que escalan el nameplate entero por encima de
-    -- todo, sin tocar un solo offset del perfil. El Designer sigue trabajando en
-    -- sus propias unidades y no se entera de esto.
+
+    -- Nameplates / Friendly (2026-08-03, pedido del usuario: "separarlo de
+    -- jugador aliado, npc aliado, y pet, para que tengan el nombre" -- 3
+    -- categorias INDEPENDIENTES, cada una con su propio modo: off (plate
+    -- nativo de Blizzard intacto), nameonly (solo el nombre, sin barra --
+    -- el "para que tengan el nombre" del pedido), healthbar (plate propio
+    -- completo, igual que un hostil). UnitCategory en NameplatesNext.lua
+    -- separa jugador/pet/npc via UnitIsPlayer + UnitPlayerControlled.
     do
-        local f = Section("np_scale")
-        MakeHeader(f, "Scale", L, -6, 430)
+        local f = Section("np_friendly")
+        MakeHeader(f, "Friendly nameplates", L, -6, 430)
+        local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
+        note:SetPoint("TOPLEFT", L, -30); note:SetWidth(430); note:SetJustifyH("LEFT")
+        note:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        note:SetText("Off: that category keeps Blizzard's native plate untouched. Name only: just the floating name, no bar/cast. Health bar: full custom plate, same as hostiles.")
+
+        MakeCycle(f, "Players", { "nameonly", "healthbar", "off" }, "friendlyPlayerMode", L, -66)
+        MakeCycle(f, "NPCs (vendors, guards, etc)", { "nameonly", "healthbar", "off" }, "friendlyNPCMode", L, -100)
+        MakeCycle(f, "Pets/guardians/totems", { "nameonly", "healthbar", "off" }, "friendlyPetMode", L, -134)
+
+        MakeCheckbox(f, "Class color (players)", "friendlyClassColor", L, -178)
+        local ccNote = f:CreateFontString(nil, "ARTWORK"); setFont(ccNote, 10)
+        ccNote:SetPoint("TOPLEFT", L, -202); ccNote:SetWidth(430); ccNote:SetJustifyH("LEFT")
+        ccNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        ccNote:SetText("Friendly players colored by class instead of plain white/green. NPCs and pets unaffected.")
+
+        -- Pedido del usuario 2026-08-03: "ya se que en dungeon o raid se
+        -- desactive automaticamente friendly npc nameplates y cuando salga
+        -- se active de nuevo... que incluya tambien el de minions". Se
+        -- probo despues bajar el alpha de la barra nativa directamente
+        -- (uf.HealthBarsContainer.healthBar:SetAlpha(0)) -- CONFIRMADO
+        -- ROTO con /mcfautoalphadiag en vivo: hasta GetAlpha (una simple
+        -- LECTURA) falla en un ForbiddenNamePlate real, y SetAlpha(0)
+        -- explicito tambien fallo en las 6 plates probadas. Blizzard
+        -- bloquea TODA llamada a metodo -- getter o setter -- sobre esos
+        -- widgets, sin excepcion (mismo limite que ya rompio SetShowOnlyName
+        -- con pcall y con securecall). Alcance final, el unico lograble:
+        -- categorias NPC y Pet/minion pasan a "off" (plate nativo COMPLETO,
+        -- barra + nombre, sin nuestro skin) mientras estas en instancia, y
+        -- vuelven a tu configuracion normal al salir.
+        MakeCheckbox(f, "Auto-disable NPC/pet (minion) nameplate styling in dungeons & raids", "friendlyAutoDisableNPCsInInstance", L, -226)
+        local autoNote = f:CreateFontString(nil, "ARTWORK"); setFont(autoNote, 10)
+        autoNote:SetPoint("TOPLEFT", L, -250); autoNote:SetWidth(430); autoNote:SetJustifyH("LEFT")
+        autoNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        autoNote:SetText("Switches NPCs/Pets modes above to \"off\" while in a dungeon/raid (native Blizzard plate, unstyled) and restores them on exit. Can't hide/fade the native bar itself -- Blizzard blocks addons from touching it at all. Doesn't apply to friendly players.")
+
+        -- Pedido del usuario 2026-08-03: "en dungeon o raid, los nameplates
+        -- de los npc aliados y del pet sean solo nombre". ABANDONADO
+        -- DEFINITIVAMENTE para NPCs/pets tras 2 tecnicas distintas
+        -- confirmadas rotas en vivo (pcall Y securecall, ver el comentario
+        -- largo en NameplatesNext.lua) -- SetShowOnlyName internamente
+        -- llama Hide()/SetShown() sobre sus hijos, y Blizzard BLOQUEA esas
+        -- llamadas en cualquier ForbiddenNamePlate sin importar la tecnica
+        -- de invocacion. Es un limite de seguridad intencional de
+        -- Blizzard, no arreglable desde un addon. Alcance final: SOLO
+        -- jugadores amistosos (tienen su propio CVar nativo, que si esta
+        -- pensado para que un addon lo toque) + tamaño de fuente.
+        MakeCheckbox(f, "Native name-only for friendly players in dungeons & raids", "friendlyInstanceNameOnly", L, -294)
+        local instNote = f:CreateFontString(nil, "ARTWORK"); setFont(instNote, 10)
+        instNote:SetPoint("TOPLEFT", L, -318); instNote:SetWidth(430); instNote:SetJustifyH("LEFT")
+        instNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        instNote:SetText("CVar-only, crash-safe. Doesn't apply to NPCs/pets -- Blizzard blocks addons from hiding parts of their protected instance plates, no workaround exists. Those keep the Players/NPCs/Pets modes above.")
+
+        MakeSlider(f, "Name size", 8, 24, 1, "friendlyInstanceNameOnlySize", L, -362)
+    end
+
+    -- Nameplates / Auras (2026-08-03, pedido del usuario: "poder moverlos x y
+    -- offset"). Los 3 grupos de NameplateAurasNext.lua (cc/personal/enemy)
+    -- comparten las MISMAS claves de posicion que ya existian en
+    -- NameplateLayout.lua (L.AURA_GROUP_OFFSET_KEYS/L.AURA_GROUP_DIRECTION_KEYS
+    -- -- "big"/"personal"/"enemy", "cc" hereda el anclaje de "big", ver
+    -- ANCHOR_KEY en NameplateAurasNext.lua) -- este panel no inventa nada
+    -- nuevo, solo expone lo que ReassertGeometry ya lee de db.nameplates.
+    do
+        local f = Section("np_auras")
+        MakeHeader(f, "Aura groups", L, -6, 430)
         local intro = f:CreateFontString(nil, "ARTWORK"); setFont(intro, 10)
         intro:SetPoint("TOPLEFT", L, -30); intro:SetWidth(430); intro:SetJustifyH("LEFT")
         intro:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        intro:SetText("Native Blizzard nameplate scale CVars. They resize the whole plate -- bar, name and auras together -- and do not touch anything you set in the Nameplate Designer.")
+        intro:SetText("Direction sets the side that stays fixed while the row grows; offsets nudge it from there.")
 
-        MakeSlider(f, "Global scale", 0.5, 2, 0.05, "globalScale", L, -80)
-        MakeSlider(f, "Target scale", 0.5, 2, 0.05, "selectedScale", R, -80)
-        local scaleNote = f:CreateFontString(nil, "ARTWORK"); setFont(scaleNote, 10)
-        scaleNote:SetPoint("TOPLEFT", L, -124); scaleNote:SetWidth(430); scaleNote:SetJustifyH("LEFT")
-        scaleNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
-        scaleNote:SetText("Global size of every nameplate, and how much bigger your current target is than the rest (1.20 = 20% larger).")
+        MakeHeader(f, "Crowd control", L, -66, 430)
+        MakeCycle(f, "Direction", { "right", "left", "center" }, "bigDebuffDirection", L, -90)
+        MakeSlider(f, "Offset X", -100, 100, 1, "bigDebuffOffsetX", L, -134)
+        MakeSlider(f, "Offset Y", -100, 100, 1, "bigDebuffOffsetY", R, -134)
+
+        MakeHeader(f, "Personal debuffs", L, -182, 430)
+        MakeCycle(f, "Direction", { "right", "left", "center" }, "personalDebuffsDirection", L, -206)
+        MakeSlider(f, "Offset X", -100, 100, 1, "personalDebuffsOffsetX", L, -250)
+        MakeSlider(f, "Offset Y", -100, 100, 1, "personalDebuffsOffsetY", R, -250)
+
+        -- Renombrado (2026-08-05, filtro real cambio con la migracion a
+        -- AuraContainer): antes mostraba TODOS los buffs visibles en la
+        -- nameplate (HELPFUL|INCLUDE_NAME_PLATE_ONLY); el sistema nuevo
+        -- (NameplateAurasNext.lua, criterio EllesmereUI) solo muestra los
+        -- ROBABLES (candidateFilters.isStealable) -- un set mucho mas chico,
+        -- el nombre viejo confundia sobre que iba a aparecer ahi.
+        MakeHeader(f, "Enemy buffs (stealable only)", L, -298, 430)
+        MakeCycle(f, "Direction", { "right", "left", "center" }, "enemyBuffsDirection", L, -322)
+        MakeSlider(f, "Offset X", -100, 100, 1, "enemyBuffsOffsetX", L, -366)
+        MakeSlider(f, "Offset Y", -100, 100, 1, "enemyBuffsOffsetY", R, -366)
+    end
+
+    -- =========================== COPIAR SETTINGS ENTRE GRUPOS DE AURAS (2026-08-04) ===========================
+    -- Pedido del usuario: "agrega que pueda copiar las opciones de player a
+    -- target o a las demas... para no tener que poner los datos manualmente
+    -- en todos". Los 5 grupos (party/arena/focus/player/target) ya guardan
+    -- TODO en relacion a su PROPIO carrier (offsets, direccion, growth --
+    -- ver AuraHoverPreview.lua: carrier se ancla a u.button de CADA unidad,
+    -- y los offsets son un nudge ENCIMA de eso) -- por eso copiar los
+    -- valores CRUDOS entre grupos ya da "la misma posicion relativa a su
+    -- propio unitframe" sin ninguna conversion: no hace falta saber donde
+    -- esta cada frame en pantalla, el sistema ya es relativo por diseño.
+    local AURA_COPY_FIELDS = {
+        "Direction", "IconSize", "MaxIcons", "Padding", "Growth",
+        "OffsetX", "OffsetY", "GroupPadding", "ShowDebuffs", "ShowBuffs",
+    }
+    local AURA_GROUP_IDS = { "party", "arena", "focus", "player", "target" }
+    local AURA_GROUP_LABELS = { party = "Party", arena = "Arena", focus = "Focus", player = "Player", target = "Target" }
+    local AURA_REFRESH_FN = {
+        party = "RefreshPartyAuraDirection", arena = "RefreshArenaAuraDirection",
+        focus = "RefreshFocusAuraDirection", player = "RefreshPlayerAuraDirection",
+        target = "RefreshTargetAuraDirection",
+    }
+    local function CopyAuraGroupSettings(fromId, toId)
+        local d = ns.GetDB(); if not d or fromId == toId then return end
+        for _, field in ipairs(AURA_COPY_FIELDS) do
+            d[toId .. "Aura" .. field] = d[fromId .. "Aura" .. field]
+        end
+        local fn = AURA_REFRESH_FN[toId]
+        if fn and ns[fn] then ns[fn]() end
+        for _, r in ipairs(refreshers) do pcall(r) end
+    end
+    -- 1 fila reusada por las 5 secciones de abajo: boton ciclico para elegir
+    -- el grupo ORIGEN (los otros 4, nunca el propio) + boton "Copy" que
+    -- aplica CopyAuraGroupSettings(origen, ownId) de una.
+    local function AddAuraCopyRow(f, y, ownId)
+        local others = {}
+        for _, g in ipairs(AURA_GROUP_IDS) do if g ~= ownId then others[#others + 1] = g end end
+        local src = others[1]
+        MakeHeader(f, "Copy settings from another group", L, y, 430)
+        local srcBtn = MakeButton(f, "", 200, 24)
+        srcBtn:SetPoint("TOPLEFT", L, y - 24)
+        local function SrcText() srcBtn.text:SetText("From: " .. (AURA_GROUP_LABELS[src] or src)) end
+        srcBtn:SetScript("OnClick", function()
+            local idx = 1
+            for i, v in ipairs(others) do if v == src then idx = i break end end
+            src = others[(idx % #others) + 1]
+            SrcText()
+        end)
+        SrcText()
+        local applyBtn = MakeButton(f, "Copy", 100, 24)
+        applyBtn:SetPoint("TOPLEFT", R, y - 24)
+        applyBtn:SetScript("OnClick", function() CopyAuraGroupSettings(src, ownId) end)
+    end
+    -- Pedido del usuario (2026-08-04, tras copiar Player -> Target y ver
+    -- que el Offset X copiado quedaba del mismo lado en los 2 -- Player a
+    -- la izquierda de PANTALLA, Target a la derecha, pero mismo signo de
+    -- offset -- "me gustaria que comience en la derecha"): invierte el
+    -- signo del Offset X (ahora 1 solo, compartido por debuffs y buffs --
+    -- ver AuraHoverPreview.lua GetOffset) de un saque, para no escribir el
+    -- numero a mano -- 1 clic espeja horizontalmente sin tocar Y/tamaño/
+    -- direccion/growth/nada mas.
+    local function AddAuraMirrorButton(f, y, ownId)
+        local btn = MakeButton(f, "Mirror X (flip offset)", 220, 24)
+        btn:SetPoint("TOPLEFT", L, y)
+        btn:SetScript("OnClick", function()
+            local d = ns.GetDB(); if not d then return end
+            local key = ownId .. "AuraOffsetX"
+            d[key] = -(d[key] or 0)
+            local fn = AURA_REFRESH_FN[ownId]
+            if fn and ns[fn] then ns[fn]() end
+            for _, r in ipairs(refreshers) do pcall(r) end
+        end)
     end
 
     -- =========================== SECCION PARTY AURAS (TEST, 2026-07-16) ===========================
@@ -3801,15 +3923,20 @@ local function BuildPanel()
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", L, -32); note:SetWidth(430); note:SetJustifyH("LEFT")
         note:SetTextColor(0.8, 0.8, 0.8)
-        note:SetText("Applies to ALL 5 party frames at once. Shows your configured number of auras " ..
-            "(debuffs take priority, buffs fill empty slots) on mouseover, or fixed while the unit " ..
-            "is in combat. Sort/limit/padding below apply to all 5. Try /mcfpartytest to preview " ..
+        -- ACTUALIZADO (2026-08-03, "opciones desactualizadas"): migrado a
+        -- AuraContainer nativo (Blizzard dibuja los iconos, nunca se
+        -- bloquea en combate) -- ya no hay "sort" que elegir, el motor
+        -- ordena solo. Debuffs y buffs son 2 grupos separados ahora
+        -- (posicionables independiente).
+        note:SetText("Applies to ALL 5 party frames at once. Debuffs and buffs are separate groups " ..
+            "(Blizzard draws the icons -- never blocked in combat). Try /mcfpartytest to preview " ..
             "without a real group.")
 
         -- Direccion: boton ciclico (no hay MakeCycle generico para valores GLOBALES, se arma a
         -- mano igual que el resto de los botones ciclicos del addon).
-        local dirBtn = MakeButton(f, "", 220, 24)
-        dirBtn:SetPoint("TOPLEFT", L, -76)
+        MakeHeader(f, "Anchor", L, -70, 430)
+        local dirBtn = MakeButton(f, "", 200, 24)
+        dirBtn:SetPoint("TOPLEFT", L, -94)
         local function DirText()
             local d = ns.GetDB() and ns.GetDB().partyAuraDirection or "left"
             dirBtn.text:SetText("Direction: " .. d)
@@ -3824,39 +3951,70 @@ local function BuildPanel()
             if ns.RefreshPartyAuraDirection then ns.RefreshPartyAuraDirection() end
         end)
         refreshers[#refreshers + 1] = DirText
+        MakePreviewButton(f, R, -94, function() return ns.TogglePartyAuraTest end)
 
-        MakeSlider(f, "Icon size", 12, 48, 1, "partyAuraIconSize", L, -120,
+        MakeHeader(f, "Icons", L, -138, 430)
+        MakeSlider(f, "Icon size", 12, 48, 1, "partyAuraIconSize", L, -162,
             function() return ns.GetDB() end,
             function() if ns.RefreshPartyAuraSize then ns.RefreshPartyAuraSize() end end)
-
-        -- Sort/limite/padding (2026-07-27, pedido del usuario: "que este en el menu option de
-        -- elegir sort, limite de buffs y debuffs o auras mostradas y el padding entre ellas").
-        local auraSortBtn = MakeButton(f, "", 220, 24)
-        auraSortBtn:SetPoint("TOPLEFT", L, -164)
-        local function SortText()
-            local d = ns.GetDB() and ns.GetDB().partyAuraSort or "priority"
-            auraSortBtn.text:SetText("Sort: " .. d)
-        end
-        auraSortBtn:SetScript("OnClick", function()
-            local list = ns.AURA_SORT_MODES or { "priority", "time", "index" }
-            local d = ns.GetDB(); if not d then return end
-            local cur, idx = d.partyAuraSort or "priority", 1
-            for i, v in ipairs(list) do if v == cur then idx = i break end end
-            d.partyAuraSort = list[(idx % #list) + 1]
-            SortText()
-            if ns.RefreshPartyAuraSort then ns.RefreshPartyAuraSort() end
-        end)
-        refreshers[#refreshers + 1] = SortText
-
-        MakeSlider(f, "Max icons shown", 1, 8, 1, "partyAuraMaxIcons", L, -208,
+        MakeSlider(f, "Max icons per group", 1, 8, 1, "partyAuraMaxIcons", R, -162,
             function() return ns.GetDB() end,
             function() if ns.RefreshPartyAuraMaxIcons then ns.RefreshPartyAuraMaxIcons() end end)
 
-        MakeSlider(f, "Icon padding", 0, 20, 1, "partyAuraPadding", L, -252,
+        MakeSlider(f, "Icon padding", 0, 20, 1, "partyAuraPadding", L, -206,
             function() return ns.GetDB() end,
             function() if ns.RefreshPartyAuraPadding then ns.RefreshPartyAuraPadding() end end)
 
-        MakePreviewButton(f, R, -164, function() return ns.TogglePartyAuraTest end)
+        -- Crecimiento (2026-08-04, "la direccion que yo digo es de donde
+        -- crecen las auras nuevas"): SEPARADO de "Direction" (arriba, de
+        -- donde sale/aparece la fila relativo al frame) -- este boton dice
+        -- hacia donde crecen los iconos DENTRO de esa fila.
+        local growBtn = MakeButton(f, "", 200, 24)
+        growBtn:SetPoint("TOPLEFT", R, -206)
+        local function GrowText()
+            local d = ns.GetDB() and ns.GetDB().partyAuraGrowth or "h-left"
+            growBtn.text:SetText("Growth: " .. d)
+        end
+        growBtn:SetScript("OnClick", function()
+            local list = ns.AURA_GROWTH_MODES or { "h-left", "h-right", "h-center", "v-up", "v-down", "v-center" }
+            local d = ns.GetDB(); if not d then return end
+            local cur, idx = d.partyAuraGrowth or "h-left", 1
+            for i, v in ipairs(list) do if v == cur then idx = i break end end
+            d.partyAuraGrowth = list[(idx % #list) + 1]
+            GrowText()
+            if ns.RefreshPartyAuraGrowth then ns.RefreshPartyAuraGrowth() end
+        end)
+        refreshers[#refreshers + 1] = GrowText
+
+        MakeHeader(f, "Content", L, -250, 430)
+        -- Toggle independiente buffs/debuffs (2026-08-04, "una opcion para
+        -- desactivar buffs o debuffs si solo quiero mostrar uno de los 2").
+        MakeToggle(f, "Show debuffs", L, -274,
+            function() local d = ns.GetDB(); return d and d.partyAuraShowDebuffs ~= false end,
+            function(v) local d = ns.GetDB(); if d then d.partyAuraShowDebuffs = v end
+                if ns.RefreshPartyAuraShowDebuffs then ns.RefreshPartyAuraShowDebuffs() end end)
+        MakeToggle(f, "Show buffs", R, -274,
+            function() local d = ns.GetDB(); return d and d.partyAuraShowBuffs ~= false end,
+            function(v) local d = ns.GetDB(); if d then d.partyAuraShowBuffs = v end
+                if ns.RefreshPartyAuraShowBuffs then ns.RefreshPartyAuraShowBuffs() end end)
+
+        -- Offset fino UNIFICADO (2026-08-03/04, "controlar x y offset" +
+        -- "unificar las posiciones"): 1 solo offset para debuffs Y buffs --
+        -- se SUMA a la posicion normal por direccion, no la reemplaza.
+        MakeHeader(f, "Position", L, -318, 430)
+        MakeSlider(f, "Offset X", -100, 100, 1, "partyAuraOffsetX", L, -342,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshPartyAuraDirection then ns.RefreshPartyAuraDirection() end end)
+        MakeSlider(f, "Offset Y", -100, 100, 1, "partyAuraOffsetY", R, -342,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshPartyAuraDirection then ns.RefreshPartyAuraDirection() end end)
+        MakeSlider(f, "Group padding (debuffs <-> buffs gap)", 0, 40, 1, "partyAuraGroupPadding", L, -386,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshPartyAuraDirection then ns.RefreshPartyAuraDirection() end end)
+
+        AddAuraCopyRow(f, -430, "party")
+        AddAuraMirrorButton(f, -478, "party")
+
     end
 
     -- =========================== SECCION ARENA AURAS (2026-07-19) ===========================
@@ -3869,13 +4027,15 @@ local function BuildPanel()
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", L, -32); note:SetWidth(430); note:SetJustifyH("LEFT")
         note:SetTextColor(0.8, 0.8, 0.8)
-        note:SetText("Applies to ALL 6 arena frames at once (allies + enemies). Shows your " ..
-            "configured number of auras (debuffs take priority, buffs fill empty slots) on " ..
-            "mouseover, or fixed while the unit is in combat. Arena-only. Sort/limit/padding below " ..
-            "apply to all 6. Try /mcfarenaauratest to preview without a real match.")
+        -- ACTUALIZADO (2026-08-03): migrado a AuraContainer nativo -- ya no
+        -- hay "sort", debuffs/buffs son 2 grupos separados posicionables.
+        note:SetText("Applies to ALL 6 arena frames at once (allies + enemies). Debuffs and buffs " ..
+            "are separate groups (Blizzard draws the icons -- never blocked in combat). Arena-only. " ..
+            "Try /mcfarenaauratest to preview without a real match.")
 
-        local dirBtn = MakeButton(f, "", 220, 24)
-        dirBtn:SetPoint("TOPLEFT", L, -76)
+        MakeHeader(f, "Anchor", L, -70, 430)
+        local dirBtn = MakeButton(f, "", 200, 24)
+        dirBtn:SetPoint("TOPLEFT", L, -94)
         local function DirText()
             local d = ns.GetDB() and ns.GetDB().arenaAuraDirection or "down"
             dirBtn.text:SetText("Direction: " .. d)
@@ -3890,37 +4050,61 @@ local function BuildPanel()
             if ns.RefreshArenaAuraDirection then ns.RefreshArenaAuraDirection() end
         end)
         refreshers[#refreshers + 1] = DirText
+        MakePreviewButton(f, R, -94, function() return ns.ToggleArenaAuraTest end)
 
-        MakeSlider(f, "Icon size", 12, 48, 1, "arenaAuraIconSize", L, -120,
+        MakeHeader(f, "Icons", L, -138, 430)
+        MakeSlider(f, "Icon size", 12, 48, 1, "arenaAuraIconSize", L, -162,
             function() return ns.GetDB() end,
             function() if ns.RefreshArenaAuraSize then ns.RefreshArenaAuraSize() end end)
-
-        local auraSortBtn = MakeButton(f, "", 220, 24)
-        auraSortBtn:SetPoint("TOPLEFT", L, -164)
-        local function SortText()
-            local d = ns.GetDB() and ns.GetDB().arenaAuraSort or "priority"
-            auraSortBtn.text:SetText("Sort: " .. d)
-        end
-        auraSortBtn:SetScript("OnClick", function()
-            local list = ns.AURA_SORT_MODES or { "priority", "time", "index" }
-            local d = ns.GetDB(); if not d then return end
-            local cur, idx = d.arenaAuraSort or "priority", 1
-            for i, v in ipairs(list) do if v == cur then idx = i break end end
-            d.arenaAuraSort = list[(idx % #list) + 1]
-            SortText()
-            if ns.RefreshArenaAuraSort then ns.RefreshArenaAuraSort() end
-        end)
-        refreshers[#refreshers + 1] = SortText
-
-        MakeSlider(f, "Max icons shown", 1, 8, 1, "arenaAuraMaxIcons", L, -208,
+        MakeSlider(f, "Max icons per group", 1, 8, 1, "arenaAuraMaxIcons", R, -162,
             function() return ns.GetDB() end,
             function() if ns.RefreshArenaAuraMaxIcons then ns.RefreshArenaAuraMaxIcons() end end)
 
-        MakeSlider(f, "Icon padding", 0, 20, 1, "arenaAuraPadding", L, -252,
+        MakeSlider(f, "Icon padding", 0, 20, 1, "arenaAuraPadding", L, -206,
             function() return ns.GetDB() end,
             function() if ns.RefreshArenaAuraPadding then ns.RefreshArenaAuraPadding() end end)
 
-        MakePreviewButton(f, R, -164, function() return ns.ToggleArenaAuraTest end)
+        local growBtn = MakeButton(f, "", 200, 24)
+        growBtn:SetPoint("TOPLEFT", R, -206)
+        local function GrowText()
+            local d = ns.GetDB() and ns.GetDB().arenaAuraGrowth or "v-down"
+            growBtn.text:SetText("Growth: " .. d)
+        end
+        growBtn:SetScript("OnClick", function()
+            local list = ns.AURA_GROWTH_MODES or { "h-left", "h-right", "h-center", "v-up", "v-down", "v-center" }
+            local d = ns.GetDB(); if not d then return end
+            local cur, idx = d.arenaAuraGrowth or "v-down", 1
+            for i, v in ipairs(list) do if v == cur then idx = i break end end
+            d.arenaAuraGrowth = list[(idx % #list) + 1]
+            GrowText()
+            if ns.RefreshArenaAuraGrowth then ns.RefreshArenaAuraGrowth() end
+        end)
+        refreshers[#refreshers + 1] = GrowText
+
+        MakeHeader(f, "Content", L, -250, 430)
+        MakeToggle(f, "Show debuffs", L, -274,
+            function() local d = ns.GetDB(); return d and d.arenaAuraShowDebuffs ~= false end,
+            function(v) local d = ns.GetDB(); if d then d.arenaAuraShowDebuffs = v end
+                if ns.RefreshArenaAuraShowDebuffs then ns.RefreshArenaAuraShowDebuffs() end end)
+        MakeToggle(f, "Show buffs", R, -274,
+            function() local d = ns.GetDB(); return d and d.arenaAuraShowBuffs ~= false end,
+            function(v) local d = ns.GetDB(); if d then d.arenaAuraShowBuffs = v end
+                if ns.RefreshArenaAuraShowBuffs then ns.RefreshArenaAuraShowBuffs() end end)
+
+        MakeHeader(f, "Position", L, -318, 430)
+        MakeSlider(f, "Offset X", -100, 100, 1, "arenaAuraOffsetX", L, -342,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshArenaAuraDirection then ns.RefreshArenaAuraDirection() end end)
+        MakeSlider(f, "Offset Y", -100, 100, 1, "arenaAuraOffsetY", R, -342,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshArenaAuraDirection then ns.RefreshArenaAuraDirection() end end)
+        MakeSlider(f, "Group padding (debuffs <-> buffs gap)", 0, 40, 1, "arenaAuraGroupPadding", L, -386,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshArenaAuraDirection then ns.RefreshArenaAuraDirection() end end)
+
+        AddAuraCopyRow(f, -430, "arena")
+        AddAuraMirrorButton(f, -478, "arena")
+
     end
 
     -- =========================== SECCION FOCUS AURAS (2026-07-27) ===========================
@@ -3934,13 +4118,16 @@ local function BuildPanel()
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", L, -32); note:SetWidth(430); note:SetJustifyH("LEFT")
         note:SetTextColor(0.8, 0.8, 0.8)
-        note:SetText("Shows your configured number of auras on your focus target (debuffs take " ..
-            "priority, colored by dispel type; buffs fill empty slots) on mouseover, or fixed " ..
-            "while you're in combat. Needs a focus target set. Try /mcffocusauratest to preview " ..
-            "without one.")
+        -- ACTUALIZADO (2026-08-04, "agrega tambien al focus en esto"):
+        -- migrado a AuraContainer nativo igual que party/arena/player/target
+        -- -- ya no hay "sort", debuffs/buffs son 2 grupos separados.
+        note:SetText("Shows auras on your focus target on mouseover, or fixed while you're in " ..
+            "combat. Debuffs and buffs are separate groups (Blizzard draws the icons -- never " ..
+            "blocked in combat). Needs a focus target set. Try /mcffocusauratest to preview without one.")
 
-        local dirBtn = MakeButton(f, "", 220, 24)
-        dirBtn:SetPoint("TOPLEFT", L, -76)
+        MakeHeader(f, "Anchor", L, -70, 430)
+        local dirBtn = MakeButton(f, "", 200, 24)
+        dirBtn:SetPoint("TOPLEFT", L, -94)
         local function DirText()
             local d = ns.GetDB() and ns.GetDB().focusAuraDirection or "down"
             dirBtn.text:SetText("Direction: " .. d)
@@ -3955,37 +4142,61 @@ local function BuildPanel()
             if ns.RefreshFocusAuraDirection then ns.RefreshFocusAuraDirection() end
         end)
         refreshers[#refreshers + 1] = DirText
+        MakePreviewButton(f, R, -94, function() return ns.ToggleFocusAuraTest end)
 
-        MakeSlider(f, "Icon size", 12, 48, 1, "focusAuraIconSize", L, -120,
+        MakeHeader(f, "Icons", L, -138, 430)
+        MakeSlider(f, "Icon size", 12, 48, 1, "focusAuraIconSize", L, -162,
             function() return ns.GetDB() end,
             function() if ns.RefreshFocusAuraSize then ns.RefreshFocusAuraSize() end end)
-
-        local auraSortBtn = MakeButton(f, "", 220, 24)
-        auraSortBtn:SetPoint("TOPLEFT", L, -164)
-        local function SortText()
-            local d = ns.GetDB() and ns.GetDB().focusAuraSort or "priority"
-            auraSortBtn.text:SetText("Sort: " .. d)
-        end
-        auraSortBtn:SetScript("OnClick", function()
-            local list = ns.AURA_SORT_MODES or { "priority", "time", "index" }
-            local d = ns.GetDB(); if not d then return end
-            local cur, idx = d.focusAuraSort or "priority", 1
-            for i, v in ipairs(list) do if v == cur then idx = i break end end
-            d.focusAuraSort = list[(idx % #list) + 1]
-            SortText()
-            if ns.RefreshFocusAuraSort then ns.RefreshFocusAuraSort() end
-        end)
-        refreshers[#refreshers + 1] = SortText
-
-        MakeSlider(f, "Max icons shown", 1, 8, 1, "focusAuraMaxIcons", L, -208,
+        MakeSlider(f, "Max icons per group", 1, 8, 1, "focusAuraMaxIcons", R, -162,
             function() return ns.GetDB() end,
             function() if ns.RefreshFocusAuraMaxIcons then ns.RefreshFocusAuraMaxIcons() end end)
 
-        MakeSlider(f, "Icon padding", 0, 20, 1, "focusAuraPadding", L, -252,
+        MakeSlider(f, "Icon padding", 0, 20, 1, "focusAuraPadding", L, -206,
             function() return ns.GetDB() end,
             function() if ns.RefreshFocusAuraPadding then ns.RefreshFocusAuraPadding() end end)
 
-        MakePreviewButton(f, R, -164, function() return ns.ToggleFocusAuraTest end)
+        local growBtn = MakeButton(f, "", 200, 24)
+        growBtn:SetPoint("TOPLEFT", R, -206)
+        local function GrowText()
+            local d = ns.GetDB() and ns.GetDB().focusAuraGrowth or "v-down"
+            growBtn.text:SetText("Growth: " .. d)
+        end
+        growBtn:SetScript("OnClick", function()
+            local list = ns.AURA_GROWTH_MODES or { "h-left", "h-right", "h-center", "v-up", "v-down", "v-center" }
+            local d = ns.GetDB(); if not d then return end
+            local cur, idx = d.focusAuraGrowth or "v-down", 1
+            for i, v in ipairs(list) do if v == cur then idx = i break end end
+            d.focusAuraGrowth = list[(idx % #list) + 1]
+            GrowText()
+            if ns.RefreshFocusAuraGrowth then ns.RefreshFocusAuraGrowth() end
+        end)
+        refreshers[#refreshers + 1] = GrowText
+
+        MakeHeader(f, "Content", L, -250, 430)
+        MakeToggle(f, "Show debuffs", L, -274,
+            function() local d = ns.GetDB(); return d and d.focusAuraShowDebuffs ~= false end,
+            function(v) local d = ns.GetDB(); if d then d.focusAuraShowDebuffs = v end
+                if ns.RefreshFocusAuraShowDebuffs then ns.RefreshFocusAuraShowDebuffs() end end)
+        MakeToggle(f, "Show buffs", R, -274,
+            function() local d = ns.GetDB(); return d and d.focusAuraShowBuffs ~= false end,
+            function(v) local d = ns.GetDB(); if d then d.focusAuraShowBuffs = v end
+                if ns.RefreshFocusAuraShowBuffs then ns.RefreshFocusAuraShowBuffs() end end)
+
+        MakeHeader(f, "Position", L, -318, 430)
+        MakeSlider(f, "Offset X", -100, 100, 1, "focusAuraOffsetX", L, -342,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshFocusAuraDirection then ns.RefreshFocusAuraDirection() end end)
+        MakeSlider(f, "Offset Y", -100, 100, 1, "focusAuraOffsetY", R, -342,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshFocusAuraDirection then ns.RefreshFocusAuraDirection() end end)
+        MakeSlider(f, "Group padding (debuffs <-> buffs gap)", 0, 40, 1, "focusAuraGroupPadding", L, -386,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshFocusAuraDirection then ns.RefreshFocusAuraDirection() end end)
+
+        AddAuraCopyRow(f, -430, "focus")
+        AddAuraMirrorButton(f, -478, "focus")
+
     end
 
     -- =========================== SECCION PLAYER AURAS (2026-07-27) ===========================
@@ -4000,12 +4211,14 @@ local function BuildPanel()
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", L, -32); note:SetWidth(430); note:SetJustifyH("LEFT")
         note:SetTextColor(0.8, 0.8, 0.8)
-        note:SetText("Shows your configured number of your own auras (debuffs take priority, " ..
-            "colored by dispel type; buffs fill empty slots) -- always visible, same as Target " ..
-            "Auras.")
+        -- ACTUALIZADO (2026-08-03): migrado a AuraContainer nativo -- ya no
+        -- hay "sort", debuffs/buffs son 2 grupos separados posicionables.
+        note:SetText("Shows your own auras -- always visible. Debuffs and buffs are separate " ..
+            "groups (Blizzard draws the icons -- never blocked in combat).")
 
-        local dirBtn = MakeButton(f, "", 220, 24)
-        dirBtn:SetPoint("TOPLEFT", L, -76)
+        MakeHeader(f, "Anchor", L, -70, 430)
+        local dirBtn = MakeButton(f, "", 200, 24)
+        dirBtn:SetPoint("TOPLEFT", L, -94)
         local function DirText()
             local d = ns.GetDB() and ns.GetDB().playerAuraDirection or "up"
             dirBtn.text:SetText("Direction: " .. d)
@@ -4020,37 +4233,61 @@ local function BuildPanel()
             if ns.RefreshPlayerAuraDirection then ns.RefreshPlayerAuraDirection() end
         end)
         refreshers[#refreshers + 1] = DirText
+        MakePreviewButton(f, R, -94, function() return ns.TogglePlayerAuraTest end)
 
-        MakeSlider(f, "Icon size", 12, 48, 1, "playerAuraIconSize", L, -120,
+        MakeHeader(f, "Icons", L, -138, 430)
+        MakeSlider(f, "Icon size", 12, 48, 1, "playerAuraIconSize", L, -162,
             function() return ns.GetDB() end,
             function() if ns.RefreshPlayerAuraSize then ns.RefreshPlayerAuraSize() end end)
-
-        local auraSortBtn = MakeButton(f, "", 220, 24)
-        auraSortBtn:SetPoint("TOPLEFT", L, -164)
-        local function SortText()
-            local d = ns.GetDB() and ns.GetDB().playerAuraSort or "priority"
-            auraSortBtn.text:SetText("Sort: " .. d)
-        end
-        auraSortBtn:SetScript("OnClick", function()
-            local list = ns.AURA_SORT_MODES or { "priority", "time", "index" }
-            local d = ns.GetDB(); if not d then return end
-            local cur, idx = d.playerAuraSort or "priority", 1
-            for i, v in ipairs(list) do if v == cur then idx = i break end end
-            d.playerAuraSort = list[(idx % #list) + 1]
-            SortText()
-            if ns.RefreshPlayerAuraSort then ns.RefreshPlayerAuraSort() end
-        end)
-        refreshers[#refreshers + 1] = SortText
-
-        MakeSlider(f, "Max icons shown", 1, 8, 1, "playerAuraMaxIcons", L, -208,
+        MakeSlider(f, "Max icons per group", 1, 8, 1, "playerAuraMaxIcons", R, -162,
             function() return ns.GetDB() end,
             function() if ns.RefreshPlayerAuraMaxIcons then ns.RefreshPlayerAuraMaxIcons() end end)
 
-        MakeSlider(f, "Icon padding", 0, 20, 1, "playerAuraPadding", L, -252,
+        MakeSlider(f, "Icon padding", 0, 20, 1, "playerAuraPadding", L, -206,
             function() return ns.GetDB() end,
             function() if ns.RefreshPlayerAuraPadding then ns.RefreshPlayerAuraPadding() end end)
 
-        MakePreviewButton(f, R, -164, function() return ns.TogglePlayerAuraTest end)
+        local growBtn = MakeButton(f, "", 200, 24)
+        growBtn:SetPoint("TOPLEFT", R, -206)
+        local function GrowText()
+            local d = ns.GetDB() and ns.GetDB().playerAuraGrowth or "v-down"
+            growBtn.text:SetText("Growth: " .. d)
+        end
+        growBtn:SetScript("OnClick", function()
+            local list = ns.AURA_GROWTH_MODES or { "h-left", "h-right", "h-center", "v-up", "v-down", "v-center" }
+            local d = ns.GetDB(); if not d then return end
+            local cur, idx = d.playerAuraGrowth or "v-down", 1
+            for i, v in ipairs(list) do if v == cur then idx = i break end end
+            d.playerAuraGrowth = list[(idx % #list) + 1]
+            GrowText()
+            if ns.RefreshPlayerAuraGrowth then ns.RefreshPlayerAuraGrowth() end
+        end)
+        refreshers[#refreshers + 1] = GrowText
+
+        MakeHeader(f, "Content", L, -250, 430)
+        MakeToggle(f, "Show debuffs", L, -274,
+            function() local d = ns.GetDB(); return d and d.playerAuraShowDebuffs ~= false end,
+            function(v) local d = ns.GetDB(); if d then d.playerAuraShowDebuffs = v end
+                if ns.RefreshPlayerAuraShowDebuffs then ns.RefreshPlayerAuraShowDebuffs() end end)
+        MakeToggle(f, "Show buffs", R, -274,
+            function() local d = ns.GetDB(); return d and d.playerAuraShowBuffs ~= false end,
+            function(v) local d = ns.GetDB(); if d then d.playerAuraShowBuffs = v end
+                if ns.RefreshPlayerAuraShowBuffs then ns.RefreshPlayerAuraShowBuffs() end end)
+
+        MakeHeader(f, "Position", L, -318, 430)
+        MakeSlider(f, "Offset X", -100, 100, 1, "playerAuraOffsetX", L, -342,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshPlayerAuraDirection then ns.RefreshPlayerAuraDirection() end end)
+        MakeSlider(f, "Offset Y", -100, 100, 1, "playerAuraOffsetY", R, -342,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshPlayerAuraDirection then ns.RefreshPlayerAuraDirection() end end)
+        MakeSlider(f, "Group padding (debuffs <-> buffs gap)", 0, 40, 1, "playerAuraGroupPadding", L, -386,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshPlayerAuraDirection then ns.RefreshPlayerAuraDirection() end end)
+
+        AddAuraCopyRow(f, -430, "player")
+        AddAuraMirrorButton(f, -478, "player")
+
     end
 
     -- =========================== SECCION TARGET AURAS (2026-07-27) ===========================
@@ -4063,13 +4300,15 @@ local function BuildPanel()
         local note = f:CreateFontString(nil, "ARTWORK"); setFont(note, 10)
         note:SetPoint("TOPLEFT", L, -32); note:SetWidth(430); note:SetJustifyH("LEFT")
         note:SetTextColor(0.8, 0.8, 0.8)
-        note:SetText("Shows your configured number of auras on your target (debuffs take " ..
-            "priority, colored by dispel type; buffs fill empty slots) -- always visible while " ..
-            "you have a target, hover just makes sure it's freshly refreshed. Try " ..
+        -- ACTUALIZADO (2026-08-03): migrado a AuraContainer nativo -- ya no
+        -- hay "sort", debuffs/buffs son 2 grupos separados posicionables.
+        note:SetText("Shows auras on your target -- always visible while targeting. Debuffs and " ..
+            "buffs are separate groups (Blizzard draws the icons -- never blocked in combat). Try " ..
             "/mcftargetauratest to preview without one.")
 
-        local dirBtn = MakeButton(f, "", 220, 24)
-        dirBtn:SetPoint("TOPLEFT", L, -76)
+        MakeHeader(f, "Anchor", L, -70, 430)
+        local dirBtn = MakeButton(f, "", 200, 24)
+        dirBtn:SetPoint("TOPLEFT", L, -94)
         local function DirText()
             local d = ns.GetDB() and ns.GetDB().targetAuraDirection or "down"
             dirBtn.text:SetText("Direction: " .. d)
@@ -4084,37 +4323,61 @@ local function BuildPanel()
             if ns.RefreshTargetAuraDirection then ns.RefreshTargetAuraDirection() end
         end)
         refreshers[#refreshers + 1] = DirText
+        MakePreviewButton(f, R, -94, function() return ns.ToggleTargetAuraTest end)
 
-        MakeSlider(f, "Icon size", 12, 48, 1, "targetAuraIconSize", L, -120,
+        MakeHeader(f, "Icons", L, -138, 430)
+        MakeSlider(f, "Icon size", 12, 48, 1, "targetAuraIconSize", L, -162,
             function() return ns.GetDB() end,
             function() if ns.RefreshTargetAuraSize then ns.RefreshTargetAuraSize() end end)
-
-        local auraSortBtn = MakeButton(f, "", 220, 24)
-        auraSortBtn:SetPoint("TOPLEFT", L, -164)
-        local function SortText()
-            local d = ns.GetDB() and ns.GetDB().targetAuraSort or "priority"
-            auraSortBtn.text:SetText("Sort: " .. d)
-        end
-        auraSortBtn:SetScript("OnClick", function()
-            local list = ns.AURA_SORT_MODES or { "priority", "time", "index" }
-            local d = ns.GetDB(); if not d then return end
-            local cur, idx = d.targetAuraSort or "priority", 1
-            for i, v in ipairs(list) do if v == cur then idx = i break end end
-            d.targetAuraSort = list[(idx % #list) + 1]
-            SortText()
-            if ns.RefreshTargetAuraSort then ns.RefreshTargetAuraSort() end
-        end)
-        refreshers[#refreshers + 1] = SortText
-
-        MakeSlider(f, "Max icons shown", 1, 8, 1, "targetAuraMaxIcons", L, -208,
+        MakeSlider(f, "Max icons per group", 1, 8, 1, "targetAuraMaxIcons", R, -162,
             function() return ns.GetDB() end,
             function() if ns.RefreshTargetAuraMaxIcons then ns.RefreshTargetAuraMaxIcons() end end)
 
-        MakeSlider(f, "Icon padding", 0, 20, 1, "targetAuraPadding", L, -252,
+        MakeSlider(f, "Icon padding", 0, 20, 1, "targetAuraPadding", L, -206,
             function() return ns.GetDB() end,
             function() if ns.RefreshTargetAuraPadding then ns.RefreshTargetAuraPadding() end end)
 
-        MakePreviewButton(f, R, -164, function() return ns.ToggleTargetAuraTest end)
+        local growBtn = MakeButton(f, "", 200, 24)
+        growBtn:SetPoint("TOPLEFT", R, -206)
+        local function GrowText()
+            local d = ns.GetDB() and ns.GetDB().targetAuraGrowth or "v-down"
+            growBtn.text:SetText("Growth: " .. d)
+        end
+        growBtn:SetScript("OnClick", function()
+            local list = ns.AURA_GROWTH_MODES or { "h-left", "h-right", "h-center", "v-up", "v-down", "v-center" }
+            local d = ns.GetDB(); if not d then return end
+            local cur, idx = d.targetAuraGrowth or "v-down", 1
+            for i, v in ipairs(list) do if v == cur then idx = i break end end
+            d.targetAuraGrowth = list[(idx % #list) + 1]
+            GrowText()
+            if ns.RefreshTargetAuraGrowth then ns.RefreshTargetAuraGrowth() end
+        end)
+        refreshers[#refreshers + 1] = GrowText
+
+        MakeHeader(f, "Content", L, -250, 430)
+        MakeToggle(f, "Show debuffs", L, -274,
+            function() local d = ns.GetDB(); return d and d.targetAuraShowDebuffs ~= false end,
+            function(v) local d = ns.GetDB(); if d then d.targetAuraShowDebuffs = v end
+                if ns.RefreshTargetAuraShowDebuffs then ns.RefreshTargetAuraShowDebuffs() end end)
+        MakeToggle(f, "Show buffs", R, -274,
+            function() local d = ns.GetDB(); return d and d.targetAuraShowBuffs ~= false end,
+            function(v) local d = ns.GetDB(); if d then d.targetAuraShowBuffs = v end
+                if ns.RefreshTargetAuraShowBuffs then ns.RefreshTargetAuraShowBuffs() end end)
+
+        MakeHeader(f, "Position", L, -318, 430)
+        MakeSlider(f, "Offset X", -100, 100, 1, "targetAuraOffsetX", L, -342,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshTargetAuraDirection then ns.RefreshTargetAuraDirection() end end)
+        MakeSlider(f, "Offset Y", -100, 100, 1, "targetAuraOffsetY", R, -342,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshTargetAuraDirection then ns.RefreshTargetAuraDirection() end end)
+        MakeSlider(f, "Group padding (debuffs <-> buffs gap)", 0, 40, 1, "targetAuraGroupPadding", L, -386,
+            function() return ns.GetDB() end,
+            function() if ns.RefreshTargetAuraDirection then ns.RefreshTargetAuraDirection() end end)
+
+        AddAuraCopyRow(f, -430, "target")
+        AddAuraMirrorButton(f, -478, "target")
+
     end
 
     -- =========================== SECCION CLASS POWER (2026-07-19) ===========================

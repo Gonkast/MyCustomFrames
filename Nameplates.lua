@@ -132,6 +132,101 @@ local function LockBar(region, parent, point, relPoint, x, y, w, h)
     Reassert()
 end
 
+-- FIX (2026-08-03, 12.1.0 PTR: "el texto de vida no tiene la textura
+-- correcta" -- confirmado con /mcfnpdiag: statusBarTexture path=6704514, un
+-- fileID nativo de Blizzard, NO nuestro BAR_TEX): a diferencia de posicion/
+-- tamaño (LockBar de arriba, con su propio hooksecurefunc), la textura no
+-- tenia ningun pin -- Blizzard la reafirma sola en algun refresh interno
+-- (probablemente el mismo ciclo que actualiza health/reaction) y nuestro
+-- SetStatusBarTexture de una sola vez en SkinHealthBar quedaba pisado.
+-- Mismo patron que LockBar: hooksecurefunc + guard de reentrancia (evita
+-- loop infinito -- SetStatusBarTexture dispara su propio hook al
+-- reaplicar).
+local function LockStatusBarTexture(region, texPath, texcoord)
+    if not region then return end
+    local locking = false
+    -- pcall (2026-08-03, ronda 2): la 1ra version llamaba SetStatusBarTexture
+    -- SIN proteger -- si eso tira (healthBar mas restringido en 12.1.0), la
+    -- excepcion aborta ANTES de `locking = false`, dejando el guard trabado
+    -- para siempre (bloquea hasta el intento INICIAL) y corta SkinHealthBar
+    -- a mitad de camino (todo lo que viene despues en esa funcion nunca
+    -- corre). Diagnosticable ahora via region._mcfTexOK (ver /mcfnpdiag).
+    --
+    -- RONDA 3 (2026-08-03, "sigue sin funcionar... es simplemente un shape
+    -- rectangular"): confirmado con /mcfnpdiag que _mcfTexOK=true (nuestro
+    -- SetStatusBarTexture NO tira error) pero el path aplicado sigue siendo
+    -- el fileID nativo -- o sea Blizzard NO vuelve a llamar
+    -- region:SetStatusBarTexture (eso lo interceptamos bien), sino que toca
+    -- la TEXTURA interna directo (region:GetStatusBarTexture():SetTexture(..)),
+    -- esquivando nuestro hook por completo. Se agrega un 2do pin sobre el
+    -- objeto Texture en si (SetTexture + SetAtlas), enganchado UNA vez por
+    -- objeto (region._mcfTexHooked evita colgar hooks duplicados si
+    -- Reassert corre varias veces sobre el MISMO objeto Texture).
+    local function Reassert()
+        if locking then return end
+        locking = true
+        local ok1 = pcall(region.SetStatusBarTexture, region, texPath)
+        local ok2, tex = pcall(region.GetStatusBarTexture, region)
+        local ok3 = true
+        if ok2 and tex then
+            if texcoord then ok3 = pcall(tex.SetTexCoord, tex, unpack(texcoord)) end
+            if not tex._mcfTexPinned then
+                tex._mcfTexPinned = true
+                hooksecurefunc(tex, "SetTexture", function()
+                    if locking then return end
+                    Reassert()
+                end)
+                if tex.SetAtlas then
+                    hooksecurefunc(tex, "SetAtlas", function()
+                        if locking then return end
+                        Reassert()
+                    end)
+                end
+                -- RONDA 4 (2026-08-03): path=-100 confirmado via /mcfnpdiag --
+                -- ese es el sentinel de "textura de color solido" (API
+                -- SetColorTexture, separada de SetTexture/SetAtlas y no
+                -- cubierta por los 2 hooks de arriba). Coincide exacto con
+                -- "un shape rectangular" -- relleno solido, sin imagen.
+                if tex.SetColorTexture then
+                    hooksecurefunc(tex, "SetColorTexture", function()
+                        if locking then return end
+                        Reassert()
+                    end)
+                end
+            end
+        end
+        region._mcfTexOK = ok1 and ok2 and ok3
+        locking = false
+    end
+    hooksecurefunc(region, "SetStatusBarTexture", Reassert)
+    Reassert()
+end
+
+-- Version para una TEXTURE region directa (no StatusBar) -- mismos 3 hooks
+-- (SetTexture/SetAtlas/SetColorTexture) que LockStatusBarTexture le pone al
+-- objeto Texture interno, pero aca van directo sobre `tex` (no hay
+-- SetStatusBarTexture de por medio). Usado por selectionHighlight (2026-08-03,
+-- "el highlight de target seleccionando" -- mismo bug que la barra de vida:
+-- Blizzard reafirma SU textura via CompactUnitFrame_UpdateSelectionHighlight,
+-- y este addon solo tenia pineado el COLOR, nunca la textura en si).
+local function LockTexture(tex, texPath, texcoord)
+    if not tex then return end
+    local locking = false
+    local function Reassert()
+        if locking then return end
+        locking = true
+        local ok1 = pcall(tex.SetTexture, tex, texPath)
+        local ok2 = true
+        if texcoord then ok2 = pcall(tex.SetTexCoord, tex, unpack(texcoord)) end
+        tex._mcfTexOK = ok1 and ok2
+        locking = false
+    end
+    hooksecurefunc(tex, "SetTexture", Reassert)
+    if tex.SetAtlas then hooksecurefunc(tex, "SetAtlas", Reassert) end
+    if tex.SetColorTexture then hooksecurefunc(tex, "SetColorTexture", Reassert) end
+    Reassert()
+end
+
 -- El highlight de seleccion (target/focus) y el glow de amenaza los sigue
 -- coloreando Blizzard SOLO -- CompactUnitFrame_UpdateSelectionHighlight ya
 -- les pone el vertex color correcto (focus celeste, target dorado, etc);
@@ -542,10 +637,91 @@ local function HideNativeBorder(region)
     end
 end
 
+-- RONDA 5, 12.1.0 (2026-08-03, "sigue sin funcionar... la textura correcta"):
+-- rondas 2-4 pelearon contra los resets de Blizzard sobre `hp` en el lugar
+-- (SetStatusBarTexture -> fileID nativo; el objeto Texture -> SetColorTexture
+-- con -100; un 4to camino desconocido dio -924) -- whack-a-mole real, cada
+-- pin nuevo dura hasta que Blizzard usa OTRO metodo mas. Mismo criterio que
+-- ya funciono para selectionHighlight (ver SkinHighlight): en vez de seguir
+-- persiguiendo, `hp` queda oculta COMPLETA (alpha 0, permanente) y se dibuja
+-- una StatusBar 100% propia (uf.mcfHealthBar) que Blizzard nunca toca --
+-- alimentada por ns.GetHealthPercent (ya centralizado/secret-safe, API.lua)
+-- desde el mismo ticker que ya actualizaba el texto de vida (healthValueDriver
+-- mas abajo, 0.2s). SOLO para 12.1.0+ (ns.IsMidnightNext) -- en 12.0.7 sigue
+-- el reskin-en-su-lugar de siempre, cero riesgo, cero cambio de comportamiento.
+local function SkinHealthBarNext(uf, hp)
+    -- FIX RONDA 2 (2026-08-03, "aun no puedo seleccionar los nameplates" --
+    -- confirmado SIN el addon que las nameplates SI se clickean bien, asi
+    -- que es algo nuestro; la ronda 1 (alpha 0 en la textura en vez del
+    -- frame) tampoco alcanzo). Nueva teoria, mas simple y sin tocar NADA de
+    -- `hp` (ni frame ni textura, ni alpha ni Hide): el click-to-target de
+    -- nameplates en este build puede usar hit-test POR PIXEL (si el pixel
+    -- clickeado es opaco) en vez de un rectangulo simple -- volver
+    -- transparente la textura (alpha 0) le quita el pixel opaco que
+    -- Blizzard necesita para detectar el click, aunque el FRAME siga
+    -- "shown" y con mouse habilitado. Se deja de tocar `hp` por completo:
+    -- Blizzard puede seguir pintando lo que quiera ahi (fileID nativo,
+    -- SetColorTexture, lo que sea) -- `mine` simplemente se dibuja ENCIMA
+    -- con mas frame level, tapandolo visualmente sin que a Blizzard nunca
+    -- le falte un pixel opaco para detectar el click.
+    local mine = uf.mcfHealthBar
+    if not mine then
+        mine = CreateFrame("StatusBar", nil, uf)
+        mine:SetStatusBarTexture(BAR_TEX)
+        local tex = mine:GetStatusBarTexture()
+        if tex then tex:SetTexCoord(unpack(BAR_TEXCOORD)) end
+        mine:SetMinMaxValues(0, 100)
+        local bg = mine:CreateTexture(nil, "BACKGROUND", nil, -1)
+        bg:SetPoint("CENTER")
+        bg:SetTexture(BACKDROP_TEX)
+        mine.mcfBackdrop = bg
+        uf.mcfHealthBar = mine
+    end
+    local okLvl, hpLvl = pcall(hp.GetFrameLevel, hp)
+    mine:SetFrameLevel((okLvl and hpLvl or 0) + 2)
+    local hl0 = ns.NPLayout.Health(P())
+    LockBar(mine, uf, hl0.point, hl0.relPoint, hl0.x, hl0.y, GetHealthSize)
+    mine.mcfBackdrop:SetSize(GetHealthSize())
+    -- "todo sigue desubicado... el icon elite boss" (2026-08-03): dejar a
+    -- `hp` (nativo) sin tamaño/posicion propia (nunca mas LockBar) puede
+    -- estar afectando el layout INTERNO de Blizzard para toda la nameplate
+    -- (uf), si depende del tamaño de su healthBar nativo para posicionar
+    -- otras piezas (classificationIndicator, etc.) -- se lo sigue pineando
+    -- IGUAL que antes (mismo tamaño/posicion de siempre), solo que ahora
+    -- queda invisible via alpha en vez de reskineado en su lugar.
+    LockBar(hp, uf, hl0.point, hl0.relPoint, hl0.x, hl0.y, GetHealthSize)
+    -- Ahora que `hp` se queda en alpha 1 (necesario para no romper el
+    -- click-to-target), sus hijos VUELVEN a mostrarse solos si no se
+    -- ocultan uno por uno -- antes esto lo cubria gratis el alpha 0 del
+    -- padre. Mismas piezas que ocultaba el reskin-en-su-lugar viejo.
+    HideNativeBorder(hp.bgTexture)
+    HideNativeBorder(hp.deselectedOverlay)
+    HideNativeBorder(hp.Text)
+    HideNativeBorder(hp.TextString)
+    HideNativeBorder(hp.LeftText)
+    HideNativeBorder(hp.RightText)
+    -- Piezas nativas que viven FUERA de hp (hijas de uf directamente) --
+    -- alpha 0 en hp no las tapa, siguen necesitando el ocultado individual.
+    HideNativeBorder(uf.myHealPrediction)
+    HideNativeBorder(uf.otherHealPrediction)
+    HideNativeBorder(uf.myHealAbsorb)
+    HideNativeBorder(uf.myHealAbsorbLeftShadow)
+    HideNativeBorder(uf.myHealAbsorbRightShadow)
+    HideNativeBorder(uf.overHealAbsorbGlow)
+    HideNativeBorder(uf.totalAbsorb)
+    HideNativeBorder(uf.totalAbsorbOverlay)
+    HideNativeBorder(uf.overAbsorbGlow)
+end
+
 local function SkinHealthBar(uf)
     local hp = uf.healthBar
     if not hp or hp._mcfSkinned then return end
     hp._mcfSkinned = true
+
+    if ns.IsMidnightNext and not (ns.GetDB() and ns.GetDB()._npSafeMode) then
+        SkinHealthBarNext(uf, hp)
+        return
+    end
 
     -- Punto/offset desde ns.NPLayout, no escritos a mano: el editor dibuja su
     -- barra con L.Health y esto tiene que ser lo MISMO. Estaban duplicados
@@ -553,9 +729,7 @@ local function SkinHealthBar(uf)
     -- justo el tipo de pareja que se desincroniza al primer cambio.
     local hl0 = ns.NPLayout.Health(P())
     LockBar(hp, uf, hl0.point, hl0.relPoint, hl0.x, hl0.y, GetHealthSize)
-    hp:SetStatusBarTexture(BAR_TEX)
-    local tex = hp:GetStatusBarTexture()
-    if tex then tex:SetTexCoord(unpack(BAR_TEXCOORD)) end
+    LockStatusBarTexture(hp, BAR_TEX, BAR_TEXCOORD)
     -- El "borde" nativo visible es `bgTexture` (confirmado via /mcfnpdiag en
     -- vivo -- el campo `border` no existe en este cliente, por eso no se
     -- ocultaba antes).
@@ -613,7 +787,15 @@ end
 -- nativa por completo y se dibuja una barra 100% propia con la MISMA
 -- textura/tamaño/backdrop que la de vida.
 local function HideNativeCastBar(uf)
+    -- FIX (2026-08-03, 12.1.0 PTR: "el cast bar es la nativa de Blizzard"):
+    -- confirmado con /mcfnpdiag -- ninguno de los 5 nombres viejos matchea
+    -- en este build, el widget real quedo anidado un nivel mas adentro,
+    -- uf.CastBarsContainer.castBar (Blizzard reestructuro Blizzard_
+    -- NamePlates.xml). Se agrega como candidato mas sin sacar los viejos
+    -- (aparte de 0/castBar, CastBarsContainer trae mas claves segun el
+    -- build -- por eso el barrido, no solo ese campo puntual).
     local cb = uf.castBar or uf.CastBar or uf.castbar or uf.Castbar or uf.CastingBarFrame
+        or (uf.CastBarsContainer and uf.CastBarsContainer.castBar)
     if cb then HideNativeBorder(cb) end
 end
 
@@ -908,7 +1090,13 @@ end
 local function SkinHealthValue(uf)
     local hp = uf.healthBar
     if not hp or hp.mcfValue then return end
-    local fs = hp:CreateFontString(nil, "OVERLAY")
+    -- 12.1.0 (2026-08-03): `hp` queda con alpha 0 permanente cuando
+    -- SkinHealthBarNext esta activo (ver mas arriba) -- un FontString hijo
+    -- suyo heredaria esa alpha 0 y se volveria invisible. Se crea sobre
+    -- uf.mcfHealthBar (la barra propia, siempre visible) en ese caso;
+    -- fallback a `hp` en 12.0.7, sin cambios ahi.
+    local parent = (ns.IsMidnightNext and uf.mcfHealthBar) or hp
+    local fs = parent:CreateFontString(nil, "OVERLAY")
     local function Reassert()
         local p = P()
         local size = (p and p.healthValueFontSize) or 12
@@ -919,7 +1107,7 @@ local function SkinHealthValue(uf)
             fs:SetFont("Fonts\\FRIZQT__.TTF", size, "OUTLINE")
         end
         fs:SetTextColor(c.r, c.g, c.b, (p and p.healthValueAlpha) or 1)
-        ns.NPBuild.Place(fs, hp, ns.NPLayout.HealthValue(p), hp:GetEffectiveScale())
+        ns.NPBuild.Place(fs, parent, ns.NPLayout.HealthValue(p), parent:GetEffectiveScale())
     end
     Reassert()
     fs._mcfReassert = Reassert
@@ -1037,23 +1225,78 @@ local function SkinHighlight(uf)
     local hl = uf.selectionHighlight
     if not hl or hl._mcfSkinned then return end
     hl._mcfSkinned = true
-    hl:SetTexture(OUTLINE_TEX)
-    -- Color FIJO (configurable en el menu, "dorado opaco" por defecto) en vez
-    -- de que Blizzard lo pinte distinto segun focus/target/soft-target -- se
-    -- fuerza SIEMPRE al mismo tono (leido del perfil EN VIVO), reafirmado
-    -- cada vez que Blizzard le vuelve a poner SU color
-    -- (CompactUnitFrame_UpdateSelectionHighlight).
+    -- FIX (2026-08-03, "aun no deja" -- con /mcfnpsafe activo (health bar +
+    -- auras en modo viejo) el click SEGUIA roto -- unico sistema nuevo que
+    -- quedaba corriendo era este, sin gate propio. Se agrega al mismo
+    -- interruptor para confirmar/descartar de una vez: con safe mode, esta
+    -- funcion no toca `hl` para NADA (ni Hide, ni crea `mine`) -- Blizzard
+    -- se queda con su highlight nativo tal cual, sin reskin ni reemplazo.
+    if ns.GetDB() and ns.GetDB()._npSafeMode then return end
+    -- FIX RONDA 2 (2026-08-03, 12.1.0 PTR: "aun no se ve el highlight de
+    -- seleccion" -- el pin de textura de la ronda 1 (LockTexture, 3 hooks)
+    -- seguia sin alcanzar). Investigando EllesmereUINameplates.lua:5533-5700
+    -- (HideBlizzardFrame) se confirma que NO pelean contra los resets de
+    -- Blizzard en este elemento puntual -- ocultan el highlight NATIVO por
+    -- completo (hooksecurefunc en Show/SetShown, forzando SetAlpha(0)+Hide)
+    -- y dibujan una textura PROPIA aparte, mostrada/ocultada en el mismo
+    -- momento. Mismo criterio aca, acotado solo a este elemento (el resto
+    -- del addon sigue reskineando en su lugar, sin tocar la arquitectura
+    -- general): Blizzard decide CUANDO corresponde mostrarlo (target/focus/
+    -- soft-target -- logica nativa que no queremos reimplementar), nosotros
+    -- decidimos CON QUE textura/color se dibuja.
+    -- BUG (2026-08-03, "SkinHighlight tiro un error: CreateTexture()...
+    -- Couldn't find inherited node '0'"): GetDrawLayer() devuelve 2
+    -- valores (capa, sub-nivel) -- sin los parentesis, Lua expandia el
+    -- segundo (0) como 3er argumento posicional de CreateTexture, que ES
+    -- el nombre de template heredado (string) -- WoW intentaba resolver la
+    -- "plantilla" 0 y fallaba. Con parentesis se trunca a un solo valor.
+    -- FIX RONDA 3 (2026-08-03, "no funciona" pese a shown=true/alpha=1 en
+    -- el diag): `mine` se creaba con padre = hl:GetParent(), que en 12.1.0
+    -- (SkinHealthBarNext activo) es la BARRA DE VIDA NATIVA -- la misma que
+    -- dejamos con alpha 0 PERMANENTE. La alpha se hereda multiplicando por
+    -- la del padre: aunque mine reportara shown=true/alpha=1 (correcto,
+    -- confirmado en /mcfnpdiag), su alpha EFECTIVA de render era 0 igual.
+    -- Se parentea a `uf` directo (nunca tocado con alpha 0) en vez de
+    -- heredar el padre de hl.
+    local mine = uf:CreateTexture(nil, (hl:GetDrawLayer()))
+    mine:SetAllPoints(hl)
+    mine:SetTexture(OUTLINE_TEX)
+    -- "sale un highlight, pero no es la textura correcta" (2026-08-03):
+    -- probable blend mode -- Blizzard suele dibujar este glow con blend
+    -- ADD (aditivo), CreateTexture por defecto usa BLEND (alpha normal);
+    -- una textura de brillo bajo BLEND se ve opaca/oscura en vez de sumar
+    -- luz. Se copia el blend mode REAL del highlight nativo en vez de
+    -- adivinar uno fijo -- si Blizzard usa otro en otro contexto, se seguiria
+    -- viendo igual.
+    local okB, blend = pcall(hl.GetBlendMode, hl)
+    if okB and blend then mine:SetBlendMode(blend) end
+    mine:Hide()
+    hl._mcfMine = mine
+
     local colorLocking = false
     local function ReassertColor()
         if colorLocking then return end
         colorLocking = true
         local c = (P() and P().highlightColor) or DEFAULT_HIGHLIGHT_COLOR
-        hl:SetVertexColor(c.r, c.g, c.b)
+        mine:SetVertexColor(c.r, c.g, c.b)
         colorLocking = false
     end
     ReassertColor()
     hl._mcfReassertColor = ReassertColor
-    hooksecurefunc(hl, "SetVertexColor", ReassertColor)
+
+    -- QUITADO (2026-08-03, "aparece!! pero hay un parpadeo raro"): habia 2
+    -- sistemas escribiendo mine:SetShown() al mismo tiempo -- este espejo
+    -- (Show/Hide/SetShown/SetAlpha de `hl`, event-driven) y el nuevo que
+    -- maneja todo por uf.isTarget en el ticker de 0.2s (ver
+    -- healthValueDriver). Confirmado en /mcfnpdiag que Blizzard NO dispara
+    -- su logica nativa de highlight en este build (hl:GetAlpha()/IsShown()
+    -- nunca pasan a 1/true realmente) -- este espejo no tenia nada real que
+    -- reflejar y solo competia con el otro, produciendo el parpadeo. Se
+    -- deja SOLO el manejo por isTarget (mas abajo, healthValueDriver).
+    -- `hl` sigue forzado invisible de forma permanente -- reusa el helper
+    -- ya establecido en este archivo (Hide + hook sobre Show/SetShown) en
+    -- vez de un sistema aparte, ya que no hace falta espejar nada real.
+    HideNativeBorder(hl)
     -- `healthBar.selectedBorder` es un marco BLANCO nativo separado que
     -- Blizzard sigue dibujando al seleccionar (visto en vivo: el rectangulo
     -- blanco que quedaba encima de nuestro highlight ya reskineado).
@@ -1063,7 +1306,12 @@ local function SkinHighlight(uf)
     -- queda corrido/desalineado. Se recentra sobre healthBar con el tamaño
     -- fijo que usa AzeriteUI para este mismo marco.
     LockSize(hl, GetHighlightSize)
-    local hp = uf.healthBar
+    -- 12.1.0 (2026-08-03, "el highlight... se descuadro"): con
+    -- SkinHealthBarNext activo, `hp` (nativo) ya no tiene posicion propia
+    -- controlada por el addon (queda oculto, LockBar corre sobre
+    -- uf.mcfHealthBar en cambio) -- anclar el highlight a `hp` lo dejaba en
+    -- la posicion NATIVA de Blizzard, no en la de la barra real visible.
+    local hp = uf.mcfHealthBar or uf.healthBar
     if not hp then return end
     local reasserting = false
     local function Reanchor()
@@ -1156,17 +1404,35 @@ local function GetAuraPadding() return ns.NPLayout.AuraPadding(P()) end
 local function HookAurasImportance(uf)
     local af = uf.AurasFrame
     if not af or af._mcfImportantHooked then return end
-    if not (af.buffList and af.buffList.Iterate and af.debuffList and af.debuffList.Iterate) then return end
+    -- FIX (2026-08-03, 12.1.0 PTR: "attempted to index a table that cannot
+    -- be accessed while tainted", af.debuffList=<forbidden table>): Blizzard
+    -- ahora puede proteger buffList/debuffList (nuevo sistema "Forbidden
+    -- Aspects" del parche). El gate de abajo indexaba af.debuffList SIN
+    -- pcall -- y el error real estaba en Refresh(): `pcall(af.debuffList.
+    -- Iterate, af.debuffList, fn)` evalua `af.debuffList.Iterate` ANTES de
+    -- llamar a pcall (los argumentos de una llamada se evaluan primero en
+    -- Lua), asi que el index prohibido pasaba POR FUERA del pcall que
+    -- deberia atraparlo -- mismo error de forma que ya paso antes con
+    -- PortraitClassCoords/CollectAuras (ver STRUCTURE.md, "Secretos: el
+    -- crash tiene que quedar DENTRO de la closure"). Envolver TODO
+    -- (index + llamada) en una funcion anonima lo arregla.
+    local okGate, hasBoth = pcall(function()
+        return af.buffList and af.buffList.Iterate and af.debuffList and af.debuffList.Iterate
+    end)
+    if not okGate or not hasBoth then return end
     af._mcfImportantHooked = true
     uf.mcfKnownImportant = uf.mcfKnownImportant or {}
     local function Refresh()
         local known = uf.mcfKnownImportant
         for k in pairs(known) do known[k] = nil end
-        pcall(af.buffList.Iterate, af.buffList, function(id) known[id] = true end)
-        pcall(af.debuffList.Iterate, af.debuffList, function(id) known[id] = true end)
+        -- Prohibido/tainted en algunos refreshes (combate) y no en otros --
+        -- cuando falla, simplemente no suma nada esta vuelta (degrada en
+        -- silencio, no rompe el resto del nameplate).
+        pcall(function() af.buffList:Iterate(function(id) known[id] = true end) end)
+        pcall(function() af.debuffList:Iterate(function(id) known[id] = true end) end)
     end
     hooksecurefunc(af, "RefreshAuras", Refresh)
-    Refresh()
+    pcall(Refresh)
 end
 
 -- CORREGIDO (2026-07-19, "Freezing Trap/Harpoon salen en Personal, deberian
@@ -1337,9 +1603,24 @@ local function AuraShowFilter(uf, unit, p0, filter, isHarmful)
     end
 end
 
+-- 12.1.0 (2026-08-03): sistema nuevo via AuraContainer, ver
+-- NameplateAurasNext.lua -- af.buffList/debuffList (la señal que usaba
+-- HookAurasImportance) puede venir prohibida ahora, y las auras se vuelven
+-- secretas en combate/mythic+/PvP, justo cuando mas hacen falta. Gateado
+-- por disponibilidad real del widget (probado una vez, no asumido) -- si no
+-- esta disponible en este build/version, sigue el sistema viejo sin tocar
+-- nada (build 12.0.7 no entra a este branch nunca).
 local function UpdateAuras(uf, unit)
     unit = unit or uf.unit
     if not unit then return end
+    if ns.NPAurasNext_Available and ns.NPAurasNext_Available() then
+        if not UnitIsUnit(unit, "target") then
+            if ns.NPAurasNext_Hide then ns.NPAurasNext_Hide(uf) end
+            return
+        end
+        if ns.NPAurasNext_Update then ns.NPAurasNext_Update(uf, unit) end
+        return
+    end
     if not UnitIsUnit(unit, "target") then
         if uf.mcfAuraGroups then
             for _, g in ipairs(AURA_GROUPS) do uf.mcfAuraGroups[g]:Hide() end
@@ -1417,8 +1698,12 @@ SlashCmdList["MCFAURASDIAG"] = function()
     end
     local plate = C_NamePlate and C_NamePlate.GetNamePlateForUnit and C_NamePlate.GetNamePlateForUnit(unit)
     local uf = plate and (plate.UnitFrame or plate)
-    print("  uf.AurasFrame.buffList/debuffList disponibles=" ..
-        tostring(uf and uf.AurasFrame and uf.AurasFrame.buffList and uf.AurasFrame.buffList.Iterate ~= nil))
+    -- pcall (2026-08-03, 12.1.0 PTR): buffList puede venir prohibido segun
+    -- el momento (ver el FIX largo en HookAurasImportance mas arriba).
+    local okBL, hasBL = pcall(function()
+        return uf and uf.AurasFrame and uf.AurasFrame.buffList and uf.AurasFrame.buffList.Iterate ~= nil
+    end)
+    print("  uf.AurasFrame.buffList/debuffList disponibles=" .. tostring(okBL and hasBL))
     print("  uf._mcfImportantHooked=" .. tostring(uf and uf.AurasFrame and uf.AurasFrame._mcfImportantHooked))
     local knownCount = 0
     if uf and uf.mcfKnownImportant then for _ in pairs(uf.mcfKnownImportant) do knownCount = knownCount + 1 end end
@@ -1482,6 +1767,32 @@ end
 -- nil y "secreto" son estados distintos y se pueden diferenciar sin leer
 -- nada -- UnitReaction confirma lo mismo (nil vs numero) como 2da señal,
 -- para no depender de una sola API.
+-- FIX (2026-08-03, 12.1.0 PTR: "Questzertauren" -- una nameplate de
+-- objeto/quest-marker se mostraba SIN skinear en vez de ocultarse): el
+-- fallback de abajo (creatureType==nil) seguia siendo tecnicamente correcto
+-- (SECRETO no es nil, /mcfnpobjdiag lo confirmo), pero UnitGUID TAMBIEN
+-- puede venir secreto ahora para el objeto en si (no solo para criaturas
+-- reales), asi que la 1ra rama (GUID legible, GameObject-...) puede no
+-- ejecutarse nunca y todo cae al fallback -- que en teoria deberia seguir
+-- funcionando iu igual. Investigando Platynator (ya actualizado a 12.1.0,
+-- Display/Nameplate.lua:134) se confirma que Blizzard AGREGO 2 APIs
+-- dedicadas justo para esto, pensadas para seguir siendo legibles pase lo
+-- que pase con la secrecia de identidad: UnitNameplateShowsWidgetsOnly
+-- (marcadores de quest/delve, solo widgets) y UnitIsGameObject (objetos de
+-- verdad). Se usan como señal PRIMARIA -- mas directas y confiables que
+-- adivinar por ausencia de datos -- y se deja el fallback viejo como red
+-- de seguridad para builds donde esas 2 APIs no existan.
+-- REVERTIDO (2026-08-03, "no puedo clickear NINGUNA nameplate"): los 2
+-- chequeos de arriba (UnitNameplateShowsWidgetsOnly/UnitIsGameObject)
+-- estaban dando falso positivo en NPCs normales en este build de PTR --
+-- las capturas del usuario mostraron nameplates enteras (Training Dummy,
+-- NPCs con nombre) cayendo al render nativo simplificado de Blizzard (sin
+-- skin, y ese modo de Blizzard es NO-clickeable por diseño) en vez de
+-- pasar por SkinNamePlate. Aislado con /mcfnpsafe + descartando health
+-- bar/highlight/auras uno por uno -- esta funcion era la unica pieza sin
+-- gatear, y coincide exacto con "se ve nativo Y no se puede clickear".
+-- Vuelve al heuristico viejo (GUID + fallback creatureType/reaction), que
+-- SI viene funcionando bien para el resto de los casos.
 local function IsObjectNameplate(frame)
     local unit = frame.namePlateUnitToken or frame.unitToken
     if not unit then return false end
@@ -1499,8 +1810,31 @@ local function IsObjectNameplate(frame)
     return okT and creatureType == nil and okR and reaction == nil
 end
 
+-- INTERRUPTOR DE EMERGENCIA (2026-08-03, "no me deja seleccionar los
+-- nameplates" -- 2 rondas de fixes de alpha/frame-level no lo resolvieron):
+-- para AISLAR cual de los 3 sistemas nuevos de 12.1.0 (health bar propia,
+-- highlight propio, auras via AuraContainer) esta rompiendo el click, sin
+-- tener que revertir commits. /mcfnpsafe togglea ns._mcfNPSafeMode -- con
+-- esto en true, SkinHealthBar usa el reskin-en-su-lugar viejo Y
+-- NPAurasNext_Available() reporta false (fallback al sistema viejo de
+-- auras). Requiere /reload para que las plates ya skineadas se re-evaluen.
+-- BUG PROPIO ENCONTRADO (2026-08-03): la version original guardaba esto
+-- SOLO en memoria (ns._mcfNPSafeMode) -- y el siguiente paso pedido
+-- SIEMPRE era /reload, que borra toda variable en memoria del addon. O sea
+-- que NINGUNA de las pruebas de aislamiento anteriores corrio de verdad
+-- con el modo seguro activo, sin importar lo que dijera el print. Ahora se
+-- guarda en la DB (persiste el /reload de verdad).
+SLASH_MCFNPSAFE1 = "/mcfnpsafe"
+SlashCmdList["MCFNPSAFE"] = function()
+    local db = ns.GetDB and ns.GetDB()
+    if not db then return end
+    db._npSafeMode = not db._npSafeMode
+    print(("|cff00ff00[MCF]|r Nameplates safe mode = %s (guardado en DB, sobrevive /reload) -- hace falta /reload para que tome efecto."):format(
+        tostring(db._npSafeMode)))
+end
+
 local function SkinNamePlate(frame)
-    if not frame then return end
+    if not frame or ns.NPNextActive then return end
     local uf = frame.UnitFrame or frame
     -- CORREGIDO (2026-07-27, confirmado con /mcfnpobjdiag: "Wooden Chair" ya
     -- detectaba IsObjectNameplate=true pero seguia MOSTRANDOSE skineado --
@@ -1521,15 +1855,39 @@ local function SkinNamePlate(frame)
     if not uf or uf._mcfNPSkinned then return end
     uf._mcfNPSkinned = true
 
-    SkinHealthBar(uf)
-    HideNativeCastBar(uf)
-    HideNativeAuras(uf)
-    SkinName(uf)
-    SkinHealthValue(uf)
-    HideNativeBorder(uf.classificationIndicator)
-    LockRaidMark(uf)
-    SkinHighlight(uf)
-    SkinThreat(uf)
+    -- RESET DEFENSIVO (2026-08-03, "sigue sin funcionar" -- con TODO
+    -- desactivado via /mcfnpsafe, el click seguia roto, lo que sugiere que
+    -- `uf.disableMouse` quedo PEGADO desde una ronda anterior -- /reload NO
+    -- recrea los frames nativos de Blizzard, solo vuelve a correr el Lua
+    -- del addon sobre los MISMOS objetos ya existentes). Se fuerza de vuelta
+    -- a false por si algo (nuestro o de Blizzard) lo dejo en true.
+    if uf.disableMouse then
+        pcall(function() uf.disableMouse = false end)
+    end
+
+    -- pcall POR PASO (2026-08-03, 12.1.0 PTR: "sigue sin salir el
+    -- highlight" -- hl._mcfMine daba nil, o sea SkinHighlight nunca
+    -- corria). uf._mcfNPSkinned se pone en true ANTES de esta secuencia --
+    -- si algun paso tira sin capturar, TODO lo que viene despues se salta
+    -- para siempre (el guard bloquea reintentar). Envolver cada paso
+    -- evita que uno roto tape a los demas, y el print identifica CUAL.
+    local STEPS = {
+        { "SkinHealthBar", SkinHealthBar, uf },
+        { "HideNativeCastBar", HideNativeCastBar, uf },
+        { "HideNativeAuras", HideNativeAuras, uf },
+        { "SkinName", SkinName, uf },
+        { "SkinHealthValue", SkinHealthValue, uf },
+        { "HideNativeBorder(classificationIndicator)", HideNativeBorder, uf.classificationIndicator },
+        { "LockRaidMark", LockRaidMark, uf },
+        { "SkinHighlight", SkinHighlight, uf },
+        { "SkinThreat", SkinThreat, uf },
+    }
+    for _, step in ipairs(STEPS) do
+        local ok, err = pcall(step[2], step[3])
+        if not ok then
+            print(("|cffff5555[MCF]|r SkinNamePlate: %s tiro un error: %s"):format(step[1], tostring(err)))
+        end
+    end
 end
 
 -- Llamada desde Options.lua (ApplyCurrent) cada vez que el usuario cambia
@@ -1538,6 +1896,7 @@ end
 -- aparezcan despues ya nacen con el perfil actual via Skin* al crearse).
 local function RefreshNameplateStyle()
     ApplyMaxDistance()
+    if ns.NPNextActive then return end
     if not C_NamePlate or not C_NamePlate.GetNamePlates then return end
     for _, frame in ipairs(C_NamePlate.GetNamePlates()) do
         local uf = frame.UnitFrame or frame
@@ -1611,6 +1970,7 @@ local function ApplyNameOnlyMode(uf, unit)
     else
         if uf.mcfCast then uf.mcfCast:Hide() end
         if uf.mcfAuraGroups then for _, g in ipairs(AURA_GROUPS) do uf.mcfAuraGroups[g]:Hide() end end
+        if ns.NPAurasNext_Hide then ns.NPAurasNext_Hide(uf) end
         if uf.mcfClass then uf.mcfClass:Hide() end
     end
 end
@@ -1648,6 +2008,38 @@ healthValueDriver:SetScript("OnUpdate", ns.Prof.Wrap("Nameplates: valor de vida"
                 if not pcall(fs.SetFormattedText, fs, "%d%%", pct) then fs:SetText("") end
             else
                 fs:SetText("")
+            end
+            -- 12.1.0 (2026-08-03): la barra propia (SkinHealthBarNext) no la
+            -- alimenta Blizzard -- mismo pct ya calculado arriba, mismo
+            -- ticker de 0.2s que ya corria para el texto.
+            if uf.mcfHealthBar then
+                local okV = pct ~= nil and pcall(uf.mcfHealthBar.SetValue, uf.mcfHealthBar, pct)
+                if not okV then pcall(uf.mcfHealthBar.SetValue, uf.mcfHealthBar, 0) end
+                -- FIX (2026-08-03, "el color del nameplate hostil no es
+                -- rojo"): al reskinear la barra NATIVA en su lugar,
+                -- Blizzard seguia coloreandola sola por reaccion -- la
+                -- barra 100% propia (SkinHealthBarNext) no la tiñe nadie.
+                -- UnitReaction(unit,"player") NO es secreto (info basica de
+                -- reaccion), mismo patron ya usado en Units.lua.
+                local reaction = ns.safeVal(UnitReaction, unit, "player")
+                local cr, cg, cb = 0, 0.9, 0
+                if type(reaction) == "number" then
+                    if reaction <= 3 then cr, cg, cb = 0.86, 0.11, 0.11
+                    elseif reaction == 4 then cr, cg, cb = 1, 0.85, 0
+                    else cr, cg, cb = 0, 0.9, 0 end
+                end
+                pcall(uf.mcfHealthBar.SetStatusBarColor, uf.mcfHealthBar, cr, cg, cb)
+            end
+            -- FIX (2026-08-03, "no sale el outline en el target" -- /mcfnpdiag
+            -- confirmo que hl:GetAlpha()/IsShown() nunca pasan a 1/true en
+            -- este build: Blizzard mismo no dispara su logica nativa de
+            -- highlight para nameplates, no es un bug de nuestro espejo
+            -- Show/Hide/SetAlpha, que si esta funcionando). En vez de seguir
+            -- esperando una señal que no llega, se maneja DIRECTO desde
+            -- uf.isTarget (campo confirmado presente y correcto en el diag).
+            local hl = uf.selectionHighlight
+            if hl and hl._mcfMine then
+                pcall(hl._mcfMine.SetShown, hl._mcfMine, uf.isTarget and true or false)
             end
         end
         if uf then
@@ -1763,6 +2155,11 @@ ev:RegisterEvent("NAME_PLATE_UNIT_ADDED")
 ev:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
 ev:RegisterEvent("PLAYER_ENTERING_WORLD")
 ev:SetScript("OnEvent", function(self, event, unit)
+    -- 12.1.0 (2026-08-03): sistema viejo desactivado por completo cuando
+    -- NameplatesNext.lua toma el control -- 2 sistemas escribiendo sobre
+    -- el mismo nameplate.UnitFrame a la vez era la causa de la mayoria de
+    -- los bugs de esta sesion.
+    if ns.NPNextActive then return end
     local p = P()
     if not (p and p.enabled ~= false) then return end
     if event == "NAME_PLATE_UNIT_ADDED" then
@@ -1963,7 +2360,14 @@ SlashCmdList["MCFNPDIAG"] = function()
             end
         end
     end
+    -- Preferir la plate del TARGET (2026-08-03, "isTarget=false" en un
+    -- diagnostico -- plates[1] es arbitrario, con varias plates visibles
+    -- puede no ser la que estas mirando/probando).
     local sample = plates[1]
+    for _, frame in ipairs(plates) do
+        local ufCheck = frame.UnitFrame or frame
+        if ufCheck and ufCheck.isTarget then sample = frame; break end
+    end
     if sample then
         local uf = sample.UnitFrame or sample
         print("  isTarget=" .. tostring(uf and uf.isTarget) .. " _mcfNPSkinned=" .. tostring(uf and uf._mcfNPSkinned)
@@ -2000,11 +2404,78 @@ SlashCmdList["MCFNPDIAG"] = function()
         else
             print("  AurasFrame=nil")
         end
+        -- 12.1.0 (2026-08-03, "sigo sin ver las auras"): estado real del
+        -- sistema nuevo (NameplateAurasNext.lua) -- si esto no aparece del
+        -- todo, ni siquiera se esta creando; si aparece pero sin hijos,
+        -- SetUnit/UpdateAllAuras no esta produciendo nada visible.
+        print("  NPAurasNext disponible=" .. tostring(ns.NPAurasNext_Available and ns.NPAurasNext_Available()))
+        if uf.mcfAurasNext then
+            for key, c in pairs(uf.mcfAurasNext) do
+                -- RONDA 3 (2026-08-03, "hasta ahi llego" DE NUEVO pese al
+                -- fix de closures): sigue cortando el diag entero en el
+                -- mismo punto -- en vez de seguir cazando la linea exacta,
+                -- TODO el cuerpo por container va adentro de UN pcall
+                -- grande. Si algo revienta, se imprime el error y se sigue
+                -- con el resto (castBar/textura mas abajo) en vez de perder
+                -- el diagnostico completo otra vez.
+                -- RONDA 4 (2026-08-03): CAUSA REAL encontrada -- kid:IsShown()
+                -- de un boton de aura devuelve un BOOLEANO SECRETO en 12.1.0
+                -- (confirmado: "attempt to perform boolean test on a secret
+                -- boolean value" -- ni siquiera se puede usar en un `if`).
+                -- No hay forma segura de leer esto desde Lua -- es del mismo
+                -- tipo de secreto que UnitHealth/UnitCastingInfo para
+                -- unidades ajenas. Se deja de intentar inspeccionar
+                -- shown/count por boton: Blizzard puede estar dibujandolo
+                -- perfecto por dentro sin que este addon pueda verificarlo
+                -- via diagnostico -- hay que confirmarlo A OJO en el juego,
+                -- no por este comando.
+                local okBlock, blockErr = pcall(function()
+                    local shownC = c:IsShown()
+                    local kids = { c:GetChildren() }
+                    print(("    container[%s]: shown=%s unit=%s children=%s nextOK=%s nextErr=%s"):format(
+                        key, tostring(shownC), tostring(c._mcfNextUnit), tostring(#kids),
+                        tostring(c._mcfNextOK), tostring(c._mcfNextErr)))
+                    local hasIcon = kids[1] and kids[1].mcfIcon ~= nil
+                    print(("      children=%d, primero tiene mcfIcon=%s (shown/count no leible -- secreto)"):format(
+                        #kids, tostring(hasIcon)))
+                end)
+                if not okBlock then
+                    print(("    container[%s]: DIAG CRASHEO -- %s"):format(key, tostring(blockErr)))
+                end
+            end
+        else
+            print("  uf.mcfAurasNext=nil (containers nunca se crearon para este uf)")
+        end
         do
             local cb = uf and (uf.castBar or uf.CastBar or uf.castbar or uf.Castbar or uf.CastingBarFrame)
             print("  castBar=" .. tostring(uf and uf.castBar ~= nil) .. " CastBar=" .. tostring(uf and uf.CastBar ~= nil)
                 .. " CastingBarFrame=" .. tostring(uf and uf.CastingBarFrame ~= nil)
                 .. " chosen._mcfSkinned=" .. tostring(cb and cb._mcfSkinned))
+            -- 12.1.0 PTR (2026-08-03, "el cast bar es la nativa de Blizzard"):
+            -- ninguno de los 5 nombres de arriba matcheo -- CastBarsContainer
+            -- SI aparecio en un dump de error anterior en este mismo build.
+            -- Volcado de esa tabla + sus hijos para encontrar el nombre real
+            -- del widget de cast en este cliente.
+            local cbc = uf and uf.CastBarsContainer
+            print("  uf.CastBarsContainer=" .. tostring(cbc ~= nil))
+            if cbc then
+                print("  Claves de CastBarsContainer (primeras 25):")
+                local n = 0
+                for k, v in pairs(cbc) do
+                    print(("    %s = %s (%s)"):format(tostring(k), tostring(v), type(v)))
+                    n = n + 1
+                    if n >= 25 then print("    ..."); break end
+                end
+                local okKids, kids = pcall(function() return { cbc:GetChildren() } end)
+                if okKids then
+                    print(("  CastBarsContainer:GetChildren() -> %d hijos"):format(#kids))
+                    for i, k in ipairs(kids) do
+                        local okOT, ot = pcall(k.GetObjectType, k)
+                        local okShown, shown = pcall(k.IsShown, k)
+                        print(("    child %d: %s shown=%s"):format(i, okOT and ot or "?", tostring(okShown and shown)))
+                    end
+                end
+            end
         end
         -- UnitHealth/UnitHealthMax confirmados SECRETOS para nameplates
         -- ajenos (ni imprimirlos andaba) -- el texto de vida usa
@@ -2033,6 +2504,60 @@ SlashCmdList["MCFNPDIAG"] = function()
             .. " RaidTargetFrame=" .. tostring(uf and uf.RaidTargetFrame ~= nil)
             .. " selectionHighlight=" .. tostring(uf and uf.selectionHighlight ~= nil)
             .. " aggroHighlight=" .. tostring(uf and uf.aggroHighlight ~= nil))
+        -- 12.1.0 (2026-08-03, "no me deja seleccionar los nameplates para
+        -- click-to-target"): `disableMouse` es un campo NATIVO real de
+        -- Blizzard (visto en un dump de error anterior en este mismo build)
+        -- que controla si la nameplate acepta clicks -- si algo de nuestro
+        -- lado esta empujando esto a true sin querer, o si Blizzard lo pone
+        -- solo bajo alguna condicion nueva de 12.1.0, esto lo confirma.
+        if uf then
+            print(("  disableMouse=%s IsMouseEnabled=%s frame:GetHitRectInsets=%s"):format(
+                tostring(uf.disableMouse),
+                tostring(select(2, pcall(function() return uf:IsMouseEnabled() end))),
+                tostring(select(2, pcall(function() return uf:GetHitRectInsets() end)))))
+            local np = sample
+            if np then
+                print(("  namePlateFrame: EnableMouse=%s HitTest=%s"):format(
+                    tostring(select(2, pcall(function() return np:IsMouseEnabled() end))),
+                    tostring(select(2, pcall(function() return np:GetHitRectInsets() end)))))
+            end
+        end
+        -- 12.1.0 (2026-08-03, "sigue sin existir el highlight" pese a los
+        -- fixes de Show/Hide/SetShown/SetAlpha): mismo patron que el cast
+        -- bar (que se movio a uf.CastBarsContainer.castBar) -- volcado de
+        -- TODAS las claves de `uf` para buscar un contenedor nuevo de
+        -- seleccion que reemplazo a `uf.selectionHighlight` (que puede
+        -- seguir EXISTIENDO pero ya no ser el objeto real que Blizzard usa).
+        if uf then
+            print("  Claves de uf (buscando algo tipo *Highlight*/*Selection*/*Target*):")
+            for k, v in pairs(uf) do
+                if tostring(k):match("[Hh]ighlight") or tostring(k):match("[Ss]elect") then
+                    print(("    %s = %s (%s)"):format(tostring(k), tostring(v), type(v)))
+                end
+            end
+        end
+        do
+            local hl = uf and uf.selectionHighlight
+            if hl then
+                local okHl, hlShown = pcall(function() return hl:IsShown() end)
+                local okA, hlAlpha = pcall(function() return hl:GetAlpha() end)
+                local mine = hl._mcfMine
+                -- BUG (2026-08-03): `mine and pcall(...)` trunca los 2
+                -- valores de pcall a uno solo (and/or descartan el resto) --
+                -- mineShown/mineAlpha salian SIEMPRE nil sin importar el
+                -- resultado real. Con if/then se preservan los 2.
+                local okMine, mineShown = false, nil
+                local okMineA, mineAlpha = false, nil
+                if mine then
+                    okMine, mineShown = pcall(function() return mine:IsShown() end)
+                    okMineA, mineAlpha = pcall(function() return mine:GetAlpha() end)
+                end
+                print(("  selectionHighlight: nativo shown=%s alpha=%s (ok=%s/%s) | mine=%s shown=%s alpha=%s (ok=%s/%s)"):format(
+                    tostring(okHl and hlShown), tostring(okA and hlAlpha), tostring(okHl), tostring(okA),
+                    tostring(mine ~= nil), tostring(okMine and mineShown), tostring(okMineA and mineAlpha),
+                    tostring(okMine), tostring(okMineA)))
+            end
+        end
         local hp = uf and uf.healthBar
         if hp then
             -- GetPoint()/GetNumPoints() estan BLOQUEADOS en nameplates (son
@@ -2053,6 +2578,15 @@ SlashCmdList["MCFNPDIAG"] = function()
             local tex = hp:GetStatusBarTexture()
             if tex then
                 local l, r, t, b = tex:GetTexCoord()
+                -- 12.1.0 PTR (2026-08-03, "textura incorrecta"): la ruta REAL
+                -- del archivo aplicado, para comparar contra BAR_TEX
+                -- ("Interface\AddOns\MyCustomFrames\Assets\nameplate_bar.tga").
+                -- Si esto muestra un fileID numerico o una ruta DISTINTA,
+                -- alguien (Blizzard o este addon) la piso despues del skin.
+                local okP, path = pcall(tex.GetTexture, tex)
+                print("  statusBarTexture path = " .. tostring(okP and path))
+                print("  BAR_TEX esperado = " .. tostring(BAR_TEX))
+                print("  hp._mcfTexOK (LockStatusBarTexture, ronda 2) = " .. tostring(hp._mcfTexOK))
                 print(("  statusBarTexture: w=%.1f h=%.1f texcoord=(%.3f,%.3f,%.3f,%.3f)"):format(
                     tex:GetWidth() or -1, tex:GetHeight() or -1, l or -1, r or -1, t or -1, b or -1))
             end

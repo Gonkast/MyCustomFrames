@@ -913,6 +913,12 @@ StaticPopupDialogs["MCF_SETUP_FINISH_RELOAD"] = {
 function ns.SetupFinish()
     local db = ns.GetDB and ns.GetDB()
     if db then db.setupSeen = true end
+    -- Re-fuerza los CVars nativos de Nameplates/Names (2026-08-05, "esto es
+    -- en primera instalacion y cuando vuelva a correr el setup, pero
+    -- respeta la seleccion de un usuario despues") -- correr el wizard de
+    -- nuevo es una accion EXPLICITA, asi que vuelve a aplicar lo horneado
+    -- sin el gate de "solo una vez" que usa el disparador de instalacion.
+    if ns.ReapplyNativeNameplateCVars then ns.ReapplyNativeNameplateCVars() end
     if frame then frame:Hide() end
     if StaticPopup_Show then StaticPopup_Show("MCF_SETUP_FINISH_RELOAD") end
 end
@@ -921,6 +927,7 @@ function ns.CloseSetupWizard(markSeen)
     if markSeen then
         local db = ns.GetDB and ns.GetDB()
         if db then db.setupSeen = true end
+        if ns.ReapplyNativeNameplateCVars then ns.ReapplyNativeNameplateCVars() end
     end
     if frame then frame:Hide() end
 end

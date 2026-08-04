@@ -76,6 +76,25 @@ local AURA_MAX_PER_CAT = 3
 -- direccion en que crece el grupo.
 local AURA_ANCHOR_POINT = { right = "BOTTOMLEFT", left = "BOTTOMRIGHT", center = "BOTTOM" }
 
+-- Fuente compartida del contador/tiempo de las auras de nameplate (2026-08-05,
+-- "que tengan las mismas opciones... los mismos datos size y colores... y
+-- que no se puedan controlar" -- mismo criterio fijo que ya se uso para
+-- Player/Target: 1 sola fuente COMPARTIDA, sin slider/color picker propios).
+-- Antes NameplateBuild.lua (mock del Designer) y el sistema viejo apagado
+-- (Nameplates.lua) esperaban un font object llamado "MCFAuraTimeFontObj",
+-- pero solo Nameplates.lua lo CREABA -- con ese archivo deshabilitado, el
+-- nombre nunca resolvia a nada real y SetCountdownFont fallaba en silencio
+-- (pcall). Se recrea aca (carga temprano, antes de NameplateBuild.lua/
+-- NameplateAurasNext.lua) con el MISMO nombre para no tener que tocar esos
+-- 2 archivos donde ya se lo pide por nombre.
+local MCFAuraTimeFontObj = CreateFont("MCFAuraTimeFontObj")
+MCFAuraTimeFontObj:SetFont("Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
+if ns.GOLD then
+    MCFAuraTimeFontObj:SetTextColor(ns.GOLD.r, ns.GOLD.g, ns.GOLD.b, 1)
+else
+    MCFAuraTimeFontObj:SetTextColor(1, 1, 1, 1)
+end
+
 local L = {}
 ns.NPLayout = L
 
@@ -101,6 +120,17 @@ L.AURA_GROUP_OFFSET_KEYS = {
 L.AURA_GROUP_DIRECTION_KEYS = {
     big = "bigDebuffDirection", personal = "personalDebuffsDirection", enemy = "enemyBuffsDirection",
 }
+-- Default POR GRUPO (2026-08-05, "las posiciones no son iguales"): antes de
+-- que Nameplates.lua (viejo) se deshabilitara, NameplateDefaults sembraba
+-- estos 3 valores en cada perfil nuevo -- bigDebuffDirection="right",
+-- personalDebuffsDirection="center", enemyBuffsDirection="left" (repartidos
+-- a proposito para no superponerse). L.AuraGroup (mas abajo) caia a "right"
+-- PARA LOS 3 si el perfil no tenia el valor guardado -- con Nameplates.lua
+-- apagado, nadie siembra el default nunca, asi que cualquier perfil sin
+-- estos 3 campos EXPLICITOS (perfiles nuevos, o viejos donde nunca se toco
+-- el boton de Direction) terminaba con personal/enemy tambien en "right",
+-- los 3 amontonados en el mismo lado -- justo el sintoma reportado.
+L.AURA_GROUP_DEFAULT_DIRECTION = { big = "right", personal = "center", enemy = "left" }
 
 local function num(v, dflt) return (type(v) == "number") and v or dflt end
 
@@ -271,7 +301,7 @@ function L.AuraGroup(p, groupKey)
     local keys = L.AURA_GROUP_OFFSET_KEYS[groupKey]
     local base = AURA_BASE[groupKey]
     if not (keys and base) then return nil end
-    local dir = (p and p[L.AURA_GROUP_DIRECTION_KEYS[groupKey]]) or "right"
+    local dir = (p and p[L.AURA_GROUP_DIRECTION_KEYS[groupKey]]) or L.AURA_GROUP_DEFAULT_DIRECTION[groupKey] or "right"
     local x, y = off(p, keys[1], keys[2], base)
     -- scratch POR GRUPO ("aura:big" y demas): los tres se piden seguidos en el
     -- bucle de LayoutPlate, asi que compartir una sola seria correcto igual,

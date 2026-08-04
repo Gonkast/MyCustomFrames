@@ -1812,6 +1812,21 @@ local GLOBAL_FLAT_KEYS = {
     "focusAuraMaxIcons", "focusAuraPadding", "focusAuraSort",
     "playerAuraMaxIcons", "playerAuraPadding", "playerAuraSort",
     "targetAuraMaxIcons", "targetAuraPadding", "targetAuraSort",
+    -- Migracion a AuraContainer (2026-08-03/04): growth, offset unificado,
+    -- padding entre grupos y el toggle show buffs/debuffs son TODOS
+    -- posteriores a este barrido -- faltaban aca, el export/import los
+    -- perdia en silencio (quedaban en default hasta que el usuario los
+    -- retocara a mano en el perfil nuevo). Mismos 5 grupos que arriba.
+    "partyAuraGrowth", "partyAuraOffsetX", "partyAuraOffsetY", "partyAuraGroupPadding",
+    "partyAuraShowDebuffs", "partyAuraShowBuffs",
+    "arenaAuraGrowth", "arenaAuraOffsetX", "arenaAuraOffsetY", "arenaAuraGroupPadding",
+    "arenaAuraShowDebuffs", "arenaAuraShowBuffs",
+    "focusAuraGrowth", "focusAuraOffsetX", "focusAuraOffsetY", "focusAuraGroupPadding",
+    "focusAuraShowDebuffs", "focusAuraShowBuffs",
+    "playerAuraGrowth", "playerAuraOffsetX", "playerAuraOffsetY", "playerAuraGroupPadding",
+    "playerAuraShowDebuffs", "playerAuraShowBuffs",
+    "targetAuraGrowth", "targetAuraOffsetX", "targetAuraOffsetY", "targetAuraGroupPadding",
+    "targetAuraShowDebuffs", "targetAuraShowBuffs",
     "hideChatEditBoxTexture", "raidGhostShowAll",
     -- Automatismos del Explorer (ExplorerAuto.lua, 2026-07-28): son ajustes de
     -- comportamiento compartibles, van al export igual que el resto de los
@@ -1995,6 +2010,144 @@ ns.ImportPreset = function(str)
     db.presets[name] = pr
     print("|cff00ff00[MCF]|r Profile imported: " .. name)
     return true, name
+end
+
+-- ==========================================================================
+-- FORZAR CVARS NATIVOS DE NAMEPLATES/NAMES (2026-08-05, pedido del usuario:
+-- "necesito que mi addon fuerce estos datos... en primera instalacion o al
+-- correr el setup, pero si alguien hace cambios, que se le guarden").
+--
+-- Son ajustes NATIVOS de Blizzard (paneles Options > Names/Nameplates), no
+-- de este addon -- se controlan via SetCVar, no via db.units/etc. "Forzar
+-- pero respetar cambios despues" = escribirlos UNA sola vez (gateado por
+-- db._nativeCVarsSeeded) y nunca mas -- si el usuario los cambia a mano
+-- despues, no hay nada que los vuelva a pisar.
+--
+-- Confirmado en vivo con /mcfcvardiag (2026-08-05): de los 7 candidatos de
+-- Nameplates originales, 5 EXISTEN de verdad (nameplateShowAll/Enemies/
+-- EnemyMinions/EnemyMinus/FriendlyNPCs) y 2 NO (nameplateShowFriends,
+-- nameplateShowFriendlyPets -- "Friendly Player Nameplates" y su "Minions"
+-- usan otro nombre en este build, todavia sin confirmar -- sacados de la
+-- lista forzada hasta encontrar el real, en vez de forzar un nombre que no
+-- existe). Los 6 candidatos de la pantalla "Names" TAMBIEN existen todos
+-- (unitNameOwn/NPC/FriendlyPlayerName/FriendlyPetName/EnemyPlayerName/
+-- EnemyPetName) -- se agregan forzados a "0" (apagado), igual que las
+-- capturas que paso el usuario -- el nombre flotante sobre la unidad es
+-- redundante con el nombre que ya dibuja el nameplate propio del addon.
+-- 2da ronda confirmada (2026-08-05): nameplateShowFriendlyPlayers (=1,
+-- "Friendly Player Nameplates" -- el nombre real, ni nameplateShowFriends
+-- ni nameplateShowFriendlyPets eran correctos), nameplateShowClassColor
+-- (=1, "Use Class Color for Names", NEW), nameplateShowOffscreen (=1,
+-- "Show Offscreen Nameplates"), unitNameNonCombatCreatureName (=0,
+-- "Critters and Companions" de Names).
+--
+-- 3ra ronda confirmada (2026-08-05): nameplateShowFriendlyPlayerPets/
+-- Minions/Guardians (=1 los 3 -- el "Minions" anidado bajo Friendly Player
+-- Nameplates son en realidad 3 CVars separados, forzados juntos).
+--
+-- DESCARTADO A PROPOSITO: nameplateOverlapV SI existe (=1) pero el nombre
+-- sugiere tolerancia de superposicion VERTICAL, no el dropdown "Stack
+-- Nameplates" -- sin confirmar que sea lo mismo, no se fuerza (mejor no
+-- tocar un ajuste que puede ser otra cosa).
+--
+-- Sin confirmar todavia, deje de adivinar tras 3 rondas sin acertar:
+-- "Only Show Names" (NEW), "Realm Name" (NEW), "Stack Nameplates" (NEW,
+-- dropdown) -- si el usuario encuentra el nombre real (ej. inspeccionando
+-- el widget nativo), se agregan.
+local NATIVE_NAMEPLATE_CVARS = {
+    nameplateShowAll                    = "1", -- Always Show Nameplates
+    nameplateShowEnemies                = "1", -- Enemy Unit Nameplate
+    nameplateShowEnemyMinions           = "1", -- Enemy Unit Nameplate > Minions
+    nameplateShowEnemyMinus             = "1", -- Enemy Unit Nameplate > Minor
+    nameplateShowFriendlyPlayers        = "1", -- Friendly Player Nameplates
+    nameplateShowFriendlyPlayerPets      = "1", -- Friendly Player Nameplates > Minions
+    nameplateShowFriendlyPlayerMinions   = "1", -- Friendly Player Nameplates > Minions
+    nameplateShowFriendlyPlayerGuardians = "1", -- Friendly Player Nameplates > Minions
+    nameplateShowFriendlyNPCs    = "1", -- Friendly NPC Nameplates
+    nameplateShowClassColor      = "1", -- Use Class Color for Names (NEW)
+    nameplateShowOffscreen       = "1", -- Show Offscreen Nameplates
+    unitNameOwn                    = "0", -- Names > My Name
+    unitNameNPC                     = "0", -- Names > NPC Names
+    unitNameFriendlyPlayerName     = "0", -- Names > Friendly Players
+    unitNameFriendlyPetName        = "0", -- Names > Friendly Players > Minions
+    unitNameEnemyPlayerName        = "0", -- Names > Enemy Players
+    unitNameEnemyPetName           = "0", -- Names > Enemy Players > Minions
+    unitNameNonCombatCreatureName  = "0", -- Names > Critters and Companions
+}
+local function ApplyNativeNameplateCVarsNow()
+    for cvar, val in pairs(NATIVE_NAMEPLATE_CVARS) do
+        pcall(SetCVar, cvar, val)
+    end
+end
+local pendingNativeCVarApply = false
+local function ApplyOrDefer()
+    if InCombatLockdown and InCombatLockdown() then
+        pendingNativeCVarApply = true
+        return
+    end
+    ApplyNativeNameplateCVarsNow()
+end
+-- Disparador de PRIMERA instalacion (InitDB, mas abajo) -- gateado, corre
+-- UNA sola vez en la vida del SavedVariables.
+function ForceNativeNameplateCVarsOnce()
+    if not db or db._nativeCVarsSeeded then return end
+    db._nativeCVarsSeeded = true
+    ApplyOrDefer()
+end
+-- Disparador de RE-CORRIDA del wizard (2026-08-05, "recuerda que esto es en
+-- primera instalacion y cuando vuelva a correr el setup, pero respeta la
+-- seleccion de un usuario despues"): Setup.lua llama esto en CUALQUIER
+-- cierre del wizard (terminado o skip) -- SIN el gate de arriba, porque
+-- "correr el setup" es, por definicion, una accion explicita del usuario
+-- pidiendo que se vuelva a aplicar lo horneado. Fuera de esos 2 disparadores
+-- (primera instalacion / cerrar el wizard), nada mas vuelve a tocar estos
+-- CVars -- un cambio manual del usuario en el panel nativo de Blizzard
+-- queda tal cual hasta la proxima vez que el corra /mcfsetup el mismo.
+function ns.ReapplyNativeNameplateCVars()
+    ApplyOrDefer()
+end
+do
+    local ev = CreateFrame("Frame")
+    ev:RegisterEvent("PLAYER_REGEN_ENABLED")
+    ev:SetScript("OnEvent", function()
+        if pendingNativeCVarApply then
+            pendingNativeCVarApply = false
+            ApplyNativeNameplateCVarsNow()
+        end
+    end)
+end
+
+-- Diagnostico (2026-08-05): vuelca el valor ACTUAL de cada CVar candidato --
+-- tanto los ya forzados arriba como los inciertos (marcados "NEW" en el
+-- panel, o de la pantalla "Names") -- para confirmar los nombres reales
+-- antes de forzarlos tambien. GetCVarInfo devuelve nil si el nombre no
+-- existe en este build -- esa es la señal de "adivine mal".
+SLASH_MCFCVARDIAG1 = "/mcfcvardiag"
+SlashCmdList["MCFCVARDIAG"] = function()
+    print("|cff00ff00[MCF cvar diag]|r -- confirmados (ya forzados):")
+    for cvar in pairs(NATIVE_NAMEPLATE_CVARS) do
+        local okG, val = pcall(GetCVar, cvar)
+        print(("  %-28s = %s"):format(cvar, okG and tostring(val) or "|cffff5555no existe|r"))
+    end
+    print("|cff00ff00[MCF cvar diag]|r -- candidatos SIN confirmar (los 3 que quedan tras 3 rondas de adivinar):")
+    local CANDIDATES = {
+        -- "Only Show Names" (NEW) -- nameplateShowOnlyNames/showOnlyNames/
+        -- nameplateNamesOnly descartados.
+        "nameplateOnlyNames", "namesOnly",
+        -- "Realm Name" (NEW) -- nameplateShowRealmNames/showRealmNames
+        -- descartados.
+        "nameplateShowRealmName", "showRealmName",
+        -- "Stack Nameplates" (NEW, dropdown Enemy/Friendly Units) --
+        -- nameplateStackNameplates/Stacking/StackMode descartados.
+        -- nameplateOverlapV SI existe pero se descarto por semantica
+        -- incierta (ver comentario largo arriba, junto a NATIVE_NAMEPLATE_CVARS).
+        "nameplateOverlapH", "nameplateClusterMode",
+    }
+    for _, cvar in ipairs(CANDIDATES) do
+        local okG, val = pcall(GetCVar, cvar)
+        print(("  %-40s = %s"):format(cvar, okG and val ~= nil and tostring(val) or "|cffff5555no existe / nil|r"))
+    end
+    print("|cffaaaaaa[MCF]|r Si alguno de la 2da lista SI existe con un valor con sentido, decime cual para agregarlo a la lista forzada.")
 end
 
 -- ==========================================================================
@@ -2303,6 +2456,7 @@ local function InitDB()
     if db.presets then
         for _, pr in pairs(db.presets) do RemapPaths(pr.units or pr) end
     end
+    ForceNativeNameplateCVarsOnce()
 end
 
 -- Fix DialogueUI + DynamicCam: DialogueUI llama a BlockShoulderOffsetZoom() al abrir su

@@ -74,8 +74,14 @@ local QUESTION_MARK_ICON = "Interface\\Icons\\INV_Misc_QuestionMark"
 -- nameplates) -- son 2 sistemas de aura totalmente separados con sus
 -- propios ajustes; compartir el mismo objeto haria que uno pisara al otro.
 -- ns.GOLD (core.lua) es el color de texto default de TODO el addon.
+-- QUITADO el control de tamaño/color por grupo (2026-08-04, pedido del
+-- usuario: "quita la opcion de controlar el size del text y color, simplemente
+-- aumentame el tamaño de texto un poco" -- el mecanismo con fuente propia
+-- POR GRUPO nunca termino de reflejarse en vivo de forma confiable (solo al
+-- /reload o al entrar al menu), asi que se vuelve a 1 sola fuente
+-- COMPARTIDA fija para los 5 grupos, un poco mas grande que antes (10->12).
 local MCFAuraHoverTimeFontObj = CreateFont("MCFAuraHoverTimeFontObj")
-MCFAuraHoverTimeFontObj:SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
+MCFAuraHoverTimeFontObj:SetFont("Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
 MCFAuraHoverTimeFontObj:SetTextColor(ns.GOLD.r, ns.GOLD.g, ns.GOLD.b, 1)
 
 local DIRECTIONS = { "left", "right", "up", "down" }
@@ -86,6 +92,33 @@ local DIR_INFO = {
     right = { carrierPoint = "LEFT",   carrierRel = "RIGHT",  axis = "x", sign = 1 },
     up    = { carrierPoint = "BOTTOM", carrierRel = "TOP",    axis = "y", sign = 1 },
     down  = { carrierPoint = "TOP",    carrierRel = "BOTTOM", axis = "y", sign = -1 },
+}
+
+-- Crecimiento de auras NUEVAS dentro de la fila (2026-08-04, pedido del
+-- usuario: "la direccion que haya (up/down/left/right) es de donde salen y
+-- aparecen [DIR_INFO, arriba, sin tocar] -- la direccion que yo digo es de
+-- donde crecen las auras nuevas"). Antes esto NO existia como concepto
+-- propio -- RefreshContainers derivaba `isX`/signo directo de la MISMA
+-- direccion de DIR_INFO (dirKey=="left" or "right"), asi que un grupo
+-- anclado arriba/abajo del frame (up/down) SIEMPRE apilaba sus iconos en
+-- vertical, aunque visualmente una fila horizontal tuviera mas sentido ahi
+-- -- exactamente el bug reportado ("en el preview las auras se despliegan
+-- verticalmente, cuando deberian ser horizontales"). Ahora es un segundo
+-- ajuste, TOTALMENTE independiente del anclaje (GetGrowth() vs GetDirection()
+-- mas abajo, cada uno con su propia DB key) -- 6 modos: horizontal
+-- izquierda/derecha/centro, vertical arriba/abajo/centro.
+-- `centered` (2026-08-04, "si desde el centro"): en vez de un edge fijo del
+-- `carrier`, la fila entera arranca con un offset de -mitad de su ancho/alto
+-- total (ver RefreshContainers) y crece desde ahi -- no es un anchor point
+-- especial de Blizzard, es aritmetica antes del loop.
+ns.AURA_GROWTH_MODES = { "h-left", "h-right", "h-center", "v-up", "v-down", "v-center" }
+local GROWTH_INFO = {
+    ["h-left"]   = { isX = true,  edge = "RIGHT",  anchor = "BOTTOMRIGHT", gH = "Left",  gV = "Up",   sign = -1, centered = false },
+    ["h-right"]  = { isX = true,  edge = "LEFT",   anchor = "BOTTOMLEFT",  gH = "Right", gV = "Up",   sign = 1,  centered = false },
+    ["h-center"] = { isX = true,  edge = "LEFT",   anchor = "BOTTOMLEFT",  gH = "Right", gV = "Up",   sign = 1,  centered = true },
+    ["v-up"]     = { isX = false, edge = "BOTTOM", anchor = "BOTTOMLEFT",  gH = "Right", gV = "Up",   sign = 1,  centered = false },
+    ["v-down"]   = { isX = false, edge = "TOP",    anchor = "TOPLEFT",     gH = "Right", gV = "Down", sign = -1, centered = false },
+    ["v-center"] = { isX = false, edge = "BOTTOM", anchor = "BOTTOMLEFT",  gH = "Right", gV = "Up",   sign = 1,  centered = true },
 }
 
 local function SafeInCombat(unit)
@@ -185,7 +218,11 @@ local function CollectAuras(unit, onlyBuffs, maxIcons, sortMode)
         for i = 1, 40 do
             local ok, data = pcall(C_UnitAuras.GetAuraDataByIndex, unit, i, "HARMFUL")
             if not ok or data == nil then break end
-            data.__filter = "HARMFUL"
+            -- 12.1.0 prep: `data` puede venir como struct SECRETO en combate
+            -- (auras secretas) -- hasta ESCRIBIRLE un campo propio puede
+            -- tirar error si Blizzard lo protege contra mutacion. Mismo
+            -- criterio de "degradar en silencio" que el resto del addon.
+            if not pcall(function() data.__filter = "HARMFUL" end) then break end
             debuffs[#debuffs + 1] = data
         end
     end
@@ -193,7 +230,7 @@ local function CollectAuras(unit, onlyBuffs, maxIcons, sortMode)
     for i = 1, 40 do
         local ok, data = pcall(C_UnitAuras.GetAuraDataByIndex, unit, i, "HELPFUL")
         if not ok or data == nil then break end
-        data.__filter = "HELPFUL"
+        if not pcall(function() data.__filter = "HELPFUL" end) then break end
         buffs[#buffs + 1] = data
     end
 
@@ -222,6 +259,137 @@ local function CollectAuras(unit, onlyBuffs, maxIcons, sortMode)
     return list
 end
 
+-- ==========================================================================
+-- MOTOR AuraContainer (2026-08-03, "la idea es que salgan en combate"):
+-- CollectAuras (arriba) lee con C_UnitAuras.GetAuraDataByIndex en loop --
+-- la MISMA api vieja que ya rompio en nameplates (el loop corta apenas la
+-- primera llamada falla/devuelve secreto, y en 12.1.0 las auras de
+-- unidades ajenas SON secretas justo en combate/M+/PvP -- el momento en
+-- que mas importa verlas). La solucion ya confirmada en vivo para
+-- nameplates (ver NameplateAurasNext.lua) es el widget nativo
+-- AuraContainer: Blizzard dibuja los iconos EL MISMO desde su propio
+-- codigo seguro, sin exponerle la lista de auras al addon -- nunca se
+-- bloquea, sea cual sea el estado de combate/secreto.
+--
+-- Se integra COMO HIJO de `carrier` (el mismo frame que ya maneja el fade
+-- por hover/combate via ApplyFrac -- carrier:SetAlpha(frac)), asi que el
+-- reveal/ocultamiento por mouse-over/combate sigue funcionando IDENTICO,
+-- sin tocar esa logica -- solo cambia COMO se llenan los iconos.
+-- ==========================================================================
+-- Movido desde mas abajo (2026-08-03): BuildContainerButton la referencia
+-- y necesita verla como LOCAL, no como global -- en Lua, un identificador
+-- dentro del cuerpo de una funcion resuelve al `local` MAS CERCANO que ya
+-- este declarado LEXICAMENTE ANTES de esa funcion; declarada despues,
+-- adentro se lee como global (nil) y `iconRegistry[#iconRegistry+1] = x`
+-- explota. CreateIcon (mas abajo) sigue usandola igual, sin cambios.
+local iconRegistry = {}
+
+local AURACONTAINER_OK
+local function AuraContainerAvailable()
+    if AURACONTAINER_OK ~= nil then return AURACONTAINER_OK end
+    local ok, test = pcall(CreateFrame, "AuraContainer", nil, UIParent, "CustomAuraContainerTemplate")
+    if ok and test then test:Hide(); test:SetParent(nil) end
+    AURACONTAINER_OK = ok and test ~= nil
+    return AURACONTAINER_OK
+end
+
+-- Mismo patron EXACTO que BuildAuraButton en NameplateAurasNext.lua --
+-- "an unsized button renders nothing" (button:SetSize explicito, no
+-- alcanza con el layout del grupo) + borde propio via textures=wrapper.
+--
+-- QUITADO el font object configurable POR GRUPO (2026-08-04, pedido del
+-- usuario: "quita la opcion de controlar el size del text y color, simplemente
+-- aumentame el tamaño de texto un poco" -- el intento de hacerlo vivo/por
+-- grupo (fontObjName + ReapplyCounterFont) seguia sin reflejarse sin pasar
+-- por un /reload, asi que se simplifica: 1 sola fuente COMPARTIDA fija
+-- (MCFAuraHoverTimeFontObj, ver arriba del archivo) para los 5 grupos.
+--
+-- FIX (2026-08-04, "el icon padding esta desplazando las auras, al igual
+-- que el icon size"): el AuraContainer de Blizzard NUNCA supo de nuestro
+-- `padding` -- posiciona sus botones pegados unos a otros usando solo su
+-- propio button:SetSize, mientras que RefreshContainers calculaba el
+-- tamaño de la caja asumiendo sz+padding por icono -- la caja y lo que
+-- Blizzard realmente dibujaba adentro se desalineaban cada vez mas al
+-- tocar cualquiera de los 2 sliders. Fix: "slot fantasma" -- el BOTON (lo
+-- que Blizzard usa para su propio layout) ahora mide sz+padding, pero el
+-- icono/cooldown/borde VISIBLES quedan centrados adentro a tamaño sz --
+-- Blizzard sigue pegando botones sin gap propio, pero el boton en si ya
+-- tiene el padding incorporado, asi que el gap SI aparece.
+--
+-- Swipe circular QUITADO (2026-08-04, pedido del usuario: "el wipe
+-- texture... quitalo"): SetDrawSwipe(false) apaga el relleno/oscurecido
+-- radial de Blizzard -- el numero de cuenta regresiva sigue dibujandose
+-- igual, sin el circulo tapando el icono.
+local function BuildContainerButton(color, sz, padding)
+    return function(button)
+        local slot = sz + (padding or 0)
+        button:SetSize(slot, slot)
+        local icon = button:CreateTexture(nil, "ARTWORK")
+        icon:SetSize(sz, sz)
+        icon:SetPoint("CENTER", button, "CENTER")
+        icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        local cd = CreateFrame("Cooldown", nil, button, "CooldownFrameTemplate")
+        cd:SetSize(sz, sz)
+        cd:SetPoint("CENTER", button, "CENTER")
+        cd:SetReverse(true)
+        cd:SetDrawEdge(false)
+        if cd.SetDrawSwipe then cd:SetDrawSwipe(false) end
+        local count = button:CreateFontString(nil, "OVERLAY")
+        count:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", 1, 0)
+        local border = button:CreateTexture(nil, "OVERLAY")
+        border:SetTexture(ns.AURA_BORDER or AURA_BORDER)
+        local inset = sz * BORDER_SCALE
+        border:SetPoint("TOPLEFT", icon, "TOPLEFT", -inset, inset)
+        border:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", inset, -inset)
+        if color then border:SetVertexColor(color[1], color[2], color[3]) end
+        pcall(button.SetIcon, button, icon)
+        pcall(button.SetDurationCooldown, button, cd)
+        pcall(button.SetApplicationCount, button, count, {})
+        -- Nuestra fuente SIEMPRE al final -- SetDurationCooldown/
+        -- SetApplicationCount (llamadas de Blizzard arriba) pueden
+        -- reestilar el cooldown/fontstring que les pasamos a SU fuente por
+        -- defecto -- aplicando la nuestra DESPUES, gana siempre.
+        pcall(cd.SetCountdownFont, cd, "MCFAuraHoverTimeFontObj")
+        count:SetFontObject("MCFAuraHoverTimeFontObj")
+        button.mcfBorder = border
+        iconRegistry[#iconRegistry + 1] = button
+    end
+end
+
+local function SetContainerFlow(container, anchorPoint, growthH, growthV)
+    local fAnchor = container.SetFlowLayoutAnchorPoint or container.SetAuraLayoutAnchorPoint
+    if fAnchor then pcall(fAnchor, container, anchorPoint) end
+    local fGrowth = container.SetFlowLayoutGrowthDirection or container.SetAuraLayoutGrowthDirection
+    if fGrowth and growthH and growthV then pcall(fGrowth, container, growthH, growthV) end
+end
+
+-- specs = lista de { key, filter, candidateFilters, color, maxFrameCount }.
+-- Crea 1 AuraContainer POR spec, todos hijos de `carrier` (heredan su
+-- alpha/fade automaticamente) -- mismo criterio que los 3 containers
+-- separados (cc/personal/enemy) de NameplateAurasNext.lua, ya probado.
+-- maxIcons (2026-08-03): valor EN VIVO del panel -- se pasa explicito en
+-- vez de tener un default hardcodeado aca, para que "Max icons shown" siga
+-- funcionando de verdad tras la migracion.
+local function EnsureAuraContainers(carrier, specs, sz, padding, maxIcons)
+    if carrier._mcfContainers then return carrier._mcfContainers end
+    if not AuraContainerAvailable() then return nil end
+    local containers = {}
+    for _, spec in ipairs(specs) do
+        local ok, c = pcall(CreateFrame, "AuraContainer", nil, carrier, "CustomAuraContainerTemplate")
+        if ok and c then
+            c:SetSize(1, 1) -- "renderable rect desde el primer dirty mark" -- confirmado necesario
+            local okAdd = pcall(c.AddAuraGroup, c, "np", spec.filter, {
+                initializeFrame = BuildContainerButton(spec.color, sz, padding),
+                maxFrameCount = spec.maxFrameCount or maxIcons or 5,
+                candidateFilters = spec.candidateFilters or {},
+            })
+            if okAdd then containers[spec.key] = c end
+        end
+    end
+    carrier._mcfContainers = containers
+    return containers
+end
+
 local function ResizeIcon(b, sz)
     b:SetSize(sz, sz)
     local inset = sz * BORDER_SCALE
@@ -234,8 +402,8 @@ end
 -- borde en vivo cuando cambia la skin global -- antes este archivo usaba un
 -- AURA_BORDER local fijo, la unica pieza de auras que NO seguia el sistema
 -- de Skins (ver STRUCTURE.md "Hallazgo pendiente" 2026-07-23; Auras.lua y
--- Nameplates.lua ya usaban ns.AURA_BORDER dinamico).
-local iconRegistry = {}
+-- Nameplates.lua ya usaban ns.AURA_BORDER dinamico). Declarada mas arriba
+-- ahora (ver el comentario ahi) -- se sigue usando igual aca.
 ns.RefreshAuraHoverBorder = function()
     local tex = ns.AURA_BORDER or AURA_BORDER
     for _, b in ipairs(iconRegistry) do
@@ -254,6 +422,10 @@ local function CreateIcon(parent)
     local swipe = CreateFrame("Cooldown", nil, b, "CooldownFrameTemplate")
     swipe:SetAllPoints(b)
     swipe:SetDrawEdge(false)
+    -- Swipe circular QUITADO (2026-08-04, "el wipe texture... quitalo"):
+    -- mismo criterio que BuildContainerButton -- el numero de cuenta
+    -- regresiva sigue visible, sin el relleno/oscurecido radial encima.
+    if swipe.SetDrawSwipe then swipe:SetDrawSwipe(false) end
     -- CAMBIADO (2026-07-27, pedido del usuario: "que se muestren, en
     -- prioridad, debuff, buff y tiempo restante"): antes se ocultaba el
     -- numero de cuenta regresiva a proposito -- ahora se deja visible.
@@ -343,6 +515,54 @@ local function MakeAuraHoverGroup(cfg)
         for _, m in ipairs(ns.AURA_SORT_MODES) do if m == v then return v end end
         return "priority"
     end
+    -- Offset X/Y UNIFICADO (2026-08-04, "quiero poder unificar las
+    -- posiciones y growth"): antes debuffs y buffs tenian CADA UNO su
+    -- propio offset -- eso permitia que terminaran desalineados entre si
+    -- (reportado: 2 filas corridas una respecto a la otra). Ahora es 1 SOLO
+    -- offset para el grupo entero -- debuffs y buffs comparten el mismo
+    -- punto de referencia en X/Y, apilados por separado (ver GetGroupPadding
+    -- y RefreshContainers) en vez de nudgeados cada uno a mano.
+    local function GetOffset()
+        local d = ns.GetDB and ns.GetDB()
+        if not d then return 0, 0 end
+        local x = (type(d[cfg.offsetXDBKey]) == "number" and d[cfg.offsetXDBKey]) or 0
+        local y = (type(d[cfg.offsetYDBKey]) == "number" and d[cfg.offsetYDBKey]) or 0
+        return x, y
+    end
+    -- Margen ENTRE los 2 grupos (2026-08-04, "agrega padding tambien para
+    -- el margen entre los dos") -- separado del padding de iconos (GetPadding,
+    -- adentro de un mismo grupo) -- este es el gap perpendicular entre la
+    -- fila/columna de debuffs y la de buffs.
+    local function GetGroupPadding()
+        local d = ns.GetDB and ns.GetDB()
+        local v = d and d[cfg.groupPaddingDBKey]
+        return (type(v) == "number" and v >= 0 and v <= 40) and v or 6
+    end
+    -- Crecimiento (2026-08-04): ver el comentario largo junto a GROWTH_INFO
+    -- (arriba del todo del archivo) -- totalmente separado de GetDirection.
+    -- cfg.growDBKey/cfg.defaultGrowth, mismo patron que dirDBKey/defaultDir.
+    local function GetGrowth()
+        local d = ns.GetDB and ns.GetDB()
+        local g = d and cfg.growDBKey and d[cfg.growDBKey]
+        return GROWTH_INFO[g] and g or (cfg.defaultGrowth or "v-down")
+    end
+    -- Mostrar/ocultar buffs y debuffs por separado (2026-08-04, pedido del
+    -- usuario: "una opcion para desactivar buffs o debuffs si solo quiero
+    -- mostrar uno de los 2"). Default ON (nil = no guardado todavia = las 2
+    -- categorias visibles, comportamiento previo sin cambios para quien no
+    -- toque el nuevo checkbox).
+    local function GetSpecEnabled(specKey)
+        local d = ns.GetDB and ns.GetDB()
+        local dbKey = specKey == "debuffs" and cfg.debuffEnabledDBKey or cfg.buffEnabledDBKey
+        if not d or not dbKey then return true end
+        local v = d[dbKey]
+        if v == nil then return true end
+        return v and true or false
+    end
+    -- QUITADO el font object propio por grupo (2026-08-04, "quita la opcion
+    -- de controlar el size del text y color") -- los 5 grupos vuelven a
+    -- compartir MCFAuraHoverTimeFontObj (fuente unica, ver arriba del
+    -- archivo), sin ajustes por grupo ni necesidad de reaplicarla a mano.
 
     local function Setup(key)
         local u = ns.frames and ns.frames[key]
@@ -357,8 +577,43 @@ local function MakeAuraHoverGroup(cfg)
         carrier:SetFrameStrata("LOW")
         carrier:SetAlpha(0)
 
+        -- Migracion a AuraContainer (2026-08-03, "que salgan en combate"):
+        -- cfg.auraGroups(key), si esta presente, reemplaza el pool de
+        -- iconos propios + CollectAuras por AuraContainers nativos (ver el
+        -- motor mas arriba) -- el pool de iconos viejo ni se crea para
+        -- este caso, ahorra memoria y evita confusion sobre cual sistema
+        -- esta activo.
+        -- FIX (2026-08-03): AuraContainer NO existe en 12.0.7 (solo Midnight
+        -- 12.1.0+) -- sin este guard, un cliente todavia en 12.0.7 pediria
+        -- specs igual, AuraContainerAvailable() fallaria en silencio, y las
+        -- auras de estas 4 unidades quedarian vacias para siempre (nunca
+        -- caeria de vuelta al sistema viejo). ns.IsMidnightNext ya lo pone
+        -- AuraContainerProbe.lua a nivel de archivo, antes que este cargue.
+        local specs = ns.IsMidnightNext and cfg.auraGroups and cfg.auraGroups(key)
         local icons = {}
-        for i = 1, HARD_MAX_ICONS do icons[i] = CreateIcon(carrier) end
+        if not specs then
+            for i = 1, HARD_MAX_ICONS do icons[i] = CreateIcon(carrier) end
+        end
+
+        -- FIX (2026-08-03, "previsualizar los debuffs o buffs aunque no
+        -- existan, para poder moverlos mejor"): el boton "Preview" viejo
+        -- (testMode) armaba una lista fake y la pasaba por RefreshIcons --
+        -- pero RefreshContainers (la rama migrada) corta ANTES de llegar a
+        -- esa lista, asi que el Preview dejo de hacer algo util para estos
+        -- 4 grupos. AuraContainer no acepta datos falsos (Blizzard es quien
+        -- decide que dibuja) -- en vez de eso, un pool de iconos PROPIOS
+        -- (mismo CreateIcon de siempre) por cada spec (debuffs/buffs),
+        -- superpuestos en la MISMA posicion/tamaño que tendrian los
+        -- containers reales -- solo se muestran en test mode, los
+        -- containers reales se ocultan mientras tanto para no mezclarse.
+        local testIcons = {}
+        if specs then
+            for _, spec in ipairs(specs) do
+                local pool = {}
+                for i = 1, HARD_MAX_ICONS do pool[i] = CreateIcon(carrier) end
+                testIcons[spec.key] = pool
+            end
+        end
 
         local frac, target = 0, 0
         local driver = CreateFrame("Frame")
@@ -399,7 +654,207 @@ local function MakeAuraHoverGroup(cfg)
             carrier:SetAlpha(frac)
         end
 
+        -- Rama AuraContainer (2026-08-03): reemplaza RefreshIcons entero
+        -- para las claves migradas -- no hay lista de auras que leer/pintar
+        -- nosotros, Blizzard puebla los botones el mismo. Solo hay que
+        -- mostrar/ocultar los containers y decirles que unidad seguir.
+        -- Anclaje/crecimiento del flow interno viene de GROWTH_INFO
+        -- (module-scope, ver arriba) -- ya NO de la direccion (GetDirection),
+        -- son 2 ajustes independientes desde 2026-08-04.
+        -- Fila de iconos FALSOS para un spec (2026-08-03, "previsualizar
+        -- sin que existan"): misma matematica de paso/anclaje que el
+        -- container real de ese spec (mismo x0/y0/edge/isX), asi el
+        -- preview queda pixel-a-pixel donde estaria el real.
+        local function ShowTestRow(pool, color, count, sz, padding, edge, x0, y0, isX2, growSign)
+            for i = 1, HARD_MAX_ICONS do
+                local b = pool[i]
+                if i <= count then
+                    ResizeIcon(b, sz)
+                    b.tex:SetTexture(QUESTION_MARK_ICON)
+                    if b.swipe.Clear then b.swipe:Clear() end
+                    b.count:SetText("")
+                    b.border:SetVertexColor(color[1], color[2], color[3])
+                    local step = (sz + padding) * (i - 1) * growSign
+                    b:ClearAllPoints()
+                    if isX2 then
+                        b:SetPoint(edge, carrier, edge, x0 + step, y0)
+                    else
+                        b:SetPoint(edge, carrier, edge, x0, y0 + step)
+                    end
+                    b:Show()
+                else
+                    b:Hide()
+                end
+            end
+        end
+        local function HideTestRow(pool)
+            for i = 1, HARD_MAX_ICONS do pool[i]:Hide() end
+        end
+
+        -- FIX (2026-08-04, "si estoy en centro, las auras deben crecer
+        -- desde el centro, la primera centrada y las demas salen a los
+        -- lados"): Blizzard es quien decide DONDE cae cada icono dentro de
+        -- un AuraContainer (nosotros solo le damos anchor+direccion de
+        -- flow) -- no hay forma de forzar "1ro centrado, 2do/3ro alternando
+        -- lados" sin pelear contra su propio layout interno, algo que
+        -- rompe justo la garantia por la que se migro a AuraContainer (dibuja
+        -- el SOLO, nunca se bloquea en combate). Lo que SI era un bug real:
+        -- el centrado usaba `cap` (el maximo posible, ej. 8) en vez de
+        -- cuantas auras hay DE VERDAD -- con 1 sola aura, quedaba corrida
+        -- bien a un lado en vez de centrada. GetActiveCount intenta leer el
+        -- conteo real (varios nombres posibles de API, el primero que
+        -- funcione gana) DESPUES de UpdateAllAuras -- si Blizzard no expone
+        -- ninguno, cae de vuelta a `cap` (mismo comportamiento de antes,
+        -- sin romper nada).
+        local function GetActiveCount(c, cap)
+            if c.framePool and c.framePool.GetNumActive then
+                local ok, n = pcall(c.framePool.GetNumActive, c.framePool)
+                if ok and type(n) == "number" then return n end
+            end
+            if c.GetNumActiveWidgets then
+                local ok, n = pcall(c.GetNumActiveWidgets, c)
+                if ok and type(n) == "number" then return n end
+            end
+            if c.GetNumAuras then
+                local ok, n = pcall(c.GetNumAuras, c)
+                if ok and type(n) == "number" then return n end
+            end
+            return cap
+        end
+
+        local function RefreshContainers()
+            local sz = GetIconSize()
+            local padding = GetPadding()
+            local maxIcons = GetMaxIcons()
+            -- FIX (2026-08-04, "el padding no esta creando margen... el
+            -- icon size esta desplazandolas"): `slot` es el tamaño REAL de
+            -- cada boton que Blizzard usa para su propio layout interno
+            -- (BuildContainerButton ahora lo mide sz+padding y centra el
+            -- icono visible mas chico adentro) -- la caja del container y
+            -- el paso entre iconos usan ESTE mismo numero en vez de 2
+            -- formulas separadas que se desalineaban entre si.
+            local slot = sz + padding
+            local containers = EnsureAuraContainers(carrier, specs, sz, padding, maxIcons)
+            if not containers then return end
+            local gi = GROWTH_INFO[GetGrowth()] or GROWTH_INFO["v-down"]
+            local isX = gi.isX
+            local FD = AnchorUtil and AnchorUtil.FlowDirection
+            local show = cfg.gateFn() and not (cfg.skipIfSolo and cfg.skipIfSolo(key) and not IsInGroup())
+            local offsetX, offsetY = GetOffset()
+            local groupPadding = GetGroupPadding()
+
+            -- Pass 1 (SOLO si centrado + mostrando de verdad, no preview):
+            -- mostrar/actualizar cada container ANTES de calcular el
+            -- centrado, para poder preguntarle a Blizzard cuantas auras
+            -- puso de verdad (GetActiveCount) en vez de asumir el maximo.
+            if gi.centered and not testMode and show then
+                for _, spec in ipairs(specs) do
+                    local c = containers[spec.key]
+                    if c and GetSpecEnabled(spec.key) then
+                        c:Show()
+                        pcall(c.SetEnabled, c, true)
+                        if c._mcfUnit ~= u.unit then pcall(c.SetUnit, c, u.unit); c._mcfUnit = u.unit end
+                        pcall(c.UpdateAllAuras, c)
+                    end
+                end
+            end
+
+            -- Apilado SIEMPRE vertical entre debuffs/buffs (2026-08-04,
+            -- "quiero que buffs y debuffs esten alineados, debuffs arriba
+            -- de buffs, poder unificar posiciones y growth"): antes cada
+            -- grupo tenia su PROPIO offset y se encadenaba a lo largo del
+            -- MISMO eje que el crecimiento de iconos (`gi`) -- si crecian
+            -- en horizontal, los 2 grupos quedaban lado a lado, y cualquier
+            -- diferencia entre sus 2 offsets los desalineaba (el bug de la
+            -- captura). Ahora: 1 SOLO offset compartido (GetOffset) para
+            -- los 2 -- quedan alineados por diseño, no hay forma de que se
+            -- desalineen -- y los grupos SIEMPRE se apilan en vertical
+            -- (debuffs primero en `specs` = arriba, buffs abajo), sin
+            -- importar si el crecimiento de iconos DENTRO de cada grupo es
+            -- horizontal o vertical. GetGroupPadding() controla el gap
+            -- entre las 2 filas/columnas.
+            local stackY = 0
+            for _, spec in ipairs(specs) do
+                local c = containers[spec.key]
+                local pool = testIcons[spec.key]
+                if c then
+                    if not GetSpecEnabled(spec.key) then
+                        -- Grupo desactivado a proposito (toggle "mostrar
+                        -- debuffs/buffs") -- ni se dibuja ni consume espacio
+                        -- de la fila (el otro grupo, si esta solo, queda
+                        -- anclado como si el desactivado no existiera).
+                        if pool then HideTestRow(pool) end
+                        c:Hide()
+                        if c._mcfUnit then pcall(c.SetUnit, c, "none"); c._mcfUnit = nil end
+                    else
+                        -- Tamaño fijo por maxFrameCount (mismo criterio que
+                        -- ReassertGeometry en NameplateAurasNext.lua).
+                        -- Centrado (2026-08-04): usa el conteo REAL para que
+                        -- la caja mida EXACTO lo que ocupan los iconos
+                        -- actuales, no el maximo posible -- CADA grupo se
+                        -- centra SOLO (ya no depende de un span combinado
+                        -- con el otro grupo, que es justo lo que causaba el
+                        -- desalineo original).
+                        local cap = spec.maxFrameCount or maxIcons
+                        local count = cap
+                        if gi.centered then
+                            count = (not testMode and show) and GetActiveCount(c, cap) or cap
+                            if count < 1 then count = 1 end
+                        end
+                        local w, h
+                        if isX then
+                            w = count * slot
+                            h = slot
+                        else
+                            w = slot
+                            h = count * slot
+                        end
+                        local rowCenterOffset = gi.centered and (-(isX and w or h) / 2) or 0
+                        local x0 = offsetX + (isX and rowCenterOffset or 0)
+                        local y0 = offsetY + stackY + ((not isX) and rowCenterOffset or 0)
+
+                        if testMode then
+                            -- Preview: iconos propios superpuestos, container
+                            -- real oculto/desatado para que no se mezclen.
+                            c:Hide()
+                            if c._mcfUnit then pcall(c.SetUnit, c, "none"); c._mcfUnit = nil end
+                            if pool then ShowTestRow(pool, spec.color, cap, sz, padding, gi.edge, x0, y0, isX, gi.sign) end
+                        elseif show then
+                            if pool then HideTestRow(pool) end
+                            -- Show/SetUnit/UpdateAllAuras YA corrieron en el
+                            -- Pass 1 de arriba cuando gi.centered -- pcall de
+                            -- nuevo es gratis/idempotente para los demas modos.
+                            c:Show()
+                            pcall(c.SetEnabled, c, true)
+                            if c._mcfUnit ~= u.unit then
+                                pcall(c.SetUnit, c, u.unit)
+                                c._mcfUnit = u.unit
+                            end
+                            pcall(c.UpdateAllAuras, c)
+                            c:SetSize(w, h)
+                            c:ClearAllPoints()
+                            c:SetPoint(gi.edge, carrier, gi.edge, x0, y0)
+                            SetContainerFlow(c, gi.anchor, FD and FD[gi.gH], FD and FD[gi.gV])
+                        else
+                            if pool then HideTestRow(pool) end
+                            c:Hide()
+                            if c._mcfUnit then
+                                pcall(c.SetUnit, c, "none")
+                                c._mcfUnit = nil
+                            end
+                        end
+                        -- Bajar el "cursor" de apilado para el PROXIMO grupo
+                        -- (buffs, si este era debuffs) -- WoW crece Y hacia
+                        -- ARRIBA en pantalla, restar deja al siguiente grupo
+                        -- mas ABAJO ("debuffs arriba de buffs").
+                        stackY = stackY - h - groupPadding
+                    end
+                end
+            end
+        end
+
         local function RefreshIcons()
+            if specs then RefreshContainers(); return end
             local maxIcons = GetMaxIcons()
             local list
             if testMode then
@@ -586,7 +1041,10 @@ local function MakeAuraHoverGroup(cfg)
         hoverZone:SetScript("OnEnter", function() RefreshIcons(); EvaluateHover() end)
         hoverZone:SetScript("OnLeave", EvaluateHover)
 
-        for i = 1, HARD_MAX_ICONS do
+        -- specs (2026-08-03): rama AuraContainer -- `icons` esta vacio a
+        -- proposito (nunca se creo el pool), este loop de tooltips es
+        -- exclusivo del sistema viejo de iconos propios.
+        for i = 1, (specs and 0 or HARD_MAX_ICONS) do
             local b = icons[i]
             b:SetScript("OnEnter", function(self)
                 -- El fade es por ALPHA (carrier:SetAlpha), que NO afecta
@@ -686,10 +1144,36 @@ local function MakeAuraHoverGroup(cfg)
         end))
         carrier._refreshTicker = refreshTicker
 
+        -- Destruye los AuraContainer ya creados (2026-08-03): fuerza a
+        -- EnsureAuraContainers a reconstruirlos desde cero en el proximo
+        -- RefreshContainers -- necesario para que cambios de tamaño/color
+        -- de contador, max icons, o cualquier otra opcion que solo se lee
+        -- al CREAR el container (maxFrameCount, initializeFrame) se vean
+        -- en vivo, no recien al /reload.
+        local function DestroyContainers()
+            if not carrier._mcfContainers then return end
+            for _, c in pairs(carrier._mcfContainers) do
+                pcall(c.SetUnit, c, "none")
+                c:Hide()
+                pcall(c.SetParent, c, nil)
+            end
+            carrier._mcfContainers = nil
+        end
+        -- Reanchor es lo que TODAS las funciones ns.RefreshXAuraY (Options.lua)
+        -- ya llaman para cualquier cambio de config -- se le suma el rebuild
+        -- de containers aca, asi que los nuevos controles (offset, contador)
+        -- quedan cableados GRATIS, sin exportar nada nuevo.
+        local function Reanchor()
+            ReanchorZone()
+            if specs then
+                DestroyContainers()
+                RefreshContainers()
+            end
+        end
         groupTest[key] = {
             Show = function() target = 1; RefreshIcons(); StartDriver() end,
             Hide = function() target = 0; StartDriver() end,
-            Reanchor = ReanchorZone,
+            Reanchor = Reanchor,
             -- Diagnostico (2026-07-27, reportado: "la de player sigue activa
             -- despues de salir del hover" -- 2 revisiones del codigo sin
             -- encontrar la causa). Vuelca el estado INTERNO real en vez de
@@ -736,6 +1220,24 @@ local function MakeAuraHoverGroup(cfg)
     }
 end
 
+-- Specs compartidos para las 4 unidades migradas a AuraContainer
+-- (2026-08-03, "que salgan en combate"): 2 grupos (debuffs rojo, buffs
+-- dorado) salvo cuando onlyBuffs (party5/arena_player = uno mismo, ya se ve
+-- el debuff propio en el unitframe nativo).
+-- maxFrameCount QUITADO a proposito (2026-08-03, "el max icons no
+-- funciona"): hardcodeado en 5 pisaba SIEMPRE el fallback a GetMaxIcons()
+-- en RefreshContainers -- el slider "Max icons shown" nunca hacia nada
+-- para estos 4 grupos. Sin el campo, cae al valor real configurado.
+local function AuraSpecsFor(onlyBuffs)
+    if onlyBuffs then
+        return { { key = "buffs", filter = "HELPFUL", color = { 1, 0.82, 0.2 } } }
+    end
+    return {
+        { key = "debuffs", filter = "HARMFUL", color = { 0.85, 0.15, 0.15 } },
+        { key = "buffs", filter = "HELPFUL", color = { 1, 0.82, 0.2 } },
+    }
+end
+
 -- ==========================================================================
 -- Instancias: Party (dungeon-only, auto-show en combate) y Arena
 -- (arena-only, SOLO hover -- combate constante en arena haria que quedara
@@ -752,6 +1254,14 @@ local party = MakeAuraHoverGroup({
     -- aunque el boton este oculto) mostraria tus propios buffs incluso
     -- jugando solo dentro de una mazmorra.
     skipIfSolo = function(key) return key == "party5" end,
+    -- Migrado a AuraContainer (2026-08-03): antes CollectAuras via indice,
+    -- se cortaba en combate/M+ apenas la primera lectura de una unidad
+    -- ajena volvia secreta. AuraContainer nunca se bloquea -- Blizzard
+    -- dibuja los iconos desde su propio codigo seguro.
+    auraGroups = function(key) return AuraSpecsFor(key == "party5") end,
+    offsetXDBKey = "partyAuraOffsetX", offsetYDBKey = "partyAuraOffsetY", groupPaddingDBKey = "partyAuraGroupPadding",
+    growDBKey = "partyAuraGrowth", defaultGrowth = "h-left",
+    debuffEnabledDBKey = "partyAuraShowDebuffs", buffEnabledDBKey = "partyAuraShowBuffs",
 })
 local arena = MakeAuraHoverGroup({
     id = "arena", keys = { "arena_player", "arena_party1", "arena_party2", "arena_enemy1", "arena_enemy2", "arena_enemy3" },
@@ -759,6 +1269,12 @@ local arena = MakeAuraHoverGroup({
     maxDBKey = "arenaAuraMaxIcons", paddingDBKey = "arenaAuraPadding", sortDBKey = "arenaAuraSort",
     gateFn = InArenaNow, autoShowOnCombat = false,
     onlyBuffs = function(key) return key == "arena_player" end,
+    -- Migrado a AuraContainer (2026-08-03): PvP/arena es exactamente donde
+    -- mas auras salian secretas y CollectAuras se quedaba en blanco.
+    auraGroups = function(key) return AuraSpecsFor(key == "arena_player") end,
+    offsetXDBKey = "arenaAuraOffsetX", offsetYDBKey = "arenaAuraOffsetY", groupPaddingDBKey = "arenaAuraGroupPadding",
+    growDBKey = "arenaAuraGrowth", defaultGrowth = "v-down",
+    debuffEnabledDBKey = "arenaAuraShowDebuffs", buffEnabledDBKey = "arenaAuraShowBuffs",
 })
 -- Focus (2026-07-27, pedido del usuario): "quita el de Auras.lua, agregale un
 -- sistema similar al de AuraHover" -- Focus paso de ser un grid SIEMPRE
@@ -776,6 +1292,14 @@ local focus = MakeAuraHoverGroup({
     -- healer vigilando al tank, por ejemplo) -- quereer verlo fijo en combate,
     -- sin depender de tener el mouse encima, es el caso de uso real.
     autoShowOnCombat = true,
+    -- Migrado a AuraContainer (2026-08-04, pedido del usuario: "agrega
+    -- tambien al focus en esto") -- ultimo de los 5 grupos en pasar del
+    -- CollectAuras viejo (indice, se corta en combate) al widget nativo,
+    -- mismo criterio que party/arena/player/target.
+    auraGroups = function() return AuraSpecsFor(false) end,
+    offsetXDBKey = "focusAuraOffsetX", offsetYDBKey = "focusAuraOffsetY", groupPaddingDBKey = "focusAuraGroupPadding",
+    growDBKey = "focusAuraGrowth", defaultGrowth = "v-down",
+    debuffEnabledDBKey = "focusAuraShowDebuffs", buffEnabledDBKey = "focusAuraShowBuffs",
 })
 -- Player/Target (2026-07-27, pedido del usuario): "quitar el sistema de
 -- auras de player y target [el grid siempre-visible de Auras.lua] y
@@ -819,14 +1343,29 @@ local playerHover = MakeAuraHoverGroup({
     gateFn = PlayerFrameVisible,
     alwaysShowOnGate = true,
     gap = PLAYER_TARGET_GAP,
+    -- Migrado a AuraContainer (2026-08-03): tus propios buffs/debuffs no
+    -- deberian ser secretos nunca, pero el loop de CollectAuras igual
+    -- podia cortarse si CUALQUIER slot devolvia algo raro -- AuraContainer
+    -- lo hace irrelevante.
+    auraGroups = function() return AuraSpecsFor(false) end,
+    offsetXDBKey = "playerAuraOffsetX", offsetYDBKey = "playerAuraOffsetY", groupPaddingDBKey = "playerAuraGroupPadding",
+    growDBKey = "playerAuraGrowth", defaultGrowth = "v-down",
+    debuffEnabledDBKey = "playerAuraShowDebuffs", buffEnabledDBKey = "playerAuraShowBuffs",
 })
 local targetHover = MakeAuraHoverGroup({
     id = "target", keys = { "target" },
     dirDBKey = "targetAuraDirection", sizeDBKey = "targetAuraIconSize", defaultDir = "down",
     maxDBKey = "targetAuraMaxIcons", paddingDBKey = "targetAuraPadding", sortDBKey = "targetAuraSort",
     gateFn = function() return UnitExists("target") end,
+    -- Migrado a AuraContainer (2026-08-03, "que salgan en combate"): target
+    -- es justo la unidad donde mas importa -- un enemigo/aliado ajeno en
+    -- combate es exactamente el caso que Midnight vuelve secreto.
+    auraGroups = function() return AuraSpecsFor(false) end,
     alwaysShowOnGate = true,
     gap = PLAYER_TARGET_GAP,
+    offsetXDBKey = "targetAuraOffsetX", offsetYDBKey = "targetAuraOffsetY", groupPaddingDBKey = "targetAuraGroupPadding",
+    growDBKey = "targetAuraGrowth", defaultGrowth = "v-down",
+    debuffEnabledDBKey = "targetAuraShowDebuffs", buffEnabledDBKey = "targetAuraShowBuffs",
 })
 
 -- ==========================================================================
@@ -866,6 +1405,25 @@ ns.RefreshPlayerAuraSort = playerHover.RefreshDirection
 ns.RefreshTargetAuraMaxIcons = targetHover.RefreshDirection
 ns.RefreshTargetAuraPadding = targetHover.RefreshDirection
 ns.RefreshTargetAuraSort = targetHover.RefreshDirection
+-- Crecimiento + toggle buffs/debuffs (2026-08-04): mismo "nudge" que todo lo
+-- de arriba -- Reanchor (lo que RefreshDirection ejecuta) ya lee GetGrowth/
+-- GetSpecEnabled EN VIVO en cada RefreshContainers, asi que no hace falta
+-- exportar nada nuevo por dentro, solo el nombre publico que Options.lua llama.
+ns.RefreshPartyAuraGrowth = party.RefreshDirection
+ns.RefreshArenaAuraGrowth = arena.RefreshDirection
+ns.RefreshFocusAuraGrowth = focus.RefreshDirection
+ns.RefreshPlayerAuraGrowth = playerHover.RefreshDirection
+ns.RefreshTargetAuraGrowth = targetHover.RefreshDirection
+ns.RefreshPartyAuraShowDebuffs = party.RefreshDirection
+ns.RefreshArenaAuraShowDebuffs = arena.RefreshDirection
+ns.RefreshFocusAuraShowDebuffs = focus.RefreshDirection
+ns.RefreshPlayerAuraShowDebuffs = playerHover.RefreshDirection
+ns.RefreshTargetAuraShowDebuffs = targetHover.RefreshDirection
+ns.RefreshPartyAuraShowBuffs = party.RefreshDirection
+ns.RefreshArenaAuraShowBuffs = arena.RefreshDirection
+ns.RefreshFocusAuraShowBuffs = focus.RefreshDirection
+ns.RefreshPlayerAuraShowBuffs = playerHover.RefreshDirection
+ns.RefreshTargetAuraShowBuffs = targetHover.RefreshDirection
 ns.TogglePartyAuraTest = party.ToggleTestMode
 ns.ToggleArenaAuraTest = arena.ToggleTestMode
 ns.ToggleFocusAuraTest = focus.ToggleTestMode

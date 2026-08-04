@@ -1224,7 +1224,7 @@ local function CreateDesigner()
     pieces.auras.personal = personalHolder
     MakeDraggable(personalHolder, "personalDebuffsOffsetX", "personalDebuffsOffsetY", StageDivisor, true)
 
-    local enemyHolder, enemyHL = MakeAuraGroupMock(stage, "Enemy Buffs")
+    local enemyHolder, enemyHL = MakeAuraGroupMock(stage, "Enemy Buffs (stealable)")
     pieces.auras.enemy = enemyHolder
     MakeDraggable(enemyHolder, "enemyBuffsOffsetX", "enemyBuffsOffsetY", StageDivisor, true)
 
@@ -1236,24 +1236,27 @@ local function CreateDesigner()
             p.auraIconSize = clamp(ns.NPLayout.AuraIconSize(p) + (dir > 0 and 2 or -2), 8, 40)
         end, root, auraKey, true)
     end
+    -- colorKey/hasAuraText QUITADOS (2026-08-05, "mismos datos... y que no
+    -- se puedan controlar"): controlaban auraCountColor/auraCountFontSize/
+    -- auraTimeColor/auraTimeFontSize -- el sistema real (NameplateAurasNext.lua)
+    -- ya no lee NINGUNO de esos 4 campos, usa MCFAuraTimeFontObj fijo (12,
+    -- dorado, igual que Player/Target). Dejar el control aca era mostrar un
+    -- slider/color picker que no hacia nada en el nameplate real.
     bigHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("bigDebuff") end end)
     selSpecs.bigDebuff = { title = "Big Debuff", handle = bigHolder,
         xKey = "bigDebuffOffsetX", yKey = "bigDebuffOffsetY", xyRange = { -150, 150, 1 },
         sizeKey = "auraIconSize", sizeRange = { 8, 40, 2 },
-        paddingKey = "auraPadding", paddingRange = { 0, 20, 1 }, directionKey = "bigDebuffDirection",
-        colorKey = "auraCountColor", colorLabel = "Count/swipe color", hasAuraText = true }
+        paddingKey = "auraPadding", paddingRange = { 0, 20, 1 }, directionKey = "bigDebuffDirection" }
     personalHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("personalDebuffs") end end)
     selSpecs.personalDebuffs = { title = "Personal Debuffs", handle = personalHolder,
         xKey = "personalDebuffsOffsetX", yKey = "personalDebuffsOffsetY", xyRange = { -150, 150, 1 },
         sizeKey = "auraIconSize", sizeRange = { 8, 40, 2 },
-        paddingKey = "auraPadding", paddingRange = { 0, 20, 1 }, directionKey = "personalDebuffsDirection",
-        colorKey = "auraCountColor", colorLabel = "Count/swipe color", hasAuraText = true }
+        paddingKey = "auraPadding", paddingRange = { 0, 20, 1 }, directionKey = "personalDebuffsDirection" }
     enemyHolder:SetScript("OnMouseDown", function() if SelectElement then SelectElement("enemyBuffs") end end)
-    selSpecs.enemyBuffs = { title = "Enemy Buffs", handle = enemyHolder,
+    selSpecs.enemyBuffs = { title = "Enemy Buffs (stealable only)", handle = enemyHolder,
         xKey = "enemyBuffsOffsetX", yKey = "enemyBuffsOffsetY", xyRange = { -150, 150, 1 },
         sizeKey = "auraIconSize", sizeRange = { 8, 40, 2 },
-        paddingKey = "auraPadding", paddingRange = { 0, 20, 1 }, directionKey = "enemyBuffsDirection",
-        colorKey = "auraCountColor", colorLabel = "Count/swipe color", hasAuraText = true }
+        paddingKey = "auraPadding", paddingRange = { 0, 20, 1 }, directionKey = "enemyBuffsDirection" }
 
     -- ---- Icono de clasificacion (elite/rare/boss, texturas de AzeriteUI --
     -- ver CLASS_TEX en Nameplates.lua) -- anclado a la DERECHA de la barra,

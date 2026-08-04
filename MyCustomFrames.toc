@@ -1,4 +1,4 @@
-## Interface: 120007
+## Interface: 120007, 120100
 ## Title: |cffdeee53Azerite|r|cff60c43eUI|r Preset - |cfff06018Gonkast|r
 ## Notes: Custom cap bars, portraits, auras, info bar, quest tracker coloring and assisted glow
 ## Author: Gonkast
@@ -90,27 +90,42 @@ MinimapButtons.lua
 # (regla del addon: nada nuevo grande directo en core.lua/Options.lua).
 MailBanner.lua
 
-# Geometria COMPARTIDA de los nameplates: una sola fuente para donde va cada
-# elemento, usada TANTO por Nameplates.lua (los reales) como por
-# NameplateDesigner.lua (el mock del editor). Antes cada uno tenia su copia y
-# se desincronizaban -- el panel no predecia lo que se veia en el juego.
-# Carga antes que ambos.
+# NAMEPLATES (2026-08-03, reescritura completa #2): el sistema viejo
+# (Nameplates.lua, reskin-en-su-lugar) y el Designer/Layout/Build que
+# dependian de el quedan DESACTIVADOS -- no se van a retomar, el sistema
+# nuevo los reemplaza por completo. Solo cargan los 2 archivos nuevos
+# (NameplatesNext.lua, arquitectura calcada de EllesmereUINameplates.lua +
+# NameplateAurasNext.lua para auras via AuraContainer), aislados asi a
+# proposito para la prueba: si el click-to-target sigue andando bien con
+# SOLO estos 2 cargados, confirma que el problema anterior vivia en
+# Nameplates.lua (viejo) o su combinacion con los nuevos, no en esta
+# reescritura en si.
+# BUG (2026-08-03, "parecen las nameplates nativas aun"): AuraContainerProbe.lua
+# (pone ns.IsMidnightNext) cargaba MUCHO despues en el .toc, casi al final --
+# NameplatesNext.lua/NameplateAurasNext.lua chequean esa variable al cargar
+# el ARCHIVO (no en tiempo de evento), asi que siempre la veian nil/false y
+# se desactivaban solas. Tiene que cargar ANTES de estos dos.
+AuraContainerProbe.lua
+
+# Solo datos de geometria (sin CreateFrame, sin eventos) -- necesario para
+# NameplateAurasNext.lua (ns.NPLayout.AuraGroup/AuraIconSize/AuraPadding).
 NameplateLayout.lua
-
-# CONSTRUCCION compartida de los elementos del nameplate: los MISMOS
-# constructores arman el nameplate real y la vista previa del Designer (flag
-# `preview`), en vez de dos implementaciones que se desincronizaban en silencio.
-# Carga despues de NameplateLayout.lua (usa ns.NPLayout) y antes de ambos.
+# REACTIVADO (2026-08-05): el Nameplate Designer lo necesita (ns.NPBuild,
+# construye los iconos mock del panel) -- solo lo consumen NameplateBuild.lua
+# mismo, NameplateDesigner.lua y el Nameplates.lua viejo (deshabilitado, sin
+# efecto), asi que no choca con NameplatesNext.lua/NameplateAurasNext.lua.
 NameplateBuild.lua
-
-# NAMEPLATES estilo AzeriteUI: reskin de textura/tamaño de los CompactUnitFrame
-# NATIVOS de Blizzard (sin oUF, sin tocar color/logica -- cero riesgo de taint).
-Nameplates.lua
-
-# Canvas de diseño (drag + rueda) para tamaño/posicion de los elementos del
-# nameplate -- pedido del usuario, calcado del tab "Designer" de Platynator
-# pero adaptado a los elementos reales de Nameplates.lua. Carga DESPUES de
-# Nameplates.lua (usa ns.NameplateDefaults/ns.RefreshNameplateStyle/GetDB().nameplates).
+NameplateAurasNext.lua
+# Nameplates.lua
+NameplatesNext.lua
+# REACTIVADO (2026-08-05, "traer de vuelta el diseñador con este nuevo
+# sistema"): NameplatesNext.lua ahora usa ns.NPLayout.Name/Cast/CastText/
+# HealthValue para nombre/cast/valor-de-vida (antes hardcodeado), igual que
+# ya hacia con Classification/RaidMark -- y ns.RefreshNameplateStyle (que
+# ya vive en NameplatesNext.lua) ahora tambien reaplica ese layout en cada
+# plate activa, no solo CVars. NameplateDesigner.lua en si NO llamaba a
+# nada del Nameplates.lua viejo salvo en 2 comentarios (sin codigo real) --
+# probar en vivo para confirmar que no falta nada mas.
 NameplateDesigner.lua
 
 Glow.lua
@@ -155,7 +170,11 @@ LossOfControl.lua
 
 # Detector del trinket de PvP (Gladiator's Medallion) via COMBAT_LOG_EVENT_UNFILTERED,
 # solo para Arena Enemy 1-3 -- API publica unicamente, sin leer inventario/cooldowns ajenos.
-ArenaTrinket.lua
+# DESHABILITADO (2026-08-04, pedido del usuario): usa C_UnitAuras.GetAuraDataByIndex en loop
+# sin guard de ns.IsMidnightNext -- se rompe en combate de arena bajo 12.1.0 (auras secretas),
+# justo el peor lugar. "despues vemos como implementarlo" -- migrar a AuraContainer cuando
+# se retome, mismo patron que AuraHoverPreview.lua/NameplateAurasNext.lua.
+# ArenaTrinket.lua
 
 # Reskin del Game Menu (Escape) -- fusionado desde el addon separado Mainmenu-Gonkast
 # (2026-07-24, pedido del usuario). Usa ns.SkinResolve, asi que cambiar la Skin activa
