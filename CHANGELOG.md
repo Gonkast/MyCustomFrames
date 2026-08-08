@@ -4,6 +4,356 @@ Notable changes per session. Older history lives in `STRUCTURE.md`, which docume
 *why* things are the way they are (including approaches that were tried and reverted —
 worth reading before redoing one of them).
 
+## Unreleased (post-8.2)
+
+### Added
+- **Blizzard's native action bars and BuffFrame/DebuffFrame can be managed by Explorer**
+  (`NATIVE_BAR_FRAMES` in `Explorer.lua`) — the fallback path for when Bartender4 isn't
+  loaded. Their real global names don't share a common pattern the way `BT4Bar*` does
+  (`NativeBar2` → `MultiBarBottomLeft`), so it's an explicit map rather than a prefix
+  rule, and `MainMenuBar` no longer exists in this build — it's `MainActionBar`.
+  `ExplorerAuto.lua` reuses the same map for hide-on-replace instead of keeping a second
+  copy of the names, deliberately excluding `NativeMainBar` (that's *the* replaced bar,
+  not one of "the others") and the two aura frames.
+- **Option to hide Blizzard's native XP/Rep bar** (`StatusTrackingBarManager`), since the
+  minimap ring already shows the same thing. `SetAlpha` only, never `Hide()`, and
+  deliberately **no** `UnregisterAllEvents`: that can't be undone without knowing exactly
+  which events Blizzard had registered, so un-ticking the option has to be enough to make
+  it work again — reversibility over a tiny event-handling saving.
+
+### Changed
+- **Two always-on per-frame `OnUpdate`s now disarm themselves**, the same self-hiding
+  driver pattern `NameplatesNext.lua` already used:
+  - `Units.lua`'s smooth health fill ran every frame, forever, on **every** bar with
+    smoothing on — including all 40 raid frames — even when the value hadn't changed in
+    minutes (which is most of the time: out of combat, target standing still). It now
+    stops as soon as it converges, and the single call site that writes `bar._target`
+    re-arms it.
+  - `MinimapButtons.lua` polled mouse position every frame from `PLAYER_ENTERING_WORLD`
+    onward. The fast hover poll is now armed only while it's actually needed (group open,
+    or mouse already on the trigger), and the 1s housekeeping sweep moved to its own
+    low-frequency ticker so the two don't have to start/stop each other.
+- **Removed the Setup Wizard's "Enable nameplate reskin" toggle.** It wrote
+  `db.nameplates.enabled`, a field `NameplatesNext.lua` — the live system in 12.1.0 —
+  never reads; the reskin runs unconditionally, gated only by `ns.IsMidnightNext` at file
+  level. `Options.lua` had already dropped the equivalent control for the same reason;
+  the wizard's copy was missed.
+
+### Fixed
+- **Shield bar truth-tested possibly-secret values.** `hMax`/`absorb` were checked with a
+  bare `and`, instead of the `type()` + `issecretvalue()` guard *before* any conditional
+  that `SafeBool` here and `SafeMax` in `ClassPower.lua` already use.
+- **Micro-stutter on every target change, reported live.** `PLAYER_TARGET_CHANGED`
+  called `ns.RefreshNameplateStyle()` — the *complete* style apply — on every
+  tab-target. That apply writes **12 CVars** (several of which, `nameplateMaxDistance`
+  / `nameplateGlobalScale` / `nameplateMin`-`MaxScale`, make the engine recompute
+  every plate in the world), then walks every active plate to null its
+  `_mcfLayoutSig` (deliberately defeating its own dedupe), reapply the layout and
+  cast overlay, and **destroy and recreate its aura containers** — `NPAurasNext_Rebuild`
+  does `SetParent(nil)` on each one. Pulling a pack and tab-targeting through it meant
+  a full nameplate teardown per target.
+
+  The only thing that actually depends on the target is `EffectiveOccludedAlpha` →
+  the single `nameplateOccludedAlphaMult` CVar, and only while `hideOccludedWithTarget`
+  is on. The target path now writes that one CVar, deduped against the last value
+  written — so with the toggle off (the default) the handler does **nothing at all**,
+  not even one `SetCVar`. The combat-deferred retry is only armed when there was a
+  real change that couldn't be written, instead of unconditionally.
+
+  For reference, `EllesmereUINameplates` re-applies **no** nameplate CVar on target
+  change; it sets them once at setup.
+- **Micro-stutter on opening the options menu, reported live.**
+  `MeasureSectionBottom` — the recursive walk that sizes a section for its scrollbar,
+  run on every `ShowSection`, i.e. every panel open and every section change — did
+  `pcall(function() return { obj:GetChildren() } end)` per node. That is **two
+  allocations per node** (the pcall's literal closure, plus the table constructor),
+  and again for `GetRegions`, across a tree of hundreds of widgets: hundreds of
+  allocations for the GC to sweep in exactly the frame the menu opens.
+
+  This is the same anti-pattern `STRUCTURE.md` already documents for the ticker — the
+  reason `ns.safeBool`/`ns.safeVal` exist instead of `pcall(function() … end)`.
+  Rewritten allocation-free: the varargs are walked with `select("#", ...)` /
+  `select(i, ...)` rather than packed into a table, and the `pcall` is gone — these
+  are the panel's *own* widgets, not protected Blizzard frames, so
+  `GetChildren`/`GetRegions` cannot fail. `BuildPanel` stays at **46/60 upvalues**
+  (verified with `luac -l -p`); the new helpers are file-scope and not captured by it.
+- **Opening the options menu ran a full subsystem apply once per slider — 230 of them.**
+  Reported as a freeze on the first open after a reload; measured at **238.9 ms of Lua**,
+  of which **225.2 ms was the 230 `MakeSlider` refreshers** at ~0.98 ms each.
+
+  Each slider's refresher does `syncing = true; s:SetValue(…)` to show the DB's current
+  value. That **fires `OnValueChanged`** — and `syncing` only guarded the handler's
+  `box:SetText`. The other two lines ran regardless:
+
+  ```lua
+  get()[dbKey] = value   -- writes the DB
+  edit()                 -- = ns.ApplyCurrent(), a full subsystem apply
+  ```
+
+  So simply opening the panel triggered 230 complete applies and rewrote all 230 values.
+  `syncing` now short-circuits the whole handler: it means *"I am setting the slider to
+  the value the DB already holds"*, which is neither an edit to persist nor a reason to
+  re-apply anything.
+
+  **This was a correctness bug too, and a known one treated at the wrong end.** The
+  write-back is clamped to the slider's range, so opening a tab could overwrite a
+  legitimately out-of-range saved value. That symptom was already documented for the Top
+  Widget ("con solo entrar a la pestaña Widget se pisaba la posicion real") and worked
+  around by widening the ranges to ±2000; this is the actual cause. The widened ranges
+  are left as they are, but nothing depends on them any more.
+
+  Also fixed incidentally: `setValue()` (the +/− buttons and the edit box) already wrote
+  the DB and called `edit()` itself, and the handler then did both *again* — a duplicate
+  apply on every click. Now one.
+
+  Result, same measurement: Lua **238.9 → 9.5 ms**, `RefreshControls` **227.6 → 2.7 ms**,
+  and the worst render frame after the open **299 → 64 ms** (those 230 applies were
+  forcing unit frame / portrait / nameplate re-layouts).
+
+  Found by instrumenting, after two reasoned guesses (the `Hide()/Show()` relayout
+  nudges, then texture streaming) were both wrong — the nudges measure 2.7 ms and 4.7 ms.
+  The instrumentation was temporary and has been **removed entirely** now that the menu
+  is confirmed fixed; `STRUCTURE.md` records how to rebuild it, including the piece that
+  actually identified the culprit (a `__newindex` on the `refreshers` table capturing
+  `debugstack` at registration, to attribute cost per registration site).
+- **Panel textures are pre-loaded a few seconds after login.** WoW doesn't read a texture
+  off disk until the frame is first drawn, and the panel border
+  (`Background_complete1.tga`) is **2592x1632 32bpp RLE** — 1.58 MB on disk that expands
+  to ~16 MB to decompress and upload. A shown 1x1 frame at ~0 alpha is enough to make the
+  engine fetch it during idle time instead.
+
+  Honest caveat: this was added on the assumption that texture streaming *was* the
+  freeze, which turned out to be wrong — the slider fix above is what removed it. The
+  preload is kept because the decompression cost is real regardless, but its isolated
+  benefit has not been measured.
+
+  The underlying waste stands: the border draws at ~988x671, so the source carries about
+  **6.4x the pixels ever visible**. Halving it to 1296x816 would put it at ~4 MB and make
+  the preload pointless. Left alone — it's authored art, not generated.
+
+  Worth noting: `STRUCTURE.md` claimed this file was unused ("revertido al nine-slice…
+  los archivos quedan en `Assets\` sin usar"). It isn't — it's the live border. Corrected.
+- **`ForceNativeNameplateCVarsOnce` was leaking into `_G`** (missing `local`, found by
+  luacheck). Defined and called only within `core.lua`, so it is now a file-local.
+- **`/mcfcastbardiag` could never report the one value it exists to report.** It read
+  `local okA, a = cb and pcall(cb.GetAlpha, cb)` — and `and` **truncates to a single
+  return value**, so when `cb` existed the expression yielded only `pcall`'s `true` and
+  `a` was *always* `nil`. The command's stated purpose is showing "el alpha real que tiene
+  el castBar nativo AHORA MISMO", and it printed `alpha=nil` every time — including
+  throughout the investigation it was written for ("aun sigue saliendo el cast bar"), which
+  it may well have misled. Found by luacheck's "variable 'a' is never set".
+
+### Removed
+- **The attempt to move/scale `BuffTimer1` and `PlayerPowerBarAlt` with `/mcf`.**
+  These are the event-only widgets (Darkmoon Faire minigames such as Whack-a-Gnoll).
+  They cannot be repositioned by an addon in 12.1.0, and the failure is instructive:
+  `BuffTimer1:GetCenter()` returns **secret numbers**, so comparing its position
+  against a holder throws *"attempt to perform arithmetic on local 'wx' (a secret
+  number value…)"*; and `SetPoint` on it is **"a secret function value"**, which
+  taints `UnitPowerBarAlt.lua` outright. Reparenting doesn't hold either — Blizzard
+  reassigns them to `UIParent` / `PlayerPowerBarAlt` on its own refresh. The only verb
+  that works on them is `Hide()`/`SetAlpha`.
+
+  They are now simply hidden by **Hide Blizzard Elements** (`HideBlizzardFramesNow`
+  in `core.lua`, with a safety-net re-hide in the main tick since they are created
+  lazily). `DynamicWidgets.lua` is reduced from ~300 lines to the diagnostic plus a
+  manual override, with the whole holder/hook machinery gone — luacheck was already
+  flagging two entire functions in it as dead. `/mcfdyndiag` is registered with the
+  `/mcfdiag` router (in `Maintenance.lua`, the lazy `Cmd()` pattern — registering it
+  in the module itself silently did nothing, since that file loads long before
+  `ns.RegisterDiag` exists).
+- **`dynamicWidgets` removed from `Defaults.lua` and added to `DEAD_GLOBALS`**, so it
+  is purged from anyone's saved DB and exports. Its entry in `PRESET_TABLE_KEYS` is
+  gone too — it was doubly wrong: dead, *and* spelled `dynamicwidgets` against a real
+  key of `dynamicWidgets`, so the preset system would never have matched it. Every
+  other entry in that list matches its key exactly.
+
+## 8.2 — 2026-08-05 (Midnight 12.1.0 release — API changes, nameplates rewritten)
+
+### Architecture
+- **Nameplate engine rewritten from scratch** (`NameplatesNext.lua`, vs `Nameplates.lua` 
+  commented out). The previous system's inconsistency between real and preview persisted 
+  despite 4 targeted "structural" fixes — with two competing implementations there's always 
+  one more way they can diverge. Lesson: if a reasoned fix fails twice, the problem is 
+  architectural, not detail-level. The new one has a single `ns.NPLayout` (pure numbers) 
+  and `ns.NPBuild` (widget construction) that both the real plates and the Designer read 
+  from.
+- **AuraContainer support in nameplates** (`NameplateAurasNext.lua`) — Midnight 12.1.0 
+  makes unit auras completely secret values (expirationTime, duration, spellID, stacks). 
+  No Lua-based aura reading possible anymore; instead use `C_UnitAuras.CreateAuraContainer` 
+  to get Blizzard-maintained frame children. Implementation complete, fallback to 
+  no-auras-displayed if data unavailable (chosen over trying new APIs in production).
+- **Global and selected nameplate scale** (`nameplateGlobalScale` and 
+  `nameplateSelectedScale` CVars, part of the new Options > Nameplates > "Scale" tab).
+
+### Added
+- **`Indicators.lua` — range fade and absorb (shield) bar** for Player/Target/Focus/Party/Arena.
+  Uses `UnitInRange` (now secret for arena units in 12.1.0 — guarded), and absorb bar reads 
+  `UnitGetTotalAbsorbs`/`UnitHealthMax` directly to StatusBar in C (no Lua math). 
+  `/mcfindicatortest` force-toggles for preview without needing actual out-of-range or shielding.
+- **Loss of Control icon** — centered on player portrait's top edge, shows cooldown for 
+  stun/silence/root/fear/etc. Uses `C_LossOfControl.GetActiveLossOfControlData` (player's 
+  own data only, never secret). `/mcfloctest` previews with a fake 6s placeholder.
+- **`AuraContainerProbe.lua`** — detects `C_UnitAuras.CreateAuraContainer` to set 
+  `ns.IsMidnightNext` before nameplate files load (they read this flag at file load time to 
+  decide whether to activate).
+- **`PlayerAurasSkin.lua`** — reskins Blizzard's native BuffFrame/DebuffFrame (if Bartender4 
+  not installed) via hooksecurefunc hooks only — never touches frame children directly, 
+  since they're managed by AuraContainer internally and Blizzard can re-order them without 
+  warning. Heavily cautious: only update cosmetics when Blizzard has already updated.
+- **Aura sort modes: priority / time / index** for all 5 hover groups (Player/Target/Focus/
+  Party/Arena). Priority (debuffs first) is default; `time` sorts all auras by 
+  soonest-to-expire regardless of type; `index` uses Blizzard's native order.
+- **Aura max icons per group: 1-8** (was fixed 4). Icon pool pre-created at 8 so raising the 
+  limit later needs no `/reload`. Separate from existing "gap from unit frame" setting.
+- **Aura icon padding: 0-20px** — gap between icons in a row. Separate from row spacing.
+- **`/mcfaurahoverdiag [key]`** — dumps live internal state (hover/target/combat/cast/gate/
+  carrier alpha) of any hover-aura group, built to debug "group stays visible after mouse 
+  leaves" reports.
+- **Hover aura text smaller and gold** — matches addon color (`ns.GOLD`) instead of default 
+  white/countdown-font-size. Used `SetCountdownFont` for the timer number (dedicated 
+  FontObject, not shared with nameplates).
+- **Arena trinket detection (`ArenaTrinket.lua`)** — watches for Gladiator's Medallion 
+  (PvP trinket) usage on all 3 enemy frames via COMBAT_LOG, draws cooldown swipe on the icon. 
+  `/mcftrinkettest` fakes the cooldown for testing. **Disabled 2026-08-04** in 12.1.0: 
+  used `GetAuraDataByIndex` in loop without guarding `ns.IsMidnightNext` — broke in arena 
+  (auras secret). Will migrate to AuraContainer when retaken.
+
+### Changed
+- **Secret-safe low-health percent color** — instead of comparing secret health in Lua, use 
+  Midnight's `ColorCurve` + `C_ColorUtil` to color-shift the text only at ≤40% (coloring 
+  happens in C). On by default for all health units (player/pet/target/tot/party/boss/arena) 
+  — existing saves migrated once.
+- **Blizzard Edit Mode integration removed** — used to sync with the game's Edit Mode, but 
+  had its own toggle, so the hook/option/default/baked key are all gone. `syncBlizzEditMode` 
+  joins `DEAD_GLOBALS` for cleanup.
+- **Hover auras hide instantly** (no 0.35s grace period). Fade animation is still smooth 
+  — only the *moment it starts* changed.
+- **Player Auras simplified to always visible** — no hover/combat/cast/target gates. Went 
+  through 3 shapes the same day before landing here.
+- **Nameplate Designer canvas pinned to 1.00 scale** (no longer mirrors target's distance-based 
+  scale). Only explicit **Panel zoom** slider resizes it. Removes the rescaling during edits 
+  that made changes hard to judge, and stops `anyDragActive` freeze from bouncing mid-drag.
+- **Nameplate Designer reference scale** is now `db.designerRefScale` (top-level, not nested 
+  in `db.nameplates`). Sampled once when Designer opens (retries every 0.5s until it gets a 
+  real plate, gives up after 20s). Doesn't travel in exports anymore — it's UI state, not 
+  configuration.
+- **All ~40 slash commands discoverable in-game** via `/mcfdiag` (lists grouped by function: 
+  diagnostics, previews, other). Registered centrally in `Maintenance.lua`, handler lazily 
+  resolved at call time.
+- **Options panel's section area scrolls now** (was clipped if content didn't fit). Height 
+  measured from lowest visible element (ignoring hidden widgets per unit).
+- **Setup Wizard page 2 states the recommendation** in yellow above the warning — ticking 
+  all addons (default on personal installs) is what this preset is designed around.
+- **Bundled profiles are now opt-in** (Setup page 2) instead of opt-out destroying the 
+  user's config. All checkboxes start unticked, warning is red and explicit. The standalone 
+  "Apply Profiles" button got the same warning.
+- **Personal character data stripped from bundled profiles** — `Masque.lua` had 36 character 
+  names across 4 realms in `profileKeys` (per-character pointers, not settings). Bartender4 
+  had one in LibDualSpec. Chattynator's "Gonkast" profile left alone (it's the author 
+  username + 7 real settings different from DEFAULT). No configuration lost.
+
+### Fixed
+- **Minimap XP ring spark drifted from the ring** — geometry computed once at `CreateRing()` 
+  before `RefreshMinimap`'s first call, when `Minimap:GetWidth()` didn't yet reflect the 
+  configured size. Split into `CreateRing()` (frames once) and `LayoutRing()` (recomputes 
+  scale factor and re-applies geometry). Both now run from `RefreshMinimap`.
+- **`ADDON_ACTION_BLOCKED` on minimap SetScale in combat** — `RefreshMinimap` called 
+  `SetScale` on the root frame that parents Blizzard's protected `Minimap`, making it 
+  protected too for the lockdown's duration. Deferred the whole function; layout and 
+  cosmetics have no reason to update mid-fight anyway.
+- **Group-finder eye didn't fade with Explorer** — lives in its own frame outside the 
+  minimap's tree to avoid tainting it, so it never inherited alpha. Synced by hand.
+- **Options panel clashing with new-mail banner** — both on `HIGH` strata, so draw order 
+  was arbitrary. Main panel now `DIALOG`; Setup Wizard, Lock mode, and Designer move to 
+  `FULLSCREEN`.
+- **Conditional unit without an existence check came back in edit mode with sample cast bar** 
+  — `SetUnlocked` force-shows all frames (so they can be positioned), but cast bar's 
+  `OnUpdate` had no `UnitExists` gate, so it painted the sample. `UnitUpdateBar` (which 
+  the tick does gate) never ran. Fixed: explicitly tear down cast bars at the `SetUnlocked` 
+  transition via `ns.ResetUnitCastBars`.
+- **Leaving edit mode left preview content on screen** (name stuck at "player 60", cast bars 
+  frozen at 60% fill) — regression from the `SetText` dedupe. The dedupe caches the last 
+  write; preview branches wrote via raw `SetText`, leaving the cache holding the *real* 
+  name. On the way out, real name was recomputed, compared against a cache that already 
+  held it, and skipped. Fixed: every FontString write goes through the dedupe helper, and 
+  paths that can't (SetFormattedText, mandatory for secrets) call `DirtyText` to mark cache 
+  unknown **before** the write.
+- **Designer text holders sized to fit; real nameplate doesn't** — panel sized them to the 
+  string, but real anchors its FontString `CENTER` in a fixed 220x20 box. Fixed: both use 
+  the same fixed box from `ns.NPBuild.NAME_HOLDER_W/H`.
+- **Designer drew name and aura groups *behind* health bar; in-game they're in front** — 
+  structural depth issue (stage children sit above content siblings). Panel now reproduces 
+  real order: health bar → name → auras/classification/raid mark.
+- **Nameplate aura groups anchored to name instead of plate** — moving/resizing the name 
+  dragged all three groups. Fixed: anchor to the nameplate itself like everything else.
+- **"Cannot call restricted closure" from raid frames** — `SetSize`/`SetAttribute` blocked 
+  when roster changes mid-combat. Use `pcall` + deferred to `PLAYER_REGEN_ENABLED`.
+- **Pet action bar reappeared and needed `/reload`** — `ns.ExplorerResetAll()` force-sets 
+  alpha 1 on all Explorer elements (including pet bar), undoing "no pet, stay hidden". All 
+  3 call sites of that function now call `ns.RefreshPetBarVisibility()` right after.
+- **Shield bar showed as low-opacity black patch** — `SetStatusBarTexture` never called at 
+  creation, only on first update. Now given explicit initial texture.
+- **`attempt to perform boolean test on local 'checked' (a secret boolean value)` in range 
+  fade** — `UnitInRange` returns secret booleans for arena/party units (anti-scouting). 
+  Added `type()+issecretvalue()` guard before testing.
+- **`/mcfindicatortest` only showed shield bar on Player-based frames** — test mode checked 
+  `UnitExists(u.unit)`, but party/arena units only exist while actually grouped/in-arena. 
+  Test mode now bypasses that entirely.
+- **This addon's styling bled onto world object nameplates** — postboxes, chairs, etc. showed 
+  styled names and health bars. Added `IsObjectNameplate` (checks GUID prefix for 
+  GameObject, with fallback to `UnitCreatureType`/`UnitReaction` when GUID is secret in 
+  dungeons). Frame gets explicit `:Hide()` if object, Blizzard shows it again on reassign.
+- **Object nameplates still visible in dungeons** — GUID always secret in instances, prefix 
+  check had nothing to work with. Fallback: `UnitCreatureType` returns `nil` for objects but 
+  secret for actual creatures; `UnitReaction` the same split. Now detects both paths.
+- **`LUA_WARNING: function at line 1396 has more than 60 upvalues`** — `BuildPanel` hit Lua's 
+  hard ceiling. Traced with `luac -l`: 14 of the 61 were one-line `IsXxxSection` prefix 
+  checks, all used in one place (section-family description table). Inlined them there, 
+  dropped to 47 upvalues with real headroom.
+- **Nameplate geometry had two sources of truth** (`Nameplates.lua` real vs `NameplateDesigner.lua` 
+  mock). Created `NameplateLayout.lua` as pure-number generator, and `NameplateBuild.lua` 
+  as shared constructor. Both sides read from one now; two concrete mismatches fell out 
+  immediately (factory sizes in `NPLayout` itself had drifted; Designer carried three sets of 
+  fallback numbers).
+- **Designer didn't match real 1:1** — reference scale never actually sampled. Root cause 
+  found by *measuring* (after three reasoned fixes failed): `designerRefScale` was `nil` 
+  while real plates ran at `0.768`, so panel fell back to **1.0** and drew 30% too large. 
+  Two causes: (1) Timing — scale sampled at Designer open, but no plate exists yet if you 
+  open-then-target. (2) Wrong home — the key lived in `db.nameplates` and got replaced 
+  wholesale on profile load. Now top-level `db.designerRefScale` with bounded retry logic.
+- **`/mcfnplayoutdiag` compared something unreadable** — tried comparing each element's 
+  position via `GetRect`/`GetLeft`/`GetCenter`, but those are all blocked (`Can't measure 
+  restricted regions`). Deleted the helper and changed the command to compare scale only 
+  (the one measurable thing that matters).
+- **Audit pass: removed dead call sites** — when aura grid was stripped, four `core.lua` 
+  call sites were left calling functions that no longer exist (`ns.EnsureCancelOverlay`, 
+  `ns.UpdateAuraGroup` ×3) with no nil-guard. Also dropped blanket `UNIT_AURA` registration 
+  whose handler was one of those (was waking the frame on a high-frequency event to do 
+  nothing). `ArenaTrinket.lua`/`ClassPower.lua` register it on their own frames and are 
+  unaffected.
+- **`PurgeDeadKeys` couldn't clean module sub-tables** — left no way to retire a nameplate 
+  setting. Added nameplate-scoped list applied to live DB *and* saved presets, populated 
+  with this session's abandoned experiments (7 dispel-glow fields, 3 threat-nameplate fields).
+- **`db.auras` carried entire removed grid** — `aura_player` and `aura_target`, ~54 config 
+  fields each. Purged as whole entries, live DB and saved presets alike.
+- **`bartenderAutoProfile` shipped as `nil`** — new characters with no entry in 
+  `profileKeys` hit AceDB's fallback chain and landed on empty profiles instead of the 
+  preset's. Now defaults to `"Default"` and baked into `Defaults.lua`. Also fixed the 
+  auto-apply mark that was written unconditionally even when it hadn't worked.
+- **Raid frames blooming during edit mode** — the "sample bar" painting applied as soon as 
+  frames showed, even in a preview state that should show nothing yet.
+
+### Changed (continued from first section)
+- **Defaults.lua regenerated from fresh export** — picks up all new aura settings (direction/
+  size/max-icons/padding/sort), `classColorEnemyNames`, expanded Explorer element selection. 
+  Verified against previous: zero keys lost, all module sub-tables the same size except the 
+  two meant to grow. Dead aura-grid entries gone from the bake.
+- **Baked new nameplate range/alpha defaults** — max distance 40→60, max alpha 0.6→0.80, 
+  min alpha 0.20. Also forced onto `nameplateUserDefault` during bake to match shipped 
+  default.
+- **Explorer ships disabled by default** (`explorerEnabled = false`).
+
 ## Unreleased
 
 ### Changed

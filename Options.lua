@@ -477,10 +477,34 @@ local function MakeSlider(parent, label, minV, maxV, step, dbKey, x, y, getTbl, 
         syncing = true; s:SetValue(v); syncing = false
         box:SetText(fmtVal(v)); edit()
     end
-    s:SetScript("OnValueChanged", function(self, value)
+    -- `syncing` marca "estoy poniendo el slider en el valor que YA tiene la DB",
+    -- no una edicion del usuario. Tiene que cortar el handler ENTERO.
+    --
+    -- FIX (2026-08-08, medido: 225 de los 239 ms de abrir el menu): antes
+    -- `syncing` solo protegia el `box:SetText`, asi que el refresher de cada
+    -- slider -- que hace `syncing = true; s:SetValue(...)` -- igual caia en
+    -- `get()[dbKey] = value` y en `edit()`. Con `edit()` = `ns.ApplyCurrent()`,
+    -- abrir el panel disparaba **un apply completo del subsistema por cada uno
+    -- de los 230 sliders** (0.98 ms cada uno). Se midio con una instrumentacion
+    -- temporal, ya retirada; como rehacerla esta en STRUCTURE.md (sesion 2026-08-08).
+    --
+    -- Y no era solo lentitud: tambien reescribia los 230 valores en la DB con
+    -- el valor CLAMPEADO al rango del slider. Ese bug ya se habia visto (el
+    -- CHANGELOG lo documenta para el Top Widget: "con solo entrar a la pestaña
+    -- Widget se pisaba la posicion real") pero se trato el sintoma ensanchando
+    -- los rangos a +-2000 en vez de la causa, que es esta linea.
+    --
+    -- Los tres caminos siguen correctos:
+    --   * arrastre del usuario -> syncing=false -> corre entero, igual que antes.
+    --   * setValue() (+/-/editbox) -> ya escribe la DB y llama edit() por su
+    --     cuenta; antes el handler lo hacia ADEMAS, o sea un apply duplicado
+    --     por click. Ahora uno solo.
+    --   * refresher -> no escribe nada ni aplica nada. Que es el arreglo.
+    s:SetScript("OnValueChanged", function(_, value)
+        if syncing then return end
         value = roundStep(value)
         get()[dbKey] = value
-        if not syncing then box:SetText(fmtVal(value)) end
+        box:SetText(fmtVal(value))
         edit()
     end)
     plus:SetScript("OnClick",  function() setValue(get()[dbKey] + step) end)
@@ -999,27 +1023,55 @@ local GLOBAL_SECTION_TITLE = { presets = "Profile", explorer = "Explorer", editi
 -- siempre los cubre. Solo cuenta lo VISIBLE: varias secciones ocultan widgets
 -- segun la unidad (power/color), y contarlos inflaria el scroll con espacio
 -- vacio.
-local function MeasureSectionBottom(obj, lowest, depth)
+-- FIX DE RENDIMIENTO (2026-08-08, reportado en vivo: "siento un micro corte
+-- cada vez que abro mi menu"): la version anterior hacia
+-- `pcall(function() return { obj:GetChildren() } end)` por cada nodo del
+-- arbol, o sea DOS allocations por nodo (la closure del pcall + la tabla del
+-- constructor `{}`), y otras dos para GetRegions. Este walk corre en cada
+-- ShowSection, o sea en cada apertura del panel y en cada cambio de seccion,
+-- sobre una seccion con decenas de widgets que a su vez tienen hijos --
+-- cientos de allocations que el GC tiene que limpiar justo en el frame en el
+-- que se abre el menu.
+--
+-- Es exactamente el anti-patron que STRUCTURE.md ya documenta para el ticker
+-- (por eso existen ns.safeBool/ns.safeVal en vez de
+-- `pcall(function() ... end)`): pcall con una closure literal aloca una
+-- closura nueva por llamada.
+--
+-- Version nueva: cero allocations. Los varargs de GetChildren/GetRegions se
+-- recorren con select("#", ...) / select(i, ...) en vez de empaquetarlos en
+-- una tabla, y se saca el pcall -- estos son frames PROPIOS del panel
+-- (widgets que creamos nosotros), no frames protegidos de Blizzard;
+-- GetChildren/GetRegions sobre un frame normal no puede fallar.
+local MeasureSectionBottom
+
+local function ScanKidsBottom(lowest, depth, ...)
+    for i = 1, select("#", ...) do
+        local c = select(i, ...)
+        if c and c.IsShown and c:IsShown() then
+            local b = c.GetBottom and c:GetBottom()
+            if b and b < lowest then lowest = b end
+            lowest = MeasureSectionBottom(c, lowest, depth + 1)
+        end
+    end
+    return lowest
+end
+
+local function ScanRegionsBottom(lowest, ...)
+    for i = 1, select("#", ...) do
+        local r = select(i, ...)
+        if r and r.IsShown and r:IsShown() and r.GetBottom then
+            local b = r:GetBottom()
+            if b and b < lowest then lowest = b end
+        end
+    end
+    return lowest
+end
+
+MeasureSectionBottom = function(obj, lowest, depth)
     if depth > 3 then return lowest end
-    local okKids, kids = pcall(function() return { obj:GetChildren() } end)
-    if okKids then
-        for _, c in ipairs(kids) do
-            if c.IsShown and c:IsShown() then
-                local b = c.GetBottom and c:GetBottom()
-                if b and b < lowest then lowest = b end
-                lowest = MeasureSectionBottom(c, lowest, depth + 1)
-            end
-        end
-    end
-    local okRegs, regs = pcall(function() return { obj:GetRegions() } end)
-    if okRegs then
-        for _, r in ipairs(regs) do
-            if r.IsShown and r:IsShown() and r.GetBottom then
-                local b = r:GetBottom()
-                if b and b < lowest then lowest = b end
-            end
-        end
-    end
+    lowest = ScanKidsBottom(lowest, depth, obj:GetChildren())
+    lowest = ScanRegionsBottom(lowest, obj:GetRegions())
     return lowest
 end
 
@@ -2141,7 +2193,14 @@ local function BuildPanel()
         { key = "colors",  label = "Color" },
         -- Trinket de PvP (pedido del usuario 2026-07-19) -- pestaña visible
         -- SOLO para arena_enemy1/2/3 (ver SelectUnit, filtro por key:sub(1,11)).
-        { key = "trinket", label = "Trinket" },
+        -- QUITADA DEL TAB ROW (2026-08-05, auditoria): con ArenaTrinket.lua
+        -- deshabilitado (usa el escaneo viejo de auras sin proteger para
+        -- 12.1.0), esta pestaña ya no era solo "inerte" -- mostraba un
+        -- icono ESTATICO sin cooldown real, visualmente roto en vez de
+        -- simplemente no hacer nada. La Section("trinket") de mas abajo
+        -- queda definida pero inalcanzable (sin boton que navegue ahi) --
+        -- reactivar este renglon cuando ArenaTrinket.lua vuelva.
+        -- { key = "trinket", label = "Trinket" },
     }
     BuildTabRow(secList, 40, false)
 
@@ -2738,6 +2797,10 @@ local function BuildPanel()
         indNote:SetPoint("TOPLEFT", R, -246); indNote:SetWidth(210); indNote:SetJustifyH("LEFT")
         indNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         indNote:SetText("Applies to player, target, focus, party and arena. /mcfindicatortest previews both.")
+
+        -- Action bar nativas: reskin/panel ELIMINADOS (2026-08-05, "quitale
+        -- toda la personalizacion o reskin a las barras nativas") -- ya no
+        -- hay nada que abrir aca.
 
         local tnote = f:CreateFontString(nil, "ARTWORK"); setFont(tnote, 10)
         tnote:SetPoint("TOPLEFT", R, -290); tnote:SetWidth(210); tnote:SetJustifyH("LEFT")
@@ -3402,6 +3465,13 @@ local function BuildPanel()
         -- minimap de mi addon" (UIWidgetBelowMinimapContainerFrame nativo --
         -- catch-up buffs, barras de faccion, etc).
         MakeCheckbox(f, "Follow native below-minimap widget (catch-up buffs, etc)", "showBelowMinimapWidget", L, -202)
+        -- Pedido del usuario 2026-08-05: "esconder la barra de xp de
+        -- blizzard, ya que nosotros tenemos una propia" -- el anillo de
+        -- arriba (showRing). StatusTrackingBarManager (nombre real, ver
+        -- Minimap.lua) es el sistema nativo moderno de XP/rep/honor/favor de
+        -- casa, unificado en un solo frame. Default ON (~= false) -- ya
+        -- estaba oculto desde el primer login para quien no tocara nada.
+        MakeCheckbox(f, "Hide Blizzard's native XP/Rep bar (redundant with the ring above)", "hideNativeXPBar", L, -234)
     end
     -- Minimap / Icons (offsets del eye y del boton de desmontar). Reorganizado
     -- 2026-07-19 (pedido del usuario, "esta muy desorganizado, los ultimos
@@ -3659,6 +3729,18 @@ local function BuildPanel()
     do
         local f = Section("np_general")
         MakeHeader(f, "Range", L, -6, 430)
+        -- Boton de vuelta al Designer (2026-08-05, auditoria: "no hay forma
+        -- de descubrirlo desde el panel"): NameplateDesigner.lua se
+        -- reactivo, pero el link de vuelta ("Open Nameplate Designer") se
+        -- habia sacado junto con "Enabled"/"Reset" cuando el archivo estaba
+        -- apagado (ver comentario grande arriba) y nunca se repuso. Setup.lua
+        -- (wizard de primera instalacion) ya tiene el suyo -- este cubre a
+        -- quien ya paso el wizard y quiere volver a abrirlo despues.
+        local designBtn = MakeButton(f, "Open Nameplate Designer", 200, 24)
+        designBtn:SetPoint("TOPLEFT", R, -6)
+        designBtn:SetScript("OnClick", function()
+            if ns.ToggleNameplateDesigner then ns.ToggleNameplateDesigner() end
+        end)
         MakeSlider(f, "Max distance", 10, 60, 1, "maxDistance", L, -56)
         local distNote = f:CreateFontString(nil, "ARTWORK"); setFont(distNote, 10)
         distNote:SetPoint("TOPLEFT", L, -100); distNote:SetWidth(430); distNote:SetJustifyH("LEFT")
@@ -3679,6 +3761,21 @@ local function BuildPanel()
         scaleNote:SetPoint("TOPLEFT", L, -234); scaleNote:SetWidth(430); scaleNote:SetJustifyH("LEFT")
         scaleNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
         scaleNote:SetText("Global size of every nameplate, and how much bigger your current target is than the rest (1.20 = 20% larger).")
+
+        -- Cast overlay (2026-08-05, "casts en frente de las nameplates" --
+        -- puerto de EllesmereUINameplates_CastOverlay.lua): las plates
+        -- componen COMO UNIDAD ENTERA -- si dos se superponen, la cast bar
+        -- de una puede quedar tapada por la plate vecina de arriba, sin
+        -- importar el strata que le pongamos MIENTRAS siga siendo hija del
+        -- arbol de esa plate. La unica forma real de evitarlo es sacarla
+        -- del todo (reparentarla a un frame propio en UIParent, strata
+        -- HIGH) -- ver ReassertCastOverlay en NameplatesNext.lua.
+        MakeHeader(f, "Cast bar", L, -278, 430)
+        MakeCheckbox(f, "Casts always in front (never hidden behind another nameplate)", "castOverlayEnabled", L, -302)
+        local castOvNote = f:CreateFontString(nil, "ARTWORK"); setFont(castOvNote, 10)
+        castOvNote:SetPoint("TOPLEFT", L, -326); castOvNote:SetWidth(430); castOvNote:SetJustifyH("LEFT")
+        castOvNote:SetTextColor(COLOR_DESC[1], COLOR_DESC[2], COLOR_DESC[3])
+        castOvNote:SetText("Off by default. Only changes stacking order -- position/size/color still come from the Nameplate Designer.")
     end
 
     -- Pestaña "Names" ELIMINADA (2026-08-03, "quita las opciones del menu en
@@ -5197,6 +5294,49 @@ builder:SetScript("OnEvent", function(self)
         BuildPanel()
         built = true
     end
+    -- PRECARGA DE TEXTURAS (2026-08-08, reportado en vivo: "la primera vez que
+    -- abro el menu despues de un reload hay un micro congelado" -- y SOLO la
+    -- primera, las siguientes van bien).
+    --
+    -- No es Lua: BuildPanel ya corrio aca arriba, asi que el primer OnShow hace
+    -- exactamente el mismo trabajo que los siguientes. Lo que es unico de la
+    -- primera vez es el STREAMING de las texturas del panel: WoW no las lee del
+    -- disco hasta que el frame se dibuja por primera vez.
+    --
+    -- El costo esta medido y esta casi todo en un solo archivo:
+    --   Background_complete1.tga (el borde del panel) es 2592x1632 32bpp con
+    --   compresion RLE -- 1.58 MB en disco que se expanden a ~16 MB de pixeles
+    --   que hay que DESCOMPRIMIR y subir a VRAM, todo en el frame en el que
+    --   abris el menu.
+    --
+    -- Esto solo MUEVE el costo: se paga unos segundos despues del login (con la
+    -- pantalla de carga recien terminada, donde no se nota) en vez de la primera
+    -- vez que abris el panel. Un frame mostrado de 1x1 con alpha casi cero
+    -- alcanza para que el motor haga la carga; se destruye apenas termina.
+    --
+    -- ARREGLO DE FONDO (pendiente, requiere re-exportar arte): el borde se
+    -- dibuja a ~988x671 en pantalla, asi que 2592x1632 son ~7x los pixeles que
+    -- se ven. Bajarlo a ~1024x672 lo dejaria en ~2.7 MB en memoria y la precarga
+    -- pasaria a ser innecesaria.
+    C_Timer.After(3, function()
+        local pre = CreateFrame("Frame", nil, UIParent)
+        pre:SetPoint("TOPLEFT")
+        pre:SetSize(1, 1)
+        pre:SetAlpha(0.01)   -- 0 exacto puede saltearse en el render
+        for _, path in ipairs({
+            "Interface\\AddOns\\MyCustomFrames\\Assets\\Background_complete1.tga",
+            "Interface\\AddOns\\MyCustomFrames\\Assets\\PlumberSettingsPanel.png",
+            "Interface\\AddOns\\MyCustomFrames\\Assets\\SettingsPanelWidget.png",
+        }) do
+            local t = pre:CreateTexture(nil, "BACKGROUND")
+            t:SetTexture(path)
+            t:SetAllPoints(pre)
+        end
+        pre:Show()
+        -- 2 segundos de margen: la carga es asincronica, destruirlo en el
+        -- frame siguiente podria cancelarla antes de que llegue a VRAM.
+        C_Timer.After(2, function() pre:Hide(); pre:SetParent(nil) end)
+    end)
     -- AddOn Compartment (2026-07-17): el icono de rompecabezas junto al minimapa,
     -- disponible desde Dragonflight — el usuario no quiere depender solo de
     -- /mcfmenu. Es el reemplazo moderno de "clic derecho > Opciones" para addons

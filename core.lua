@@ -108,7 +108,7 @@ ns.TEX_LIB = {
     auraborder   = { "actionbutton-border square.tga", "actionbutton-border square2.tga",
                      "actionbutton-border.tga" },
     glow         = { "actionbuttonhighlight.tga", "actionbutton-border square.tga",
-                     "cursor-highlight.tga" },
+                     "actionbutton-border square highlight.tga", "cursor-highlight.tga" },
     raidtarget   = { "raid_target_icons.tga", "raid_target_icons_small.tga" },
     infobg       = { "info_bg.tga" },
     highlight    = { "hp_low_case_miror_s_highlight.tga", "actionbuttonhighlight.tga", "hp_pet_highlight.tga", "hp_party_highlight.tga", "hp_boss_highlight.tga", },
@@ -2089,7 +2089,11 @@ local function ApplyOrDefer()
 end
 -- Disparador de PRIMERA instalacion (InitDB, mas abajo) -- gateado, corre
 -- UNA sola vez en la vida del SavedVariables.
-function ForceNativeNameplateCVarsOnce()
+-- FIX (2026-08-08, detectado por luacheck): faltaba el `local` -- esta
+-- funcion se estaba filtrando a _G. Solo se define y se usa dentro de
+-- core.lua (un unico call site, mas abajo en InitDB), asi que no hace falta
+-- exponerla en ns; alcanza con hacerla local.
+local function ForceNativeNameplateCVarsOnce()
     if not db or db._nativeCVarsSeeded then return end
     db._nativeCVarsSeeded = true
     ApplyOrDefer()
@@ -2551,6 +2555,7 @@ events:SetScript("OnEvent", function(self, event, arg1)
         end
         if db then ns.UpdatePetDriver() ns.UpdatePartyDrivers()
             if ns.UpdateArenaDrivers then ns.UpdateArenaDrivers() end
+            if ns.InitDynamicWidgets then ns.InitDynamicWidgets() end
             RefreshAll()
             if ns.HideBlizzardFrames then ns.HideBlizzardFrames() end
             for _, u in pairs(frames) do AttachFadeIn(u.button) end
@@ -2699,6 +2704,20 @@ C_Timer.NewTicker(0.1, ns.Prof.Wrap("core: tick principal 0.1s", function()
     if tickState.n % 20 == 0 and db.hideBlizzard and not tickState.inCombat
         and _G.PlayerFrame and _G.PlayerFrame:IsShown() and ns.HideBlizzardFrames then
         ns.HideBlizzardFrames()
+    end
+    -- Red de seguridad para widgets dinamicos (BuffTimer, PlayerPowerBarAlt)
+    -- Si hideBlizzard está activo, mantenerlos ocultos (se re-crean dinamicamente)
+    if tickState.n % 10 == 0 and db.hideBlizzard then
+        for i = 1, 5 do
+            local frame = _G["BuffTimer" .. i]
+            if frame and frame:IsVisible() then
+                frame:Hide()
+            end
+        end
+        local pbframe = _G.PlayerPowerBarAlt
+        if pbframe and pbframe:IsVisible() then
+            pbframe:Hide()
+        end
     end
     -- RED DE SEGURIDAD (2026-07-19, reportado por el usuario: "las
     -- unitframes/auras de arena dejan una dead zone aunque no aparezcan"):
@@ -3083,6 +3102,35 @@ local function HideBlizzardFramesNow()
     -- quedan cubiertos solo con ocultar el contenedor de arriba si Blizzard les toca el
     -- alpha aparte en su propio refresh nativo).
     HideArenaFramesNow()
+    -- Dynamic widgets (BuffTimer, PlayerPowerBarAlt) - eventos/minijuegos niche
+    -- Solo por alpha (seguro, no causa taint en frames protected de Blizzard)
+    for i = 1, 5 do
+        local frame = _G["BuffTimer" .. i]
+        if frame then
+            HB_HideAlpha(frame)
+            -- Hook SetAlpha para mantenerlo oculto si Blizzard lo muestra
+            if not frame._mcfAlphaHooked then
+                hooksecurefunc(frame, "SetAlpha", function(self, alpha)
+                    if db and db.hideBlizzard and alpha and alpha > 0 then
+                        self:SetAlpha(0)
+                    end
+                end)
+                frame._mcfAlphaHooked = true
+            end
+        end
+    end
+    local pbframe = _G.PlayerPowerBarAlt
+    if pbframe then
+        HB_HideAlpha(pbframe)
+        if not pbframe._mcfAlphaHooked then
+            hooksecurefunc(pbframe, "SetAlpha", function(self, alpha)
+                if db and db.hideBlizzard and alpha and alpha > 0 then
+                    self:SetAlpha(0)
+                end
+            end)
+            pbframe._mcfAlphaHooked = true
+        end
+    end
 end
 -- GROUP_ROSTER_UPDATE dispara TANTO nuestro handler como el refresh nativo de
 -- CompactPartyFrame/CompactRaidFrameContainer (CompactUnitFrame_UpdateAll -> UpdateHealthColor,

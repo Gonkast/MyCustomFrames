@@ -9,6 +9,13 @@
 -- Carga DESPUES de core.lua en el toc.
 -- ==========================================================================
 local ADDON, ns = ...
+-- Forward declaration (2026-08-05, self-hiding smooth-fill driver): definida
+-- mas abajo (junto a BarOnUpdate), pero el unico lugar que la LLAMA (donde
+-- se escribe bar._target) esta MAS ARRIBA en el archivo -- Lua resuelve
+-- locals por scope lexico en el momento de la DEFINICION de la funcion que
+-- los usa, no en tiempo de llamada, asi que sin este forward-declare la
+-- llamada de mas abajo resolveria a un global nil.
+local ArmSmoothDriver
 -- ==========================================================================
 -- LOGICA POR UNIDAD
 -- ==========================================================================
@@ -584,6 +591,10 @@ local function UnitUpdateBar(u, doText)
             u.bar._readable = true
             u.bar._target = frac
             if u.bar._cur == nil or not p.smooth then u.bar._cur = frac end
+            -- Arma el driver solo si hay algo que animar de verdad -- si
+            -- _cur ya quedo en frac arriba (sin smooth, o primera vez), no
+            -- hace falta ningun OnUpdate.
+            if p.smooth and u.bar._cur ~= frac then ArmSmoothDriver(u.bar) end
             -- reverseFill: (1) archivo YA espejado (MirrorTexPath) para que el arte
             -- se vea coherente, (2) ANCLAR el recorte al lado derecho para que se
             -- vacie de izquierda a derecha (si no, solo cambia el arte pero sigue
@@ -1034,18 +1045,49 @@ end
 ns.ResetCastBar = ResetCastBar
 
 -- Smooth del hp/power bar (relleno manual; solo si el valor es legible).
+-- FIX (2026-08-05, "que mas cosas ves en performance"): antes este OnUpdate
+-- quedaba armado PARA SIEMPRE desde la creacion de la barra (ver
+-- bar:SetScript("OnUpdate", ...) mas abajo) -- corria cada frame, para
+-- siempre, en TODAS las barras con "smooth" activo, incluidas las 40 de
+-- raid, aunque el valor llevara rato sin cambiar (la inmensa mayoria del
+-- tiempo: fuera de combate, target quieto). Ahora se desarma solo apenas
+-- converge (mismo patron self-hiding-driver ya aplicado a nameplates) -- el
+-- unico lugar que lo vuelve a armar es donde se escribe bar._target (un
+-- solo call site, ver Units.lua ~585), asi que no hay riesgo de que una
+-- barra quede congelada por un call site que se reactive y se olvide de
+-- rearmar el driver.
 local function BarOnUpdate(self, elapsed)
-    if not self._readable then return end
+    if not self._readable then
+        self:SetScript("OnUpdate", nil); self._smoothRunning = false
+        return
+    end
     local u = self._u
-    if not u then return end
+    if not u then
+        self:SetScript("OnUpdate", nil); self._smoothRunning = false
+        return
+    end
     local p = P(u)
-    if not p.smooth then return end
+    if not p.smooth then
+        self:SetScript("OnUpdate", nil); self._smoothRunning = false
+        return
+    end
     local t = self._target or 0
     local cur = self._cur or t
     cur = cur + (t - cur) * math.min((elapsed or 0) * 10, 1)
     if math.abs(t - cur) < 0.001 then cur = t end
     self._cur = cur
     RenderManualFill(u.fillTex, self, cur, p.reverseFill)
+    if cur == t then
+        self:SetScript("OnUpdate", nil)
+        self._smoothRunning = false
+    end
+end
+-- Arma el driver SOLO si hace falta (hay algo que animar) y no esta ya
+-- corriendo -- llamado desde el unico lugar que escribe bar._target.
+function ArmSmoothDriver(bar)
+    if bar._smoothRunning then return end
+    bar._smoothRunning = true
+    bar:SetScript("OnUpdate", ns.Prof.Wrap("Units: barras (smooth)", BarOnUpdate))
 end
 
 -- ==========================================================================
@@ -1092,7 +1134,8 @@ local function CreateUnit(def)
     bar:SetStatusBarTexture(isPower and ns.POWER_TEXTURE or ns.TEXTURE_DEFAULT)
     bar:SetOrientation("HORIZONTAL")
     bar._u = u
-    bar:SetScript("OnUpdate", ns.Prof.Wrap("Units: barras (smooth)", BarOnUpdate))
+    -- Ya NO se arma aca -- ArmSmoothDriver lo prende solo cuando hace falta
+    -- animar de verdad (ver el comentario largo junto a BarOnUpdate).
 
     -- Textura de relleno MANUAL (para valores legibles; encima del relleno nativo).
     -- Recorte via SetTexCoord+SetVertexOffset (tecnica WeakAuras), sin mascara.

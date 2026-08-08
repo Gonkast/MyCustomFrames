@@ -6,6 +6,31 @@ local ADDON, ns = ...
 -- de otros locals de core.lua salvo los ya expuestos via ns (GetDB/IsUnlocked/frames/
 -- portraits/auras/tickState).
 
+-- Barras/BuffFrame/DebuffFrame NATIVOS de Blizzard (2026-08-05, "agregar
+-- estas barras al explorer"): mapa clave-de-Explorer -> nombre REAL de
+-- frame global, mismos nombres verificados en vivo para ActionBarsSkin.lua/
+-- PlayerAurasSkin.lua (el fallback para cuando Bartender4 no esta cargado).
+-- Tabla propia (no un prefijo tipo "BT4Bar") porque los nombres reales no
+-- comparten un patron comun entre si.
+local NATIVE_BAR_FRAMES = {
+    NativeMainBar = "MainActionBar",
+    NativeBar2    = "MultiBarBottomLeft",
+    NativeBar3    = "MultiBarBottomRight",
+    NativeBar4    = "MultiBarRight",
+    NativeBar5    = "MultiBarLeft",
+    NativeBar6    = "MultiBar5",
+    NativeBar7    = "MultiBar6",
+    NativeBar8    = "MultiBar7",
+    NativeStance  = "StanceBar",
+    NativePet     = "PetActionBar",
+    NativeBuffs   = "BuffFrame",
+    NativeDebuffs = "DebuffFrame",
+}
+-- Expuesta (2026-08-05, "agregar estas opciones tambien a las barras
+-- nativas"): ExplorerAuto.lua reusa este mismo mapa para el hide-on-replace,
+-- en vez de mantener una copia separada de nombres reales.
+ns.NATIVE_BAR_FRAMES = NATIVE_BAR_FRAMES
+
 -- Mapa elementKey -> frame raiz del elemento.
 -- Ampliado (2026-07-24, pedido del usuario: "que tal probable es agregar
 -- minimap/topwidget/classpower/raid al explorer"): minimap/topwidget usan
@@ -29,6 +54,13 @@ local function GetElementFrame(key)
     -- BT4BarPetBar/StanceBar/BagBar/ExtraActionBar). SetAlpha nada mas, mismo
     -- criterio que classpower/raid arriba.
     if key:sub(1, 6) == "BT4Bar" then return _G[key] end
+    -- Barras/BuffFrame/DebuffFrame NATIVOS de Blizzard (2026-08-05, "agregar
+    -- estas barras al explorer" -- ActionBarsSkin.lua/PlayerAurasSkin.lua,
+    -- el fallback para cuando Bartender4 no esta cargado). Nombres reales
+    -- verificados en vivo (ver el comentario largo en ActionBarsSkin.lua --
+    -- MainMenuBar YA NO EXISTE en este build, es MainActionBar). SetAlpha
+    -- nada mas, mismo criterio que todo lo demas aca.
+    if NATIVE_BAR_FRAMES[key] then return _G[NATIVE_BAR_FRAMES[key]] end
     if ns.frames[key] then return ns.frames[key].button end
     if ns.portraits[key] then return ns.portraits[key].root end
     if ns.auras[key] then return ns.auras[key].root end
@@ -101,6 +133,24 @@ ns.EXPLORER_ELEMENTS = {
     { label = "Stance Bar", keys = { "BT4BarStanceBar" } },
     { label = "Bag Bar", keys = { "BT4BarBagBar" } },
     { label = "Extra Action Bar", keys = { "BT4BarExtraActionBar" } },
+    -- Barras/auras propias NATIVAS de Blizzard (2026-08-05, "agregar estas
+    -- barras al explorer") -- el fallback de ActionBarsSkin.lua/
+    -- PlayerAurasSkin.lua para cuando Bartender4 no esta cargado. Mismos
+    -- keys que NATIVE_BAR_FRAMES arriba -- GetElementFrame los resuelve por
+    -- esa tabla, no por nombre directo (a diferencia de BT4Bar*, los
+    -- nombres reales no coinciden 1:1 con el key de Explorer).
+    { label = "Native Action Bar 1", keys = { "NativeMainBar" } },
+    { label = "Native Action Bar 2", keys = { "NativeBar2" } },
+    { label = "Native Action Bar 3", keys = { "NativeBar3" } },
+    { label = "Native Action Bar 4", keys = { "NativeBar4" } },
+    { label = "Native Action Bar 5", keys = { "NativeBar5" } },
+    { label = "Native Action Bar 6", keys = { "NativeBar6" } },
+    { label = "Native Action Bar 7", keys = { "NativeBar7" } },
+    { label = "Native Action Bar 8", keys = { "NativeBar8" } },
+    { label = "Native Stance Bar", keys = { "NativeStance" } },
+    { label = "Native Pet Bar", keys = { "NativePet" } },
+    { label = "Native Buff Frame", keys = { "NativeBuffs" } },
+    { label = "Native Debuff Frame", keys = { "NativeDebuffs" } },
 }
 
 -- FIX (2026-07-24, "las de bartender tambien deberian mostrarse en mouse
@@ -112,9 +162,19 @@ ns.EXPLORER_ELEMENTS = {
 -- no solo el frame contenedor. Acotado a Bartender4 (no a los ~45 elementos
 -- restantes) para no pagar un GetChildren()+loop extra cada frame en todo
 -- lo demas, que ya funciona bien solo con el frame propio.
+-- IsBarGroup (2026-08-05): "es un elemento de barra" -- Bartender4 (prefijo
+-- BT4Bar) O una de las barras/BuffFrame/DebuffFrame nativos (tabla
+-- NATIVE_BAR_FRAMES) -- mismo criterio de agrupacion (children-check +
+-- alpha de grupo "loBars") para los 2 sistemas, nunca los 2 activos a la
+-- vez en la practica (el reskin nativo se apaga solo si Bartender4 esta
+-- cargado) pero no hace falta que Explorer lo sepa, ambos casos son
+-- inofensivos de tratar igual.
+local function IsBarGroup(key)
+    return key:sub(1, 6) == "BT4Bar" or NATIVE_BAR_FRAMES[key] ~= nil
+end
 local function IsMouseOverElement(f, key)
     if f:IsMouseOver() then return true end
-    if key:sub(1, 6) ~= "BT4Bar" then return false end
+    if not IsBarGroup(key) then return false end
     local ok, children = pcall(function() return { f:GetChildren() } end)
     if not ok then return false end
     for _, c in ipairs(children) do
@@ -176,8 +236,12 @@ explorerDriver:SetScript("OnUpdate", ns.Prof.Wrap("Explorer: driver", function(s
                 -- barra 1 esta reemplazada (ver ns.ExplorerBarForceHidden
                 -- mas abajo). No hace falta condicion propia: la stance bar
                 -- sigue exactamente la misma regla que las demas.
-                local forceOverride = (key == "BT4Bar1") and self.overrideBar
-                local myLo = (key:sub(1, 6) == "BT4Bar") and loBars or loUnits
+                -- NativeMainBar se suma al mismo override que BT4Bar1
+                -- (2026-08-05, "agregar estas barras al explorer") -- misma
+                -- logica de "se volvio vehiculo/posesion/montura", solo que
+                -- para la barra principal NATIVA en vez de la de Bartender4.
+                local forceOverride = (key == "BT4Bar1" or key == "NativeMainBar") and self.overrideBar
+                local myLo = IsBarGroup(key) and loBars or loUnits
                 local target = (self.combat or self.showTgt or self.casting or forceOverride or IsMouseOverElement(f, key)) and 1 or myLo
                 -- "Solo ver la barra 1" (2026-07-28, ExplorerAuto.lua): cuando la
                 -- barra 1 esta REEMPLAZADA (vehiculo/override/possess) y la opcion
@@ -300,7 +364,15 @@ local QUICK_PROFILES = {
         label = "Combat",
         desc = "Only your action bars fade out, revealing automatically when you enter combat. Everything else stays visible.",
         mode = "keys_matching",
-        match = function(key) return key:sub(1, 6) == "BT4Bar" end,
+        -- Incluye las barras nativas (2026-08-05, "agregar las barras
+        -- nativas a los preset de explorer") junto con las de Bartender4.
+        -- NO cualquier "Native*": NativeBuffs/NativeDebuffs no son barras de
+        -- accion, este perfil promete "solo tus action bars", no tocarlas.
+        match = function(key)
+            if key:sub(1, 6) == "BT4Bar" then return true end
+            return key == "NativeMainBar" or key == "NativeStance" or key == "NativePet"
+                or key:match("^NativeBar%d+$") ~= nil
+        end,
         forceCombat = true,
     },
     minimal = {

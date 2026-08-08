@@ -143,6 +143,11 @@ MirrorTimers.lua
 # eventos/delves) -- pedido del usuario 2026-07-23. Standalone, sin arte propio.
 TopWidget.lua
 
+# Controla frames dinamicos de Blizzard (BuffTimer, PlayerPowerBarAlt, etc)
+# que se crean en contextos especiales (feria, dungeon events).
+# Permite moverlos/escalarlos con /mcf (Edit Mode).
+DynamicWidgets.lua
+
 ChatBubble.lua
 MicroMenu.lua
 Grouping.lua
@@ -156,6 +161,23 @@ ClassPower.lua
 # accion BT4Bar1-10 de Bartender4, multiplicado sobre la escala que ya tiene
 # configurada el usuario en Bartender4.
 BartenderScale.lua
+
+# ActionBarsSkin.lua / ActionBarDesigner.lua (reskin de las 10 action bars
+# nativas + su panel standalone) ELIMINADOS (2026-08-05, "quitale toda la
+# personalizacion o reskin a las barras nativas, solo deja que las detecte
+# el explorer mode cuando no este bartender4"): 5 intentos distintos de
+# padding terminaron rompiendo el rectangulo de seleccion de Edit Mode o
+# desplazando botones, y el usuario decidio cortar por lo sano. La deteccion
+# de estas barras en Explorer/ExplorerAuto (NATIVE_BAR_FRAMES en
+# Explorer.lua) es INDEPENDIENTE de estos archivos -- sigue funcionando
+# igual, referencia los frames nativos de Blizzard directo por nombre.
+
+# Reskin del BuffFrame/DebuffFrame NATIVOS de Blizzard (2026-08-05) -- mismo
+# gate (solo si Bartender4 no esta cargado). MAS delicado: usa
+# AuraContainer (valores secretos en 12.1.0) -- solo hooksecurefunc, nunca
+# llama las funciones de Blizzard directo (taint -> errores en combate de
+# raid, ver comentario largo en el archivo).
+PlayerAurasSkin.lua
 
 # Auras hover de Party1-5 (dungeon-only) y las 6 unitframes de arena
 # (arena-only): fusionados en un solo modulo data-driven (2026-07-23,

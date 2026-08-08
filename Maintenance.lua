@@ -136,6 +136,13 @@ local DEAD_GLOBALS = {
     "barReposition",     -- BarReposition.lua borrado 2026-07-24
     "explorerDamage",    -- condicion "recibi daño" revertida 2026-07-24
     "syncBlizzEditMode", -- integracion con el Edit Mode de Blizzard quitada 2026-07-28
+    -- Intento de mover/escalar BuffTimer1 y PlayerPowerBarAlt con /mcf
+    -- (2026-08-08). Se descarto: son frames con coordenadas SECRETAS en
+    -- 12.1.0 (GetCenter devuelve secret numbers, y SetPoint sobre ellos es
+    -- "a secret function value" -> taint). Ahora simplemente se ocultan con
+    -- Hide Blizzard Elements. Quien haya corrido la version intermedia
+    -- arrastra esta tabla en su DB y en sus exports.
+    "dynamicWidgets",
 }
 -- Claves muertas dentro de db.nameplates (2026-07-27). Categoria NUEVA: hasta
 -- ahora solo se purgaba db.units[*] y la raiz de db, asi que una feature
@@ -440,6 +447,7 @@ ns.RegisterDiag("auracontainer", "Prep 12.1.0: prueba en vivo si el widget AuraC
 ns.RegisterDiag("nameplates",   "Estado general de los nameplates", Cmd("MCFNPDIAG"))
 ns.RegisterDiag("npobjects",    "unit/GUID/tipo por nameplate -- para plates que no deberian estar (objetos)", Cmd("MCFNPOBJDIAG"))
 ns.RegisterDiag("castwatch",    "Togglea el log en vivo de casteos de nameplates", Cmd("MCFCASTWATCH"))
+ns.RegisterDiag("dynwidgets",   "BuffTimer / PlayerPowerBarAlt (widgets de evento) -- existen y si estan ocultos", Cmd("MCFDYNDIAG"))
 ns.RegisterDiag("minimap",      "Estado general del minimapa", Cmd("MCFMMDIAG"))
 ns.RegisterDiag("rings",        "Anillos de XP/reputacion/honor/renombre del minimapa", Cmd("MCFRINGDIAG"))
 ns.RegisterDiag("mapicons",     "Iconos y pines del minimapa", Cmd("MCFMAPICONSDIAG"))

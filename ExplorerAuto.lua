@@ -258,12 +258,34 @@ local HIDE_NAMED = {
     BT4BarPetBar = true, BT4BarStanceBar = true, BT4BarBagBar = true,
 }
 
+-- Nativas equivalentes (2026-08-05, "agregar estas opciones tambien a las
+-- barras nativas, sin duplicar toggles"): mismo criterio que BT4Bar*, pero
+-- resueltas via ns.NATIVE_BAR_FRAMES (Explorer.lua) porque el nombre real de
+-- frame no coincide con el key ("NativeBar2" -> "MultiBarBottomLeft"). Se
+-- excluye a proposito NativeMainBar (equivalente de BT4Bar1: es LA barra
+-- reemplazada, no una de "las demas") y NativeBuffs/NativeDebuffs (no son
+-- barras de accion, esconderlas con la barra 1 reemplazada no tiene relacion
+-- con el pedido original).
+local HIDE_NATIVE_NAMED = { NativeStance = true, NativePet = true }
+
 local function IsHideable(key)
-    if key == "BT4Bar1" then return false end
-    if HIDE_NAMED[key] then return true end
+    if key == "BT4Bar1" or key == "NativeMainBar" then return false end
+    if HIDE_NAMED[key] or HIDE_NATIVE_NAMED[key] then return true end
     -- BT4Bar2..10 (numeradas): solo las que existan de verdad.
     local n = key:match("^BT4Bar(%d+)$")
-    return n ~= nil and tonumber(n) >= 2
+    if n ~= nil and tonumber(n) >= 2 then return true end
+    -- NativeBar2..8: mismo trato, resueltas via ns.NATIVE_BAR_FRAMES.
+    return key:match("^NativeBar%d+$") ~= nil
+end
+
+-- Resuelve un key de este sistema al frame real: BT4Bar* usa su propio
+-- nombre como key (siempre lo hizo); Native* necesita el mapa de
+-- Explorer.lua porque los nombres reales no comparten patron entre si.
+local function ResolveBarFrame(key)
+    if ns.NATIVE_BAR_FRAMES and ns.NATIVE_BAR_FRAMES[key] then
+        return _G[ns.NATIVE_BAR_FRAMES[key]]
+    end
+    return _G[key]
 end
 
 function ns.ExplorerBarForceHidden(key)
@@ -287,12 +309,16 @@ local touched = {}
 local function ApplyBarHiding()
     local db = DB(); if not db then return end
     local explorerOwns = (db.explorerEnabled ~= false) and db.explorer or nil
-    -- Numeradas + las de nombre propio, en una sola lista.
+    -- Numeradas + las de nombre propio, en una sola lista. Incluye las
+    -- equivalentes nativas (2026-08-05) para que el hide-on-replace actue
+    -- sobre ellas tambien cuando Bartender4 no esta cargado.
     local keys = {}
     for i = 2, 10 do keys[#keys + 1] = "BT4Bar" .. i end
     for k in pairs(HIDE_NAMED) do keys[#keys + 1] = k end
+    for i = 2, 8 do keys[#keys + 1] = "NativeBar" .. i end
+    for k in pairs(HIDE_NATIVE_NAMED) do keys[#keys + 1] = k end
     for _, key in ipairs(keys) do
-        local bar = _G[key]
+        local bar = ResolveBarFrame(key)
         if bar and not (explorerOwns and explorerOwns[key]) then
             local hide = ns.ExplorerBarForceHidden(key)
             -- FIX (2026-08-03, "no quiero que oculte al 100% las demas, que

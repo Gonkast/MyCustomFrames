@@ -421,9 +421,15 @@ ns.RefreshMinimapButtonsLayout = LayoutGroup
 -- confiable pase lo que pase con el foco) decide mostrar/ocultar.
 local isOverGroup = false          -- estado actual (evita reiniciar el fade a cada tick)
 local leaveElapsed = nil           -- nil = no contando; numero = segundos sin hover
+-- Forward declaration (2026-08-05, self-hiding mouse driver): definida mas
+-- abajo junto al ticker, pero ShowGroup (aca mismo) necesita armarla apenas
+-- el grupo se abre -- mismo motivo/patron que el forward-declare de
+-- ArmSmoothDriver en Units.lua.
+local ArmMouseDriver
 
 local function ShowGroup()
     if not container then return end
+    if ArmMouseDriver then ArmMouseDriver() end
     leaveElapsed = nil
     if isOverGroup then return end
     isOverGroup = true
@@ -515,6 +521,7 @@ local function EnsureFrames()
     -- NO depende de estos eventos (ver nota arriba de ShowGroup/HideGroupNow)
     -- -- lo maneja el ticker de poll geometrico mas abajo.
     trigger:SetScript("OnEnter", function()
+        if ArmMouseDriver then ArmMouseDriver() end
         GameTooltip:SetOwner(trigger, "ANCHOR_TOP")
         GameTooltip:SetText("Minimap addon buttons")
         GameTooltip:AddLine("Hover to show", 0.7, 0.7, 0.7)
@@ -596,22 +603,51 @@ ns.RefreshMinimapButtons = Layout
 -- orden de addons) + reaseguro de parent (por si algo reparenta el boton de
 -- vuelta) + rescan periodico (fallback generico, addons que crean su boton
 -- tarde sin pasar por LibDBIcon).
+-- FIX (2026-08-05, auditoria: "always-on per-frame ticker never disarms"):
+-- este OnUpdate corria cada frame, PARA SIEMPRE, desde PLAYER_ENTERING_WORLD
+-- -- el poll de hover geometrico (rapido a proposito, ver nota arriba) no
+-- necesita 60fps cuando el grupo esta cerrado Y nadie esta cerca del
+-- trigger. Mismo patron self-hiding ya aplicado a Units.lua (BarOnUpdate):
+-- el driver se arma solo mientras hace falta vigilar el mouse de cerca
+-- (grupo abierto, o el mouse ya esta sobre el trigger) y se desarma cuando
+-- no. El barrido de 1s (LibDBIcon/rescan/reparent/layout) se separa a su
+-- PROPIO ticker de baja frecuencia, que ese si puede correr siempre sin
+-- costo real -- ya estaba throttleado a 1s, solo se lo desacopla del driver
+-- de mouse para no tener que arrancar/parar el driver rapido cada 1s.
+local mouseDriver = CreateFrame("Frame")
+mouseDriver:Hide()
+local mouseDriverArmed = false
+function ArmMouseDriver()
+    if mouseDriverArmed then return end
+    mouseDriverArmed = true
+    mouseDriver:Show()
+end
+local function DisarmMouseDriver()
+    if not mouseDriverArmed then return end
+    mouseDriverArmed = false
+    mouseDriver:Hide()
+end
+mouseDriver:SetScript("OnUpdate", function(self, elapsed)
+    if not (trigger and container) then DisarmMouseDriver(); return end
+    local unlocked = ns.IsUnlocked and ns.IsUnlocked()
+    local over = trigger:IsMouseOver() or (container:IsShown() and container:IsMouseOver())
+    if over or unlocked then
+        ShowGroup()
+    elseif isOverGroup then
+        leaveElapsed = (leaveElapsed or 0) + elapsed
+        if leaveElapsed >= ((P() and P().leaveDelay) or 0.35) then
+            HideGroupNow()
+        end
+    else
+        -- Ni sobre el trigger ni el grupo abierto -- nada que vigilar de
+        -- cerca hasta el proximo OnEnter del trigger.
+        DisarmMouseDriver()
+    end
+end)
+
 local ticker = CreateFrame("Frame")
 ticker:Hide()
 ticker:SetScript("OnUpdate", function(self, elapsed)
-    if trigger and container then
-        local unlocked = ns.IsUnlocked and ns.IsUnlocked()
-        local over = trigger:IsMouseOver() or (container:IsShown() and container:IsMouseOver())
-        if over or unlocked then
-            ShowGroup()
-        elseif isOverGroup then
-            leaveElapsed = (leaveElapsed or 0) + elapsed
-            if leaveElapsed >= ((P() and P().leaveDelay) or 0.35) then
-                HideGroupNow()
-            end
-        end
-    end
-
     self.t = (self.t or 0) + elapsed
     if self.t < 1.0 then return end
     self.t = 0

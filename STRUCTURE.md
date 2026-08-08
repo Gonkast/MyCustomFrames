@@ -700,7 +700,15 @@ en archivo aparte": esto es evolucion del mismo panel, no una feature disjunta).
   `MainFrame.NineSlice` de respaldo de Plumber, `SettingsPanelNew.lua:2143-2166`). Se probo
   reemplazarlo por arte propio del usuario (`Background_complete.tga`/`Background_complete1.tga`
   en `Assets\`) pero no convencio tras varias rondas de ajuste de padding/aspect ratio —
-  revertido al nine-slice. Los archivos quedan en `Assets\` sin usar por si se retoma.
+  revertido al nine-slice.
+  **CORRECCION (2026-08-08): esta ultima frase decia "los archivos quedan en `Assets\` sin
+  usar por si se retoma" y ya NO es cierta** — el arte SI se retomo despues.
+  `Background_complete1.tga` es HOY el borde vivo del panel (`Options.lua`, el `borderTex`
+  justo despues del hook de `ToggleGameMenu`), anclado TOPLEFT -44,54 / BOTTOMRIGHT 44,-41.
+  Importa para rendimiento: es **2592x1632 32bpp RLE**, o sea ~16 MB de pixeles a
+  descomprimir, y era la causa del micro-congelado en la PRIMERA apertura del menu (ver
+  la seccion de la sesion 2026-08-08). Se dibuja a ~988x671, asi que la fuente tiene ~6.4x
+  los pixeles que se ven — bajarla a 1296x816 la dejaria en ~4 MB.
 - **3 columnas**: sidebar (buscador + boton "All" que expande/colapsa todos los grupos +
   lista de unidades agrupada MAIN/POWER/BOSSES/GROUP/PORTRAITS/AURAS/INFO/MICRO/CHAT/TRACKER/GLOW,
   con scroll vertical suavizado por interpolacion) → contenido (titulo + fila de sub-tabs con su
@@ -770,6 +778,253 @@ combate) — la causa raíz final (tanda 11, HOY) fue mutar la tabla GLOBAL `OBJ
 cada 0.4s (`PatchColorTable`, YA ELIMINADO); el detalle completo de la saga (11 tandas, muchas
 hipótesis descartadas) vive en la memoria `project-mycustomframes-pending-bug` — no se repite aquí
 en extenso, solo el estado FINAL. Ver secciones actualizadas abajo.
+
+## SESION 2026-08-08 (auditoria de rendimiento contra EllesmereUI; 2 micro-cortes arreglados)
+
+Repaso pedido por el usuario comparando contra la suite **EllesmereUI** (8 addons,
+`E:\World of Warcraft\_ptr_\Interface\AddOns\EllesmereUI*`), a raiz de dos micro-cortes
+que sentia en vivo: al abrir el menu y al seleccionar un nameplate. Los dos se
+encontraron y se arreglaron (detalle en el CHANGELOG). Lo que sigue es lo que
+importa a futuro: las diferencias de ARQUITECTURA, no los dos bugs puntuales.
+
+### La causa raiz de los dos cortes era la misma: reconstruir en vez de deduplicar
+- **Nameplates**: el apply completo se llamaba en cada `PLAYER_TARGET_CHANGED`, y ese
+  apply hace `f._mcfLayoutSig = nil` — o sea **anula a proposito su propio dedupe** —
+  y llama `NPAurasNext_Rebuild`, que **destruye** los aura containers con
+  `SetParent(nil)` para que se recreen despues.
+- **Menu**: `MeasureSectionBottom` alocaba una closure + una tabla POR NODO del arbol
+  de widgets, en cada apertura.
+
+En los dos casos el codigo estaba escrito para ser "seguro" (reaplicar todo siempre,
+envolver todo en `pcall`) y el costo era invisible hasta sentirse en frames concretos.
+
+### Lo que hace EllesmereUI distinto (candidatos reales de mejora, NO aplicados aun)
+
+**1. Ticker auto-desarmable (`EllesmereUI_Ticker.lua`) — la diferencia mas grande.**
+Su driver es un `OnUpdate` que se `Hide()`ea solo cuando se va el ultimo suscriptor:
+*"a driver frame only exists-as-running while at least one subscriber is registered,
+so an idle UI runs no per-frame code at all"*. Un suscriptor se da de baja a si mismo
+cuando su trabajo termina (la animacion llego, el casteo acabo).
+
+**Este patron YA ESTA en MCF para los `OnUpdate`** (aplicado en la sesion 2026-08-05,
+antes de esta auditoria): `Units.lua` (el relleno smooth se desarma al converger),
+`MinimapButtons.lua` (driver de mouse separado del barrido de 1s) y `NameplatesNext.lua`
+(el driver arranca oculto). O sea que no es una tecnica nueva a introducir sino una
+**ya establecida en el codebase**, y extenderla es consistente con lo que ya hay.
+
+Lo que queda son los **`C_Timer.NewTicker`, que corren SIEMPRE desde el login** y no
+tienen forma de desarmarse (core 0.1s, ChatBubble 0.1s, Glow 0.2s, AuraHover/Indicators/
+LossOfControl 0.3s, ExplorerAuto/Tracker 1.0s...). Los dos mas faciles:
+  - `LossOfControl.lua` (0.3s): es una **red de seguridad** de una feature que ya es
+    por evento (`LOSS_OF_CONTROL_UPDATE`); solo existe para detectar el vencimiento
+    natural. Deberia armarse al aparecer un CC y desarmarse al ocultarse el icono —
+    ~0 ticks el 99% del tiempo en vez de 200/minuto para siempre.
+  - `Indicators.lua` (0.3s): recorre todas las unidades siempre, aunque nunca estes
+    fuera de rango ni escudado.
+Ojo con la **atribucion de CPU** que documentan: el motor le factura el arbol de
+llamadas de un handler al addon que llamo `CreateFrame` para ESE frame, no a donde
+vive el codigo — por eso ellos exponen `Tick.NewDriver(frame)` para que cada addon
+hijo pase un frame creado en su propio chunk.
+
+**2. Pool de containers de auras en vez de destruir/recrear.**
+`EUI_Nameplates_AuraContainers.lua` pre-crea un pool al login y **attachea/detachea**
+bundles segun aparecen plates (*"containers can only be created out of combat, so
+bundles are built at login"*), con `POOL_SIZE = 16` y pre-calentado a 25 al entrar a
+instancia. MCF destruye y recrea.
+
+**3. Sello de generacion de layout (`geoGen`) en vez de bustear el dedupe.**
+Estampan la generacion de geometria en cada container; si coincide, **saltean los
+setters de layout del motor** porque *"each one is a dirty mark that costs real engine
+work"*. Es exactamente lo contrario de `_mcfLayoutSig = nil`.
+
+**4. Activacion por refcount (`EllesmereUI_Range.lua`).**
+Los eventos se registran solo mientras algun consumidor se declaro activo via
+`Range_SetActive`, *"so the engine costs nothing while every range feature is
+disabled"*, con cache de resultado por tick compartido entre consumidores.
+
+**5. Fingerprints sin allocation.** Su helper `FP(...)` reusa una tabla scratch de
+modulo (`FP_JOIN`) en vez de alocar una por llamada — mismo espiritu que
+`ns.safeBool`/`ns.safeVal` de este addon, aplicado tambien fuera del ticker.
+
+**6. Gate de version por archivo.** `if not (EllesmereUI and EllesmereUI.IS_121) then
+return end` al tope del archivo entero. MCF ya hace lo mismo con `ns.IsMidnightNext`
+(via `AuraContainerProbe.lua`) — **con la trampa ya documentada de que la probe tiene
+que cargar ANTES en el .toc**, porque el flag se lee al cargar el archivo.
+
+### El corte del menu: `syncing` protegia media linea de mas
+Sintoma: congelado al abrir el panel. Causa: el refresher de CADA `MakeSlider` hace
+`syncing = true; s:SetValue(...)` para mostrar el valor de la DB — y eso **dispara
+`OnValueChanged`**, cuyo `syncing` solo cubria el `box:SetText`. Las otras dos lineas
+corrian igual: `get()[dbKey] = value` y `edit()`, con `edit() = ns.ApplyCurrent()`.
+**Abrir el menu = 230 applies completos del subsistema.** 225 de los 239 ms.
+
+Arreglo: `syncing` corta el handler ENTERO. Significa "estoy poniendo el slider en el
+valor que la DB ya tiene", que no es ni una edicion que persistir ni un motivo para
+reaplicar nada.
+
+**Era ademas un bug de correccion ya conocido, atacado por el lado equivocado:** el
+write-back va CLAMPEADO al rango del slider, asi que abrir una pestaña podia pisar un
+valor guardado legitimamente fuera de rango. Eso ya estaba documentado para el Top Widget
+("con solo entrar a la pestaña Widget se pisaba la posicion real") y se habia workaroundeado
+ensanchando los rangos a ±2000. Los rangos anchos quedan, pero ya nada depende de ellos.
+
+Medicion antes/despues: Lua 238.9 → **9.5 ms**, `RefreshControls` 227.6 → **2.7 ms**,
+peor frame de render despues de abrir 299 → **64 ms**.
+
+### Como se encontro, y como rehacerlo (la instrumentacion YA NO ESTA en el addon)
+Dos hipotesis razonadas fallaron antes de medir — los nudges `Hide()/Show()` de relayout
+(miden 2.7 y 4.7 ms, ruido) y el streaming de texturas. Lo que lo encontro fue instrumentar.
+**Todo lo que sigue se retiro** una vez confirmado el arreglo; queda escrito por si hay que
+repetirlo (no buscar `/mcfmenuprof` en el codigo, no existe).
+
+Tenia tres piezas, y las tres hicieron falta:
+
+1. **Cronometro por FASE** dentro de `ApplyPanelView` / `ShowSection`, guardando en una tabla
+   `ns._menuProf` que solo existe mientras se mide (si es nil, ni se llama a
+   `debugprofilestop()`). Eso aislo `RefreshControls` como el 95% del coste.
+2. **Watcher de frames posteriores**: un `OnUpdate` que mira los 12 frames siguientes a la
+   apertura y reporta el peor. **Distinguir Lua de render importa:** si el tiempo esta dentro
+   del OnShow es codigo; si el OnShow sale rapido y el frame LARGO es uno posterior, es
+   subida de texturas a VRAM. (Y el veredicto tiene que juzgar cada uno por SU cuenta — una
+   primera version los comparaba entre si y llego a decir "no es Lua" con 238 ms de Lua.)
+3. **Atribucion POR REFRESHER** — la que senyalo al culpable. El truco: un `__newindex` sobre
+   la tabla `refreshers` que captura `debugstack(2,1,0)` al registrar, asi no hay que tocar
+   los 27 sitios que hacen `refreshers[#refreshers+1] = fn`. Despues se cronometra cada
+   refresher y se acumula por linea de origen. Con eso la linea 442 (`MakeSlider`) salto
+   sola: 230 refreshers a 0.98 ms cada uno, contra 192 de otra linea que sumaban 0.3 ms en
+   TOTAL. **Esta pieza cuesta 516 `debugstack` en cada login** — por eso no se deja puesta.
+
+### Regla que sale de esta sesion
+**Antes de reaplicar "todo por las dudas" en un handler de evento frecuente, mirar
+cuantas veces dispara ese evento.** `PLAYER_TARGET_CHANGED` dispara en cada tab-target;
+`ShowSection` en cada apertura del panel. Un apply completo que es imperceptible en
+login es un corte visible ahi. El patron correcto es el inverso: calcular el valor
+nuevo, compararlo con el ultimo escrito, y salir sin tocar nada si no cambio.
+
+## SESION 2026-08-03/05 (Midnight 12.1.0 — nameplates reescritas, auras secretas, arquitectura nueva)
+
+RESUMEN: Preparacion COMPLETA para Midnight 12.1.0. **Cambios API disruptivos:** (1) auras de 
+unidades NO-player (enemigos/party/focus en dungeon/arena) se vuelven secret values — imposible 
+leer expirationTime/duration/spellName/stacks en Lua, solo metodos en C via AuraContainer. 
+(2) health/maxHealth/power/maxPower siguen siendo secret en Midnight (cliente actual), 
+pero ahora hay **`C_UnitAuras` y `ColorCurve`/`C_ColorUtil`** para lo que antes requeria comparacion 
+Lua. (3) nameplates tienen **escala global + seleccionada** (CVars `nameplateGlobalScale`/
+`nameplateSelectedScale`) y **distancia variable** (minScale/maxScale por distancia).
+
+### NameplatesNext.lua (NUEVO 2026-08-03, arquitectura calcada de EllesmereUINameplates.lua)
+**Estado:** UNICO nameplate engine activo; Nameplates.lua (viejo) esta comentado en el toc.
+
+Reescritura completa desde cero tras confirmar que la anterior fue incapaz de reproducir 
+el 1:1 esperado, aun tras 4 rondas de fixes "estructurales". La leccion: cuando un fix 
+razonado falla dos veces, el problema es arquitectural, no de detalle — con DOS codebases 
+para la misma funcion siempre hay una diferencia nueva que la otra no tenia.
+
+**Arquitectura:** una `Plate` = frame singleton seguro (`_mcf` child de cada nameplate de 
+Blizzard) con geometria compartida (escalas, offsets via `ns.NPLayout`) y construccion 
+compartida (widgets via `ns.NPBuild`). Callbacks re-invocados para cada plate activa 
+(`OnShow`/`OnUpdate`/etc) en vez de un ticker central.
+
+**APIs publicas:**
+- `ns.UpdateNameplateStyle()` — fuerza re-lectura de Defaults y reaplica layout/scale a TODAS 
+  las plates visibles (llamada desde Options al cambiar opciones de nameplates, y desde 
+  core.lua en RefreshAll).
+- `ns.CreatePlate(uf)` — construye _mcf child, NO crea el nameplate (viaja en OnShow de 
+  `uf:GetName()` registrado dinamicamente).
+- `ns.ForEachPlate(fn)` — itera todas las plates de este addon en vivo (usa `_mcf` marker).
+- Resto es file-local o no-expuesto por el momento (se expone al necesitar).
+
+**Validaciones:**
+- Objetos del mundo (GameObject-...) detectados via GUID-prefix o fallback UnitCreatureType/
+  UnitReaction (cuando GUID es secreto en instancias) — nunca skinneados.
+- Arena enemies (GUID secreto) nunca crashean comparaciones — se tratan como "datos legibles, 
+  solo que el GUID es opaco".
+- Secret values en auras de enemigos: **nunca se comparan en Lua** (ver NameplateAurasNext.lua).
+
+### NameplateAurasNext.lua (NUEVO 2026-08-03, usa AuraContainer API)
+**Estado:** UNICA fuente de auras en nameplates (ArenaAuraPreview.lua viejo no carga).
+
+Las auras de enemigos son **completamente secretas en 12.1.0**: expirationTime, duration, 
+spellID, stacks — TODO. `C_UnitAuras.GetAuraDataByIndex` devuelve tablas con esos campos 
+secret values. **No hay lectura en Lua posible.**
+
+**Solucion:** usar **`AuraContainer`** (nuevo en Midnight, disponible via 
+`C_UnitAuras.CreateAuraContainer(unit, filter)`). AuraContainer es un Frame que **Blizzard 
+mantiene actualizado en C**; nunca se comparan auras en Lua, solo se iteran sus children 
+(frames que Blizzard renderiza).
+
+**Construccion:**
+```lua
+local container = C_UnitAuras.CreateAuraContainer(unit, filter)
+for i = 1, container:GetNumChildren() do
+  local child = select(i, container:GetChildren())
+  -- child es un frame con texturas/valores legibles, sin datos secretos
+  local auraInstanceID = child.auraInstanceID (booleano? numero? -- revisar)
+end
+```
+**Limitacion real:** AuraContainer es un **Frame hijo de UIParent** (o invisible, depende de 
+la version), no data. Cada child es una copia renderizada que Blizzard de-sincroniza sin avisar 
+cuando carga otro unit. **Este addon NO lo usa todavia — preferencia del usuario de "no ser el 
+primero en probar una API nueva"** (citado en chat).
+
+**Estado actual (2026-08-05):** NameplateAurasNext.lua esta escrito completo (maneja ciclo de 
+vida del container, re-crea al cambiar unit, itera children), pero Blizzard aun no devuelve 
+auras via el container en vivo en arena/mundo (confirmado con pruebas 2026-08-03). Se cree que 
+es un lag o que la data llega despues del `OnShow` inicial. **PENDIENTE:** reproducir con un 
+ejemplo minimo sin addon, reportar a Blizzard si es bug o feature.
+
+Fallback temporal: **NameplateAurasNext.lua detecta ns.IsMidnightNext (via AuraContainerProbe.lua) 
+y NO renderiza auras si AuraContainer no trae datos** — las plates quedan sin auras pero sin crash.
+
+### AuraContainerProbe.lua (NUEVO 2026-08-03, detector de cambio API)
+**Unica funcion:** `ns.IsMidnightNext = C_UnitAuras ~= nil and 
+C_UnitAuras.CreateAuraContainer ~= nil`
+
+Carga **ANTES de NameplatesNext.lua y NameplateAurasNext.lua en el toc** porque ambos lo 
+leen al cargar el archivo (no en tiempo de evento) para decidir si activarse. Bug encontrado 
+(2026-08-03): cargaba muy al final del toc → variable siempre nil → plates parecian nativas.
+
+Fija una variable `ns.IsMidnightNext` binaria en lugar de comparar `C_UnitAuras` repetidamente 
+(caching por claridad, aunque sea una sola lectura).
+
+### NameplateLayout.lua + NameplateBuild.lua
+Documentados en STRUCTURE (sesion 2026-07-28). En 12.1.0 no cambiaron (la nueva 
+NameplatesNext.lua los consume igual que la vieja).
+
+### PlayerAurasSkin.lua (NUEVO 2026-08-05, BuffFrame/DebuffFrame nativo)
+**Scope:** reskin de Blizzard's BuffFrame + DebuffFrame (auras globals del player en esquina 
+sup izq) **solo si Bartender4 no esta instalado** (Bartender4 ya reskinea esos frames).
+
+**Arquitectura:** **ZERO lectura de datos** en Lua — solo hooksecurefunc sobre los metodos 
+que Blizzard llama internamente (SetPoint/SetTexture/etc). Parecido a lo que hace Bartender4 
+mismo.
+
+```lua
+hooksecurefunc(BuffFrame, "Update", function()
+  -- Blizzard acaba de actualizar el contenido, reskinea texturas/colores/posicion
+end)
+```
+
+**Razon de tanta cautela (comentario largo en el archivo):** BuffFrame/DebuffFrame en 12.1.0 
+usan AuraContainer internamente TAMBIEN → si el addon los toca directo (SetPoint/modificar 
+children) puede chocarse con Blizzard re-ordenando los children via AuraContainer sin avisar. 
+**Solucion:** NUNCA tocar el contenido (children), solo enganchar a los updates que Blizzard 
+dispara y re-pintar arrededor.
+
+**Es nuevo, todavia sin validacion en juego** (solo escrito, no testeado en vivo).
+
+### Indicators.lua (API change: UnitInRange es secreto en arena)
+Documentado en CHANGELOG (se escribio antes en otra sesion). Cambio 12.1.0: `UnitInRange` 
+devuelve **secret booleans para arena/M+/party units** (anti-scouting). Se guarda 
+`type(v) + issecretvalue(v)` check antes de usarlo.
+
+### Profiling (CHANGELOG, no STRUCTURE)
+Dos comandos nuevos para encontrar donde se va el CPU en el addon:
+- `/mcfdiag hot` — desglose por subsistema (via Profiler.lua).
+- `/mcfdiag cpu` — ranking de este addon vs otros (windows de tiempo).
+
+Revelacion: **el 50% del CPU se iba a UnitUpdateBar en Units.lua** — fix: reducir tickrate de 
+texto de 10→5 Hz, deduping SetText (no re-layout si el string es igual), otro deduping de 
+SetMinMaxValues, media poll del glow.
 
 ## Archivos (orden de carga en el toc)
 1. `Defaults.lua` — `ns.BUILTIN` = layout HORNEADO del autor (globals top-level + units + portraits +

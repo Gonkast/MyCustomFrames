@@ -596,8 +596,76 @@ local function AcquirePlateFrame()
     end
     return CreatePlateFrame()
 end
+-- Cast overlay ("casts in front of nameplates", 2026-08-05, puerto directo
+-- de EllesmereUINameplates_CastOverlay.lua): las nameplates componen como
+-- unidades ENTERAS -- ningun strata de un hijo puede "escapar" de su propia
+-- plate (verificado en vivo por EllesmereUI: una cast bar en HIGH sigue
+-- quedando DEBAJO de una plate vecina en MEDIUM). La UNICA forma de que la
+-- cast bar nunca quede tapada por una plate de al lado es sacarla del todo
+-- del arbol de la plate -- reparentarla a un frame propio en UIParent,
+-- strata HIGH, con la MISMA escala efectiva que la plate (SetIgnoreParentScale
+-- + SetScale a mano). El anclaje (f.cast:SetPoint(..., f.health, ...)) sigue
+-- funcionando igual, cruzando padres -- SetPoint no exige ancestro comun,
+-- solo importa para strata/orden de dibujado, que es justo lo que estamos
+-- cambiando. f.cast.icon/bg/text son REGIONES (texturas/fontstring) de
+-- f.cast, no frames propios -- heredan su strata automaticamente, sin nada
+-- extra que sincronizar (a diferencia de EllesmereUI, que tiene un
+-- castTextFrame aparte).
+local CAST_OVERLAY_STRATA = "HIGH"
+local function CastOverlayEnabled()
+    local p = P()
+    return p and p.castOverlayEnabled == true
+end
+local function GetCastLift(f)
+    local lift = f._castLift
+    if not lift then
+        lift = CreateFrame("Frame", nil, UIParent)
+        lift:SetFrameStrata(CAST_OVERLAY_STRATA)
+        if lift.SetIgnoreParentScale then lift:SetIgnoreParentScale(true) end
+        lift:SetSize(1, 1)
+        lift:EnableMouse(false)
+        f._castLift = lift
+    end
+    return lift
+end
+-- Idempotente -- se puede llamar en cada refresh de layout sin costo si no
+-- cambio nada (mismo criterio que el resto del archivo).
+local function ReassertCastOverlay(f)
+    local cast = f.cast
+    if not cast then return end
+    if CastOverlayEnabled() then
+        local lift = GetCastLift(f)
+        if cast:GetParent() ~= lift then
+            cast:SetParent(lift)
+            cast:SetFrameStrata(CAST_OVERLAY_STRATA)
+            f._castOverlayLifted = true
+        end
+        local s = f:GetEffectiveScale()
+        if f._castLiftScale ~= s then
+            f._castLiftScale = s
+            lift:SetScale(s)
+        end
+    elseif f._castOverlayLifted then
+        cast:SetParent(f)
+        cast:SetFrameStrata(f:GetFrameStrata())
+        f._castOverlayLifted = nil
+        f._castLiftScale = nil
+    end
+end
+
 local function ReleasePlateFrame(f)
     f:Hide()
+    -- Devolver la cast bar a la plate ANTES de soltar el frame al pool --
+    -- sin esto, un plate reciclado con el overlay activo quedaria con
+    -- f.cast colgado del lift VIEJO (huerfano, invisible) hasta el proximo
+    -- ReassertCastOverlay -- que ya nunca lo volveria a atar bien porque
+    -- f._castOverlayLifted seguiria en true de la unidad anterior.
+    if f._castOverlayLifted then
+        f.cast:SetParent(f)
+        f.cast:SetFrameStrata(f:GetFrameStrata())
+        f._castOverlayLifted = nil
+        f._castLiftScale = nil
+    end
     f:ClearAllPoints()
     f:SetParent(UIParent)
     pool[f] = true
@@ -957,6 +1025,7 @@ local function SetUnit(nameplate, unit)
     f:SetAlpha(1)
     f:Show()
     ReassertLayout(f, nameOnly)
+    ReassertCastOverlay(f)
     f.health:SetShown(not nameOnly)
     f.healthValue:SetShown(not nameOnly)
     if nameOnly then
@@ -1058,6 +1127,41 @@ local function EffectiveOccludedAlpha(p)
     return (p and p.alphaOccluded) or 1
 end
 
+-- FIX DE RENDIMIENTO (2026-08-08, reportado en vivo: "siento un micro corte
+-- cada vez que selecciono un nameplate"): PLAYER_TARGET_CHANGED llamaba a
+-- ns.RefreshNameplateStyle() -> ApplyNameplateStyleNow() COMPLETO, y eso en
+-- cada tab-target. Ese apply escribe 12 CVars (varios de los cuales -- Max
+-- Distance / GlobalScale / Min-MaxScale -- fuerzan al motor a recalcular
+-- TODAS las plates), y despues recorre cada plate activa busteando su
+-- _mcfLayoutSig (o sea anulando el dedupe a proposito), reaplicando el
+-- layout, el cast overlay, y DESTRUYENDO + recreando los aura containers
+-- (NPAurasNext_Rebuild hace SetParent(nil) sobre cada container). En una
+-- pack de mobs eso es un rebuild completo del sistema de nameplates por cada
+-- cambio de target.
+--
+-- Lo UNICO que de verdad depende del target es EffectiveOccludedAlpha -> el
+-- CVar nameplateOccludedAlphaMult, y solo cuando hideOccludedWithTarget esta
+-- prendido. Asi que el camino de target ahora escribe ESE CVar y nada mas,
+-- con dedupe sobre el ultimo valor escrito: con el toggle apagado el valor
+-- no cambia nunca con el target y el handler es un no-op real (cero SetCVar).
+--
+-- Referencia: EllesmereUINameplates no reaplica NINGUN CVar de nameplate en
+-- PLAYER_TARGET_CHANGED -- los setea una sola vez en su setup.
+-- Devuelve true si quedo trabajo pendiente por combate (el llamador arma el
+-- reintento). Si el valor no cambio no hace NADA y no pide reintento: con
+-- hideOccludedWithTarget apagado ese es el caso siempre, asi que el handler
+-- de target sale sin tocar un solo CVar.
+local lastOccludedWritten = nil
+local function ApplyOccludedAlphaOnly()
+    local p = P()
+    local v = EffectiveOccludedAlpha(p)
+    if v == lastOccludedWritten then return false end
+    if InCombatLockdown and InCombatLockdown() then return true end
+    lastOccludedWritten = v
+    pcall(SetCVar, "nameplateOccludedAlphaMult", tostring(v))
+    return false
+end
+
 local pendingStyleApply = false
 local function ApplyNameplateStyleNow()
     local p = P()
@@ -1075,6 +1179,10 @@ local function ApplyNameplateStyleNow()
     pcall(SetCVar, "nameplateSelectedAlpha", tostring(targetAlpha))
     pcall(SetCVar, "nameplateNotSelectedAlpha", tostring(notSelectedAlpha))
     pcall(SetCVar, "nameplateOccludedAlphaMult", tostring(occludedAlpha))
+    -- Mantener coherente el cache de ApplyOccludedAlphaOnly: si el apply
+    -- completo escribe otro valor, el camino rapido tiene que saberlo o se
+    -- saltearia la proxima escritura legitima.
+    lastOccludedWritten = occludedAlpha
     local globalScale = (p and p.globalScale) or 1
     local selectedScale = (p and p.selectedScale) or 1
     pcall(SetCVar, "nameplateGlobalScale", tostring(globalScale))
@@ -1099,6 +1207,7 @@ local function ApplyNameplateStyleNow()
         if f then
             f._mcfLayoutSig = nil
             ReassertLayout(f, f.nameOnly)
+            ReassertCastOverlay(f)
             -- FIX (2026-08-05, "que se aplique en vivo el auraIconSize"):
             -- ver el comentario largo en ns.NPAurasNext_Rebuild -- destruye
             -- los containers de esta plate y los recrea al toque si sigue
@@ -1137,10 +1246,15 @@ styleEv:RegisterEvent("PLAYER_TARGET_CHANGED")
 styleEv:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 styleEv:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_TARGET_CHANGED" then
-        -- FIX: target se cambia CONSTANTEMENTE en combate (tab-target, click),
-        -- y SetCVar SI se bloquea en combate en este build -- tiene que pasar
-        -- por el mismo gate de reintento que el resto, no aplicar directo.
-        ns.RefreshNameplateStyle()
+        -- Solo el CVar de oclusion (ver el comentario largo sobre
+        -- ApplyOccludedAlphaOnly). Antes esto llamaba a
+        -- ns.RefreshNameplateStyle() -- el apply COMPLETO -- en cada
+        -- tab-target, que era el micro corte reportado.
+        --
+        -- Solo marca pendiente si de verdad habia un cambio que no se pudo
+        -- escribir por combate. Con el toggle apagado no hay cambio nunca, asi
+        -- que ni siquiera se arma el reintento.
+        if ApplyOccludedAlphaOnly() then pendingStyleApply = true end
         return
     end
     if event == "ZONE_CHANGED_NEW_AREA" then
@@ -1387,7 +1501,17 @@ SlashCmdList["MCFCASTBARDIAG"] = function()
             local okPlayer, isPlayer = pcall(UnitIsPlayer, unit)
             if okFriend and isFriend then
                 local cb = uf.castBar
-                local okA, a = cb and pcall(cb.GetAlpha, cb)
+                -- FIX (2026-08-08, detectado por luacheck: "variable 'a' is
+                -- never set"): antes era
+                --     local okA, a = cb and pcall(cb.GetAlpha, cb)
+                -- y `and` TRUNCA a un solo valor de retorno -- con cb presente
+                -- la expresion entregaba solo el `true` de pcall, asi que `a`
+                -- era SIEMPRE nil. O sea: este diagnostico, cuyo unico proposito
+                -- es reportar "el alpha real del castBar AHORA MISMO", nunca
+                -- pudo reportarlo -- imprimia alpha=nil siempre, incluido
+                -- durante la caceria del bug para la que se escribio.
+                local okA, a
+                if cb then okA, a = pcall(cb.GetAlpha, cb) end
                 print(("  unit=%s isPlayer=%s ourPlate(f)=%s uf.castBar=%s alpha=%s(%s) uf.unitFrameTemplate=%s"):format(
                     tostring(unit), tostring(okPlayer and isPlayer), tostring(f ~= nil),
                     tostring(cb ~= nil), tostring(a), tostring(okA), tostring(np.unitFrameTemplate)))

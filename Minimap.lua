@@ -1512,6 +1512,11 @@ local function RefreshMinimap()
     end
     if mm.LayoutRing then mm.LayoutRing() end
     UpdateRing()
+    -- Toggle "Hide Blizzard's native XP/Rep bar" (2026-08-05): la funcion en
+    -- si esta definida MAS ABAJO en este archivo, pero se accede via ns.*
+    -- (resuelto en tiempo de LLAMADA, no de definicion) -- ya esta asignada
+    -- para cuando RefreshMinimap se invoca de verdad, sin falta forward-declare.
+    if ns.HideNativeXPBar then ns.HideNativeXPBar() end
 end
 ns.RefreshMinimap = RefreshMinimap
 
@@ -1560,6 +1565,39 @@ local function Init()
     f:RegisterEvent("HONOR_XP_UPDATE")
     f:RegisterEvent("MAJOR_FACTION_RENOWN_LEVEL_CHANGED")
     f:SetScript("OnEvent", function() UpdateRing() end)
+end
+
+-- ==========================================================================
+-- OCULTAR LA BARRA DE XP/REP/HONOR NATIVA (2026-08-05, pedido del usuario:
+-- "ya que nosotros tenemos una propia" -- el anillo de arriba). El sistema
+-- nativo moderno (post-Dragonflight) unifico XP/reputacion/honor/favor de
+-- casa en un solo frame, StatusTrackingBarManager (nombre real confirmado
+-- en vivo, no adivinado -- ver el mismo criterio de verificacion que
+-- ActionBarsSkin.lua). NO es un widget seguro/protegido (solo muestra
+-- datos, sin clicks ni acciones) -- pero por las dudas se sigue el mismo
+-- criterio "SetAlpha, nunca Hide()" que el resto del addon usa en frames
+-- nativos, para no arriesgar nada nuevo. SIN UnregisterAllEvents a
+-- proposito: eso no se puede deshacer sin saber exactamente que eventos
+-- tenia registrados Blizzard de entrada -- si el usuario desmarca la
+-- opcion despues, alpha 1 tiene que alcanzar para que vuelva a funcionar
+-- de verdad (no solo verse), asi que se prioriza reversibilidad sobre el
+-- ahorro chico de performance de no escuchar un par de eventos raros.
+local function HideNativeXPBar()
+    local bar = _G.StatusTrackingBarManager
+    if not bar then return end
+    local p = ns.GetDB() and ns.GetDB().minimap
+    bar:SetAlpha((p and p.hideNativeXPBar ~= false) and 0 or 1)
+end
+ns.HideNativeXPBar = HideNativeXPBar
+do
+    local xf = CreateFrame("Frame")
+    xf:RegisterEvent("PLAYER_ENTERING_WORLD")
+    xf:RegisterEvent("PLAYER_XP_UPDATE")
+    xf:RegisterEvent("UPDATE_EXHAUSTION")
+    xf:RegisterEvent("UPDATE_FACTION")
+    xf:RegisterEvent("HONOR_XP_UPDATE")
+    xf:RegisterEvent("MAJOR_FACTION_RENOWN_LEVEL_CHANGED")
+    xf:SetScript("OnEvent", HideNativeXPBar)
 end
 
 local ev = CreateFrame("Frame")

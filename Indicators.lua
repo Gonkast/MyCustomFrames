@@ -172,9 +172,15 @@ local function UpdateShield(u)
     if not (u.unit and UnitExists(u.unit)) then bar:SetValue(0); return end
     ApplyShieldTexture(bar, u)
 
+    -- FIX (2026-08-05, auditoria): antes truth-testeaba hMax/absorb
+    -- directo (`and hMax`) -- mismo criterio "type()+issecretvalue() ANTES
+    -- de cualquier if" que ya usa SafeBool aca arriba y SafeMax en
+    -- ClassPower.lua, aplicado ahora tambien aca por consistencia.
     local okMax, hMax = pcall(UnitHealthMax, u.unit)
     local okAbs, absorb = pcall(UnitGetTotalAbsorbs, u.unit)
-    if not (okMax and hMax and okAbs and absorb) then bar:SetValue(0); return end
+    local maxOK = okMax and type(hMax) == "number" and not (issecretvalue and issecretvalue(hMax))
+    local absOK = okAbs and type(absorb) == "number" and not (issecretvalue and issecretvalue(absorb))
+    if not (maxOK and absOK) then bar:SetValue(0); return end
     pcall(bar.SetMinMaxValues, bar, 0, hMax)
     pcall(bar.SetValue, bar, absorb)
 end

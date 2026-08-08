@@ -841,22 +841,21 @@ local function BuildPage7(content)
         "elite/rare/boss icon, raid marks) to match this preset's look — the underlying frames " ..
         "and coloring logic stay 100% Blizzard's own, no oUF, no addon replacement.")
 
-    local enableCB = Toggle(p, "Enable nameplate reskin", 4, -74,
-        function() local d = ns.GetDB(); return d and d.nameplates and d.nameplates.enabled end,
-        function(v)
-            local d = ns.GetDB(); if not d then return end
-            d.nameplates = d.nameplates or {}
-            d.nameplates.enabled = v
-            if ns.RefreshNameplateStyle then ns.RefreshNameplateStyle() end
-        end)
+    -- Toggle "Enable nameplate reskin" QUITADO (2026-08-05, auditoria):
+    -- controlaba db.nameplates.enabled, campo que NameplatesNext.lua (el
+    -- sistema activo en 12.1.0) nunca lee -- el reskin corre incondicional,
+    -- gateado solo por ns.IsMidnightNext a nivel de archivo. Options.lua ya
+    -- habia sacado el mismo control equivalente por el mismo motivo (ver su
+    -- comentario en la seccion np_general) -- este del wizard quedo sin
+    -- tocar hasta ahora.
 
-    Paragraph(p, 4, -104, 11,
+    Paragraph(p, 4, -74, 11,
         "Position, size, colors, aura categories, classification/raid mark icons — everything " ..
         "is drag-and-scroll editable in the Nameplate Designer, a visual panel (not sliders/text " ..
         "fields). Open it now to set it up, or later anytime with |cffffff00/mcfnpdesigner|r.")
 
     local designBtn = TexButton(p, CUSTOM.APPLY, 220, 40, "Nameplate Designer", 14)
-    designBtn:SetPoint("TOPLEFT", 2, -148)
+    designBtn:SetPoint("TOPLEFT", 2, -118)
     designBtn:SetScript("OnClick", function()
         -- Pedido del usuario 2026-07-19: abrir el Designer desde el Setup NO
         -- debe quedar superpuesto/detras del wizard -- corre el wizard a la
