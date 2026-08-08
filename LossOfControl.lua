@@ -63,6 +63,11 @@ local function EnsureHolder()
 end
 
 local testMode = false
+local testCdSet = false
+
+-- DRIVER AUTO-DESARMABLE (2026-08-08) -- ver el comentario largo abajo, junto
+-- a su creacion. Declarados antes que Refresh porque Refresh los llama.
+local ArmDriver, DisarmDriver
 
 local function Refresh()
     local f = EnsureHolder()
@@ -70,13 +75,23 @@ local function Refresh()
     if not (C_LossOfControl and C_LossOfControl.GetActiveLossOfControlDataCount
         and C_LossOfControl.GetActiveLossOfControlData) then
         f:Hide()
+        DisarmDriver()
         return
     end
 
     if testMode then
         f.tex:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-        f.cd:SetCooldown(GetTime(), 6)
+        -- Una sola vez por activacion (2026-08-08): antes esto corria en cada
+        -- tick del ticker de 0.3s, o sea que el swipe se REINICIABA 3 veces por
+        -- segundo y nunca avanzaba -- la preview mostraba un cooldown congelado.
+        if not testCdSet then
+            testCdSet = true
+            f.cd:SetCooldown(GetTime(), 6)
+        end
         f:Show()
+        -- En test no hace falta el driver: no hay vencimiento real que vigilar,
+        -- el swipe lo dibuja el propio Cooldown en C.
+        DisarmDriver()
         return
     end
 
@@ -91,11 +106,54 @@ local function Refresh()
                 pcall(f.cd.Clear, f.cd)
             end
             f:Show()
+            -- Hay un CC activo: recien AHORA hace falta vigilar su vencimiento.
+            ArmDriver()
             return
         end
     end
     f:Hide()
+    -- Nada activo: no hay nada que vencer, el driver no tiene trabajo.
+    DisarmDriver()
 end
+
+-- RED DE SEGURIDAD, AHORA AUTO-DESARMABLE (2026-08-08)
+--
+-- Sigue haciendo falta: un vencimiento NATURAL del CC puede no volver a
+-- disparar LOSS_OF_CONTROL_UPDATE, asi que sin esto el icono podria quedarse
+-- pegado en pantalla. Lo que cambia es CUANDO corre.
+--
+-- Antes era un `C_Timer.NewTicker(0.3, Refresh)` creado en el login y sin
+-- forma de pararse: 200 llamadas por minuto, para siempre, aunque no te
+-- hubieran controlado en toda la sesion. Y la abrumadora mayoria de esas
+-- llamadas no tenian nada que hacer -- salian por el `f:Hide()` del final.
+--
+-- Ahora es un OnUpdate que se arma SOLO mientras hay un CC activo (mismo
+-- patron self-hiding que Units.lua y MinimapButtons.lua, que es la convencion
+-- del addon para esto). Con el icono oculto no corre ni una linea de Lua por
+-- frame; el evento sigue siendo quien lo enciende.
+local driver = CreateFrame("Frame")
+driver:Hide()
+local driverArmed, acc = false, 0
+
+ArmDriver = function()
+    if driverArmed then return end
+    driverArmed = true
+    acc = 0
+    driver:Show()
+end
+
+DisarmDriver = function()
+    if not driverArmed then return end
+    driverArmed = false
+    driver:Hide()
+end
+
+driver:SetScript("OnUpdate", ns.Prof.Wrap("LossOfControl: driver 0.3s", function(_, elapsed)
+    acc = acc + elapsed
+    if acc < 0.3 then return end
+    acc = 0
+    Refresh()   -- se desarma solo si ya no hay nada activo
+end))
 
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("PLAYER_LOGIN")
@@ -105,11 +163,6 @@ eventFrame:SetScript("OnEvent", function(self)
         local watcher = CreateFrame("Frame")
         watcher:RegisterEvent("LOSS_OF_CONTROL_UPDATE")
         watcher:SetScript("OnEvent", Refresh)
-        -- Red de seguridad (2026-07-27, mismo patron que el resto del addon
-        -- este sesion): un vencimiento NATURAL sin ningun cambio de estado
-        -- puede no disparar el evento de nuevo -- el ticker se asegura de
-        -- ocultar el icono poco despues igual.
-        C_Timer.NewTicker(0.3, ns.Prof.Wrap("LossOfControl: 0.3s", Refresh))
         Refresh()
     end)
 end)
@@ -118,6 +171,7 @@ end)
 -- el estado NUEVO, que el boton usa para quedar marcado mientras este activo.
 function ns.ToggleLossOfControlTest()
     testMode = not testMode
+    testCdSet = false   -- que la proxima activacion vuelva a arrancar el swipe
     Refresh()
     return testMode
 end

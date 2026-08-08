@@ -22,6 +22,32 @@ worth reading before redoing one of them).
   it work again — reversibility over a tiny event-handling saving.
 
 ### Changed
+- **`LossOfControl` and `Indicators` no longer run a ticker forever.** Both used a
+  `C_Timer.NewTicker(0.3, …)` created at login with no way to stop — 200 calls a minute
+  each, for the whole session. They now use the self-hiding `OnUpdate` driver already
+  established in `Units.lua` / `MinimapButtons.lua` / `NameplatesNext.lua`:
+  - **Loss of Control** is event-driven (`LOSS_OF_CONTROL_UPDATE`); the ticker was only
+    a safety net for a CC expiring *naturally*, which may not re-fire the event. So it
+    now runs only while an icon is actually shown. With nothing controlling you — which
+    is nearly always — it costs zero. The vast majority of the old calls were doing
+    nothing but falling through to the `f:Hide()` at the end.
+  - **Indicators** genuinely needs polling (there is no "distance changed" event), but
+    only while something exists to check. `player` doesn't count — `UpdateRange` returns
+    on its first line for it, and the three `unit="player"` keys always exist. With no
+    target, no focus, no group and outside arena, the old ticker spun 200 times a minute
+    over nothing. It re-evaluates on the events that change that answer
+    (target/focus/roster/arena/PEW), and stays disarmed when both indicators are turned
+    off in the menu regardless of what exists. Worst case if an arming event were ever
+    missed is the range dim not updating until the next target change — visual only, no
+    error, self-correcting.
+
+  Nine `C_Timer.NewTicker`s still run unconditionally (core's 0.1s tick, ChatBubble,
+  Glow, AuraHover, ExplorerAuto, Tracker…). See `STRUCTURE.md` for the comparison with
+  EllesmereUI's shared self-disarming driver.
+- **The Loss of Control preview never animated.** `/mcfloctest` set
+  `f.cd:SetCooldown(GetTime(), 6)` on every refresh, and the old 0.3s ticker called that
+  three times a second — so the swipe restarted continuously and never advanced. Now set
+  once per activation.
 - **Two always-on per-frame `OnUpdate`s now disarm themselves**, the same self-hiding
   driver pattern `NameplatesNext.lua` already used:
   - `Units.lua`'s smooth health fill ran every frame, forever, on **every** bar with

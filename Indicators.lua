@@ -185,22 +185,90 @@ local function UpdateShield(u)
     pcall(bar.SetValue, bar, absorb)
 end
 
--- Ticker compartido (2026-07-27): misma cadencia (0.3s) ya establecida en
--- AuraHoverPreview.lua para los grupos de auras hover.
+-- DRIVER AUTO-DESARMABLE (2026-08-08, misma cadencia de 0.3s de antes)
+--
+-- El rango NECESITA polling de verdad: no existe un evento de "cambio la
+-- distancia", cambia sola mientras vos o el objetivo se mueven. Asi que no se
+-- puede volver puramente reactivo como LossOfControl.lua.
+--
+-- Pero solo tiene sentido mientras exista ALGUNA unidad que chequear. `player`
+-- no cuenta: UpdateRange sale por `u.unit == "player"` en la primera linea, y
+-- las 3 keys basadas en unit="player" (player/party5/arena_player) existen
+-- siempre. Sin target, sin foco, sin grupo y fuera de arena -- el caso comun
+-- en mundo abierto -- el ticker viejo daba 200 vueltas por minuto para no
+-- hacer absolutamente nada.
+--
+-- Ahora se arma segun exista o no algo real que vigilar, recalculado en los
+-- eventos que cambian esa respuesta. Si alguno se escapara, lo peor que pasa
+-- es que el oscurecido por rango no se actualice hasta el proximo cambio de
+-- target: es visual, no tira error y se corrige solo.
+local driver = CreateFrame("Frame")
+driver:Hide()
+local driverArmed, acc = false, 0
+
+-- Hay algo que vigilar? Solo cuentan las unidades cuyo token NO es "player".
+local function AnythingToWatch()
+    -- Con las DOS features apagadas en el menu no hay nada que actualizar,
+    -- exista lo que exista (`~= false` porque ausente = encendida, mismo
+    -- criterio que usan UpdateRange/UpdateShield).
+    local db = ns.GetDB and ns.GetDB()
+    if db and db.indicatorRange == false and db.indicatorShield == false then
+        return false
+    end
+    if not ns.frames then return false end
+    for key in pairs(INDICATOR_KEYS) do
+        local u = ns.frames[key]
+        if u and u.unit and u.unit ~= "player" and UnitExists(u.unit) then
+            return true
+        end
+    end
+    return false
+end
+
+local function UpdateAll()
+    for key in pairs(INDICATOR_KEYS) do
+        local u = ns.frames and ns.frames[key]
+        if u then
+            UpdateRange(u)
+            UpdateShield(u)
+        end
+    end
+end
+
+driver:SetScript("OnUpdate", ns.Prof.Wrap("Indicators: driver 0.3s", function(_, elapsed)
+    acc = acc + elapsed
+    if acc < 0.3 then return end
+    acc = 0
+    UpdateAll()
+end))
+
+local function SyncDriver()
+    -- En modo test se fuerza armado: la preview no depende de que las unidades
+    -- existan de verdad (ese es justamente el punto de /mcfindicatortest).
+    local want = testMode or AnythingToWatch()
+    if want == driverArmed then return end
+    driverArmed = want
+    if want then acc = 0; driver:Show() else driver:Hide() end
+    -- Un pase inmediato al cambiar de estado, para no esperar hasta 0.3s al
+    -- adquirir target, y para limpiar el overlay al perderlo.
+    UpdateAll()
+end
+ns.SyncIndicatorDriver = SyncDriver
+
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_LOGIN")
 f:SetScript("OnEvent", function(self)
     self:UnregisterAllEvents()
     C_Timer.After(1, function()
-        C_Timer.NewTicker(0.3, ns.Prof.Wrap("Indicators: range/shield 0.3s", function()
-            for key in pairs(INDICATOR_KEYS) do
-                local u = ns.frames and ns.frames[key]
-                if u then
-                    UpdateRange(u)
-                    UpdateShield(u)
-                end
-            end
-        end))
+        local ev = CreateFrame("Frame")
+        -- Los eventos que cambian la respuesta de AnythingToWatch().
+        ev:RegisterEvent("PLAYER_TARGET_CHANGED")
+        ev:RegisterEvent("PLAYER_FOCUS_CHANGED")
+        ev:RegisterEvent("GROUP_ROSTER_UPDATE")
+        ev:RegisterEvent("ARENA_OPPONENT_UPDATE")
+        ev:RegisterEvent("PLAYER_ENTERING_WORLD")
+        ev:SetScript("OnEvent", SyncDriver)
+        SyncDriver()
     end)
 end)
 
@@ -208,6 +276,10 @@ end)
 -- el estado NUEVO, que el boton usa para quedar marcado mientras este activo.
 function ns.ToggleIndicatorTest()
     testMode = not testMode
+    -- El driver se arma incondicionalmente en test (ver SyncDriver): sin esto,
+    -- prender la preview estando sin target no mostraba nada, porque no habia
+    -- nada que armara el ticker.
+    SyncDriver()
     return testMode
 end
 
@@ -224,4 +296,7 @@ function ns.RefreshIndicators()
         UpdateRange(u)
         UpdateShield(u)
     end
+    -- Apagar las dos features desde el menu tiene que PARAR el driver, y
+    -- volver a encender alguna tiene que rearmarlo (ver AnythingToWatch).
+    if ns.SyncIndicatorDriver then ns.SyncIndicatorDriver() end
 end

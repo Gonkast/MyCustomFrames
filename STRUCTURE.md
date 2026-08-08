@@ -813,14 +813,26 @@ antes de esta auditoria): `Units.lua` (el relleno smooth se desarma al converger
 **ya establecida en el codebase**, y extenderla es consistente con lo que ya hay.
 
 Lo que queda son los **`C_Timer.NewTicker`, que corren SIEMPRE desde el login** y no
-tienen forma de desarmarse (core 0.1s, ChatBubble 0.1s, Glow 0.2s, AuraHover/Indicators/
-LossOfControl 0.3s, ExplorerAuto/Tracker 1.0s...). Los dos mas faciles:
-  - `LossOfControl.lua` (0.3s): es una **red de seguridad** de una feature que ya es
-    por evento (`LOSS_OF_CONTROL_UPDATE`); solo existe para detectar el vencimiento
-    natural. Deberia armarse al aparecer un CC y desarmarse al ocultarse el icono —
-    ~0 ticks el 99% del tiempo en vez de 200/minuto para siempre.
-  - `Indicators.lua` (0.3s): recorre todas las unidades siempre, aunque nunca estes
-    fuera de rango ni escudado.
+tienen forma de desarmarse. **`LossOfControl.lua` e `Indicators.lua` ya se convirtieron
+(2026-08-08)**, quedan 9: core 0.1s, ChatBubble 0.1s, Glow 0.2s, AuraHover 0.3s,
+ExplorerAuto/Tracker 1.0s, etc.
+
+Los dos convertidos ilustran los dos casos que uno se encuentra:
+  - **`LossOfControl.lua` — reactivo con red de seguridad.** La feature ya era por
+    evento (`LOSS_OF_CONTROL_UPDATE`); el ticker solo cubria el vencimiento NATURAL,
+    que puede no re-disparar el evento. Se arma al mostrar el icono y se desarma al
+    ocultarlo, asi que sin CC activo cuesta cero. Casi todas las llamadas viejas caian
+    directo en el `f:Hide()` del final sin hacer nada.
+  - **`Indicators.lua` — polling genuino, pero acotado.** El rango NO tiene evento, hay
+    que sondearlo. Lo que si se puede es no sondear cuando no hay nada que mirar: se
+    arma segun exista alguna unidad con token distinto de `"player"` (las 3 keys
+    `unit="player"` existen siempre y `UpdateRange` sale en su primera linea para
+    ellas), recalculado en target/focus/roster/arena/PEW. En mundo abierto sin target
+    ni grupo, el ticker viejo daba 200 vueltas por minuto sobre nada.
+    **Criterio de riesgo:** si un evento de armado se escapara, lo peor es que el
+    oscurecido por rango no se actualice hasta el proximo cambio de target — visual,
+    sin error, y se corrige solo. Por eso se acepto; en un sistema donde fallar
+    significara un error o un dato incorrecto, este trade-off NO valdria.
 Ojo con la **atribucion de CPU** que documentan: el motor le factura el arbol de
 llamadas de un handler al addon que llamo `CreateFrame` para ESE frame, no a donde
 vive el codigo — por eso ellos exponen `Tick.NewDriver(frame)` para que cada addon
