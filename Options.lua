@@ -5294,49 +5294,12 @@ builder:SetScript("OnEvent", function(self)
         BuildPanel()
         built = true
     end
-    -- PRECARGA DE TEXTURAS (2026-08-08, reportado en vivo: "la primera vez que
-    -- abro el menu despues de un reload hay un micro congelado" -- y SOLO la
-    -- primera, las siguientes van bien).
-    --
-    -- No es Lua: BuildPanel ya corrio aca arriba, asi que el primer OnShow hace
-    -- exactamente el mismo trabajo que los siguientes. Lo que es unico de la
-    -- primera vez es el STREAMING de las texturas del panel: WoW no las lee del
-    -- disco hasta que el frame se dibuja por primera vez.
-    --
-    -- El costo esta medido y esta casi todo en un solo archivo:
-    --   Background_complete1.tga (el borde del panel) es 2592x1632 32bpp con
-    --   compresion RLE -- 1.58 MB en disco que se expanden a ~16 MB de pixeles
-    --   que hay que DESCOMPRIMIR y subir a VRAM, todo en el frame en el que
-    --   abris el menu.
-    --
-    -- Esto solo MUEVE el costo: se paga unos segundos despues del login (con la
-    -- pantalla de carga recien terminada, donde no se nota) en vez de la primera
-    -- vez que abris el panel. Un frame mostrado de 1x1 con alpha casi cero
-    -- alcanza para que el motor haga la carga; se destruye apenas termina.
-    --
-    -- ARREGLO DE FONDO (pendiente, requiere re-exportar arte): el borde se
-    -- dibuja a ~988x671 en pantalla, asi que 2592x1632 son ~7x los pixeles que
-    -- se ven. Bajarlo a ~1024x672 lo dejaria en ~2.7 MB en memoria y la precarga
-    -- pasaria a ser innecesaria.
-    C_Timer.After(3, function()
-        local pre = CreateFrame("Frame", nil, UIParent)
-        pre:SetPoint("TOPLEFT")
-        pre:SetSize(1, 1)
-        pre:SetAlpha(0.01)   -- 0 exacto puede saltearse en el render
-        for _, path in ipairs({
-            "Interface\\AddOns\\MyCustomFrames\\Assets\\Background_complete1.tga",
-            "Interface\\AddOns\\MyCustomFrames\\Assets\\PlumberSettingsPanel.png",
-            "Interface\\AddOns\\MyCustomFrames\\Assets\\SettingsPanelWidget.png",
-        }) do
-            local t = pre:CreateTexture(nil, "BACKGROUND")
-            t:SetTexture(path)
-            t:SetAllPoints(pre)
-        end
-        pre:Show()
-        -- 2 segundos de margen: la carga es asincronica, destruirlo en el
-        -- frame siguiente podria cancelarla antes de que llegue a VRAM.
-        C_Timer.After(2, function() pre:Hide(); pre:SetParent(nil) end)
-    end)
+    -- (Aca vivio brevemente una precarga de texturas, agregada el 2026-08-08
+    -- sobre la hipotesis equivocada de que el congelado al abrir el menu era
+    -- streaming de texturas. Era Lua -- 230 ns.ApplyCurrent() por los
+    -- refreshers de los sliders, ver el comentario en MakeSlider. Con esa causa
+    -- arreglada Y el borde del panel bajado de 2592x1632 a 1024x645 (~16 MB ->
+    -- ~2.5 MB en memoria), quedaba sin proposito y se saco.)
     -- AddOn Compartment (2026-07-17): el icono de rompecabezas junto al minimapa,
     -- disponible desde Dragonflight — el usuario no quiere depender solo de
     -- /mcfmenu. Es el reemplazo moderno de "clic derecho > Opciones" para addons

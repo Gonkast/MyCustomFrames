@@ -142,23 +142,31 @@ worth reading before redoing one of them).
   is confirmed fixed; `STRUCTURE.md` records how to rebuild it, including the piece that
   actually identified the culprit (a `__newindex` on the `refreshers` table capturing
   `debugstack` at registration, to attribute cost per registration site).
-- **Panel textures are pre-loaded a few seconds after login.** WoW doesn't read a texture
-  off disk until the frame is first drawn, and the panel border
-  (`Background_complete1.tga`) is **2592x1632 32bpp RLE** — 1.58 MB on disk that expands
-  to ~16 MB to decompress and upload. A shown 1x1 frame at ~0 alpha is enough to make the
-  engine fetch it during idle time instead.
+- **The options panel border was 6.4x larger than it is ever drawn.**
+  `Background_complete1.tga` was **2592x1632 32bpp RLE** — 1.58 MB on disk expanding to
+  **~16 MB** of pixels to decompress and upload to VRAM — while the border draws at
+  ~988x671 (and at most ~1482x1007, since `panelScale` caps at 1.5). Resampled to
+  **1024x645**, preserving the exact source aspect ratio so the alpha padding maths still
+  line up: **~16 MB → ~2.5 MB in memory**, 1.58 MB → 0.32 MB on disk.
 
-  Honest caveat: this was added on the assumption that texture streaming *was* the
-  freeze, which turned out to be wrong — the slider fix above is what removed it. The
-  preload is kept because the decompression cost is real regardless, but its isolated
-  benefit has not been measured.
+  Verified rather than assumed. Measured against the original *at the size it is actually
+  drawn*, the difference is **RMSE 0.0038** — well under perceptible. Two things only
+  turned up by looking at the render:
+  - The first attempt destroyed the alpha channel outright (`-alpha disassociate`
+    collapsed it to 3 channels), which would have broken the border completely, since the
+    art is inset inside transparent padding.
+  - The second attempt kept alpha but produced **white halos** along the inner edges —
+    un-premultiplying divides RGB by a near-zero alpha and amplifies the noise. A plain
+    Lanczos resize (letting ImageMagick weight alpha itself) is clean.
 
-  The underlying waste stands: the border draws at ~988x671, so the source carries about
-  **6.4x the pixels ever visible**. Halving it to 1296x816 would put it at ~4 MB and make
-  the preload pointless. Left alone — it's authored art, not generated.
+  Output format matches the original exactly: TGA type 10 (RLE true-color), 32bpp, sRGBA.
 
   Worth noting: `STRUCTURE.md` claimed this file was unused ("revertido al nine-slice…
   los archivos quedan en `Assets\` sin usar"). It isn't — it's the live border. Corrected.
+- **Removed the texture preload added earlier the same day.** It was written on the
+  assumption that texture streaming caused the menu freeze; it didn't — the slider fix
+  above did. With that fixed *and* the border now ~2.5 MB instead of ~16 MB, it had no
+  remaining purpose, so it went rather than staying as scaffolding from a wrong guess.
 - **`ForceNativeNameplateCVarsOnce` was leaking into `_G`** (missing `local`, found by
   luacheck). Defined and called only within `core.lua`, so it is now a file-local.
 - **`/mcfcastbardiag` could never report the one value it exists to report.** It read

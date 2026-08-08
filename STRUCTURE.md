@@ -705,10 +705,24 @@ en archivo aparte": esto es evolucion del mismo panel, no una feature disjunta).
   usar por si se retoma" y ya NO es cierta** — el arte SI se retomo despues.
   `Background_complete1.tga` es HOY el borde vivo del panel (`Options.lua`, el `borderTex`
   justo despues del hook de `ToggleGameMenu`), anclado TOPLEFT -44,54 / BOTTOMRIGHT 44,-41.
-  Importa para rendimiento: es **2592x1632 32bpp RLE**, o sea ~16 MB de pixeles a
-  descomprimir, y era la causa del micro-congelado en la PRIMERA apertura del menu (ver
-  la seccion de la sesion 2026-08-08). Se dibuja a ~988x671, asi que la fuente tiene ~6.4x
-  los pixeles que se ven — bajarla a 1296x816 la dejaria en ~4 MB.
+
+  **Re-escalado 2026-08-08: era 2592x1632 (~16 MB en memoria), ahora 1024x645 (~2.5 MB).**
+  Se dibuja a ~988x671 y como mucho ~1482x1007 (`panelScale` topea en 1.5), asi que la
+  fuente vieja tenia ~6.4x los pixeles que se ven. RMSE contra el original **al tamaño en
+  que se dibuja: 0.0038** — imperceptible.
+
+  **Si hay que re-escalarlo otra vez, dos trampas (las dos aparecieron en el intento real,
+  y ninguna se ve en los numeros — solo mirando el render):**
+  1. `-alpha disassociate` **destruye el canal alfa** (deja 3 canales). El arte esta inset
+     dentro de padding transparente, asi que eso rompe el borde por completo.
+  2. El ciclo premultiply/un-premultiply mete **halos blancos** en los bordes internos: al
+     des-premultiplicar se divide RGB por un alfa casi cero y se amplifica el ruido.
+
+  Lo que SI funciona: `magick src.tga -filter Lanczos -resize 1024x -alpha on
+  -type TrueColorAlpha -depth 8 -compress RLE out.tga` (resize directo, dejando que IM
+  pondere el alfa solo). Verificar siempre que la salida sea **TGA tipo 10, 32bpp, srgba**
+  — igual que el original — y MIRAR el resultado compuesto sobre fondo oscuro, no confiar
+  solo en el RMSE.
 - **3 columnas**: sidebar (buscador + boton "All" que expande/colapsa todos los grupos +
   lista de unidades agrupada MAIN/POWER/BOSSES/GROUP/PORTRAITS/AURAS/INFO/MICRO/CHAT/TRACKER/GLOW,
   con scroll vertical suavizado por interpolacion) → contenido (titulo + fila de sub-tabs con su
