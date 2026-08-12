@@ -7,6 +7,16 @@ worth reading before redoing one of them).
 ## Unreleased (post-8.2)
 
 ### Changed
+- **Bundled Blizzard Edit Mode layout updated** to the current HUD (`version=2`, 52 systems;
+  the previous one was 50). `/mcfhud`, the Setup wizard and the menu button all show the
+  new string.
+
+  Note for next time: `Profiles/Export Blizzard.txt` is the *source*, but it is not what
+  ships — WoW cannot read a `.txt` from an addon, so the string has to travel inside Lua.
+  `Profiles/_Exports.lua` is generated from it and is what `ns.ProfExports.blizzard`
+  actually exposes. Replacing only the `.txt` changes nothing; both must move together,
+  and a note saying so was added to the generated file's header (it didn't say it before).
+  Verified byte-for-byte: 2421 bytes, identical.
 - **`ns.BUILTIN` re-baked from the live config** — what a brand-new account, a fresh
   install, or `Reset All` falls back to. **67 → 98 top-level keys.** Baked straight from
   the SavedVariables (parsed with a real Lua interpreter, not regex), and verified
