@@ -6,6 +6,38 @@ worth reading before redoing one of them).
 
 ## Unreleased (post-8.2)
 
+### Changed
+- **`ns.BUILTIN` re-baked from the live config** — what a brand-new account, a fresh
+  install, or `Reset All` falls back to. **67 → 98 top-level keys.** Baked straight from
+  the SavedVariables (parsed with a real Lua interpreter, not regex), and verified
+  field-by-field before installing: **4634 values compared, zero differences**.
+
+  **Nameplates are now included** (79 keys — 39 of them the Designer's geometry:
+  offsets, sizes, widths, font sizes). The previous bake excluded them on purpose while
+  the system was mid-rewrite; `NameplatesNext` is stable and tuned now, so they travel.
+
+  Deliberately left out, each for a reason: `presets` (BUILTIN never carries them),
+  `setupSeen` (must be absent or the wizard never runs on a fresh install),
+  `bartenderAutoApplied` (a per-character map — personal data, not configuration),
+  `defaultPreset` (points at a preset a fresh install doesn't have), `designerRefScale`
+  (UI state: a scale sampled on one monitor is wrong on another, and the Designer
+  re-samples it on open anyway), and the 11 `_*` migration flags (a fresh install starts
+  from already-migrated data).
+
+### Removed
+- **30 dead keys purged**, found by cross-checking every live SavedVariables key against
+  a grep of the source: not one line of the addon reads them, yet they were riding along
+  in everyone's DB and in every export.
+  - 16 `actionBar*`, left behind when `ActionBarsSkin.lua`/`ActionBarDesigner.lua` were
+    deleted on 2026-08-05 without cleaning up their settings.
+  - 13 from the hover-aura redesign: the `*AuraCounterColor` set and
+    `playerAuraCounterSize` (the counter lost its own colour/size), plus the separate
+    buff/debuff offsets that were merged into `player`/`targetAuraOffsetX/Y`.
+  - `_mcfCastDiag`, a flag for a diagnostic that no longer exists.
+
+  They are excluded from the bake *and* added to `DEAD_GLOBALS`, so existing saves get
+  them cleaned out too.
+
 ### Added
 - **Blizzard's native action bars and BuffFrame/DebuffFrame can be managed by Explorer**
   (`NATIVE_BAR_FRAMES` in `Explorer.lua`) — the fallback path for when Bartender4 isn't

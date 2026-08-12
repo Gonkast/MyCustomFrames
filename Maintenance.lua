@@ -143,6 +143,34 @@ local DEAD_GLOBALS = {
     -- Hide Blizzard Elements. Quien haya corrido la version intermedia
     -- arrastra esta tabla en su DB y en sus exports.
     "dynamicWidgets",
+
+    -- Detectadas durante el re-horneado de Defaults.lua (2026-08-11): se
+    -- cruzo cada clave del SavedVariables vivo contra un grep del codigo, y
+    -- estas 30 no las lee NI UNA linea del addon. Estaban viajando en la DB
+    -- de todos y en cada export.
+    --
+    -- 16 de ActionBarsSkin.lua / ActionBarDesigner.lua, eliminados el
+    -- 2026-08-05 ("quitale toda la personalizacion o reskin a las barras
+    -- nativas") sin limpiar sus claves:
+    "actionBarCountOffsetX", "actionBarCountOffsetY", "actionBarExtraSpacing",
+    "actionBarHideBorder", "actionBarHideHotkey", "actionBarHideMacroName",
+    "actionBarHotkeyMaxWidth", "actionBarIconScale", "actionBarIconZoom",
+    "actionBarPadding", "actionBarSettings", "actionBarTextColor",
+    "actionBarTextOffsetX", "actionBarTextOffsetY", "actionBarTextSize",
+    "actionBarVerticalMargin",
+
+    -- 13 restos del rediseno de las auras hover: el contador dejo de tener
+    -- color/tamano propios, y los offsets separados de buff/debuff se
+    -- unificaron en playerAuraOffsetX/Y y targetAuraOffsetX/Y.
+    "arenaAuraCounterColor", "focusAuraCounterColor", "partyAuraCounterColor",
+    "playerAuraCounterColor", "playerAuraCounterSize",
+    "playerAuraBuffOffsetX", "playerAuraBuffOffsetY",
+    "playerAuraDebuffOffsetX", "playerAuraDebuffOffsetY",
+    "targetAuraBuffOffsetX", "targetAuraBuffOffsetY",
+    "targetAuraDebuffOffsetX", "targetAuraDebuffOffsetY",
+
+    -- Flag de un diagnostico temporal que ya no existe.
+    "_mcfCastDiag",
 }
 -- Claves muertas dentro de db.nameplates (2026-07-27). Categoria NUEVA: hasta
 -- ahora solo se purgaba db.units[*] y la raiz de db, asi que una feature
