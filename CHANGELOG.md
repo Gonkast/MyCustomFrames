@@ -6,6 +6,33 @@ worth reading before redoing one of them).
 
 ## Unreleased (post-8.2)
 
+### Fixed
+- **Object nameplates showed two names** — reported with a screenshot of a Wooden Chair
+  captioned with both Blizzard's yellow name and our green one.
+
+  A regression from the rewrite: object detection existed and was well tuned in
+  `Nameplates.lua`, but that file was commented out of the `.toc` when
+  `NameplatesNext.lua` took over, and the logic was never ported. Without it an object
+  reads as a friendly NPC, falls into the configured `nameonly` mode, and draws our name
+  on top of the one Blizzard already draws.
+
+  `IsObjectNameplate` is back, with the old file's final heuristic and its reasoning:
+  the GUID prefix (`GameObject-`) outside restricted content, and inside a dungeon —
+  where the GUID is secret for everything — the fact that `UnitCreatureType` returns a
+  *real* nil for an object but a *secret* value for an actual creature. nil and secret
+  are different states and can be told apart without reading either.
+
+  Left out on purpose: `UnitNameplateShowsWidgetsOnly` / `UnitIsGameObject`. They look
+  like the right APIs and Platynator uses them, but they were tried here and reverted —
+  false positives on ordinary NPCs in this build sent whole plates to Blizzard's
+  simplified native render, which is unclickable by design. That note now lives next to
+  the code so the next attempt starts by testing click-to-target.
+
+  The fix is simpler than the old one needed to be: that system reskinned Blizzard's
+  frame in place, so a recycled frame kept its old skin and needed an explicit `Hide()`.
+  This one owns a separate child frame that `ClearUnit` releases on
+  `NAME_PLATE_UNIT_REMOVED`, so an early return leaves nothing behind.
+
 ### Changed
 - **Bundled Blizzard Edit Mode layout updated** to the current HUD (`version=2`, 52 systems;
   the previous one was 50). `/mcfhud`, the Setup wizard and the menu button all show the

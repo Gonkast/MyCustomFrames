@@ -977,7 +977,49 @@ end
 ------------------------------------------------------------------------------
 ns.plates = ns.plates or {}
 
+-- NAMEPLATES DE OBJETO (sillas, buzones, cofres, marcadores de mision).
+--
+-- REGRESION AL REESCRIBIR (2026-08-11, reportado con captura: una "Wooden
+-- Chair" mostrando DOS nombres, el amarillo nativo y el verde nuestro): esta
+-- deteccion existia y estaba bien afinada en Nameplates.lua, pero ese archivo
+-- quedo comentado en el .toc al pasar a NameplatesNext.lua y la logica no se
+-- porto. Sin ella un objeto entra como NPC amistoso, cae en el modo "nameonly"
+-- configurado y dibuja NUESTRO nombre encima del que Blizzard ya dibuja.
+--
+-- Lo que sigue es el heuristico FINAL de aquel archivo, con su historia:
+--   * El GUID codifica el tipo en el prefijo ("GameObject-", "Creature-"...).
+--     Sirve solo FUERA de contenido restringido.
+--   * Dentro de una mazmorra el GUID viene SECRETO para todo (confirmado con
+--     /mcfnpobjdiag). Respaldo: `UnitCreatureType` devuelve nil DE VERDAD para
+--     un objeto, pero un valor SECRETO (presente, no nil) para una criatura
+--     real -- nil y secreto son estados distintos y se distinguen sin leer
+--     nada. `UnitReaction` da la misma señal y se usa como segunda opinion.
+--
+-- NO usar `UnitNameplateShowsWidgetsOnly` / `UnitIsGameObject`: parecen las
+-- APIs correctas (Blizzard las agrego justo para esto, y Platynator las usa),
+-- pero ya se probaron aca y se REVIRTIERON -- daban falso positivo en NPCs
+-- normales en este build y mandaban plates enteras al render nativo
+-- simplificado, que es no-clickeable por diseño ("no puedo clickear NINGUNA
+-- nameplate"). Si se vuelven a intentar, probar el click-to-target primero.
+local function IsObjectNameplate(unit)
+    if not unit then return false end
+
+    local okG, guid = pcall(UnitGUID, unit)
+    if okG and type(guid) == "string" and not (issecretvalue and issecretvalue(guid)) then
+        return guid:match("^GameObject%-") ~= nil
+    end
+
+    local okT, creatureType = pcall(UnitCreatureType, unit)
+    local okR, reaction = pcall(UnitReaction, "player", unit)
+    return okT and creatureType == nil and okR and reaction == nil
+end
+
 local function SetUnit(nameplate, unit)
+    -- Sin frame propio y sin tocar nada: la plate nativa queda tal cual, que
+    -- es exactamente lo que se ve sin el addon. Mismo criterio que el
+    -- `mode == "off"` de mas abajo.
+    if IsObjectNameplate(unit) then return end
+
     local friendly = IsFriendlyUnit(unit)
     local nameOnly = false
     if friendly then
