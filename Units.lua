@@ -500,6 +500,42 @@ end
 -- solo cast bar y retratos, ver core.lua -- asi que el nombre depende SOLO de
 -- este tick. Bajarlo mas dejaria el nombre del target anterior a la vista al
 -- cambiar de objetivo. Para bajarlo habria que refrescarlo por evento primero.
+-- Extraida de dentro de UnitUpdateBar (2026-08-11). Antes vivia como un
+-- CLOSURE LITERAL pasado a ns.Prof.Time:
+--     ns.Prof.Time("... SetValue ...", function() ... end)
+-- Eso aloca una closure NUEVA en cada llamada -- ~127 por segundo, una por
+-- unidad por tick -- y encima la aloca SIEMPRE: el closure se construye en el
+-- sitio de llamada, antes de que Prof.Time pueda mirar si el profiler esta
+-- activo. O sea que la instrumentacion costaba basura para el GC incluso
+-- apagada, que es exactamente lo contrario de para lo que existe Prof.Time
+-- (su comentario dice "cronometra una llamada en el sitio SIN alocar un
+-- closure"). Los otros 16 sitios ya pasaban funcion + argumentos; este era el
+-- unico que no.
+local function ApplyBarValue(u)
+    -- SetReverseFill y SetMinMaxValues se repetian en cada tick con los MISMOS
+    -- valores: el maximo de vida/poder casi nunca cambia (subir de nivel, buffs
+    -- de vida). SetValue si tiene que correr siempre -- es el valor actual.
+    if u.bar._revApplied ~= false then
+        u.bar._revApplied = false
+        u.bar:SetReverseFill(false)
+    end
+    local maxFn = (u.kind == "power") and UnitPowerMax or UnitHealthMax
+    local curFn = (u.kind == "power") and UnitPower or UnitHealth
+    local max = maxFn(u.unit)
+    -- Solo se deduplica si el maximo es un numero PROPIO. Si viene secreto no se
+    -- puede comparar (rompe), asi que se aplica siempre, como antes.
+    if type(max) == "number" and not (issecretvalue and issecretvalue(max)) then
+        if u.bar._maxApplied ~= max then
+            u.bar._maxApplied = max
+            u.bar:SetMinMaxValues(0, max)
+        end
+    else
+        u.bar._maxApplied = nil
+        u.bar:SetMinMaxValues(0, max)
+    end
+    u.bar:SetValue(curFn(u.unit))
+end
+
 local function UnitUpdateBar(u, doText)
     local p = P(u)
 
@@ -553,30 +589,7 @@ local function UnitUpdateBar(u, doText)
     end
 
     -- Rellena el StatusBar nativo SIEMPRE (secret-safe y para leer geometria).
-    ns.Prof.Time("        - SetValue(vida/poder)", function()
-    -- SetReverseFill y SetMinMaxValues se repetian en cada tick con los MISMOS
-    -- valores: el maximo de vida/poder casi nunca cambia (subir de nivel, buffs
-    -- de vida). SetValue si tiene que correr siempre -- es el valor actual.
-    if u.bar._revApplied ~= false then
-        u.bar._revApplied = false
-        u.bar:SetReverseFill(false)
-    end
-    local maxFn = (u.kind == "power") and UnitPowerMax or UnitHealthMax
-    local curFn = (u.kind == "power") and UnitPower or UnitHealth
-    local max = maxFn(u.unit)
-    -- Solo se deduplica si el maximo es un numero PROPIO. Si viene secreto no se
-    -- puede comparar (rompe), asi que se aplica siempre, como antes.
-    if type(max) == "number" and not (issecretvalue and issecretvalue(max)) then
-        if u.bar._maxApplied ~= max then
-            u.bar._maxApplied = max
-            u.bar:SetMinMaxValues(0, max)
-        end
-    else
-        u.bar._maxApplied = nil
-        u.bar:SetMinMaxValues(0, max)
-    end
-    u.bar:SetValue(curFn(u.unit))
-    end)
+    ns.Prof.Time("        - SetValue(vida/poder)", ApplyBarValue, u)
 
     if not (p.texture and p.texture ~= "") then
         -- Sin textura (focus): sin relleno.
@@ -1030,6 +1043,44 @@ local function CastOnUpdate(self, elapsed)
     end
 end
 
+-- ==========================================================================
+-- TICKER COMPARTIDO DE CAST BARS (2026-08-11)
+--
+-- Antes cada cast bar tenia su PROPIO OnUpdate, armado al crearla y nunca
+-- desarmado: corria cada frame, en cada unidad, casteara o no. Medido con
+-- /mcfdiag hot: **3.59 ms/s con 1756 llamadas/s** -- ~29 barras x los FPS.
+-- Con ~29 barras a 60fps son 1740 invocaciones/s de las cuales ~1160 solo
+-- entraban, llamaban GetDB() + P(u) + IsUnlocked(), acumulaban el contador y
+-- salian sin hacer nada.
+--
+-- POR QUE SE PUEDE BAJAR A 20Hz SIN PERDER FLUIDEZ: el OnUpdate no dibuja
+-- nada por frame. Durante un casteo el relleno lo hace el MOTOR
+-- (StatusBar:SetTimerDuration, en C) y el spark esta ANCLADO al borde de la
+-- textura de relleno, asi que sigue solo. Lo unico que hace este codigo es
+-- DETECTAR inicio/fin de casteo -- y eso ya estaba throttleado a 20Hz por
+-- barra con `_castPollAcc` (el comentario de arriba lo llama "imperceptible").
+-- O sea: la cadencia efectiva de trabajo util no cambia, solo se deja de
+-- entrar y salir 1160 veces por segundo para no hacer nada.
+--
+-- La FUNCION no se toco: CastOnUpdate sigue igual, con la misma firma
+-- (self, elapsed). Solo cambia quien la llama.
+local castAcc = 0
+local castTicker = CreateFrame("Frame")
+castTicker:SetScript("OnUpdate", ns.Prof.Wrap("Units: cast bars", function(_, elapsed)
+    castAcc = castAcc + elapsed
+    if castAcc < 0.05 then return end
+    local dt = castAcc
+    castAcc = 0
+    for _, u in pairs(ns.frames) do
+        local cb = u.castBar
+        -- Solo las que se ven: una barra oculta no tiene nada que actualizar,
+        -- y su estado ocioso ya quedo aplicado (_idleApplied) la ultima vez.
+        if cb and cb:IsShown() then
+            CastOnUpdate(cb, dt)
+        end
+    end
+end))
+
 -- Fuerza re-deteccion del cast (al cambiar de target/focus/pet el frame reapunta a
 -- otra unidad; sin esto seguiria mostrando el timer del casteo anterior).
 local function ResetCastBar(key)
@@ -1162,7 +1213,8 @@ local function CreateUnit(def)
         SetSparkTexture(castSpark)
         castSpark:Hide()
         castBar._u = u
-        castBar:SetScript("OnUpdate", ns.Prof.Wrap("Units: cast bars", CastOnUpdate))
+        -- SIN OnUpdate propio (2026-08-11) -- lo maneja el ticker compartido de
+        -- 20Hz de mas abajo (ns.TickCastBars). Ver el comentario largo alla.
         u.castBar, u.castSpark = castBar, castSpark
     end
 
