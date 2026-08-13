@@ -130,6 +130,10 @@ local function PortraitUpdatePicture(u)
         if u.key:sub(1, 14) == "portrait_arena" and ns.ArenaPrepSpecState then
             local prep = ns.ArenaPrepSpecState[u.unit]
             if prep and prep.icon then
+                -- Invalida el dedupe de abajo: esta rama deja OTRA textura
+                -- puesta, asi que al volver al icono de clase hay que
+                -- reaplicarlo aunque la clase no haya cambiado.
+                u._picCoords = nil
                 u.classIcon:SetTexture(prep.icon)
                 u.classIcon:SetTexCoord(0, 1, 0, 1)
                 u.classIcon:Show()
@@ -139,10 +143,29 @@ local function PortraitUpdatePicture(u)
         local coords = PortraitClassCoords(u.unit)
         if not coords and ns.IsUnlocked() then coords = PortraitClassCoords("player") end  -- preview
         if coords then
-            u.classIcon:SetTexture(ns.CLASS_ICON_TEX)
-            u.classIcon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+            -- DEDUPE (2026-08-11): `portrait_tot` pasa por aca en CADA tick
+            -- (10 Hz) -- ver TickPortraits, se refresca siempre porque el
+            -- target-de-target cambia seguido -- y el resto de los retratos de
+            -- icono cada 3 pasadas. SetTexture (con una ruta de string) y
+            -- SetTexCoord (4 floats) son saltos a C que rehacen trabajo aunque
+            -- el icono sea identico.
+            --
+            -- Se compara la IDENTIDAD de la tabla: PortraitClassCoords devuelve
+            -- CLASS_ICON_TCOORDS[class], que es la MISMA tabla mientras la
+            -- clase no cambie. No hace falta comparar los 4 numeros ni el token
+            -- de clase (que ademas puede venir secreto).
+            --
+            -- Seguro respecto a las Skins: ns.CLASS_ICON_TEX es una constante
+            -- fija de core.lua, NO uno de los slots que ApplySkin reescribe --
+            -- si lo fuera, un cambio de skin tendria que invalidar esta cache.
+            if u._picCoords ~= coords then
+                u._picCoords = coords
+                u.classIcon:SetTexture(ns.CLASS_ICON_TEX)
+                u.classIcon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+            end
             u.classIcon:Show()
         else
+            u._picCoords = nil
             u.classIcon:Hide()
         end
         return
