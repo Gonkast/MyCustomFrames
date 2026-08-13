@@ -1655,7 +1655,18 @@ ns.TickUnits = function()
                 if u.spellText then u.spellText:SetAlpha(0); SetTextIfChanged(u.spellText, "") end
             end
         end
-        if UnitExists(u.unit) then
+        -- El gate mira existencia Y VISIBILIDAD (2026-08-11). Solo UnitExists no
+        -- alcanza: varias keys tienen `unit = "player"` -- que existe SIEMPRE --
+        -- pero su frame lo muestra/oculta un state driver. `party5` y
+        -- `arena_player` (ver ns.UNITS en core.lua) recibian las seis
+        -- actualizaciones completas 10 veces por segundo estando ocultos fuera
+        -- de un grupo o de una arena.
+        --
+        -- Saltear un frame oculto es seguro: nada de lo que hacen estas seis se
+        -- ve si el frame no esta en pantalla, y cuando el driver lo muestra el
+        -- tick siguiente (<=100 ms) lo pone al dia. En preview todos los frames
+        -- estan forzados a visible, asi que siguen actualizandose.
+        if UnitExists(u.unit) and u.button:IsShown() then
             -- Instrumentadas por separado (2026-07-28): TickUnits resulto ser el
             -- mayor costo del addon -- 7.08 ms/s, el 77% del tick principal --
             -- y estas seis corren para CADA unidad, 10 veces por segundo, sin
