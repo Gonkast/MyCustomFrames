@@ -200,7 +200,12 @@ local function ApplyGlobalLockHide()
             end
             for _, pk in ipairs(grp.portraits or {}) do
                 local p = ns.portraits[pk]
-                if p and p.root then p.root:SetShown(not hide) end
+                if p and p.root then
+                    p.root:SetShown(not hide)
+                    -- Escritura por fuera de PortraitSetShown: invalidar su
+                    -- dedupe (ver ns.DirtyPortraitShown en Portraits.lua).
+                    if ns.DirtyPortraitShown then ns.DirtyPortraitShown(p) end
+                end
             end
             for _, ak in ipairs(grp.auras or {}) do
                 local g = ns.auras[ak]

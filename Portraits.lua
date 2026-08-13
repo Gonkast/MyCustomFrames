@@ -468,8 +468,27 @@ end
 -- (ADDON_ACTION_BLOCKED:...:Hide()). En ese caso: alpha 0 como sustituto visual y el
 -- Show/Hide REAL se difiere a PLAYER_REGEN_ENABLED (_pendingShown). El flag
 -- _mcfCombatHidden en el root avisa al Explorer de que no toque ese alpha.
+-- Invalida el dedupe de PortraitSetShown. La tiene que llamar CUALQUIERA que
+-- muestre/oculte el root de un retrato por fuera de esa funcion, o la cache
+-- queda mintiendo y el proximo SetShown se saltea (mismo tipo de bug que ya
+-- paso con la cache de SetTextIfChanged y el nombre del pet).
+function ns.DirtyPortraitShown(u)
+    if u then u._shownApplied = nil end
+end
+
 local function PortraitSetShown(u, shown)
     shown = shown and true or false
+    -- DEDUPE (2026-08-11): corre para CADA retrato en CADA pasada del tick
+    -- (~16 retratos x 10 Hz) y hacia siempre tres saltos a C --
+    -- InCombatLockdown(), root:IsProtected() y root:SetShown()-- para
+    -- reaplicar el estado que ya tenia. Medido: TickPortraits gastaba
+    -- 1.25 ms/s FUERA de sus sub-caminos instrumentados, y esta era la unica
+    -- funcion sin medir que corre para todos los retratos siempre.
+    --
+    -- El guard de _pendingShown no es opcional: cuando hay una restauracion
+    -- de combate pendiente, la logica de abajo tiene que correr AUNQUE el
+    -- estado deseado no haya cambiado.
+    if u._shownApplied == shown and u._pendingShown == nil then return end
     local root = u.root
     if InCombatLockdown() and root:IsProtected() then
         local cur = u._pendingShown
@@ -490,6 +509,7 @@ local function PortraitSetShown(u, shown)
         if u.model then u.model:SetAlpha(PP(u).modelAlpha or 1) end
     end
     root:SetShown(shown)
+    u._shownApplied = shown
 end
 
 local function PortraitApplyAppearance(u)
@@ -577,6 +597,10 @@ local function PortraitApplyAppearance(u)
     -- portraits SOLO mientras se edita, sin tocar su showEnabled real.
     if ns.IsUnlocked() and ns.GetDB().lockHide and ns.GetDB().lockHide.portraits then
         u.root:Hide()
+        -- Se oculto por afuera de PortraitSetShown: invalidar su cache, o al
+        -- salir del preview el SetShown(true) se saltearia y el retrato
+        -- quedaria oculto hasta un /reload.
+        ns.DirtyPortraitShown(u)
         return
     end
     PortraitSetShown(u, ns.IsUnlocked() or PortraitShouldShow(u))
