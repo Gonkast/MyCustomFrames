@@ -169,18 +169,40 @@ ns.EXPLORER_ELEMENTS = {
 -- vez en la practica (el reskin nativo se apaga solo si Bartender4 esta
 -- cargado) pero no hace falta que Explorer lo sepa, ambos casos son
 -- inofensivos de tratar igual.
+-- FIX DE RENDIMIENTO (2026-08-11, medido con /mcfdiag hot: este driver era
+-- **9.95 ms/s, el 36% de todo el addon** -- mas del doble que el tick
+-- principal). El bucle de abajo recorre las ~69 entradas de db.explorer en
+-- CADA frame, asi que todo lo que se llame aca se multiplica por 69 y por los
+-- FPS. Dos fuentes de basura, ambas evitables:
+--
+--   1. `key:sub(1, 6)` construye un string nuevo por llamada. Se reemplaza por
+--      `find` con patron plano (4to argumento true), que no aloca.
+--   2. `pcall(function() return { f:GetChildren() } end)` alocaba DOS cosas
+--      por llamada: la closure literal del pcall y la tabla del constructor.
+--      Es el mismo anti-patron que ya estaba documentado para el ticker (por
+--      eso existen ns.safeBool/ns.safeVal) y que se acaba de arreglar en
+--      MeasureSectionBottom de Options.lua. Se recorren los varargs con
+--      select("#") / select(i) sin empaquetarlos, y se saca el pcall:
+--      GetChildren sobre un frame normal no puede fallar.
 local function IsBarGroup(key)
-    return key:sub(1, 6) == "BT4Bar" or NATIVE_BAR_FRAMES[key] ~= nil
+    return key:find("BT4Bar", 1, true) == 1 or NATIVE_BAR_FRAMES[key] ~= nil
 end
-local function IsMouseOverElement(f, key)
-    if f:IsMouseOver() then return true end
-    if not IsBarGroup(key) then return false end
-    local ok, children = pcall(function() return { f:GetChildren() } end)
-    if not ok then return false end
-    for _, c in ipairs(children) do
-        if c.IsMouseOver and c:IsMouseOver() then return true end
+
+local function AnyChildMouseOver(...)
+    for i = 1, select("#", ...) do
+        local c = select(i, ...)
+        if c and c.IsMouseOver and c:IsMouseOver() then return true end
     end
     return false
+end
+
+local function IsMouseOverElement(f, key)
+    if f:IsMouseOver() then return true end
+    -- Bartender4 no redimensiona el frame de la barra para envolver sus
+    -- botones, asi que el hover sobre un boton no lo detecta f:IsMouseOver().
+    -- Solo por eso se recorren los hijos, y solo para las barras.
+    if not IsBarGroup(key) then return false end
+    return AnyChildMouseOver(f:GetChildren())
 end
 -- Expuesta (2026-08-03, "no quiero que oculte al 100% las demas, que las
 -- pueda ver si hago mouseover"): ExplorerAuto.lua necesita el MISMO chequeo
@@ -242,7 +264,22 @@ explorerDriver:SetScript("OnUpdate", ns.Prof.Wrap("Explorer: driver", function(s
                 -- para la barra principal NATIVA en vez de la de Bartender4.
                 local forceOverride = (key == "BT4Bar1" or key == "NativeMainBar") and self.overrideBar
                 local myLo = IsBarGroup(key) and loBars or loUnits
-                local target = (self.combat or self.showTgt or self.casting or forceOverride or IsMouseOverElement(f, key)) and 1 or myLo
+                -- Una sola evaluacion del hover por elemento y por frame
+                -- (2026-08-11): antes IsMouseOverElement se llamaba aca Y otra
+                -- vez dentro de la rama de ExplorerBarForceHidden de abajo --
+                -- el doble de trabajo, incluido el recorrido de hijos de cada
+                -- barra, para responder la misma pregunta.
+                --
+                -- OJO con el cortocircuito: NO alcanza con "si ya hay otra
+                -- razon de revelado, no calcules el hover". La rama de
+                -- ForceHidden le gana a combate/target/casteo pero NO al
+                -- hover, asi que ahi el hover REAL se necesita igual --
+                -- reusar un valor cortocircuitado daria 1 en vez de 0.2.
+                local forceHidden = ns.ExplorerBarForceHidden and ns.ExplorerBarForceHidden(key)
+                local revealedByState = self.combat or self.showTgt or self.casting or forceOverride
+                local hover = (forceHidden or not revealedByState)
+                    and IsMouseOverElement(f, key) or false
+                local target = (revealedByState or hover) and 1 or myLo
                 -- "Solo ver la barra 1" (2026-07-28, ExplorerAuto.lua): cuando la
                 -- barra 1 esta REEMPLAZADA (vehiculo/override/possess) y la opcion
                 -- esta puesta, las BT4Bar2-10 se ocultan del todo. Va DESPUES de
@@ -254,14 +291,16 @@ explorerDriver:SetScript("OnUpdate", ns.Prof.Wrap("Explorer: driver", function(s
                 -- La condicion vive en ExplorerAuto y NO usa IsMounted -- a
                 -- diferencia de `overrideBar` de arriba, que si lo usa porque su
                 -- proposito es el contrario (mantener la 1 visible al montarte).
-                if ns.ExplorerBarForceHidden and ns.ExplorerBarForceHidden(key) then
+                if forceHidden then
                     -- Le gana a combate, target y casteo, pero NO al hover: con
                     -- la barra escondida el mouseover la sigue revelando, igual
                     -- que en el modo normal del Explorer (pedido del usuario).
                     -- Alpha 0.2 en vez de 0 (2026-08-03, "que no esconda las
                     -- barras, mejor que les baje la opacidad a 0.2"): antes
                     -- desaparecian del todo, ahora quedan tenues pero visibles.
-                    target = IsMouseOverElement(f, key) and 1 or 0.2
+                    -- `hover` ya es el valor REAL aca (ver arriba: cuando
+                    -- forceHidden es true se calcula siempre, sin cortocircuito).
+                    target = hover and 1 or 0.2
                 end
                 local cur = f._exAlpha; if cur == nil then cur = f:GetAlpha() end
                 cur = cur + (target - cur) * (target > cur and kIn or kOut)

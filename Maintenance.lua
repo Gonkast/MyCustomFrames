@@ -373,9 +373,29 @@ local function HotReport()
         print("|cffffe19b[MCF hot]|r Ningun camino instrumentado consumio tiempo.")
         return
     end
-    local total = 0
-    for _, e in ipairs(list) do total = total + e.msPerSec end
+    -- FIX (2026-08-11): el total sumaba TODAS las entradas, incluidos los
+    -- sub-caminos -- que por definicion ya estan contados dentro de su padre.
+    -- O sea que se contaba el mismo tiempo dos o tres veces: dio "33.39 ms/s"
+    -- cuando /mcfdiag cpu media 12.75 para el addon entero, y el propio pie
+    -- del reporte invita a comparar esos dos numeros. Inflado asi, la
+    -- comparacion sugeria que faltaba tiempo por explicar cuando en realidad
+    -- sobraba.
+    --
+    -- Los sub-caminos se registran con el nombre YA indentado ("  |- ",
+    -- "     . ", "        - "), asi que se los reconoce por eso. Se muestran
+    -- igual en la lista, solo no se suman.
+    local total, subTotal = 0, 0
+    for _, e in ipairs(list) do
+        if e.name:sub(1, 1) == " " then
+            subTotal = subTotal + e.msPerSec
+        else
+            total = total + e.msPerSec
+        end
+    end
     print(("|cffffe19b[MCF hot]|r %.0f s medidos -- total instrumentado: %.2f ms/s"):format(elapsed, total))
+    if subTotal > 0 then
+        print(("  (los sub-caminos suman %.2f ms/s, ya incluidos en el total de arriba)"):format(subTotal))
+    end
     for i, e in ipairs(list) do
         print(("  %2d. %-32s %6.2f ms/s  (%2.0f%%)  %.0f llamadas/s"):format(
             i, e.name, e.msPerSec, total > 0 and e.msPerSec * 100 / total or 0, e.callsPerSec))

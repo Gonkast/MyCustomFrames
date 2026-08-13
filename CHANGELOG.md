@@ -7,6 +7,43 @@ worth reading before redoing one of them).
 ## Unreleased (post-8.2)
 
 ### Fixed
+- **The Explorer driver was the single most expensive thing in the addon** — measured at
+  **9.95 ms/s, 36% of the total**, more than double the main tick. Its `OnUpdate` walks all
+  ~69 `db.explorer` entries every frame, so anything called inside is multiplied by 69 and
+  by the frame rate. Three avoidable costs:
+  - `pcall(function() return { f:GetChildren() } end)` allocated **two** objects per call
+    (the pcall's literal closure and the table). Same anti-pattern already documented for
+    the ticker, and fixed in `Options.lua` the same day.
+  - `key:sub(1, 6)` built a new string per call; replaced with a plain `find`.
+  - `IsMouseOverElement` ran **twice** per element — once for the target alpha and again
+    inside the force-hidden branch — answering the same question, children walk included.
+
+  Care needed on that last one: the force-hidden branch outranks combat/target/casting but
+  **not** hover, so it needs the *real* hover value. A naive "skip the hover check if
+  something else already reveals it" short-circuit would have shown alpha 1 instead of 0.2
+  whenever you were in combat with bar 1 replaced. The hover is now computed once, but
+  still computed whenever force-hidden applies.
+- **Entering a zone rebuilt every nameplate.** `ZONE_CHANGED_NEW_AREA` ran the full style
+  apply — 12 CVar writes ending in `SweepFriendlyPlates()`, which does `ClearUnit` +
+  `SetUnit` on every plate, tearing down and rebuilding all of them including their aura
+  containers. That event fires on every *subzone*, not just when crossing into an instance.
+  The only thing that actually depends on the zone is whether you're in a party/raid
+  instance, so the expensive sweep now runs only when that answer changes.
+- **`/mcfdiag hot` reported an inflated total.** It summed every entry, including the
+  sub-paths that are by definition already counted inside their parent — the same time
+  counted two or three times. It read 33.39 ms/s while `/mcfdiag cpu` measured 12.75 for
+  the whole addon, and the report's own footer invites comparing those two numbers, so the
+  inflation suggested there was hidden cost to hunt when there wasn't. Sub-paths are still
+  listed, just not added in.
+
+### Added
+- **The nameplate system is now instrumented** (`Nameplates: driver 0.2s`, plus per-event
+  `SetUnit`/`ClearUnit`). `NameplatesNext.lua` had no `ns.Prof.Wrap` at all, so the whole
+  system — the one doing the most work while you tab-target — was invisible to
+  `/mcfdiag hot`. The first "FPS drop on target change" report was measured without it.
+  With it, nameplates come in at **0.86 + 0.29 ms/s**, which rules them out as the cause.
+
+### Fixed
 - **Object nameplates showed two names** — reported with a screenshot of a Wooden Chair
   captioned with both Blizzard's yellow name and our green one.
 

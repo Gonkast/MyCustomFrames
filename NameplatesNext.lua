@@ -126,6 +126,11 @@ end
 -- que aparece, y en una pulla de M+ con 10+ adds eso son 10+ llamadas en el
 -- mismo frame si no se cachea.
 local instCache, instCacheAt = nil, 0
+-- Ultimo valor conocido de InPartyOrRaidInstance() para el handler de
+-- ZONE_CHANGED_NEW_AREA: ese evento dispara en cada SUBZONA, y el barrido de
+-- plates solo hace falta cuando la respuesta cambia de verdad (ver el
+-- comentario largo en el handler).
+local lastZoneInst = nil
 local function InPartyOrRaidInstance()
     local now = GetTime()
     if instCacheAt ~= 0 and (now - instCacheAt) < 1 then return instCache end
@@ -1307,14 +1312,41 @@ styleEv:SetScript("OnEvent", function(_, event)
         -- con el modo viejo. instCacheAt=0 fuerza a InPartyOrRaidInstance a
         -- re-leer YA (su cache de 1s podria devolver el estado de ANTES de
         -- cruzar el portal si se consulta en el mismo frame que el evento).
-        -- RefreshNameplateStyle ahora barre SIEMPRE al final (ver el
-        -- comentario en ApplyNameplateStyleNow) -- alcanza con llamarlo.
         instCacheAt = 0
-        ns.RefreshNameplateStyle()
+        -- FIX DE RENDIMIENTO (2026-08-11, reportado en vivo: "drop de FPS al
+        -- entrar a zonas"): antes esto llamaba a ns.RefreshNameplateStyle()
+        -- -- el apply COMPLETO -- en CADA cambio de subzona, no solo al
+        -- cruzar a una instancia. Ese apply reescribe 12 CVars y termina en
+        -- SweepFriendlyPlates(), que hace ClearUnit+SetUnit sobre CADA plate:
+        -- desarmar y reconstruir todos los nameplates de pantalla, incluidos
+        -- sus aura containers. ZONE_CHANGED_NEW_AREA dispara mucho mas
+        -- seguido de lo que sugiere el nombre (cada subzona), asi que se
+        -- pagaba entero cada vez.
+        --
+        -- Lo UNICO que depende de la zona es si estas en instancia de
+        -- party/raid: eso cambia el modo de las plates amistosas. Los CVars
+        -- salen del perfil y no cambian al moverte.
+        --
+        -- ApplyDungeonNameOnlyCVars y ApplyAutoDisableAlpha ya tienen su
+        -- propio early-out (`want == applied`), asi que son baratas de
+        -- llamar siempre. El barrido caro se hace SOLO si la respuesta de
+        -- InPartyOrRaidInstance cambio de verdad.
+        local nowInst = InPartyOrRaidInstance()
+        ApplyDungeonNameOnlyCVars()
+        ApplyAutoDisableAlpha()
+        if nowInst ~= lastZoneInst then
+            lastZoneInst = nowInst
+            if SweepFriendlyPlates then SweepFriendlyPlates() end
+        end
         return
     end
     if event == "PLAYER_REGEN_ENABLED" and not pendingStyleApply then return end
     pendingStyleApply = false
+    -- PLAYER_ENTERING_WORLD (login, /reload, cruzar un portal) si hace el apply
+    -- completo -- ahi es donde se establece todo. Se siembra lastZoneInst
+    -- aca para que el primer ZONE_CHANGED_NEW_AREA posterior compare contra
+    -- un valor real y no barra de gusto.
+    lastZoneInst = InPartyOrRaidInstance()
     ApplyNameplateStyleNow()
 end)
 
@@ -1330,7 +1362,13 @@ local driver = CreateFrame("Frame")
 -- plate cerca (la mayoria del tiempo en mundo abierto).
 driver:Hide()
 driverFrame = driver
-driver:SetScript("OnUpdate", function(self, elapsed)
+-- INSTRUMENTADO (2026-08-11): este archivo no tenia NI UN ns.Prof.Wrap, asi
+-- que todo el sistema de nameplates era invisible en /mcfdiag hot -- que es
+-- justo lo que mas trabaja cuando tabeas entre enemigos. El primer reporte de
+-- "drop de FPS al cambiar de target" midio 27.35 ms/s sin incluir nada de
+-- aca. Envolver el driver cuesta una comparacion booleana por llamada con el
+-- profiler apagado (ver Profiler.lua).
+driver:SetScript("OnUpdate", ns.Prof.Wrap("Nameplates: driver 0.2s", function(self, elapsed)
     acc = acc + elapsed
     if acc < 0.2 then return end
     acc = 0
@@ -1369,7 +1407,7 @@ driver:SetScript("OnUpdate", function(self, elapsed)
             end
         end
     end
-end)
+end))
 
 ------------------------------------------------------------------------------
 -- Eventos.
@@ -1394,10 +1432,15 @@ ev:SetScript("OnEvent", function(self, event, unit)
     -- sistema entero nunca enterandose de que esa unidad existia.
     local nameplate = C_NamePlate.GetNamePlateForUnit(unit, true)
     if not nameplate then return end
+    -- Cronometrados aparte del driver (2026-08-11): estos dos son el costo
+    -- por EVENTO (una plate aparece/desaparece), no por tick. Al pullear o
+    -- moverte por un pack disparan en rafaga, y es exactamente el escenario
+    -- del "drop de FPS al cambiar de target" -- conviene poder distinguirlo
+    -- del costo del ticker.
     if event == "NAME_PLATE_UNIT_ADDED" then
-        SetUnit(nameplate, unit)
+        ns.Prof.Time("Nameplates: SetUnit (por plate)", SetUnit, nameplate, unit)
     elseif event == "NAME_PLATE_UNIT_REMOVED" then
-        ClearUnit(nameplate, unit)
+        ns.Prof.Time("Nameplates: ClearUnit (por plate)", ClearUnit, nameplate, unit)
     end
 end)
 
