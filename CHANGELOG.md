@@ -6,6 +6,47 @@ worth reading before redoing one of them).
 
 ## Unreleased (post-8.2)
 
+### Changed
+- **Addon CPU cut from ~15.4 to ~12.2 ms/s (-21%)**, measured with `/mcfdiag hot` across
+  six rounds. Every win had the same shape: work that was being done and thrown away.
+  - **Cast bars: 3.59 → 1.53 ms/s.** Each bar had its own `OnUpdate`, armed at creation
+    and never disarmed — ~29 bars every frame whether anything was casting or not, of
+    which ~1160 invocations a second only called `GetDB()`, `P(u)` and `IsUnlocked()`,
+    bumped a counter and returned. Replaced by one shared 20 Hz ticker. Dropping to 20 Hz
+    costs nothing, because the engine fills the bar itself (`SetTimerDuration`, in C) and
+    the spark is anchored to the fill texture — the only per-frame job was detecting cast
+    start/end, already throttled to 20 Hz per bar.
+  - **`TickUnits`: 6.29 → 4.55 ms/s.** The loop gated on `UnitExists` alone, but several
+    keys use `unit = "player"` (always true) while a state driver decides whether their
+    frame is on screen: `party5` and `arena_player` took all six per-unit updates ten
+    times a second while hidden outside a group or arena. Call volume for `UnitUpdateBar`
+    fell 126 → 98/s.
+  - **One `ns.Prof.Time` call site passed a closure literal** instead of a function plus
+    arguments. The closure is built at the call site, *before* `Prof.Time` can check
+    whether profiling is active, so it allocated ~127 times a second permanently — the
+    exact opposite of that helper's purpose. The other 16 sites already did it right.
+  - **`PortraitSetShown` re-applied the same state every tick** (`InCombatLockdown()`,
+    `IsProtected()`, `SetShown()` — three C calls per portrait per pass). Deduped, with
+    `ns.DirtyPortraitShown` for the two places that show or hide a portrait root outside
+    that function; without it the cache would lie and a portrait could stay hidden until
+    a `/reload`, exactly the failure the `SetTextIfChanged` cache once had with the pet's
+    name.
+
+  **Two negative results, recorded so they aren't retried:**
+  - Deduping `UnitUpdateText` (the largest remaining leaf) against a readable fraction
+    **cannot work here**. `RenderManualFill` never appears in the profile at all, which
+    means `GetUnitFraction` returns `readable = false` even through its geometry fallback.
+    Health being secret on this client rules the approach out rather than complicating it.
+  - Deduping the class-icon texture **measured no gain**. It is correct and was kept, but
+    the volume was never there: `portrait_tot` is one portrait at 10 Hz and the rest run
+    every third pass — about 26 calls/s total. Estimate `calls/s x cost per call` before
+    optimising, not just whether a dedupe is missing.
+
+  What remains inside `UnitUpdateBar` is genuine work: the values are secret, cannot be
+  compared, and must be reformatted each pass. Further gains need visible trade-offs
+  (lower text refresh, or EllesmereUI-style cast refcounting worth at most 1.5 ms/s), so
+  they are a preference call rather than an obvious win.
+
 ### Fixed
 - **The Explorer driver was the single most expensive thing in the addon** — measured at
   **9.95 ms/s, 36% of the total**, more than double the main tick. Its `OnUpdate` walks all
